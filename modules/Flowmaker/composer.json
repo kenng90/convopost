@@ -1,0 +1,22 @@
+{
+    "name": "akaunting/flowmaker",
+    "description": "",
+    "authors": [
+        {
+            "name": "Akaunting",
+            "email": "info@akaunting.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Modules\\Flowmaker\\": ""
+        }
+    },
+    "require": {
+        "phpoffice/phpword": "^1.4",
+        "smalot/pdfparser": "^2.12",
+        "symfony/browser-kit": "^7.3",
+        "symfony/dom-crawler": "^7.3",
+        "symfony/http-client": "^7.3"
+    }
+}

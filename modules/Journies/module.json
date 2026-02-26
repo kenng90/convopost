@@ -1,0 +1,33 @@
+{
+    "alias": "journies",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Journies\\Providers\\Main"
+    ],
+    "hasSidebar":true,
+    "sidebarData":[
+        {
+            "name":"Contact journeys",
+            "app":"journies",
+            "icon":"https://mobidonia-demo.imgix.net/icons/journey.svg",
+            "brandColor":"#7e22ce",
+            "view":"journies::sideapp.app",
+            "script":"journies::sideapp.script"
+        }
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "ownermenus":[
+        {
+            "name":"Journies",
+            "icon":"ni ni-folder-17 text-red",
+            "route":"journies.index",
+            "color":"#2dce89",
+            "priority":10
+        }
+    ]
+}

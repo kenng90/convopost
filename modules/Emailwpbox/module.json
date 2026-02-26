@@ -1,0 +1,151 @@
+{
+    "alias": "emailwpbox",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Emailwpbox\\Providers\\Main"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "hasSidebar":true,
+    "sidebarData":[
+        {
+            "name":"Email",
+            "app":"email",
+            "icon":"https://mobidonia-demo.imgix.net/icons/email5.svg", 
+            "brandColor":"#007DC1",
+            "view":"emailwpbox::sideapp.app",
+            "script":"emailwpbox::sideapp.script"
+        }
+    ],
+    "vendor_fields":[
+        {
+            "separator":"Email settings",
+            "icon":"📧",
+            "title": "Enable email",
+            "key": "email_enabled",
+            "ftype": "bool",
+            "value":false
+        },
+        {
+            "title": "SMTP Host",
+            "key": "MAIL_HOST",
+            "ftype": "input",
+            "value": "",
+            "placeholder": "smtp.example.com"
+        },
+        {
+            "title": "SMTP Port", 
+            "key": "MAIL_PORT",
+            "ftype": "input",
+            "value": "587"
+        },
+        {
+            "title": "SMTP Encryption",
+            "key": "MAIL_ENCRYPTION",
+            "ftype": "select",
+            "value": "tls",
+            "data": ["none", "tls", "ssl", "starttls"]
+        },
+        {
+            "title": "SMTP Username",
+            "key": "MAIL_USERNAME", 
+            "ftype": "input",
+            "value": ""
+        },
+        {
+            "title": "SMTP Password",
+            "key": "MAIL_PASSWORD",
+            "ftype": "input",
+            "type": "password",
+            "value": ""
+        },
+        {
+            "title": "From Address",
+            "key": "MAIL_FROM_ADDRESS",
+            "ftype": "input", 
+            "value": ""
+        },
+        {
+            "title": "From Name",
+            "key": "MAIL_FROM_NAME",
+            "ftype": "input",
+            "value": ""
+        },
+        {
+            "separator": "Email Templates",
+            "icon": "📝",
+            "title": "Template 1 Subject",
+            "key": "EMAIL_TEMPLATE_1_SUBJECT",
+            "ftype": "input",
+            "value": "",
+            "placeholder": "Enter subject for first email template"
+        },
+        {
+            "title": "Template 1 Body",
+            "key": "EMAIL_TEMPLATE_1_BODY",
+            "ftype": "textarea",
+            "value": "",
+            "placeholder": "Enter body for first email template"
+        },
+        {
+            "title": "Template 2 Subject",
+            "key": "EMAIL_TEMPLATE_2_SUBJECT",
+            "ftype": "input",
+            "value": "",
+            "placeholder": "Enter subject for second email template"
+        },
+        {
+            "title": "Template 2 Body",
+            "key": "EMAIL_TEMPLATE_2_BODY",
+            "ftype": "textarea",
+            "value": "",
+            "placeholder": "Enter body for second email template"
+        },
+        {
+            "title": "Template 3 Subject",
+            "key": "EMAIL_TEMPLATE_3_SUBJECT",
+            "ftype": "input",
+            "value": "",
+            "placeholder": "Enter subject for third email template"
+        },
+        {
+            "title": "Template 3 Body",
+            "key": "EMAIL_TEMPLATE_3_BODY",
+            "ftype": "textarea",
+            "value": "",
+            "placeholder": "Enter body for third email template"
+        },
+        {
+            "title": "Template 4 Subject",
+            "key": "EMAIL_TEMPLATE_4_SUBJECT",
+            "ftype": "input",
+            "value": "",
+            "placeholder": "Enter subject for fourth email template"
+        },
+        {
+            "title": "Template 4 Body",
+            "key": "EMAIL_TEMPLATE_4_BODY",
+            "ftype": "textarea",
+            "value": "",
+            "placeholder": "Enter body for fourth email template"
+        },
+        {
+            "title": "Template 5 Subject",
+            "key": "EMAIL_TEMPLATE_5_SUBJECT",
+            "ftype": "input",
+            "value": "",
+            "placeholder": "Enter subject for fifth email template"
+        },
+        {
+            "title": "Template 5 Body",
+            "key": "EMAIL_TEMPLATE_5_BODY",
+            "ftype": "textarea",
+            "value": "",
+            "placeholder": "Enter body for fifth email template"
+        }
+    ]
+}

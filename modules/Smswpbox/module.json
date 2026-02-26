@@ -1,0 +1,89 @@
+{
+    "alias": "smswpbox",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Smswpbox\\Providers\\Main"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "hasSidebar":true,
+    "sidebarData":[
+        {
+            "name":"SMS",
+            "app":"smswpbox",
+            "icon":"https://mobidonia-demo.imgix.net/icons/sms3.svg",
+            "brandColor":"#25D366",
+            "view":"smswpbox::sideapp.app",
+            "script":"smswpbox::sideapp.script"
+        }
+    ],
+    "vendor_fields":[
+        {
+            "separator": "SMS Twilio",
+            "icon":"📲",
+            "title": "Twilio Account SID",
+            "key": "TWILIO_ACCOUNT_SID", 
+            "ftype": "input",
+            "type": "text",
+            "value": "",
+            "placeholder": "Enter your Twilio Account SID"
+        },
+        {
+            "title": "Twilio Auth Token",
+            "key": "TWILIO_AUTH_TOKEN",
+            "ftype": "input", 
+            "type": "text",
+            "value": "",
+            "placeholder": "Enter your Twilio Auth Token"
+        },
+        {
+            "title": "Twilio From Number",
+            "key": "TWILIO_FROM_NUMBER",
+            "ftype": "input",
+            "type": "text", 
+            "value": "",
+            "placeholder": "Enter your Twilio Phone Number"
+        },
+        {
+            "separator": "SMS Templates",
+            "icon": "📝",
+            "title": "Template 1",
+            "key": "SMS_TEMPLATE_1",
+            "ftype": "textarea",
+            "value": "",
+            "placeholder": "Enter your first SMS template"
+        },
+        {
+            "title": "Template 2", 
+            "key": "SMS_TEMPLATE_2",
+            "ftype": "textarea",
+            "value": "",
+            "placeholder": "Enter your second SMS template"
+        },
+        {
+            "title": "Template 3",
+            "key": "SMS_TEMPLATE_3", 
+            "ftype": "textarea",
+            "value": "",
+            "placeholder": "Enter your third SMS template"
+        },
+        {
+            "title": "Template 4",
+            "key": "SMS_TEMPLATE_4",
+            "ftype": "textarea",
+            "value": "",
+            "placeholder": "Enter your fourth SMS template"
+        },
+        {
+            "title": "Template 5",
+            "key": "SMS_TEMPLATE_5",
+            "ftype": "textarea",
+            "value": "",
+            "placeholder": "Enter your fifth SMS template"
+        }
+    ]
+}

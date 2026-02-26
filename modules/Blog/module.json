@@ -1,0 +1,46 @@
+{
+    "alias": "blog",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Blog\\Providers\\Main"
+    ],
+    
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "adminmenus":[
+        {
+            "name":"Blog",
+            "icon":"ni ni-collection text-blue",
+            "route":"blogging.index"
+        }
+    ],
+    "global_fields":[
+        {
+            "separator":"Blog settings",
+            "icon":"🔗",
+            "title": "TinyMCE API Key",
+            "key": "TINYMCE_API_KEY", 
+            "help": "Get it from https://www.tiny.cloud",
+            "ftype": "input",
+            "value": "ncyt1rcvx8ln70emuf8hmfyorf4d25t06176rasxqn5lyxkn"
+        },
+        {
+            "title": "Show Featured Image",
+            "key": "BLOG_SHOW_FEATURED_IMAGE",
+            "help": "Display featured image on blog posts?", 
+            "ftype": "bool",
+            "value": true
+        },
+        {
+            "title": "Disqus Shortname",
+            "key": "BLOG_DISQUS_SHORTNAME",
+            "help": "Disqus shortname", 
+            "ftype": "input",
+            "value": "wpbox"
+        }
+    ]
+}

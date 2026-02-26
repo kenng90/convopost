@@ -1,0 +1,67 @@
+{
+    "alias": "woolist",
+    "name": "WooCommerce",
+    "namespace":"Modules\\Woolist\\Http\\Controllers",
+    "icon": "🛍️",
+    "isLinkFetcher": true,
+    "brandColor": "#96588A",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Woolist\\Providers\\Main"
+    ],
+    "hasSidebar":true,
+    "sidebarData":[
+        {
+            "name":"WooCommerce",
+            "app":"woolist",
+            "icon":"https://mobidonia-demo.imgix.net/icons/shopify.svg",
+            "brandColor":"#96588A",
+            "view":"woolist::sideapp.app",
+            "script":"woolist::sideapp.script"
+        }
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "vendor_fields":[
+        {
+            "separator":"WooCommerce integration",
+            "title": "Link to your WooCommerce store",
+            "key":"woocommerce_store_url",
+            "ftype": "input",
+            "icon":"🛍️",
+            "value": ""
+        },
+        {
+            "title": "Name of the button",
+            "key": "woolist_button_name",
+            "ftype": "input",
+            "value": "🛍️ WooCommerce",
+            "placeholder": "Enter button name"
+        },
+        {
+            "title": "Currency",
+            "key": "woocommerce_currency",
+            "ftype": "input",
+            "value": "",
+            "placeholder": "$"
+        },
+        {
+            "title": "Consumer Key",
+            "key": "woocommerce_consumer_key", 
+            "ftype": "input",
+            "value": "",
+            "placeholder": "ck_XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        },
+        {
+            "title": "Consumer Secret",
+            "key": "woocommerce_consumer_secret",
+            "ftype": "input",
+            "value": "",
+            "placeholder": "cs_XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        }
+    ]
+}

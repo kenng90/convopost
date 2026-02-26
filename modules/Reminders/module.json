@@ -1,0 +1,64 @@
+{
+    "alias": "reminders",
+    "version": "1.3",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Reminders\\Providers\\Main"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "hasSidebar":true,
+    "sidebarData":[
+        {
+            "name":"Reservations",
+            "app":"reminders",
+            "icon":"https://mobidonia-demo.imgix.net/icons/calendar2.svg",
+            "brandColor":"#8966FE",
+            "view":"reminders::sideapp.app",
+            "script":"reminders::sideapp.script"
+        }
+    ],
+    "vendor_fields":[
+        {
+            "separator":"Reminders",
+            "title":"Enable Reminders",
+            "key":"ENABLE_REMINDERS", 
+            "ftype":"bool",
+            "icon":"📆",
+            "value":true
+        }
+    ],
+    "ownermenus":[
+        {       
+            "name":"Reminders",
+            "priority":5,
+            "id":"remindersMenu",
+            "icon":"ni ni-calendar-grid-58 text-green",
+            "route":"reminders.panel",
+            "isGroup":true,
+            "menus":[ 
+                
+                {
+                    "name": "Reservations",
+                    "icon": "ni ni-calendar-grid-58 text-primary",
+                    "route": "reminders.reservations.index"
+                },
+                {
+                    "name": "Reminders",
+                    "icon": "ni ni-bell-55 text-primary",
+                    "route": "reminders.reminders.index"
+                },
+                {
+                    "name": "Sources",
+                    "icon": "ni ni-collection text-primary",
+                    "route": "reminders.sources.index"
+                }
+            ]
+        }
+    ]
+
+}

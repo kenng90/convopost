@@ -1,0 +1,33 @@
+{
+    "alias": "voiceflow",
+    "version": "1.2",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Voiceflow\\Providers\\Main",
+        "Modules\\Voiceflow\\Providers\\Event"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "vendor_fields":[
+        {
+            "separator":"Voiceflow",
+            "title": "Enable Voiceflow",
+            "key":"enable_voiceflow",
+            "ftype": "bool",
+            "icon":"🔊",
+            "value": "false"
+        },
+        {
+            "title": "Voiceflow.com API Key",
+            "key":"voiceflow_api_key",
+            "ftype": "input",
+            "value": "",
+            "hint": "Get your API key from Voiceflow"
+        }
+    ]
+    
+}

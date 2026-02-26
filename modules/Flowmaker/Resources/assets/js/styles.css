@@ -1,0 +1,137 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 142 76% 36%;
+    --primary-foreground: 355.7 100% 97.3%;
+    --secondary: 187 63% 47%;
+    --secondary-foreground: 355.7 100% 97.3%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 142 76% 36%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-inter;
+  }
+}
+
+/* React Flow Node Styling */
+.react-flow__node {
+  @apply font-inter shadow-sm;
+  border-radius: 12px;
+  min-width: 200px;
+  font-size: 14px;
+  color: #344054;
+  text-align: left;
+  background: white;
+  border: 1px solid #E4E7EC;
+  padding: 0;
+}
+
+.react-flow__handle {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #4ADE80;
+  border: 2px solid white;
+}
+
+.react-flow__edge-path {
+  stroke: #E4E7EC;
+  stroke-width: 2;
+}
+
+.react-flow__controls {
+  @apply shadow-sm rounded-lg overflow-hidden bottom-28 !important;
+  background: white;
+  border: 1px solid #E4E7EC;
+}
+
+.react-flow__controls button {
+  @apply border-b border-gray-100;
+  background: white;
+  padding: 4px;
+  color: #344054;
+}
+
+.react-flow__controls button:hover {
+  background: #F9FAFB;
+}
+
+.react-flow__minimap {
+  @apply rounded-lg shadow-sm bottom-28 !important;
+  background: white;
+  border: 1px solid #E4E7EC;
+}
+
+/* Node input styles */
+.react-flow__node input {
+  @apply bg-white border border-gray-200 rounded-md px-3 py-2;
+  font-size: 0.875rem;
+  width: 100%;
+}
+
+.react-flow__node input:focus {
+  @apply outline-none ring-2 ring-primary ring-opacity-50 border-primary;
+}
+
+/* Disabled buttons */
+.disabled-button {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* Node settings section */
+.node-settings-section {
+  @apply divide-y divide-gray-100;
+}
+
+/* Conditions list */
+.conditions-list {
+  @apply text-sm text-gray-600 py-1;
+}
+
+/* Node headers */
+.node-header {
+  @apply flex items-center gap-2 border-b border-gray-100 p-3 bg-gray-50;
+}
+
+/* Node content */
+.node-content {
+  @apply p-4 space-y-4;
+}
+
+/* Custom handle colors */
+.handle-success {
+  @apply !bg-green-500;
+}
+
+.handle-error {
+  @apply !bg-red-500;
+}
+
+.handle-default {
+  @apply !bg-gray-400;
+}

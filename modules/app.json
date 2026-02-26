@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Mobidonia",
+    "slug": "mobidonia",
+    "version": "4.2.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "locationAlwaysPermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location.",
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with your contacts."
+        }
+      ],
+      "expo-font",
+      "expo-asset"
+    ],
+    "ios": {
+      "infoPlist": {
+        "NSLocationAlwaysUsageDescription": "This app uses the location to track the order current position",
+        "NSLocationWhenInUseUsageDescription": "This app uses the location to track the order position"
+      },
+      "bundleIdentifier": "com.dimovdaniel.mobidonia",
+      "supportsTablet": false,
+      "buildNumber": "1.1"
+    },
+    "android": {
+      "package": "com.dimovdaniel.mobidonia",
+      "versionCode": 2,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.FOREGROUND_SERVICE"
+      ]
+    },
+    "description": "",
+    "extra": {
+      "eas": {
+        "projectId": "83f3e0ea-add5-45bd-bc71-60be0cefb943"
+      }
+    }
+  }
+}

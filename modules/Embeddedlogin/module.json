@@ -1,0 +1,31 @@
+{
+    "alias": "embeddedlogin",
+    "version": "1.6",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Embeddedlogin\\Providers\\Main"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "global_fields":[
+        {
+            "separator":"Embedded Login setup",
+            "title": "Facebook Config ID",
+            "key":"EMBEDDED_FB_CONFIG_ID",
+            "help":"Info https://www.notion.so/mobidonia/WhatsApp-Embedded-SignUp-dbcb1473ecc14a55a37ce337468ee848",
+            "ftype": "input",
+            "value": ""
+        },
+        {
+            "title": "Solution ID",
+            "key":"BS_PROVIDER_ID",
+            "help":"Optional. Only if you use business solution provider. Info https://developers.facebook.com/docs/whatsapp/solution-providers/multi-partner-solutions/",
+            "ftype": "input",
+            "value": ""
+        }
+    ]
+}
