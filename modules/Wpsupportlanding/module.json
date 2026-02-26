@@ -1,0 +1,15 @@
+{
+    "alias": "wpsupportlanding",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Wpsupportlanding\\Providers\\Main"
+    ],
+    "nameSpace": "Modules\\Wpsupportlanding",
+    "hasDashboardInfo":true,
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

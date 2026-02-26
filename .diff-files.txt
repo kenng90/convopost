@@ -1,0 +1,8 @@
+README.md
+config/settings.php
+config/version.php
+modules/Contacts/Database/Migrations/2025_08_14_140252_add_credits_to_contacts_table.php
+modules/Knowledge/module.json
+modules/Whatsappcall/Resources/views/reports/call_statistics/app.blade.php
+package.json
+resources/views/admin/navbars/menus/extra.blade.php
