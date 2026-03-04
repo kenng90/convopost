@@ -22,6 +22,8 @@ import OpenAINode from '@/components/flow/OpenAINode';
 import DataStoreNode from '@/components/flow/DataStoreNode';
 import AssignAgentNode from '@/components/flow/AssignAgentNode';
 import AssignGroupNode from '@/components/flow/AssignGroupNode';
+import CounterNode from '@/components/flow/CounterNode';
+import CheckPricingNode from '@/components/flow/CheckPricingNode';
 
 export const nodeTypes = {
   trigger: TriggerNode,
@@ -47,4 +49,6 @@ export const nodeTypes = {
   datastore: DataStoreNode,
   assign_agent: AssignAgentNode,
   assign_group: AssignGroupNode,
+  counter: CounterNode,
+  check_pricing: CheckPricingNode,
 };

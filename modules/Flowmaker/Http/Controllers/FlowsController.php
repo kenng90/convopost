@@ -6,6 +6,7 @@ use Modules\Flowmaker\Models\Flow;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Modules\Wpbox\Models\Reply;
+use Illuminate\Support\Str;
 
 class FlowsController extends Controller
 {
@@ -207,6 +208,83 @@ class FlowsController extends Controller
         Reply::where('flow_id', $item->id)->delete();
         $item->delete();
         return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_removed', ['item'=>__($this->title)]));
+    }
+
+    /**
+     * Export flow data as JSON file.
+     *
+     * @param  \Modules\Flowmaker\Models\Flow  $flow
+     * @return \Illuminate\Http\Response
+     */
+    public function export(Flow $flow)
+    {
+        $this->authChecker();
+        
+        $flowData = $flow->flow_data ?? '{}';
+        $fileName = 'flow_' . $flow->id . '_' . Str::slug($flow->name) . '_' . date('Y-m-d_H-i-s') . '.json';
+        
+        return response($flowData)
+            ->header('Content-Type', 'application/json')
+            ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+    }
+
+    /**
+     * Show the import form.
+     *
+     * @param  \Modules\Flowmaker\Models\Flow  $flow
+     * @return \Illuminate\Http\Response
+     */
+    public function showImport(Flow $flow)
+    {
+        $this->authChecker();
+        
+        return view($this->view_path.'import', [
+            'flow' => $flow,
+            'setup' => [
+                'title' => __('Import Flow Data for :name', ['name' => $flow->name]),
+                'action_link' => url('/flows'),
+                'action_name' => __('crud.back'),
+                'action' => url('/flows/' . $flow->id . '/import'),
+                'iscontent' => true,
+            ]
+        ]);
+    }
+
+    /**
+     * Import flow data from JSON file.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Modules\Flowmaker\Models\Flow  $flow
+     * @return \Illuminate\Http\Response
+     */
+    public function import(Request $request, Flow $flow)
+    {
+        $this->authChecker();
+        
+        $request->validate([
+            'flow_file' => 'required|file|mimes:json|max:2048'
+        ]);
+
+        try {
+            $file = $request->file('flow_file');
+            $content = file_get_contents($file->path());
+            
+            // Validate if it's valid JSON
+            $decoded = json_decode($content, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return redirect()->back()->withErrors(['flow_file' => 'Invalid JSON file format.']);
+            }
+
+            // Update the flow's flow_data
+            $flow->flow_data = $content;
+            $flow->save();
+
+            return redirect('/flows')
+                ->withStatus(__('Flow data has been imported successfully for :name', ['name' => $flow->name]));
+
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['flow_file' => 'Error importing file: ' . $e->getMessage()]);
+        }
     }
     
 }

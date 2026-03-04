@@ -12,7 +12,8 @@ class UserReply extends Node
     public function listenForReply($message, $data){
        Log::info('Listening for reply in user reply node');
 
-       $contact = Contact::find($data['contact_id']);
+       $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+       $contact = Contact::find($contactId);
        $settings = $this->getDataAsArray()['settings'];
        
        // Store the user's reply in the specified variable
@@ -56,7 +57,8 @@ class UserReply extends Node
             ];
         }
         
-        $contact = Contact::find($data['contact_id']);
+        $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+        $contact = Contact::find($contactId);
 
         //Get settings
         $settings = $this->getDataAsArray()['settings'];
@@ -75,19 +77,19 @@ class UserReply extends Node
             'message' => $question
         ];
 
+        // Save state BEFORE the API call so we always wait for reply regardless of HTTP outcome
+        $contact->setContactState($this->flow_id, 'current_node', $this->id);
+        Log::info('Contact state saved, waiting for user reply', ['nodeId' => $this->id, 'flowId' => $this->flow_id]);
+
         Log::info('Question message payload', ['payload' => $payload]);
 
         // Make the API call to send the question
         try {
             $response = Http::post(config('app.url').'/api/wpbox/sendmessage', $payload);
             Log::info('Question message API response', ['response' => $response->json()]);
-            
+
             if (!$response->successful()) {
                 Log::error('Failed to send question message', ['error' => $response->body()]);
-            } else {
-                //Set the user state to wait for response
-                $contact->setContactState($this->flow_id, 'current_node', $this->id);
-                Log::info('Set contact state to wait for user reply', ['node_id' => $this->id]);
             }
         } catch (\Exception $e) {
             Log::error('Error sending question message', ['error' => $e->getMessage()]);

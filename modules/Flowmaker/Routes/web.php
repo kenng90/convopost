@@ -11,23 +11,24 @@
 |
 */
 Route::group([
-    'middleware' =>[ 'web','impersonate'],
-    'namespace' => 'Modules\Flowmaker\Http\Controllers'
+    'middleware' => ['web', 'impersonate'],
+    'namespace' => 'Modules\Flowmaker\Http\Controllers',
 ], function () {
     Route::group([
-        'middleware' =>[ 'web','auth','impersonate']
+        'middleware' => ['web', 'auth', 'impersonate'],
     ], function () {
 
-         //Flows
-         Route::get('flows', 'FlowsController@index')->name('flows.index');
-         Route::get('flows/{flow}/edit', 'FlowsController@edit')->name('flows.edit');
-         Route::get('flows/create', 'FlowsController@create')->name('flows.create');
-         Route::post('flows', 'FlowsController@store')->name('flows.store');
-         Route::put('flowsflows/{flow}', 'FlowsController@update')->name('flows.update');
-         Route::get('flows/del/{flow}', 'FlowsController@destroy')->name('flows.delete');
+        //Flows
+        Route::get('flows', 'FlowsController@index')->name('flows.index');
+        Route::get('flows/{flow}/edit', 'FlowsController@edit')->name('flows.edit');
+        Route::get('flows/create', 'FlowsController@create')->name('flows.create');
+        Route::post('flows', 'FlowsController@store')->name('flows.store');
+        Route::put('flows/{flow}', 'FlowsController@update')->name('flows.update');
+        Route::get('flows/del/{flow}', 'FlowsController@destroy')->name('flows.delete');
+        Route::get('flows/{flow}/export', 'FlowsController@export')->name('flows.export');
+        Route::get('flows/{flow}/import', 'FlowsController@showImport')->name('flows.import.show');
+        Route::post('flows/{flow}/import', 'FlowsController@import')->name('flows.import');
 
-
-         
         //Flow maker
         Route::get('flowmaker/edit/{flow}', 'Main@edit')->name('flowmaker.edit');
         Route::get('flowmaker/script', 'Main@script')->name('flowmaker.script');
@@ -54,8 +55,10 @@ Route::group([
         Route::delete('ai/document/{document}', 'AIController@deleteDocument')
             ->name('ai.delete.document')
             ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        Route::post('ai/train-knowledge-base', 'AIController@trainKnowledgeBase')
+            ->name('ai.train.knowledge.base')
+            ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
 
-        
     });
 
 });

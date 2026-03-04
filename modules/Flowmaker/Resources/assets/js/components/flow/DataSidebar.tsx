@@ -1,6 +1,6 @@
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { X, Bot, Globe, Upload, FileText, Plus, Trash2 } from "lucide-react";
+import { X, Bot, Globe, Upload, FileText, Plus, Trash2, Database } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +34,7 @@ const DataSidebar = ({ open, onOpenChange }: DataSidebarProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingFAQ, setIsProcessingFAQ] = useState(false);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [isProcessingKnowledge, setIsProcessingKnowledge] = useState(false);
   
   // State for FAQ inputs
   const [currentQuestion, setCurrentQuestion] = useState("");
@@ -421,6 +422,80 @@ const DataSidebar = ({ open, onOpenChange }: DataSidebarProps) => {
     }
   };
 
+  const handleTrainKnowledgeBase = async () => {
+    console.log('📚 Starting knowledge base training...');
+    
+    setIsProcessingKnowledge(true);
+    
+    try {
+      const flowId = window.location.pathname.split('/').pop();
+      
+      console.log('📡 Making API call to /ai/train-knowledge-base...', {
+        url: '/ai/train-knowledge-base',
+        method: 'POST',
+        flowId: flowId
+      });
+      
+      const response = await fetch('/ai/train-knowledge-base', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        },
+        body: JSON.stringify({
+          flow_id: flowId
+        })
+      });
+
+      console.log('📨 Knowledge base training API response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
+      const data = await response.json();
+      
+      console.log('📋 Knowledge base training response data:', data);
+
+      if (response.ok && data.success) {
+        console.log('✅ Knowledge base training completed successfully:', data.message);
+        console.log('📊 Training stats:', {
+          newArticles: data.stats?.new_articles || 0,
+          updatedArticles: data.stats?.updated_articles || 0,
+          totalChunks: data.stats?.total_chunks || 0
+        });
+        
+        // Show success message with stats
+        const stats = data.stats || {};
+        const message = `Knowledge base training completed!\n\n` +
+                       `New articles: ${stats.new_articles || 0}\n` +
+                       `Updated articles: ${stats.updated_articles || 0}\n` +
+                       `Total chunks created: ${stats.total_chunks || 0}`;
+        
+        alert(message);
+        
+        // Refresh the training data to show updated information
+        if (open) {
+          window.location.reload(); // Simple refresh to update the data
+        }
+      } else {
+        console.error('❌ Error training knowledge base:', data.error || 'Unknown error');
+        console.error('Full error response:', data);
+        alert(data.error || 'Failed to train knowledge base');
+      }
+    } catch (error) {
+      console.error('🚨 Knowledge base training error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
+      alert('Failed to train knowledge base. Please check your internet connection and try again.');
+    } finally {
+      console.log('🏁 Knowledge base training completed');
+      setIsProcessingKnowledge(false);
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[400px] sm:w-[540px] p-0 border-l">
@@ -537,6 +612,23 @@ const DataSidebar = ({ open, onOpenChange }: DataSidebarProps) => {
                         {isProcessingFAQ ? "Processing..." : "Add FAQs"}
                       </Button>
                     </div>
+                  </div>
+
+                  <div className="rounded-lg border p-4">
+                    <h3 className="font-medium mb-2">Knowledge Base Training</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Train your bot using articles from your knowledge base.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full" 
+                      onClick={handleTrainKnowledgeBase}
+                      disabled={isProcessingKnowledge}
+                    >
+                      <Database className="h-4 w-4 mr-2" />
+                      {isProcessingKnowledge ? "Training..." : "Train on Knowledge base"}
+                    </Button>
                   </div>
                 </TabsContent>
                 <TabsContent value="data" className="space-y-4">

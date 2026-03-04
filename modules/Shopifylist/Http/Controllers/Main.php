@@ -61,9 +61,9 @@ class Main extends Controller
         $accessToken = $company->getConfig('shopify_access_token');
 
         if(config('settings.is_demo',false)){
-            $storeName = ''; // Replace with your store name
-            $apiVersion = ''; // Replace with the desired API version
-            $accessToken = ''; // Replace with your access token
+            $storeName = 'vbz32s-vz'; // Replace with your store name
+            $apiVersion = '2024-10'; // Replace with the desired API version
+            $accessToken = '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'; // Replace with your access token
         }
     
         if(empty($storeName) || empty($apiVersion) || empty($accessToken)){
@@ -120,9 +120,9 @@ class Main extends Controller
             $accessToken = $company->getConfig('shopify_access_token');
 
             if(config('settings.is_demo',false)){
-                $storeName = ''; // Replace with your store name
-                $apiVersion = ''; // Replace with the desired API version
-                $accessToken = ''; // Replace with your access token
+                $storeName = 'vbz32s-vz'; // Replace with your store name
+                $apiVersion = '2024-10'; // Replace with the desired API version
+                $accessToken = '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'; // Replace with your access token
             }
            
 

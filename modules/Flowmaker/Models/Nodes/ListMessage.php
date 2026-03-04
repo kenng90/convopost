@@ -17,6 +17,8 @@ class ListMessage extends Node
         $node = null;
         $elseNode = $this->getNextNodeId("else");
         
+        $itemMatched = false;
+
         if($extraData != null && $extraData != ''){
             Log::info('Extra data found', ['extraData' => $extraData]);
 
@@ -30,6 +32,7 @@ class ListMessage extends Node
                     $listItemId = "{$section['id']}-{$row['id']}_id{$this->id}_flow{$this->flow_id}";
                     if($listItemId == $extraData){
                         Log::info('List item ID found', ['listItemId' => $listItemId]);
+                        $itemMatched = true;
 
                         // Get the handle ID for the connection
                         $handleId = "{$section['id']}-{$row['id']}";
@@ -48,12 +51,20 @@ class ListMessage extends Node
                 }
             }
         } else {
-            Log::info('No extra data found');
+            Log::info('No extra data found - keeping current_node state to wait for list selection');
         }
 
-        // Clear the current node from the contact state
-        $contact = Contact::find($data['contact_id']);
-        Log::info("Clear current node from contact state for contact ".$contact->id." and flow ".$this->flow_id);
+        // If no extra data, the user sent a plain text message (not a list selection)
+        // Keep the current_node state so we continue waiting for a list selection
+        if($extraData == null || $extraData == ''){
+            Log::info('No list selection detected (no extra data) - keeping current_node state');
+            return;
+        }
+
+        // A list item was selected - clear the waiting state and route accordingly
+        $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+        $contact = Contact::find($contactId);
+        Log::info("Clearing current node from contact state for contact ".$contact->id." and flow ".$this->flow_id);
         $contact->clearContactState($this->flow_id, 'current_node');
         Log::info("Current node cleared");
 
@@ -80,7 +91,8 @@ class ListMessage extends Node
             ];
         }
         
-        $contact = Contact::find($data['contact_id']);
+        $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+        $contact = Contact::find($contactId);
 
         // Get settings
         $settings = $this->getDataAsArray()['settings'];
@@ -132,16 +144,17 @@ class ListMessage extends Node
 
         Log::info('List message payload', ['payload' => $payload]);
 
+        // Save the contact state before making the API call so we always wait for a reply
+        $contact->setContactState($this->flow_id, 'current_node', $this->id);
+        Log::info('Contact state saved, waiting for reply', ['nodeId' => $this->id, 'flowId' => $this->flow_id]);
+
         // Make the API call
         try {
             $response = Http::post(config('app.url').'/api/wpbox/sendlistmessage', $payload);
             Log::info('List message API response', ['response' => $response->json()]);
-            
+
             if (!$response->successful()) {
                 Log::error('Failed to send list message', ['error' => $response->body()]);
-            } else {
-                // Set the user state
-                $contact->setContactState($this->flow_id, 'current_node', $this->id);
             }
         } catch (\Exception $e) {
             Log::error('Error sending list message', ['error' => $e->getMessage()]);
@@ -162,4 +175,4 @@ class ListMessage extends Node
         }
         return null;
     }
-} 
+}

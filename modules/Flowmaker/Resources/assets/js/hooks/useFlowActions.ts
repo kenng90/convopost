@@ -62,6 +62,8 @@ export const useFlowActions = () => {
             type === 'datastore' ? 'datastore' :
             type === 'assign_agent' ? 'assign_agent' :
             type === 'assign_group' ? 'assign_group' :
+            type === 'counter' ? 'counter' :
+            type === 'check_pricing' ? 'check_pricing' :
             type === 'branch' ? 'branch' : 'action',
       position: newPosition,
       data: data || {
@@ -80,6 +82,8 @@ export const useFlowActions = () => {
                type === 'datastore' ? 'Data Store' :
                type === 'assign_agent' ? 'Assign to Agent' :
                type === 'assign_group' ? 'Assign to Group' :
+               type === 'counter' ? 'Counter' :
+               type === 'check_pricing' ? 'Check User Pricing' :
                type.charAt(0).toUpperCase() + type.slice(1),
         type,
         settings: type === 'branch' 
@@ -116,6 +120,10 @@ export const useFlowActions = () => {
           ? { agentId: 'none' }
           : type === 'assign_group'
           ? { groupId: 'none', action: 'add' }
+          : type === 'counter'
+          ? { counter: { maxExecutions: 1, period: 'all_time' } }
+          : type === 'check_pricing'
+          ? { pricing: { freeExecutions: 0 } }
           : {},
       },
     };

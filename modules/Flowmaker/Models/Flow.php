@@ -74,8 +74,15 @@ class Flow extends Model
             Log::info('Start node from contact state', ['startNode' => $startNode]);
 
             try{
-                $graph = $this->makeGraph($flowData->nodes, $flowData->edges,$startNode);
+                $graph = $this->makeGraph($flowData->nodes, $flowData->edges, $startNode);
                 Log::info('Graph node '.$graph->id);
+
+                // If a startNode was saved but the graph resolved to a different node,
+                // the saved state was stale (e.g. from a different flow or deleted node)
+                if($startNode && $graph->id !== $startNode){
+                    Log::warning('Stale contact state detected - clearing current_node', ['stale' => $startNode, 'resolved' => $graph->id]);
+                    $contact->clearContactState($this->id, 'current_node');
+                }
             }catch(\Exception $e){
                 Log::error('Error making graph', ['error' => $e->getMessage()]);
             }
@@ -173,11 +180,14 @@ class Flow extends Model
         }
 
         //Return the graph, it is the first node
-        if($startNode){
+        if($startNode && isset($nodes[$startNode])){
             Log::info('Using provided start node', ['startNode' => $startNode]);
             $nodes[$startNode]->isStartNode = true;
             return $nodes[$startNode];
         }else{
+            if($startNode){
+                Log::warning('Saved start node not found in current flow nodes - stale state, falling back to default start', ['startNode' => $startNode]);
+            }
             $foundStartNode = $this->findStartNode($nodes);
             Log::info('Found start node based on position and type', ['startNode' => $foundStartNode->id]);
             $foundStartNode->isStartNode = true;
@@ -194,7 +204,7 @@ class Flow extends Model
      * @return Node The start node
      */
     private function findStartNode(array $nodes) {
-        $validTypes = ['keyword_trigger','incoming_message'];
+        $validTypes = ['keyword_trigger', 'incoming_message', 'incomingMessage'];
         $startNode = null;
         $lowestX = PHP_FLOAT_MAX;
 

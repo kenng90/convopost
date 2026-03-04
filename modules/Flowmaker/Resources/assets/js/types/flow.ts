@@ -1,8 +1,8 @@
 
-export type NodeType = 'trigger' | 'action' | 'end' | 'incomingMessage' | 'keyword_trigger' | 'opening_hours' | 'template' | 'webhook' | 'branch' | 'http' | 'media' | 'question' | 'image' | 'pdf' | 'video' | 'openai' | 'datastore';
+export type NodeType = 'trigger' | 'action' | 'end' | 'incomingMessage' | 'keyword_trigger' | 'opening_hours' | 'template' | 'webhook' | 'branch' | 'http' | 'media' | 'question' | 'image' | 'pdf' | 'video' | 'openai' | 'datastore' | 'counter' | 'check_pricing';
 
 export type ActionType = 'message' | 'wait' | 'branch' | 'end' | 'trigger' | 'incoming_message' | 'keyword_trigger' | 'quick_replies' | 'opening_hours' | 'template' | 'webhook' | 
-  'assign_agent' | 'assign_team' | 'unassign_agent' | 'unassign_team' | 'internal_note' | 'contact_label' | 'tag' | 'add_contact' | 'remove_contact' | 'archive' | 'unarchive' | 'update_contact' | 'http' | 'media' | 'question' | 'image' | 'pdf' | 'video' | 'openai' | 'datastore';
+  'assign_agent' | 'assign_team' | 'unassign_agent' | 'unassign_team' | 'internal_note' | 'contact_label' | 'tag' | 'add_contact' | 'remove_contact' | 'archive' | 'unarchive' | 'update_contact' | 'http' | 'media' | 'question' | 'image' | 'pdf' | 'video' | 'openai' | 'datastore' | 'counter' | 'check_pricing';
 
 export type MessageType = 'text' | 'media' | 'template' | 'interactive' | 'quick_reply' | 'list';
 export type TriggerType = 'incoming_message' | 'keyword' | 'opening_hours' | 'template' | 'webhook';
@@ -112,6 +112,13 @@ export interface NodeData {
       name?: string;
       type?: 'database' | 'api' | 'file';
       connectionDetails?: Record<string, string>;
+    };
+    counter?: {
+      maxExecutions: number;
+      period: 'all_time' | 'last_30_days';
+    };
+    pricing?: {
+      freeExecutions: number;
     };
   };
   [key: string]: any;

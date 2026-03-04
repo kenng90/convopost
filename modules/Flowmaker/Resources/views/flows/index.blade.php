@@ -11,7 +11,7 @@
            
             
             <td>
-                <!-- EDIT -->
+                <!-- FLOW MAKER -->
                 <a href="{{ route('flowmaker.edit',['flow'=>$item->id]) }}" class="btn btn-success btn-sm">
                     <i class="ni ni-ruler-pencil"></i> {{ __('Flow maker')}}
                 </a>
@@ -19,6 +19,16 @@
                 <!-- EDIT -->
                 <a href="{{ route('flows.edit',['flow'=>$item->id]) }}" class="btn btn-primary btn-sm">
                     <i class="ni ni-ruler-pencil"></i>
+                </a>
+
+                <!-- EXPORT -->
+                <a href="{{ url('/flows/' . $item->id . '/export') }}" class="btn btn-info btn-sm" title="Export Flow Data">
+                    <i class="ni ni-archive-2"></i>
+                </a>
+
+                <!-- IMPORT -->
+                <a href="{{ url('/flows/' . $item->id . '/import') }}" class="btn btn-warning btn-sm" title="Import Flow Data">
+                    <i class="ni ni-cloud-upload-96"></i>
                 </a>
 
                 <!-- DELETE -->

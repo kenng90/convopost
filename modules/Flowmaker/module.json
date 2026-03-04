@@ -14,9 +14,10 @@
     "requires": [],
     "ownermenus":[
         {
-            "name":"Flows",
+            "name":"AI Flows",
             "icon":"ni ni-controller text-blue",
             "route":"flows.index",
+            "onlyin": "wpbox,whatssupport",
             "color":"#2dce89",
             "priority":10
         }

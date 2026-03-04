@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useFlowActions } from "@/hooks/useFlowActions";
-import { GitMerge, Clock, Square } from "lucide-react";
+import { GitMerge, Clock, Square, Calculator, CreditCard } from "lucide-react";
 
 interface FlowControlSectionProps {
   searchQuery: string;
@@ -17,6 +17,33 @@ export const FlowControlSection = ({ searchQuery }: FlowControlSectionProps) => 
       bgColor: "bg-violet-100",
       textColor: "text-violet-600",
       onClick: () => createNodeBase('branch', { x: 0, y: 0 }),
+    },
+    {
+      icon: Calculator,
+      label: "Counter",
+      bgColor: "bg-orange-100",
+      textColor: "text-orange-600",
+      onClick: () => createNodeBase('counter', { x: 0, y: 0 }, {
+        settings: {
+          counter: {
+            maxExecutions: 1,
+            period: 'all_time'
+          }
+        }
+      }),
+    },
+    {
+      icon: CreditCard,
+      label: "Check User Pricing",
+      bgColor: "bg-green-100",
+      textColor: "text-green-600",
+      onClick: () => createNodeBase('check_pricing', { x: 0, y: 0 }, {
+        settings: {
+          pricing: {
+            freeExecutions: 0
+          }
+        }
+      }),
     },
     {
       icon: Square,

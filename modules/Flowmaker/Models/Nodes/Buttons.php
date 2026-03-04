@@ -10,25 +10,32 @@ use Illuminate\Support\Facades\Http;
 class Buttons extends Node
 {
     public function listenForReply($message, $data){
-       Log::info('Listening for reply in buttons node');
+       Log::info('Listening for reply in buttons node', ['nodeId' => $this->id, 'flowId' => $this->flow_id]);
 
        //Get extra data
        $extraData = $data->extra;
        $node=null;
        $elseNode = $this->getNextNodeId("else");
-       if($extraData!=null || $extraData!=''){
+
+       $buttonMatched = false;
+
+       if($extraData!=null && $extraData!=''){
             Log::info('Extra data found', ['extraData' => $extraData]);
 
             $settings = $this->getDataAsArray()['settings'];
 
             $activeButtons = $settings['activeButtons'] ?? 0;
+            Log::info('Attempting to match button', ['activeButtons' => $activeButtons, 'extraData' => $extraData]);
 
             for ($i = 1; $i <= $activeButtons; $i++) {
                 $buttonKey = "button{$i}";
                 if (isset($settings[$buttonKey]) && $settings[$buttonKey] !== null) {
                     $btnID= "button-{$i}_id{$this->id}_flow{$this->flow_id}";
+                    Log::info('Checking button match', ['expectedBtnID' => $btnID, 'receivedExtraData' => $extraData, 'match' => ($btnID == $extraData)]);
+
                     if($btnID==$extraData){
-                        Log::info('Button ID found', ['btnID' => $btnID]);
+                        Log::info('Button ID matched!', ['btnID' => $btnID]);
+                        $buttonMatched = true;
 
                         //Get the first 8 characters of the btnID
                         $btnIDsub = substr($btnID, 0, 8);
@@ -50,20 +57,28 @@ class Buttons extends Node
                     }
                 }
             }
-        
+
        }else{
-            Log::info('No extra data found');
+            Log::info('No extra data found or extra data is empty - keeping current_node state', ['extraData' => $extraData]);
        }
 
-       //Clear the current node from the contact state
-       $contact = Contact::find($data['contact_id']);
-       Log::info("clear current node from contact state for contact ".$contact->id." and flow ".$this->flow_id);
+       // If no extra data, the user sent a plain text message (not a button click)
+       // Keep the current_node state so we continue waiting for a button click
+       if($extraData==null || $extraData==''){
+            Log::info('No button click detected (no extra data) - keeping current_node state');
+            return;
+       }
+
+       // A button click was attempted - clear the waiting state and route accordingly
+       $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+       $contact = Contact::find($contactId);
+       Log::info("Clearing current node from contact state for contact ".$contact->id." and flow ".$this->flow_id);
        $contact->clearContactState($this->flow_id, 'current_node');
-       Log::info("current node cleared");
+       Log::info("Current node cleared");
 
        if($node!=null){
             Log::info('Node found, process it');
-                $node->process($message, $data);
+            $node->process($message, $data);
         }else if($elseNode!=null){
                 Log::info('Node not found, go with else case');
                 $elseNode->process($message, $data);
@@ -82,7 +97,8 @@ class Buttons extends Node
                 'success' => true
             ];
         }
-        $contact = Contact::find($data['contact_id']);
+        $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+        $contact = Contact::find($contactId);
 
         //Get settings
         $settings = $this->getDataAsArray()['settings'];
@@ -130,16 +146,17 @@ class Buttons extends Node
 
         Log::info('Button message payload', ['payload' => $payload]);
 
+        // Save the contact state before making the API call so we always wait for a reply
+        $contact->setContactState($this->flow_id, 'current_node', $this->id);
+        Log::info('Contact state saved, waiting for reply', ['nodeId' => $this->id, 'flowId' => $this->flow_id]);
+
         // Make the API call
         try {
             $response = Http::post(config('app.url').'/api/wpbox/sendmessage', $payload);
             Log::info('Button message API response', ['response' => $response->json()]);
-            
+
             if (!$response->successful()) {
                 Log::error('Failed to send button message', ['error' => $response->body()]);
-            } else {
-                //Set the user state
-                $contact->setContactState($this->flow_id, 'current_node', $this->id);
             }
         } catch (\Exception $e) {
             Log::error('Error sending button message', ['error' => $e->getMessage()]);

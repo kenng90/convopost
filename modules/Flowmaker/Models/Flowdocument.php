@@ -18,17 +18,17 @@ class Flowdocument extends Model
     {
         return $this->hasMany(EmbeddedChunk::class, 'document_id');
     }
-    
+
     /**
      * Get documents by source type for a specific flow
      */
     public static function getBySourceTypeForFlow($flowId, $sourceType)
     {
         return self::where('flow_id', $flowId)
-                   ->where('source_type', $sourceType)
-                   ->get();
+            ->where('source_type', $sourceType)
+            ->get();
     }
-    
+
     /**
      * Get formatted data for frontend
      */
@@ -37,22 +37,29 @@ class Flowdocument extends Model
         switch ($this->source_type) {
             case 'faq':
                 return [
-                    'id' => 'faq-' . $this->id,
+                    'id' => 'faq-'.$this->id,
                     'question' => $this->title,
-                    'answer' => $this->source_url
+                    'answer' => $this->source_url,
                 ];
-                
+
             case 'website':
                 return [
-                    'id' => 'web-' . $this->id,
-                    'url' => $this->source_url
+                    'id' => 'web-'.$this->id,
+                    'url' => $this->source_url,
                 ];
-                
+
+            case 'knowledge_article':
+                return [
+                    'id' => 'knowledge-'.$this->id,
+                    'name' => $this->title,
+                    'type' => 'KNOWLEDGE ARTICLE',
+                ];
+
             default: // files
                 return [
-                    'id' => 'file-' . $this->id,
+                    'id' => 'file-'.$this->id,
                     'name' => $this->title ?: basename($this->source_url),
-                    'type' => strtoupper($this->source_type)
+                    'type' => strtoupper($this->source_type),
                 ];
         }
     }

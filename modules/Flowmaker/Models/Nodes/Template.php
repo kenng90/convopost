@@ -22,8 +22,9 @@ class Template extends Node
 
         // Get template components
         $templateComponents = json_decode($template->components, true);
-        
-        $nextNode=null;
+
+        $nextNode = null;
+        $buttonMatched = false;
         if ($templateComponents) {
             foreach ($templateComponents as $component) {
                 if ($component['type'] === 'BUTTONS') {
@@ -31,23 +32,29 @@ class Template extends Node
                         if (strtolower($button['text']) === strtolower($message)) {
                             Log::info('Button match found', ['button' => $button, 'message' => $message, 'index' => $index]);
                             $nextNode = $this->getNextNodeId("quick-reply-".$index);
+                            $buttonMatched = true;
                         }
                     }
                 }
             }
         }
 
-        // Clear the current node from the contact state
+        // Get the else node
+        $elseNode = $this->getNextNodeId("else");
+
+        // If no button text matched and no extra data, the user sent a plain text message
+        // Keep the current_node state so we continue waiting for a template button click
+        if (!$buttonMatched && $elseNode === null) {
+            Log::info('No template button matched - keeping current_node state to wait for button click');
+            return;
+        }
+
+        // A button was matched (or else path exists) - clear the waiting state
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
-        Log::info("clear current node from contact state for contact ".$contact->id." and flow ".$this->flow_id);
+        Log::info("Clearing current node from contact state for contact ".$contact->id." and flow ".$this->flow_id);
         $contact->clearContactState($this->flow_id, 'current_node');
-        Log::info("current node cleared");
-
-        // Get the next node and process it
-        //else node
-        $elseNode = $this->getNextNodeId("else");
-    
+        Log::info("Current node cleared");
 
         if ($nextNode != null) {
             Log::info('Next node found, process it');

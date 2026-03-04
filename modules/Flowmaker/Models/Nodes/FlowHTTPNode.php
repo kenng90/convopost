@@ -25,6 +25,11 @@ class FlowHTTPNode extends Node
             
             if (!$contact) {
                 Log::error('Contact not found', ['contactId' => $contactId]);
+                // Skip to next node even without a contact
+                $nextNode = $this->getNextNodeId();
+                if ($nextNode) {
+                    $nextNode->process($message, $data);
+                }
                 return ['success' => false];
             }
 
@@ -43,7 +48,6 @@ class FlowHTTPNode extends Node
 
             if (empty($url)) {
                 Log::error('URL is empty after transformation');
-                return ['success' => false];
             }
 
             // Prepare headers
@@ -90,7 +94,6 @@ class FlowHTTPNode extends Node
                     break;
                 default:
                     Log::error('Unsupported HTTP method', ['method' => $method]);
-                    return ['success' => false];
             }
 
             if ($response) {
@@ -123,15 +126,13 @@ class FlowHTTPNode extends Node
 
             } else {
                 Log::error('HTTP request failed - no response');
-                return ['success' => false];
             }
 
         } catch (\Exception $e) {
             Log::error('Error processing HTTP request', ['error' => $e->getMessage()]);
-            return ['success' => false];
         }
 
-        // Continue flow to next node if one exists
+        // Continue flow to next node regardless of HTTP outcome
         $nextNode = $this->getNextNodeId();
         if ($nextNode) {
             $nextNode->process($message, $data);
