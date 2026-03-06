@@ -13,6 +13,11 @@ use Illuminate\Http\Request;
 |
 */
 
+// MPesa STK Push callback - no auth required (called by Safaricom)
+Route::post('/flowmaker/mpesa/callback', [\Modules\Flowmaker\Http\Controllers\MpesaController::class, 'stkCallback'])
+    ->name('flowmaker.mpesa.callback');
+
 Route::middleware('auth:api')->get('/flowmaker', function (Request $request) {
     return $request->user();
 });
+

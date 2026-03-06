@@ -1,4 +1,3 @@
-
 import TriggerNode from '@/components/flow/TriggerNode';
 import ActionNode from '@/components/flow/ActionNode';
 import EndNode from '@/components/flow/EndNode';
@@ -24,6 +23,7 @@ import AssignAgentNode from '@/components/flow/AssignAgentNode';
 import AssignGroupNode from '@/components/flow/AssignGroupNode';
 import CounterNode from '@/components/flow/CounterNode';
 import CheckPricingNode from '@/components/flow/CheckPricingNode';
+import MpesaStkPushNode from '@/components/flow/MpesaStkPushNode';
 
 export const nodeTypes = {
   trigger: TriggerNode,
@@ -51,4 +51,5 @@ export const nodeTypes = {
   assign_group: AssignGroupNode,
   counter: CounterNode,
   check_pricing: CheckPricingNode,
+  mpesa_stk_push: MpesaStkPushNode,
 };

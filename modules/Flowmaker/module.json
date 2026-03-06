@@ -14,10 +14,9 @@
     "requires": [],
     "ownermenus":[
         {
-            "name":"AI Flows",
+            "name":"Flows",
             "icon":"ni ni-controller text-blue",
             "route":"flows.index",
-            "onlyin": "wpbox,whatssupport",
             "color":"#2dce89",
             "priority":10
         }
@@ -29,6 +28,43 @@
             "key":"openrouter_api_key",
             "ftype": "input",
             "icon":"🔗",
+            "value": ""
+        },
+        {
+            "separator":"MPesa Daraja API",
+            "title": "Environment",
+            "key":"mpesa_environment",
+            "ftype": "select",
+            "icon":"📱",
+            "value": "sandbox",
+            "data": {"sandbox": "Sandbox (Testing)", "production": "Production (Live)"}
+        },
+        {
+            "title": "Consumer Key",
+            "key":"mpesa_consumer_key",
+            "ftype": "input",
+            "icon":"🔑",
+            "value": ""
+        },
+        {
+            "title": "Consumer Secret",
+            "key":"mpesa_consumer_secret",
+            "ftype": "input",
+            "icon":"🔑",
+            "value": ""
+        },
+        {
+            "title": "Business Short Code (Paybill / Till No.)",
+            "key":"mpesa_short_code",
+            "ftype": "input",
+            "icon":"🏢",
+            "value": ""
+        },
+        {
+            "title": "Lipa na MPesa Passkey",
+            "key":"mpesa_passkey",
+            "ftype": "input",
+            "icon":"🔐",
             "value": ""
         }
         ]

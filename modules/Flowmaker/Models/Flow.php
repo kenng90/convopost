@@ -23,6 +23,7 @@ use Modules\Flowmaker\Models\Nodes\FlowHTTPNode;
 use Modules\Flowmaker\Models\Nodes\SetVariable;
 use Modules\Flowmaker\Models\Nodes\AssignAgent;
 use Modules\Flowmaker\Models\Nodes\AssignGroup;
+use Modules\Flowmaker\Models\Nodes\MpesaStkPush;
 use Modules\Flowmaker\Models\Flowdocument;
 
 class Flow extends Model
@@ -141,6 +142,8 @@ class Flow extends Model
                 $theNewNode = new AssignAgent($nodeArray, []);
             }else if($nodeArray['type'] === 'assign_group'){
                 $theNewNode = new AssignGroup($nodeArray, []);
+            }else if($nodeArray['type'] === 'mpesa_stk_push'){
+                $theNewNode = new MpesaStkPush($nodeArray, []);
             }else{
                 $theNewNode = new Node($nodeArray, []);
             }
@@ -237,6 +240,42 @@ class Flow extends Model
         }
 
         return $startNode;
+    }
+
+    /**
+     * Resume a flow after an MPesa STK Push callback arrives.
+     * The contact's current_node is still set to the MPesa node,
+     * so makeGraph will set it as isStartNode and call listenForReply.
+     */
+    public function resumeFromMpesaCallback(Contact $contact)
+    {
+        Log::info('Resuming flow from MPesa callback', ['flowId' => $this->id, 'contactId' => $contact->id]);
+
+        try {
+            $flowData = json_decode($this->flow_data, false);
+            $startNode = $contact->getContactStateValue($this->id, 'current_node');
+
+            Log::info('MPesa resume: current_node', ['startNode' => $startNode]);
+
+            if (!$startNode || !isset($flowData->nodes) || !isset($flowData->edges)) {
+                Log::error('MPesa resume: missing flow data or current_node');
+                return;
+            }
+
+            $graph = $this->makeGraph($flowData->nodes, $flowData->edges, $startNode);
+
+            // Create a minimal data object so the node can find the contact
+            $mockData = new \stdClass();
+            $mockData->contact_id = $contact->id;
+            $mockData->company_id = $contact->company_id;
+            $mockData->value = '';
+            $mockData->extra = null;
+
+            $graph->process('', $mockData);
+
+        } catch (\Exception $e) {
+            Log::error('MPesa resume: exception', ['error' => $e->getMessage()]);
+        }
     }
 
     //Company

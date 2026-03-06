@@ -64,6 +64,7 @@ export const useFlowActions = () => {
             type === 'assign_group' ? 'assign_group' :
             type === 'counter' ? 'counter' :
             type === 'check_pricing' ? 'check_pricing' :
+            type === 'mpesa_stk_push' ? 'mpesa_stk_push' :
             type === 'branch' ? 'branch' : 'action',
       position: newPosition,
       data: data || {
@@ -84,6 +85,7 @@ export const useFlowActions = () => {
                type === 'assign_group' ? 'Assign to Group' :
                type === 'counter' ? 'Counter' :
                type === 'check_pricing' ? 'Check User Pricing' :
+               type === 'mpesa_stk_push' ? 'MPesa STK Push' :
                type.charAt(0).toUpperCase() + type.slice(1),
         type,
         settings: type === 'branch' 
@@ -124,6 +126,8 @@ export const useFlowActions = () => {
           ? { counter: { maxExecutions: 1, period: 'all_time' } }
           : type === 'check_pricing'
           ? { pricing: { freeExecutions: 0 } }
+          : type === 'mpesa_stk_push'
+          ? { mpesa: { amount: '', accountReference: 'Payment', transactionDesc: 'Payment', responseVar: 'mpesa_result' } }
           : {},
       },
     };
@@ -273,6 +277,21 @@ export const useFlowActions = () => {
     });
   }, [createNodeBase]);
 
+  const createNodeMpesaStkPush = useCallback((position: { x: number; y: number }) => {
+    return createNodeBase('mpesa_stk_push', position, {
+      label: 'MPesa STK Push',
+      type: 'mpesa_stk_push',
+      settings: {
+        mpesa: {
+          amount: '',
+          accountReference: 'Payment',
+          transactionDesc: 'Payment',
+          responseVar: 'mpesa_result',
+        },
+      },
+    });
+  }, [createNodeBase]);
+
   const createNodeAssignGroup = useCallback((position: { x: number; y: number }) => {
     return createNodeBase('assign_group', position, {
       label: "Assign to Group",
@@ -299,6 +318,7 @@ export const useFlowActions = () => {
     createNodeOpenAI,
     createNodeAssignAgent,
     createNodeAssignGroup,
+    createNodeMpesaStkPush,
     deleteNode,
     updateNode
   };

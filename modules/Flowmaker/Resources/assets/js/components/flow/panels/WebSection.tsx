@@ -1,14 +1,13 @@
-
 import { Button } from "@/components/ui/button";
 import { useFlowActions } from "@/hooks/useFlowActions";
-import { Webhook, Globe, Users, UserPlus } from "lucide-react";
+import { Webhook, Globe, Users, UserPlus, Smartphone } from "lucide-react";
 
 interface WebSectionProps {
   searchQuery: string;
 }
 
 export const WebSection = ({ searchQuery }: WebSectionProps) => {
-  const { createNodeWebhook, createNodeHTTP, createNodeAssignAgent, createNodeAssignGroup } = useFlowActions();
+  const { createNodeWebhook, createNodeHTTP, createNodeAssignAgent, createNodeAssignGroup, createNodeMpesaStkPush } = useFlowActions();
 
   const webOptions = [
     /*{
@@ -20,10 +19,17 @@ export const WebSection = ({ searchQuery }: WebSectionProps) => {
     },*/
     {
       icon: Globe,
-      label: "HTTP Request",
+      label: "HTTP Request--",
       bgColor: "bg-sky-100",
       textColor: "text-sky-600",
       onClick: () => createNodeHTTP({ x: 0, y: 0 }),
+    },
+    {
+      icon: Smartphone,
+      label: "MPesa STK Push",
+      bgColor: "bg-green-100",
+      textColor: "text-green-700",
+      onClick: () => createNodeMpesaStkPush({ x: 0, y: 0 }),
     },
     {
       icon: UserPlus,
