@@ -457,4 +457,12 @@ class SettingsController extends Controller
         //Redirect to the login page
         return redirect()->route('login');
     }
+
+    /**
+     * Display the catalogs management page
+     */
+    public function catalogs(): View
+    {
+        return view('settings.catalogs');
+    }
 }

@@ -106,6 +106,15 @@
                                 </x-dropdown-link>
                             @endif
 
+                            <!-- Catalog Management -->
+                            <div class="block px-4 py-2 text-xs text-gray-400 mt-2">
+                                {{ __('Catalogs') }}
+                            </div>
+
+                            <x-dropdown-link href="{{ route('catalogs.page') }}">
+                                {{ __('Manage Catalogs') }}
+                            </x-dropdown-link>
+
                             <div class="border-t border-gray-200"></div>
 
                             <!-- Authentication -->
@@ -168,6 +177,11 @@
                         {{ __('API Tokens') }}
                     </x-responsive-nav-link> -->
                 @endif
+
+                <!-- Catalog Management -->
+                <x-responsive-nav-link href="{{ route('catalogs.page') }}" :active="request()->routeIs('catalogs.page')">
+                    {{ __('Manage Catalogs') }}
+                </x-responsive-nav-link>
 
                 <!-- Authentication -->
                 <form method="POST" action="{{ route('logout') }}" x-data>

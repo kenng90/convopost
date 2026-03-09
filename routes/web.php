@@ -6,6 +6,7 @@ use App\Http\Controllers\CompaniesController;
 use App\Http\Controllers\CreditsController;
 use App\Http\Controllers\CRUD\PostsController;
 use App\Http\Controllers\FrontEndController;
+use App\Http\Controllers\ListCatalogController;
 use App\Http\Controllers\PlansController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Http\Request;
@@ -81,6 +82,7 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
         Route::get('/share', [App\Http\Controllers\CompaniesController::class, 'share'])->name('share');
 
         Route::resource('settings', 'App\Http\Controllers\SettingsController');
+        Route::get('/catalogs', [App\Http\Controllers\SettingsController::class, 'catalogs'])->name('catalogs.page');
 
         // Backup
         Route::get('backup', [App\Http\Controllers\BackupController::class, 'index'])->name('backup.index');
@@ -123,6 +125,16 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
     Route::get('/billing', function (Request $request) {
         return $request->user()->redirectToBillingPortal(route('plans.current'));
     })->name('billing');
+
+    // List Catalogs (for flow builder)
+    Route::controller(ListCatalogController::class)->group(function () {
+        Route::post('/api/list-catalogs/preview-excel', 'previewExcel')->name('catalogs.preview-excel');
+        Route::post('/api/list-catalogs/import-excel', 'importExcel')->name('catalogs.import-excel');
+        Route::post('/api/list-catalogs/test-api', 'testAPI')->name('catalogs.test-api');
+        Route::get('/api/list-catalogs', 'listCatalogs')->name('catalogs.list');
+        Route::get('/api/list-catalogs/{id}', 'getCatalog')->name('catalogs.show');
+        Route::delete('/api/list-catalogs/{id}', 'deleteCatalog')->name('catalogs.delete');
+    });
 });
 
 //Verify

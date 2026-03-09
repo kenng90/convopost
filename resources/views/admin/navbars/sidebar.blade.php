@@ -157,7 +157,15 @@
                                         </a>
                                     @endif
                                 @endif
-                                
+
+                                <!-- Catalogs Management -->
+                                @if (auth()->check())
+                                <a href="/catalogs" class="dropdown-item d-flex align-items-center">
+                                    <i class="ni ni-folder-17 text-info mr-2"></i>
+                                    <span>{{ __('Manage Catalogs') }}</span>
+                                </a>
+                                @endif
+
                                 <!-- Management Menu Items -->
                                 @if(auth()->user()->hasRole('owner'))
                                     <div class="dropdown-divider"></div>

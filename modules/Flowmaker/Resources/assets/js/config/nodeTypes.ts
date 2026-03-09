@@ -17,6 +17,7 @@ import PDFNode from '@/components/flow/PDFNode';
 import VideoNode from '@/components/flow/VideoNode';
 import QuickRepliesNode from '@/components/flow/QuickRepliesNode';
 import ListMessageNode from '@/components/flow/ListMessageNode';
+import WhatsAppCatalogNode from '@/components/flow/WhatsAppCatalogNode';
 import OpenAINode from '@/components/flow/OpenAINode';
 import DataStoreNode from '@/components/flow/DataStoreNode';
 import AssignAgentNode from '@/components/flow/AssignAgentNode';
@@ -45,6 +46,7 @@ export const nodeTypes = {
   video: VideoNode,
   quick_replies: QuickRepliesNode,
   list_message: ListMessageNode,
+  whatsapp_catalog: WhatsAppCatalogNode,
   openai: OpenAINode,
   datastore: DataStoreNode,
   assign_agent: AssignAgentNode,

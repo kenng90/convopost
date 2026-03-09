@@ -1,5 +1,4 @@
-
-import { MessageCircle, Image, FileText, MessageSquare, FileVideo, File, List } from "lucide-react";
+import { MessageCircle, Image, FileText, MessageSquare, FileVideo, File, List, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFlowActions } from "@/hooks/useFlowActions";
 import { NodeData } from "@/types/flow";
@@ -139,6 +138,24 @@ const messagingActions = [
         }
       };
       return actions.createNodeBase('list_message', position, data);
+    }
+  },
+  {
+    icon: Database,
+    label: "WhatsApp catalog",
+    bgColor: "bg-purple-100",
+    textColor: "text-purple-600",
+    onClick: (actions: ReturnType<typeof useFlowActions>) => {
+      const position = { x: 250, y: 100 };
+      const data: NodeData = {
+        label: "WhatsApp Catalog",
+        type: "whatsapp_catalog",
+        settings: {
+          catalogId: undefined,
+          header: "Browse our products"
+        }
+      };
+      return actions.createNodeBase('whatsapp_catalog', position, data);
     }
   }
 ];
