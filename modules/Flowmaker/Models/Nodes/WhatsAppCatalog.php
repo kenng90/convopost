@@ -5,6 +5,7 @@ namespace Modules\Flowmaker\Models\Nodes;
 use App\Models\ListCatalog;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
+use Modules\Wpbox\Models\Message;
 
 class WhatsAppCatalog extends Node
 {
@@ -77,11 +78,29 @@ class WhatsAppCatalog extends Node
         Log::info('WhatsApp Catalog: processing', ['isStartNode' => $this->isStartNode, 'nodeId' => $this->id]);
 
         if ($this->isStartNode) {
-            // Resuming after product selection
-            $this->listenForReply($message, $data);
+            // Check if we're resuming (user selected a product) by checking if extra data exists
+            $extraData = $data->extra ?? null;
+
+            if (!empty($extraData)) {
+                // User has sent a product selection - resume and listen for reply
+                Log::info('WhatsApp Catalog: resuming after product selection', ['extraData' => $extraData]);
+                $this->listenForReply($message, $data);
+            } else {
+                // First time - send the catalog
+                Log::info('WhatsApp Catalog: sending catalog for first time');
+                return $this->sendCatalog($message, $data);
+            }
             return ['success' => true];
         }
 
+        return $this->sendCatalog($message, $data);
+    }
+
+    /**
+     * Send the catalog message to the contact
+     */
+    private function sendCatalog($message, $data)
+    {
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
         $settings = $this->getDataAsArray()['settings'] ?? [];
@@ -99,33 +118,40 @@ class WhatsAppCatalog extends Node
             return ['success' => false];
         }
 
-        // Build WhatsApp catalog message
-        $catalogMessage = [
-            'type' => 'interactive',
-            'interactive' => [
-                'type' => 'native_flow',
-                'native_flow' => [
-                    'buttons' => [
-                        [
-                            'name' => 'catalog',
-                            'parameters' => [
-                                'catalog_ref' => $catalogId,
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-        ];
+        // Store catalog in contact state so it's available for the next node
+        $contact->setContactState($this->flow_id, 'catalog_id', $catalogId);
+        $contact->setContactState($this->flow_id, 'catalog_items', json_encode($catalog->items ?? []));
 
-        // Send catalog message via WhatsApp
         try {
-            $result = $contact->sendMessage(
-                $contact->changeVariables($settings['header'] ?? 'Browse our products', $this->flow_id),
-                $catalogMessage,
-                'interactive'
-            );
+            // Build message with catalog link
+            $header = $contact->changeVariables($settings['header'] ?? 'Browse our products', $this->flow_id);
+            $catalogUrl = route('catalog.public', ['catalogId' => $catalogId]);
+            $footer = $contact->changeVariables($settings['footer'] ?? 'Click the link above to view our catalog', $this->flow_id);
 
-            Log::info('WhatsApp Catalog: message sent successfully', ['result' => $result]);
+            // Create text message with catalog link
+            $messageText = "{$header}\n\n{$catalogUrl}\n\n{$footer}";
+
+            $messageData = [
+                "contact_id" => $contact->id,
+                "company_id" => $contact->company_id,
+                "value" => $messageText,
+                "is_message_by_contact" => false,
+                "is_campign_messages" => false,
+                "status" => 1,
+                "fb_message_id" => null
+            ];
+
+            $messageToBeSend = Message::create($messageData);
+            $messageToBeSend->save();
+
+            // Send via WhatsApp
+            $contact->sendMessageToWhatsApp($messageToBeSend, $contact);
+
+            Log::info('WhatsApp Catalog: message sent successfully', [
+                'catalogId' => $catalogId,
+                'phone' => $contact->phone,
+                'url' => $catalogUrl
+            ]);
 
             // Set current node to wait for product selection
             $contact->setContactState($this->flow_id, 'current_node', $this->id);

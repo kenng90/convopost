@@ -99,7 +99,7 @@ class ListCatalogController extends Controller
             $this->excelService->validateItems($transformedItems);
 
             // Create catalog
-            $catalog = ListCatalog::create([
+            $catalogData = [
                 'company_id' => auth()->user()->company_id,
                 'name' => $catalogName,
                 'version' => 1,
@@ -112,14 +112,16 @@ class ListCatalogController extends Controller
                     'imported_count' => count($transformedItems),
                     'imported_at' => now(),
                 ],
-            ]);
+            ];
+
+            $catalog = ListCatalog::create($catalogData);
 
             // Clean up original file
             unlink($fullPath);
 
             return response()->json([
                 'success' => true,
-                'message' => "Catalog '{$catalogName}' created with " . count($transformedItems) . ' items',
+                'message' => "Catalog '{$catalogName}' created with " . count($transformedItems) . ' items.',
                 'catalogId' => $catalog->id,
                 'items' => $transformedItems,
                 'itemCount' => count($transformedItems),
@@ -301,6 +303,53 @@ class ListCatalogController extends Controller
     }
 
     /**
+     * Update catalog details
+     */
+    public function updateCatalog(Request $request, $id)
+    {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        try {
+            $companyId = auth()->user()->company_id;
+            $catalog = ListCatalog::where('id', $id)
+                ->where('company_id', $companyId)
+                ->firstOrFail();
+
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string|max:1000',
+            ]);
+
+            $catalog->name = $validated['name'];
+            $catalog->description = $validated['description'] ?? null;
+            $catalog->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Catalog updated successfully',
+                'catalog' => [
+                    'id' => $catalog->id,
+                    'name' => $catalog->name,
+                    'description' => $catalog->description,
+                    'version' => $catalog->version,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Update catalog failed', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
      * Delete catalog
      */
     public function deleteCatalog($id)
@@ -326,6 +375,234 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Delete catalog failed', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Get catalog items for management
+     */
+    public function getItems($id)
+    {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        try {
+            $companyId = auth()->user()->company_id;
+            $catalog = ListCatalog::where('id', $id)
+                ->where('company_id', $companyId)
+                ->firstOrFail();
+
+            return response()->json([
+                'success' => true,
+                'items' => $catalog->items ?? [],
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get catalog items failed', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Catalog not found',
+            ], 404);
+        }
+    }
+
+    /**
+     * Add item to catalog
+     */
+    public function addItem(Request $request, $id)
+    {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        try {
+            $companyId = auth()->user()->company_id;
+            $catalog = ListCatalog::where('id', $id)
+                ->where('company_id', $companyId)
+                ->firstOrFail();
+
+            $validated = $request->validate([
+                'id' => 'required|string|max:100',
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string|max:1000',
+                'price' => 'nullable|numeric|min:0',
+                'category' => 'nullable|string|max:255',
+                'imageUrl' => 'nullable|url|max:2048',
+                'stockStatus' => 'nullable|string|in:In Stock,Out of Stock,Low Stock',
+                'variants' => 'nullable|array',
+                'tags' => 'nullable|array',
+            ]);
+
+            $items = $catalog->items ?? [];
+
+            // Check if item with same ID already exists
+            $exists = array_search($validated['id'], array_column($items, 'id'));
+            if ($exists !== false) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Item with this ID already exists',
+                ], 400);
+            }
+
+            // Add new item
+            $newItem = [
+                'id' => $validated['id'],
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? '',
+                'price' => $validated['price'] ?? 0,
+                'category' => $validated['category'] ?? '',
+                'imageUrl' => $validated['imageUrl'] ?? '',
+                'stockStatus' => $validated['stockStatus'] ?? 'In Stock',
+                'variants' => $validated['variants'] ?? [],
+                'tags' => $validated['tags'] ?? [],
+            ];
+
+            $items[] = $newItem;
+            $catalog->items = $items;
+            $catalog->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Item added successfully',
+                'item' => $newItem,
+                'items' => $items,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Add item failed', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Update item in catalog
+     */
+    public function updateItem(Request $request, $id, $itemId)
+    {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        try {
+            $companyId = auth()->user()->company_id;
+            $catalog = ListCatalog::where('id', $id)
+                ->where('company_id', $companyId)
+                ->firstOrFail();
+
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string|max:1000',
+                'price' => 'nullable|numeric|min:0',
+                'category' => 'nullable|string|max:255',
+                'imageUrl' => 'nullable|url|max:2048',
+                'stockStatus' => 'nullable|string|in:In Stock,Out of Stock,Low Stock',
+                'variants' => 'nullable|array',
+                'tags' => 'nullable|array',
+            ]);
+
+            $items = $catalog->items ?? [];
+
+            // Find item by ID
+            $itemIndex = null;
+            foreach ($items as $index => $item) {
+                if ($item['id'] === $itemId) {
+                    $itemIndex = $index;
+                    break;
+                }
+            }
+
+            if ($itemIndex === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Item not found',
+                ], 404);
+            }
+
+            // Update item
+            $items[$itemIndex]['title'] = $validated['title'];
+            $items[$itemIndex]['description'] = $validated['description'] ?? '';
+            $items[$itemIndex]['price'] = $validated['price'] ?? 0;
+            $items[$itemIndex]['category'] = $validated['category'] ?? '';
+            $items[$itemIndex]['imageUrl'] = $validated['imageUrl'] ?? '';
+            $items[$itemIndex]['stockStatus'] = $validated['stockStatus'] ?? 'In Stock';
+            $items[$itemIndex]['variants'] = $validated['variants'] ?? [];
+            $items[$itemIndex]['tags'] = $validated['tags'] ?? [];
+
+            $catalog->items = $items;
+            $catalog->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Item updated successfully',
+                'item' => $items[$itemIndex],
+                'items' => $items,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Update item failed', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Delete item from catalog
+     */
+    public function deleteItem($id, $itemId)
+    {
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        try {
+            $companyId = auth()->user()->company_id;
+            $catalog = ListCatalog::where('id', $id)
+                ->where('company_id', $companyId)
+                ->firstOrFail();
+
+            $items = $catalog->items ?? [];
+
+            // Find and remove item
+            $items = array_filter($items, function($item) use ($itemId) {
+                return $item['id'] !== $itemId;
+            });
+
+            // Re-index array
+            $items = array_values($items);
+
+            $catalog->items = $items;
+            $catalog->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Item deleted successfully',
+                'items' => $items,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Delete item failed', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),

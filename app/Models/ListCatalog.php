@@ -17,6 +17,7 @@ class ListCatalog extends Model
         'items' => 'array',
         'columns' => 'array',
         'metadata' => 'array',
+        'retailer_ids' => 'array',
     ];
 
     protected static function booted()

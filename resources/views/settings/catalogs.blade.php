@@ -11,7 +11,7 @@
             <!-- Header -->
             <div class="mb-4">
                 <h1 class="h3 mb-1">{{ __('Catalog Management') }}</h1>
-                <p class="text-muted">{{ __('Create, manage, and organize your product catalogs for WhatsApp Catalog nodes') }}</p>
+                <p class="text-muted">{{ __('Create and manage product catalogs for your WhatsApp flows') }}</p>
             </div>
 
             <!-- Import Button -->
@@ -110,193 +110,225 @@
     </div>
 </div>
 
-<script>
-    // Load catalogs on page load
-    document.addEventListener('DOMContentLoaded', loadCatalogs);
+<!-- Edit Catalog Modal -->
+<div class="modal fade" id="editCatalogModal" tabindex="-1" role="dialog" aria-labelledby="editCatalogModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title" id="editCatalogModalLabel">{{ __('Edit Catalog') }}</h6>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editCatalogForm">
+                    <input type="hidden" id="editCatalogId">
 
-    async function loadCatalogs() {
-        try {
-            const response = await fetch('/api/list-catalogs');
-            const result = await response.json();
+                    <!-- Catalog Name -->
+                    <div class="form-group">
+                        <label>{{ __('Catalog Name') }}</label>
+                        <input type="text" id="editCatalogName" class="form-control" placeholder="e.g., Summer Products" required>
+                    </div>
 
-            if (result.success && Array.isArray(result.catalogs)) {
-                const catalogsList = document.getElementById('catalogs-list');
-                
-                if (result.catalogs.length === 0) {
-                    catalogsList.innerHTML = `
-                        <tr>
-                            <td colspan="5" class="text-center py-4">
-                                <p class="text-muted">{{ __('No catalogs found. Import one to get started.') }}</p>
-                            </td>
-                        </tr>
-                    `;
-                } else {
-                    catalogsList.innerHTML = result.catalogs.map(catalog => `
-                        <tr>
-                            <td><strong>${catalog.name}</strong></td>
-                            <td>${catalog.item_count} {{ __('items') }}</td>
-                            <td>v${catalog.version}</td>
-                            <td>${new Date(catalog.created_at).toLocaleDateString()}</td>
-                            <td>
-                                <a href="javascript:void(0)" onclick="previewCatalog(${catalog.id})" class="btn btn-sm btn-info mr-2" title="{{ __('Preview') }}">
-                                    <i class="ni ni-zoom-split-in"></i>
-                                </a>
-                                <a href="javascript:void(0)" onclick="deleteCatalog(${catalog.id}, '${catalog.name}')" class="btn btn-sm btn-danger" title="{{ __('Delete') }}">
-                                    <i class="ni ni-fat-remove"></i>
-                                </a>
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-            }
-        } catch (error) {
-            console.error('Error loading catalogs:', error);
-            document.getElementById('catalogs-list').innerHTML = `
-                <tr>
-                    <td colspan="5" class="text-center py-4">
-                        <p class="text-danger">{{ __('Error loading catalogs. Please try again.') }}</p>
-                    </td>
-                </tr>
-            `;
-        }
-    }
+                    <!-- Catalog Description -->
+                    <div class="form-group">
+                        <label>{{ __('Description') }} <small class="text-muted">(Optional)</small></label>
+                        <textarea id="editCatalogDescription" class="form-control" rows="4" placeholder="Describe your catalog"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Cancel') }}</button>
+                <button type="button" class="btn btn-primary" onclick="saveEditCatalog()">{{ __('Save Changes') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-    // File upload handling
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('catalogFile');
+<!-- Manage Items Modal -->
+<div class="modal fade" id="itemsModal" tabindex="-1" role="dialog" aria-labelledby="itemsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title" id="itemsModalLabel">{{ __('Manage Items') }}</h6>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="currentCatalogId">
 
-    dropZone.addEventListener('click', () => fileInput.click());
+                <!-- Add Item Form -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">{{ __('Add New Item') }}</h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="addItemForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>{{ __('Item ID') }} <span class="text-danger">*</span></label>
+                                        <input type="text" id="newItemId" class="form-control" placeholder="e.g., PROD_001" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>{{ __('Title') }} <span class="text-danger">*</span></label>
+                                        <input type="text" id="newItemTitle" class="form-control" placeholder="e.g., Blue Dog Bowl" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ __('Description') }} <small class="text-muted">(Optional)</small></label>
+                                <textarea id="newItemDescription" class="form-control" rows="2" placeholder="Item description"></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>{{ __('Price') }} <small class="text-muted">(Optional)</small></label>
+                                        <input type="number" id="newItemPrice" class="form-control" step="0.01" min="0" placeholder="0.00">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>{{ __('Category') }} <small class="text-muted">(Optional)</small></label>
+                                        <input type="text" id="newItemCategory" class="form-control" placeholder="e.g., Pet Supplies">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ __('Image URL') }} <small class="text-muted">(Optional)</small></label>
+                                <input type="url" id="newItemImageUrl" class="form-control" placeholder="https://example.com/image.jpg">
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>{{ __('Stock Status') }} <small class="text-muted">(Optional)</small></label>
+                                        <select id="newItemStockStatus" class="form-control">
+                                            <option value="In Stock">In Stock</option>
+                                            <option value="Out of Stock">Out of Stock</option>
+                                            <option value="Low Stock">Low Stock</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>{{ __('Variants') }} <small class="text-muted">(comma-separated, e.g., S,M,L,XL)</small></label>
+                                        <input type="text" id="newItemVariants" class="form-control" placeholder="e.g., Red,Blue,Green">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ __('Tags') }} <small class="text-muted">(comma-separated, e.g., New,Sale,Popular)</small></label>
+                                <input type="text" id="newItemTags" class="form-control" placeholder="e.g., New,Popular,Eco-friendly">
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="addNewItem()">
+                                <i class="ni ni-fat-add mr-2"></i>{{ __('Add Item') }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
 
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = '#007bff';
-        dropZone.style.backgroundColor = '#f0f7ff';
-    });
+                <!-- Items List -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">{{ __('Items') }} <span id="itemsCount" class="badge badge-primary ml-2">0</span></h6>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>{{ __('ID') }}</th>
+                                    <th>{{ __('Title') }}</th>
+                                    <th>{{ __('Category') }}</th>
+                                    <th>{{ __('Price & Stock') }}</th>
+                                    <th>{{ __('Tags & Variants') }}</th>
+                                    <th>{{ __('Actions') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsList">
+                                <tr>
+                                    <td colspan="5" class="text-center py-3 text-muted">{{ __('No items yet') }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.style.borderColor = '#ccc';
-        dropZone.style.backgroundColor = 'transparent';
-    });
+<!-- Edit Item Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1" role="dialog" aria-labelledby="editItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title" id="editItemModalLabel">{{ __('Edit Item') }}</h6>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editItemId">
+                <div class="form-group">
+                    <label>{{ __('Title') }} <span class="text-danger">*</span></label>
+                    <input type="text" id="editItemTitle" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>{{ __('Description') }} <small class="text-muted">(Optional)</small></label>
+                    <textarea id="editItemDescription" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>{{ __('Price') }} <small class="text-muted">(Optional)</small></label>
+                            <input type="number" id="editItemPrice" class="form-control" step="0.01" min="0">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>{{ __('Category') }} <small class="text-muted">(Optional)</small></label>
+                            <input type="text" id="editItemCategory" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{ __('Image URL') }} <small class="text-muted">(Optional)</small></label>
+                    <input type="url" id="editItemImageUrl" class="form-control">
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>{{ __('Stock Status') }} <small class="text-muted">(Optional)</small></label>
+                            <select id="editItemStockStatus" class="form-control">
+                                <option value="In Stock">In Stock</option>
+                                <option value="Out of Stock">Out of Stock</option>
+                                <option value="Low Stock">Low Stock</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>{{ __('Variants') }} <small class="text-muted">(comma-separated)</small></label>
+                            <input type="text" id="editItemVariants" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{ __('Tags') }} <small class="text-muted">(comma-separated)</small></label>
+                    <input type="text" id="editItemTags" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Cancel') }}</button>
+                <button type="button" class="btn btn-primary" onclick="saveEditedItem()">{{ __('Save Changes') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = '#ccc';
-        dropZone.style.backgroundColor = 'transparent';
-        const files = e.dataTransfer.files;
-        if (files.length) {
-            fileInput.files = files;
-            updateFileName();
-        }
-    });
+<script src="{{ asset('js/catalog-manager.js') }}"></script>
 
-    fileInput.addEventListener('change', updateFileName);
-
-    function updateFileName() {
-        if (fileInput.files.length > 0) {
-            document.getElementById('fileName').textContent = `{{ __('Selected') }}: ${fileInput.files[0].name}`;
-        } else {
-            document.getElementById('fileName').textContent = '';
-        }
-    }
-
-    // Form submission
-    function submitImportForm() {
-        const catalogName = document.getElementById('catalogName').value;
-        const file = document.getElementById('catalogFile').files[0];
-
-        if (!catalogName || !file) {
-            alert("{{ __('Please fill in all fields') }}");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('catalogName', catalogName);
-        formData.append('columnMapping', JSON.stringify({
-            title: 'title',
-            description: 'description',
-            price: 'price',
-            id: 'id'
-        }));
-
-        fetch('/api/list-catalogs/import-excel', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            }
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                alert("{{ __('Catalog imported successfully!') }}");
-                $('#catalogImportModal').modal('hide');
-                document.getElementById('catalogImportForm').reset();
-                document.getElementById('fileName').textContent = '';
-                loadCatalogs();
-            } else {
-                alert("{{ __('Error') }}: " + (result.message || "{{ __('Failed to import catalog') }}"));
-            }
-        })
-        .catch(error => {
-            console.error('Error importing catalog:', error);
-            alert("{{ __('Error importing catalog. Please try again.') }}");
-        });
-    }
-
-    function previewCatalog(catalogId) {
-        fetch(`/api/list-catalogs/${catalogId}`)
-        .then(response => response.json())
-        .then(result => {
-            if (result.success && result.catalog) {
-                const catalog = result.catalog;
-                document.getElementById('previewCatalogModalLabel').textContent = `${catalog.name} - {{ __('Preview') }}`;
-                
-                let html = '<table class="table table-sm"><thead><tr><th>ID</th><th>Title</th><th>Description</th><th>Price</th></tr></thead><tbody>';
-                
-                if (catalog.items && catalog.items.length > 0) {
-                    catalog.items.forEach(item => {
-                        html += `<tr><td>${item.id || '-'}</td><td><strong>${item.title || '-'}</strong></td><td>${item.description || '-'}</td><td>${item.price || '-'}</td></tr>`;
-                    });
-                } else {
-                    html += `<tr><td colspan="4" class="text-center text-muted">{{ __('No items in this catalog') }}</td></tr>`;
-                }
-                
-                html += '</tbody></table>';
-                document.getElementById('previewTableContent').innerHTML = html;
-                $('#previewCatalogModal').modal('show');
-            }
-        })
-        .catch(error => {
-            console.error('Error previewing catalog:', error);
-            alert("{{ __('Error loading catalog preview') }}");
-        });
-    }
-
-    function deleteCatalog(catalogId, catalogName) {
-        if (!confirm(`{{ __('Are you sure you want to delete') }} "${catalogName}"? {{ __('This cannot be undone.') }}`)) {
-            return;
-        }
-
-        fetch(`/api/list-catalogs/${catalogId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            }
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                alert("{{ __('Catalog deleted successfully') }}");
-                loadCatalogs();
-            } else {
-                alert("{{ __('Error') }}: " + (result.message || "{{ __('Failed to delete catalog') }}"));
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting catalog:', error);
-            alert("{{ __('Error deleting catalog') }}");
-        });
-    }
-</script>
 @endsection

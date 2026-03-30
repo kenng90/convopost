@@ -184,8 +184,9 @@ trait Whatsapp
             if($user->hasRole('admin')||true){
                 //Find company based on the WABAID
                 $wabaid=$request->entry[0]['id'];
-                $company_id=Config::where('value',$wabaid)->first()->model_id;
-                if($company_id){
+                $configRecord = Config::where('value',$wabaid)->first();
+                if($configRecord && $configRecord->model_id){
+                    $company_id = $configRecord->model_id;
                     $company=Company::find($company_id);
                     if(!$company){
                         return response()->json(['send' => false,'error'=>"Company not found"]);
@@ -193,7 +194,7 @@ trait Whatsapp
                         Auth::login($company->user);
                     }
                 }else{
-                    return response()->json(['send' => false,'error'=>"Company not found"]);
+                    return response()->json(['send' => false,'error'=>"Company not found for WABAID: ".$wabaid]);
                 }
             }else{
                 //Company, -- not used anymore
