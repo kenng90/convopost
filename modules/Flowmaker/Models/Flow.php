@@ -24,6 +24,7 @@ use Modules\Flowmaker\Models\Nodes\SetVariable;
 use Modules\Flowmaker\Models\Nodes\AssignAgent;
 use Modules\Flowmaker\Models\Nodes\AssignGroup;
 use Modules\Flowmaker\Models\Nodes\MpesaStkPush;
+use Modules\Flowmaker\Models\Nodes\WhatsAppCatalog;
 use Modules\Flowmaker\Models\Flowdocument;
 
 class Flow extends Model
@@ -68,12 +69,19 @@ class Flow extends Model
 
             Log::info('Flow data', ['flowData' => $flowData]);
 
+            // Validate flow data structure
+            if(!$flowData || !isset($flowData->nodes) || !isset($flowData->edges)){
+                Log::error('Invalid flow data structure - missing nodes or edges', ['flowId' => $this->id]);
+                return;
+            }
+
             //Try to find the start node from contact state
             $contact = Contact::findOrFail($contact);
             $startNode = $contact->getContactStateValue($this->id, 'current_node');
 
             Log::info('Start node from contact state', ['startNode' => $startNode]);
 
+            $graph = null;
             try{
                 $graph = $this->makeGraph($flowData->nodes, $flowData->edges, $startNode);
                 Log::info('Graph node '.$graph->id);
@@ -88,8 +96,10 @@ class Flow extends Model
                 Log::error('Error making graph', ['error' => $e->getMessage()]);
             }
 
-            //Process the graph
-            $graph->process($message, $data);
+            //Process the graph only if it was created successfully
+            if($graph){
+                $graph->process($message, $data);
+            }
 
         }catch(\Exception $e){
             Log::error("Error processing message in flow", ['error' => $e->getMessage()]);
@@ -144,6 +154,8 @@ class Flow extends Model
                 $theNewNode = new AssignGroup($nodeArray, []);
             }else if($nodeArray['type'] === 'mpesa_stk_push'){
                 $theNewNode = new MpesaStkPush($nodeArray, []);
+            }else if($nodeArray['type'] === 'whatsapp_catalog'){
+                $theNewNode = new WhatsAppCatalog($nodeArray, []);
             }else{
                 $theNewNode = new Node($nodeArray, []);
             }

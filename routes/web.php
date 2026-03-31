@@ -6,7 +6,9 @@ use App\Http\Controllers\CompaniesController;
 use App\Http\Controllers\CreditsController;
 use App\Http\Controllers\CRUD\PostsController;
 use App\Http\Controllers\FrontEndController;
+use App\Http\Controllers\ListCatalogController;
 use App\Http\Controllers\PlansController;
+use App\Http\Controllers\PublicCatalogController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +29,21 @@ Route::get('/', [FrontEndController::class, 'index'])->name('landing');
 Route::get('/new', [FrontEndController::class, 'register'])->name('newcompany.register');
 Route::get('/'.config('settings.url_route', 'company').'/{alias}', [FrontEndController::class, 'company'])->name('vendor');
 Route::get('/notify/{type}/{id}/{message}', [CompaniesController::class, 'notify'])->name('company.notify');
+
+// Public Catalog Routes (no authentication required)
+Route::controller(PublicCatalogController::class)->prefix('catalog')->group(function () {
+    // Specific routes first (more specific before catch-all)
+    Route::get('/invoice/{invoiceId}', 'getInvoice')->name('catalog.invoice');
+    Route::get('/pay/{invoiceId}', 'showInvoice')->name('catalog.invoice.pay');
+
+    // Then parameterized routes
+    Route::get('/{catalogId}/items', 'getItems')->name('catalog.items');
+    Route::post('/{catalogId}/generate-order', 'generateOrder')->name('catalog.generate-order');
+    Route::post('/{catalogId}/create-invoice', 'createInvoice')->name('catalog.create-invoice');
+
+    // Finally catch-all (most generic)
+    Route::get('/{catalogId}', 'show')->name('catalog.public');
+});
 Route::middleware('web', WelcomesNewUsers::class)->group(function () {
     Route::get('welcome/{user}', [MyWelcomeController::class, 'showWelcomeForm'])->name('welcome');
     Route::post('welcome/{user}', [MyWelcomeController::class, 'savePassword']);
@@ -81,6 +98,7 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
         Route::get('/share', [App\Http\Controllers\CompaniesController::class, 'share'])->name('share');
 
         Route::resource('settings', 'App\Http\Controllers\SettingsController');
+        Route::get('/catalogs', [App\Http\Controllers\SettingsController::class, 'catalogs'])->name('catalogs.page');
 
         // Backup
         Route::get('backup', [App\Http\Controllers\BackupController::class, 'index'])->name('backup.index');
@@ -123,6 +141,23 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
     Route::get('/billing', function (Request $request) {
         return $request->user()->redirectToBillingPortal(route('plans.current'));
     })->name('billing');
+
+    // List Catalogs (for flow builder)
+    Route::controller(ListCatalogController::class)->group(function () {
+        Route::post('/api/list-catalogs/preview-excel', 'previewExcel')->name('catalogs.preview-excel');
+        Route::post('/api/list-catalogs/import-excel', 'importExcel')->name('catalogs.import-excel');
+        Route::post('/api/list-catalogs/test-api', 'testAPI')->name('catalogs.test-api');
+        Route::get('/api/list-catalogs', 'listCatalogs')->name('catalogs.list');
+        Route::get('/api/list-catalogs/{id}', 'getCatalog')->name('catalogs.show');
+        Route::put('/api/list-catalogs/{id}', 'updateCatalog')->name('catalogs.update');
+        Route::delete('/api/list-catalogs/{id}', 'deleteCatalog')->name('catalogs.delete');
+
+        // Item management routes (use /manage prefix to avoid conflicts with public catalog routes)
+        Route::get('/api/list-catalogs/{id}/manage/items', 'getItems')->name('catalogs.items');
+        Route::post('/api/list-catalogs/{id}/manage/items', 'addItem')->name('catalogs.items.add');
+        Route::put('/api/list-catalogs/{id}/manage/items/{itemId}', 'updateItem')->name('catalogs.items.update');
+        Route::delete('/api/list-catalogs/{id}/manage/items/{itemId}', 'deleteItem')->name('catalogs.items.delete');
+    });
 });
 
 //Verify
