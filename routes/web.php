@@ -32,9 +32,17 @@ Route::get('/notify/{type}/{id}/{message}', [CompaniesController::class, 'notify
 
 // Public Catalog Routes (no authentication required)
 Route::controller(PublicCatalogController::class)->prefix('catalog')->group(function () {
-    Route::get('/{catalogId}', 'show')->name('catalog.public');
+    // Specific routes first (more specific before catch-all)
+    Route::get('/invoice/{invoiceId}', 'getInvoice')->name('catalog.invoice');
+    Route::get('/pay/{invoiceId}', 'showInvoice')->name('catalog.invoice.pay');
+
+    // Then parameterized routes
     Route::get('/{catalogId}/items', 'getItems')->name('catalog.items');
     Route::post('/{catalogId}/generate-order', 'generateOrder')->name('catalog.generate-order');
+    Route::post('/{catalogId}/create-invoice', 'createInvoice')->name('catalog.create-invoice');
+
+    // Finally catch-all (most generic)
+    Route::get('/{catalogId}', 'show')->name('catalog.public');
 });
 Route::middleware('web', WelcomesNewUsers::class)->group(function () {
     Route::get('welcome/{user}', [MyWelcomeController::class, 'showWelcomeForm'])->name('welcome');

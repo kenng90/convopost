@@ -1,0 +1,15 @@
+{
+    "alias": "invoice",
+    "version": "1.0",
+    "nameSpace": "Modules\\Invoice",
+    "description": "Invoice and payment management module integrated with M-Pesa",
+    "keywords": ["invoice", "payment", "mpesa"],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Invoice\\Providers\\Main"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $catalog->name }} - Shop</title>
     
     <!-- Bootstrap CSS -->
@@ -494,9 +495,14 @@
                 <span>Total:</span>
                 <span id="cartTotal">$0.00</span>
             </div>
-            <button class="checkout-btn" id="checkoutBtn" onclick="proceedToCheckout()" disabled>
-                <i class="fab fa-whatsapp mr-2"></i>Order via WhatsApp
-            </button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <button class="checkout-btn" id="checkoutBtn" onclick="proceedToCheckout()" disabled style="background-color: #25D366;">
+                    <i class="fab fa-whatsapp mr-2"></i>WhatsApp
+                </button>
+                <button class="checkout-btn" id="invoiceBtn" onclick="generateInvoice()" disabled style="background-color: #007bff;">
+                    <i class="fas fa-file-invoice mr-2"></i>Invoice
+                </button>
+            </div>
         </div>
     </div>
 
@@ -650,6 +656,7 @@
             cartItemsDiv.innerHTML = html;
             cartTotal.textContent = '$' + total.toFixed(2);
             checkoutBtn.disabled = false;
+            document.getElementById('invoiceBtn').disabled = false;
         }
 
         // Remove from cart
@@ -659,7 +666,7 @@
             updateCartDisplay();
         }
 
-        // Proceed to checkout
+        // Proceed to checkout via WhatsApp
         function proceedToCheckout() {
             if (cart.length === 0) return;
 
@@ -672,13 +679,13 @@
                 const price = parseFloat(item.price) || 0;
                 const itemTotal = price * item.quantity;
                 total += itemTotal;
-                
+
                 let itemLine = `• ${item.title}`;
                 if (item.variant) {
                     itemLine += ` (${item.variant})`;
                 }
                 itemLine += ` (x${item.quantity}) - $${price.toFixed(2)} = $${itemTotal.toFixed(2)}\n`;
-                
+
                 orderMessage += itemLine;
             });
 
@@ -687,7 +694,7 @@
 
             // Get company WhatsApp number from data
             const whatsappNumber = "{{ $company->getConfig('whatsapp_phone_number', '') }}";
-           
+
             if (!whatsappNumber) {
                 alert('WhatsApp number not configured for this seller. Please contact the seller directly.');
                 return;
@@ -699,6 +706,98 @@
 
             // Open WhatsApp
             window.open(whatsappUrl, '_blank');
+        }
+
+        // Generate invoice and redirect to payment
+        function generateInvoice() {
+            if (cart.length === 0) return;
+
+            // Collect customer info
+            const customerName = prompt('Enter your name (optional):', '');
+            const customerPhone = prompt('Enter your phone number (required):', '');
+
+            if (!customerPhone) {
+                alert('Phone number is required');
+                return;
+            }
+
+            const customerEmail = prompt('Enter your email (optional):', '');
+
+            // Calculate total
+            let total = 0;
+            cart.forEach(item => {
+                const price = parseFloat(item.price) || 0;
+                total += price * item.quantity;
+            });
+
+            // Show loading
+            const button = document.getElementById('invoiceBtn');
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Creating...';
+
+            // Create invoice
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            const token = csrfToken ? csrfToken.getAttribute('content') : '';
+
+            fetch('/catalog/{{ $catalog->id }}/create-invoice', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                },
+                body: JSON.stringify({
+                    items: cart,
+                    customerName: customerName || 'Guest Customer',
+                    customerPhone: customerPhone,
+                    customerEmail: customerEmail || null,
+                    amount: total.toFixed(2),
+                })
+            })
+            .then(response => {
+                // Check if response is actually JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    return response.text().then(text => {
+                        throw new Error('Server returned HTML instead of JSON. Status: ' + response.status);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                button.disabled = false;
+                button.textContent = originalText;
+
+                if (data.success) {
+                    // Show success message
+                    let successMsg = '✅ Invoice created successfully!';
+                    if (data.invoice.whatsapp_sent) {
+                        successMsg += '\n📱 Invoice sent to WhatsApp';
+                    } else {
+                        successMsg += '\n⚠️ Invoice created but WhatsApp not configured';
+                    }
+
+                    // Clear cart and close sidebar
+                    cart = [];
+                    saveCart();
+                    updateCartDisplay();
+                    toggleCart();
+
+                    // Show message and redirect
+                    console.log(successMsg);
+                    setTimeout(() => {
+                        window.location.href = '/catalog/pay/' + data.invoice.id;
+                    }, 1500);
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to create invoice'));
+                }
+            })
+            .catch(error => {
+                button.disabled = false;
+                button.textContent = originalText;
+                console.error('Invoice creation error:', error);
+                alert('Error creating invoice: ' + error.message);
+            });
         }
     </script>
 </body>
