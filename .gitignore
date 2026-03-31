@@ -59,9 +59,7 @@ coverage/
 .svelte-kit/
 .vite/
 vite.svg
-*.bundle.js
-*.min.js    
-app/modules/flowmaker/node_modules/
+
 # Typescript
 *.tsbuildinfo
 
