@@ -9,6 +9,7 @@ use App\Http\Controllers\FrontEndController;
 use App\Http\Controllers\ListCatalogController;
 use App\Http\Controllers\PlansController;
 use App\Http\Controllers\PublicCatalogController;
+use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -157,6 +158,15 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
         Route::post('/api/list-catalogs/{id}/manage/items', 'addItem')->name('catalogs.items.add');
         Route::put('/api/list-catalogs/{id}/manage/items/{itemId}', 'updateItem')->name('catalogs.items.update');
         Route::delete('/api/list-catalogs/{id}/manage/items/{itemId}', 'deleteItem')->name('catalogs.items.delete');
+    });
+
+    // Reports Routes
+    Route::controller(ReportsController::class)->prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', 'dashboard')->name('dashboard');
+        Route::get('/transactions', 'transactions')->name('transactions');
+        Route::get('/payments', 'payments')->name('payments');
+        Route::get('/reconciliation', 'reconciliation')->name('reconciliation');
+        Route::get('/daily-summary', 'dailySummary')->name('daily-summary');
     });
 });
 
