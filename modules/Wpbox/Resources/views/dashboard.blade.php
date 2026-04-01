@@ -8,6 +8,7 @@
     <a href="{{ route('contacts.create') }}" type="button" class="btn btn-outline-primary ">🪪 {{ __('Create contact')}}</a>
     <a href="{{ route('replies.create') }}" type="button" class="btn btn-outline-primary ">📤 {{ __('Create reply bot')}}</a>
     <a target="_blank" href="https://business.facebook.com/wa/manage/message-templates/" type="button" class="btn btn-outline-primary ">🔖 {{ __('Create template')}}</a>
+    <a href="{{ route('reports.dashboard') }}" type="button" class="btn btn-outline-primary ">📊 {{ __('Transaction Reports')}}</a>
 </div>
     <div class="mb-4">
         @include('partials.infoboxes.advanced',['collection'=>$wpbox])

@@ -231,6 +231,25 @@ class User extends Authenticatable
         return $this->hasMany(Company::class);
     }
 
+    /**
+     * Get all companies accessible to this user
+     */
+    public function accessibleCompanies()
+    {
+        if ($this->hasRole('owner')) {
+            // Owners can access their own companies
+            return Company::where('user_id', $this->id)->get();
+        } elseif ($this->hasRole('staff')) {
+            // Staff can only access the company they're assigned to
+            return Company::where('id', $this->company_id)->get();
+        } elseif ($this->hasRole('admin')) {
+            // Admins can access all companies
+            return Company::all();
+        }
+
+        return collect();
+    }
+
     public function routeNotificationForExpo()
     {
         return $this->expotoken.''; //"ExponentPushToken[".$this->expotoken."]";

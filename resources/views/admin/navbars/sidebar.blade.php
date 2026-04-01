@@ -166,6 +166,14 @@
                                 </a>
                                 @endif
 
+                                <!-- Transaction Reports -->
+                                @if (auth()->check() && Route::has('reports.dashboard'))
+                                <a href="{{ route('reports.dashboard') }}" class="dropdown-item d-flex align-items-center">
+                                    <i class="ni ni-chart-pie-35 text-info mr-2"></i>
+                                    <span>{{ __('Transaction Reports') }}</span>
+                                </a>
+                                @endif
+
                                 <!-- Management Menu Items -->
                                 @if(auth()->user()->hasRole('owner'))
                                     <div class="dropdown-divider"></div>
