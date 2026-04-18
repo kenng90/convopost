@@ -19,6 +19,8 @@ class VerifyCsrfToken extends Middleware
         'paddlebilling',
         'webhook/wpbox/receive/*',
         'webhook/wpbox/receive',
+        'webhook/wpbox/flows/*',
+        'webhook/wpbox/flows',
         'webhook/whatsappcall/calling/*',
         'webhook/whatsappcall/calling',
         'api/wpbox/*',

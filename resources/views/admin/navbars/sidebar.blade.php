@@ -166,12 +166,30 @@
                                 </a>
                                 @endif
 
-                                <!-- Transaction Reports -->
-                                @if (auth()->check() && Route::has('reports.dashboard'))
-                                <a href="{{ route('reports.dashboard') }}" class="dropdown-item d-flex align-items-center">
-                                    <i class="ni ni-chart-pie-35 text-info mr-2"></i>
-                                    <span>{{ __('Transaction Reports') }}</span>
+                                <!-- WhatsApp Flows -->
+                                @if (auth()->check())
+                                <a href="{{ route('whatsapp-flows.index') }}" class="dropdown-item d-flex align-items-center @if(request()->is('whatsapp-flows*')) active @endif">
+                                    <i class="ni ni-send text-purple mr-2"></i>
+                                    <span>{{ __('WhatsApp Flows') }}</span>
                                 </a>
+                                @endif
+
+                                <!-- Reports -->
+                                @if (auth()->check())
+                                    <div class="dropdown-divider"></div>
+                                    <h6 class="dropdown-header text-xs text-muted">{{ __('Reports') }}</h6>
+
+                                    @if (Route::has('reports.dashboard'))
+                                    <a href="{{ route('reports.dashboard') }}" class="dropdown-item d-flex align-items-center @if(Route::currentRouteName() == 'reports.dashboard') active @endif">
+                                        <i class="ni ni-chart-pie-35 text-warning mr-2"></i>
+                                        <span>{{ __('Transaction Reports') }}</span>
+                                    </a>
+                                    @endif
+
+                                    <a href="/whatsapp-flows/responses/dashboard" class="dropdown-item d-flex align-items-center @if(request()->is('whatsapp-flows/responses/dashboard*')) active @endif">
+                                        <i class="ni ni-collection text-success mr-2"></i>
+                                        <span>{{ __('WhatsApp Flow Reports') }}</span>
+                                    </a>
                                 @endif
 
                                 <!-- Management Menu Items -->

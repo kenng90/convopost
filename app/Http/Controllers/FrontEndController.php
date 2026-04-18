@@ -167,8 +167,15 @@ class FrontEndController extends Controller
         }
 
         if (Module::has('blog')) {
-            $staticPage = \Modules\Blog\Models\Blog::where('post_type', 'page')->where('slug', $alias)->first();
-            return view('general.page', ['staticPage' => $staticPage]);
+            $staticPage = \Modules\Blog\Models\Blog::where('post_type', 'page')
+    ->where('slug', $alias)
+    ->first();
+
+if (!$staticPage) {
+    abort(404, 'Page not found');
+}
+
+return view('general.page', ['staticPage' => $staticPage]);
         }else{
             abort(404,'Blog module is not installed');
         }

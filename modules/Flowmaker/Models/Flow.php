@@ -25,6 +25,7 @@ use Modules\Flowmaker\Models\Nodes\AssignAgent;
 use Modules\Flowmaker\Models\Nodes\AssignGroup;
 use Modules\Flowmaker\Models\Nodes\MpesaStkPush;
 use Modules\Flowmaker\Models\Nodes\WhatsAppCatalog;
+use Modules\Flowmaker\Models\Nodes\WhatsAppFlow;
 use Modules\Flowmaker\Models\Flowdocument;
 
 class Flow extends Model
@@ -75,19 +76,26 @@ class Flow extends Model
                 return;
             }
 
-            //Try to find the start node from contact state
             $contact = Contact::findOrFail($contact);
             $startNode = $contact->getContactStateValue($this->id, 'current_node');
 
             Log::info('Start node from contact state', ['startNode' => $startNode]);
+
+            // If the message matches a keyword trigger, reset state and process ALL
+            // keyword trigger nodes — this handles flows with multiple keyword triggers
+            // correctly, since any of them could match the incoming message.
+            if ($this->messageMatchesKeywordTrigger($flowData->nodes, $message)) {
+                Log::info('Keyword match detected — resetting contact state and evaluating all keyword triggers');
+                $contact->clearContactState($this->id, 'current_node');
+                $this->processAllKeywordTriggers($flowData->nodes, $flowData->edges, $message, $data);
+                return;
+            }
 
             $graph = null;
             try{
                 $graph = $this->makeGraph($flowData->nodes, $flowData->edges, $startNode);
                 Log::info('Graph node '.$graph->id);
 
-                // If a startNode was saved but the graph resolved to a different node,
-                // the saved state was stale (e.g. from a different flow or deleted node)
                 if($startNode && $graph->id !== $startNode){
                     Log::warning('Stale contact state detected - clearing current_node', ['stale' => $startNode, 'resolved' => $graph->id]);
                     $contact->clearContactState($this->id, 'current_node');
@@ -96,7 +104,6 @@ class Flow extends Model
                 Log::error('Error making graph', ['error' => $e->getMessage()]);
             }
 
-            //Process the graph only if it was created successfully
             if($graph){
                 $graph->process($message, $data);
             }
@@ -109,11 +116,66 @@ class Flow extends Model
 
 
 
+    /**
+     * Process all keyword_trigger nodes in turn.
+     * Used when there are multiple keyword triggers in a single flow —
+     * each one gets to evaluate the message and route accordingly.
+     */
+    private function processAllKeywordTriggers($rawNodes, $rawEdges, string $message, $data): void
+    {
+        // Build a fully-wired node map (edges connected, no single start node selected)
+        $nodes = $this->buildWiredNodes($rawNodes, $rawEdges);
+
+        foreach ($nodes as $node) {
+            if ($node->type !== 'keyword_trigger') {
+                continue;
+            }
+
+            Log::info('Evaluating keyword trigger node', ['nodeId' => $node->id]);
+            $node->isStartNode = true;
+            $result = $node->process($message, $data);
+
+            // If the keyword matched (process returned success), stop here
+            if (is_array($result) && ($result['success'] ?? false)) {
+                Log::info('Keyword trigger matched', ['nodeId' => $node->id]);
+                return;
+            }
+        }
+
+        Log::info('No keyword trigger matched the message', ['message' => $message]);
+    }
+
     private function makeGraph($nodes, $edgesArray,$startNode){
 
         Log::info('Let make a graph',['nodes' => $nodes, 'edgesArray' => $edgesArray, 'startNode' => $startNode]);
+        $nodes = $this->buildWiredNodes($nodes, $edgesArray);
+
+        Log::info('Nodes', ['nodes' => $nodes]);
+
+        //Return the graph, it is the first node
+        if($startNode && isset($nodes[$startNode])){
+            Log::info('Using provided start node', ['startNode' => $startNode]);
+            $nodes[$startNode]->isStartNode = true;
+            return $nodes[$startNode];
+        }else{
+            if($startNode){
+                Log::warning('Saved start node not found in current flow nodes - stale state, falling back to default start', ['startNode' => $startNode]);
+            }
+            $foundStartNode = $this->findStartNode($nodes);
+            Log::info('Found start node based on position and type', ['startNode' => $foundStartNode->id]);
+            $foundStartNode->isStartNode = true;
+            return $foundStartNode;
+        }
+    }
+
+    /**
+     * Build the full node map with all edges wired up.
+     * Shared by makeGraph() and processAllKeywordTriggers().
+     */
+    private function buildWiredNodes($rawNodes, $rawEdgesArray): array
+    {
         //Convert the nodes to objects
-        $nodes = array_reduce($nodes, function($carry, $node) {
+        $nodes = array_reduce($rawNodes, function($carry, $node) {
             //Convert the node to an array
             $nodeArray = (array)$node;
             if($nodeArray['type'] === 'keyword_trigger'){
@@ -156,6 +218,8 @@ class Flow extends Model
                 $theNewNode = new MpesaStkPush($nodeArray, []);
             }else if($nodeArray['type'] === 'whatsapp_catalog'){
                 $theNewNode = new WhatsAppCatalog($nodeArray, []);
+            }else if($nodeArray['type'] === 'whatsapp_flow'){
+                $theNewNode = new WhatsAppFlow($nodeArray, []);
             }else{
                 $theNewNode = new Node($nodeArray, []);
             }
@@ -164,29 +228,20 @@ class Flow extends Model
             return $carry;
         }, []);
 
-        Log::info('Nodes', ['nodes' => $nodes]);
-
-    
-
         //Convert the edges to objects
-        $edges = array_reduce($edgesArray, function($carry, $edge) {
+        $edges = array_reduce($rawEdgesArray, function($carry, $edge) {
             $edgeArray = (array)$edge;
             $carry[$edgeArray['id']] = new Edge($edgeArray);
             return $carry;
         }, []);
 
-        //Make the graph, by looping through the edges, and assign the source and target nodes
+        //Wire edges to nodes
         foreach ($edges as $edge) {
             try{
                 $source = $nodes[$edge->getSourceId()];
                 $target = $nodes[$edge->getTargetId()];
-
-                //Add the edge to the source node
                 $source->addOutgoingEdge($edge);
-
-                //Add the edge to the target node
                 $target->addIncomingEdge($edge);
-
                 $edge->setSource($nodes[$edge->getSourceId()]);
                 $edge->setTarget($nodes[$edge->getTargetId()]);
             }catch(\Exception $e){
@@ -194,20 +249,7 @@ class Flow extends Model
             }
         }
 
-        //Return the graph, it is the first node
-        if($startNode && isset($nodes[$startNode])){
-            Log::info('Using provided start node', ['startNode' => $startNode]);
-            $nodes[$startNode]->isStartNode = true;
-            return $nodes[$startNode];
-        }else{
-            if($startNode){
-                Log::warning('Saved start node not found in current flow nodes - stale state, falling back to default start', ['startNode' => $startNode]);
-            }
-            $foundStartNode = $this->findStartNode($nodes);
-            Log::info('Found start node based on position and type', ['startNode' => $foundStartNode->id]);
-            $foundStartNode->isStartNode = true;
-            return $foundStartNode;
-        }
+        return $nodes;
     }
 
     /**
@@ -252,6 +294,38 @@ class Flow extends Model
         }
 
         return $startNode;
+    }
+
+    /**
+     * Check whether the incoming message matches any keyword_trigger node in this flow.
+     * Used to decide whether to reset the saved contact state or resume from it.
+     */
+    private function messageMatchesKeywordTrigger(array $nodes, string $message): bool
+    {
+        foreach ($nodes as $node) {
+            $nodeArray = (array) $node;
+            if (($nodeArray['type'] ?? '') !== 'keyword_trigger') {
+                continue;
+            }
+
+            $data = (array) ($nodeArray['data'] ?? []);
+            $keywords = $data['keywords'] ?? [];
+
+            foreach ($keywords as $kw) {
+                $kw = (array) $kw;
+                $value = $kw['value'] ?? '';
+                $matchType = $kw['matchType'] ?? 'exact';
+
+                if ($matchType === 'exact' && strtolower(trim($message)) === strtolower(trim($value))) {
+                    return true;
+                }
+                if ($matchType === 'contains' && str_contains(strtolower($message), strtolower($value))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

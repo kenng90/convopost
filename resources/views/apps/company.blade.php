@@ -1,4 +1,3 @@
-
 @extends('layouts.app', ['title' => __('Apps')])
 
 @section('content')
@@ -33,7 +32,7 @@
         </div>
         <div class="col-xl-9 mt-3">
             @include('partials.flash')
-            <form id="restorant-apps-form" method="post" autocomplete="off" enctype="multipart/form-data" action="{{ route('admin.owner.updateApps',$company) }}">
+            <form id="restorant-apps-form" method="post" autocomplete="off" enctype="multipart/form-data" action="{{ route('admin.owner.updateApps') }}"
                 @csrf
                 @method('put')
                     <div class="card shadow">
@@ -44,10 +43,13 @@
                                     @foreach ($separators as $separator)
                                         <div class="tab-pane fade show @if ($loop->first) active @endif" id="{{ $separator['snake'] }}" role="tabpanel" aria-labelledby="{{ $separator['snake'] }}">
                                             @include('partials.fields',['fields'=>$separator['fields']])
+                                            @if ($separator['snake'] === 'facebook_developer')
+                                                @livewire('whatsapp-flow-encryption-settings')
+                                            @endif
                                         </div>
                                     @endforeach
-                                
-                                    
+
+
                                 </div>
                                 
                         </div>

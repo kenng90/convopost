@@ -1,0 +1,124 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class WhatsappFlow extends MyModel
+{
+    use HasFactory;
+    use SoftDeletes;
+
+    protected $guarded = [];
+
+    protected $casts = [
+        'flow_json' => 'array',
+        'meta_error' => 'array',
+        'published_at' => 'datetime',
+    ];
+
+    /**
+     * Get the company that owns the flow.
+     */
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    /**
+     * Get the Meta credentials for this flow's WABA.
+     */
+    public function metaCredentials()
+    {
+        return $this->belongsTo(WhatsappMetaCredentials::class, 'waba_id', 'waba_id');
+    }
+
+    /**
+     * Scope to only active flows.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'published');
+    }
+
+    /**
+     * Scope to only draft flows.
+     */
+    public function scopeDraft($query)
+    {
+        return $query->where('status', 'draft');
+    }
+
+    /**
+     * Scope to only flows published to Meta.
+     */
+    public function scopePublishedToMeta($query)
+    {
+        return $query->whereNotNull('meta_flow_id')->where('status', '!=', 'archived');
+    }
+
+    /**
+     * Check if flow is published locally.
+     */
+    public function isPublished(): bool
+    {
+        return $this->status === 'published';
+    }
+
+    /**
+     * Check if flow is published to Meta.
+     */
+    public function isPublishedToMeta(): bool
+    {
+        return $this->meta_flow_id !== null;
+    }
+
+    /**
+     * Get flow fields from JSON structure.
+     */
+    public function getFields(): array
+    {
+        return $this->flow_json['screens'][0]['fields'] ?? [];
+    }
+
+    /**
+     * Get flow screens from JSON structure.
+     */
+    public function getScreens(): array
+    {
+        return $this->flow_json['screens'] ?? [];
+    }
+
+    /**
+     * Get flow settings.
+     */
+    public function getSettings(): array
+    {
+        return $this->flow_json['settings'] ?? [];
+    }
+
+    /**
+     * Get the status label for display.
+     */
+    public function getStatusLabel(): string
+    {
+        return match($this->status) {
+            'draft' => 'Draft',
+            'published' => 'Published Locally',
+            'archived' => 'Archived',
+            default => 'Unknown',
+        };
+    }
+
+    /**
+     * Get Meta publication status.
+     */
+    public function getMetaStatusLabel(): string
+    {
+        if (!$this->meta_flow_id) {
+            return 'Not Published';
+        }
+        return 'Published to Meta';
+    }
+}

@@ -24,8 +24,30 @@ class ReceiveUpdate implements ShouldQueue
     }
 
     public function handle()
-    {   
-            $value=$this->value;
+{
+    Log::info("ReceiveUpdate JOB START", ['value' => $this->value]);
+
+    try {
+        $value = $this->value;
+
+        if (!isset($value['statuses'])) {
+            Log::warning("No statuses in payload");
+            return;
+        }
+
+        $newStatus = $value['statuses'][0]['status'] ?? null;
+        $messageFBID = $value['statuses'][0]['id'] ?? null;
+
+        Log::info("Processing status", [
+            'status' => $newStatus,
+            'message_id' => $messageFBID
+        ]);
+
+        if (!$messageFBID) {
+            Log::error("Missing message ID");
+            return;
+        }
+
 
             //Status change -- Message update
             $newStatus=$value['statuses'][0]['status'];
@@ -61,5 +83,12 @@ class ReceiveUpdate implements ShouldQueue
                 }
             }
 
+    } catch (\Throwable $e) {
+        Log::error("ReceiveUpdate FAILED", [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
     }
+}
+  
 }

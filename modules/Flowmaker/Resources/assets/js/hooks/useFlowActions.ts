@@ -59,6 +59,7 @@ export const useFlowActions = () => {
             type === 'quick_replies' ? 'quick_replies' :
             type === 'list_message' ? 'list_message' :
             type === 'whatsapp_catalog' ? 'whatsapp_catalog' :
+            type === 'whatsapp_flow' ? 'whatsapp_flow' :
             type === 'openai' ? 'openai' :
             type === 'datastore' ? 'datastore' :
             type === 'assign_agent' ? 'assign_agent' :
