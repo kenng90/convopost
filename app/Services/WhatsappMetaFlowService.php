@@ -584,6 +584,13 @@ private function getMetaDataExample(string $fieldType): string
 // FLOW FORMAT CONVERSION
 // -------------------------------------------------------------------------
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Drop-in replacement methods for WhatsappMetaFlowService
+// Replace the existing convertToMetaFormat, convertFieldsToComponents,
+// convertFieldToComponent, getComponentName, getMetaDataType, getMetaDataExample
+// with these versions.
+// ─────────────────────────────────────────────────────────────────────────────
+
 public function convertToMetaFormat(WhatsappFlow $flow): array
 {
     $screens     = $flow->flow_json['screens'] ?? [];
@@ -601,44 +608,42 @@ public function convertToMetaFormat(WhatsappFlow $flow): array
         }
 
         // ── Build screen data model ───────────────────────────────────────────
-        // Start with any explicit data declarations from the source screen
+        // Start with any explicit data declarations already on the screen.
         $screenData = (! empty($screen['data']) && is_array($screen['data']))
             ? $screen['data']
             : [];
 
-        // Declare every field from previous screens in this screen's data model.
-        // Meta requires this so it accepts those fields in the navigate payload.
+        // Declare every field that was collected on a previous screen.
+        // Meta requires this so it will accept those values in the navigate payload.
+        // Because each field now carries meta_type/meta_example we no longer need
+        // a brittle match() to guess the type.
         foreach ($allPreviousFields as $prevField) {
             $componentName = $this->getComponentName($prevField);
             if (! $componentName) {
                 continue;
             }
 
-            $fieldType = $prevField['type'] ?? 'text';
+            $metaType    = $prevField['meta_type']    ?? 'string';
+            $metaExample = $prevField['meta_example'] ?? 'example';
 
-            $screenData[$componentName] = match ($fieldType) {
-                'date'                     => ['type' => 'string',  '__example__' => '2026-01-01'],
-                'checkbox'                 => ['type' => 'array',   'items' => ['type' => 'string'], '__example__' => ['option1']],
-                'radio', 'chips', 'select' => ['type' => 'string',  '__example__' => 'option1'],
-                'optin'                    => ['type' => 'boolean', '__example__' => true],  // ← add this
-                default                    => ['type' => 'string',  '__example__' => 'example text'],
-            };
+            $screenData[$componentName] = $metaType === 'array'
+                ? ['type' => 'array',  'items' => ['type' => 'string'], '__example__' => (array) $metaExample]
+                : ['type' => $metaType, '__example__' => $metaExample];
         }
 
-        Log::debug('Building screen', [
-            'screen_id'           => $screen['id'] ?? 'unknown',
-            'is_terminal'         => $isTerminal,
-            'next_screen'         => $nextScreenId,
-            'previous_field_count'=> count($allPreviousFields),
-            'screen_data_keys'    => array_keys($screenData),
+        Log::debug('convertToMetaFormat: building screen', [
+            'screen_id'            => $screen['id'] ?? 'unknown',
+            'is_terminal'          => $isTerminal,
+            'next_screen'          => $nextScreenId,
+            'previous_field_count' => count($allPreviousFields),
+            'screen_data_keys'     => array_keys($screenData),
         ]);
 
-        // ── Build the converted screen (single assignment) ────────────────────
+        // ── Single, authoritative screen array ────────────────────────────────
         $convertedScreen = [
             'id'       => (string) ($screen['id'] ?? 'SCREEN_' . chr(65 + $index)),
             'title'    => $screen['title'] ?? 'Screen',
             'terminal' => $isTerminal,
-            // Empty array must encode as {} not [] — use stdClass for empty
             'data'     => empty($screenData) ? new \stdClass() : $screenData,
             'layout'   => [
                 'type'     => 'SingleColumnLayout',
@@ -661,7 +666,7 @@ public function convertToMetaFormat(WhatsappFlow $flow): array
 
         $convertedScreens[] = $convertedScreen;
 
-        // ── Accumulate AFTER building — so next screen can reference these ────
+        // ── Accumulate AFTER building so the NEXT screen can reference these ──
         $inputOnlyTypes    = ['text', 'textarea', 'radio', 'checkbox', 'select', 'date', 'chips', 'optin'];
         $allPreviousFields = array_merge(
             $allPreviousFields,
@@ -672,12 +677,11 @@ public function convertToMetaFormat(WhatsappFlow $flow): array
         );
     }
 
-    // Build routing model (always needed for navigation)
+    // Build routing model (always needed for screen navigation)
     $routingModel = [];
-    foreach ($convertedScreens as $index => $screen) {
-        $nextIndex                   = $index + 1;
-        $routingModel[$screen['id']] = $nextIndex < count($convertedScreens)
-            ? [$convertedScreens[$nextIndex]['id']]
+    foreach ($convertedScreens as $i => $screen) {
+        $routingModel[$screen['id']] = ($i + 1 < count($convertedScreens))
+            ? [$convertedScreens[$i + 1]['id']]
             : [];
     }
 
@@ -692,7 +696,7 @@ public function convertToMetaFormat(WhatsappFlow $flow): array
         $metaFlow['data_api_version'] = '3.0';
     }
 
-    Log::debug('Flow conversion completed', [
+    Log::debug('convertToMetaFormat: completed', [
         'flow_id'           => $flow->id,
         'has_data_exchange' => isset($metaFlow['data_api_version']),
         'screen_count'      => count($metaFlow['screens']),
@@ -701,18 +705,15 @@ public function convertToMetaFormat(WhatsappFlow $flow): array
     return $metaFlow;
 }
 
-// -------------------------------------------------------------------------
-// COMPONENT CONVERSION
-// -------------------------------------------------------------------------
-
 /**
  * Convert local fields to Meta Flow components.
  *
- * Rules:
- * - Display-only components (heading, image, etc.) go OUTSIDE the Form
- * - All input fields + the footer go INSIDE a single Form component
- * - The footer navigate/complete payload must reference all form fields
- *   using ${form.x} for current screen and ${data.x} for previous screens
+ * Layout rules:
+ * - Display-only components (heading, image …) sit OUTSIDE the Form
+ * - Input fields + the footer go INSIDE a single Form component
+ * - Footer navigate/complete payload references ALL form fields:
+ *     current screen → ${form.x}
+ *     previous screens → ${data.x}
  */
 protected function convertFieldsToComponents(
     array $fields,
@@ -741,16 +742,15 @@ protected function convertFieldsToComponents(
         }
     }
 
-    // No form content at all — just return display components
     if (empty($inputFields) && empty($footerFields)) {
         return $outsideChildren;
     }
 
     // ── Build the action payload ──────────────────────────────────────────────
-    // This must be built BEFORE the footer closure so it is fully populated.
+    // Must be fully built BEFORE the footer closure captures it by value.
     //
-    // Current screen fields  → ${form.x}   (they live in the Form on this screen)
-    // Previous screen fields → ${data.x}   (they arrived via the navigate payload)
+    // Current screen fields  → ${form.x}
+    // Previous screen fields → ${data.x}
     $actionPayload = [];
 
     foreach ($inputFields as $field) {
@@ -768,10 +768,10 @@ protected function convertFieldsToComponents(
     }
 
     Log::debug('convertFieldsToComponents: payload built', [
-        'is_terminal'         => $isTerminal,
-        'input_field_count'   => count($inputFields),
-        'previous_field_count'=> count($previousScreenFields),
-        'action_payload_keys' => array_keys($actionPayload),
+        'is_terminal'          => $isTerminal,
+        'input_field_count'    => count($inputFields),
+        'previous_field_count' => count($previousScreenFields),
+        'action_payload_keys'  => array_keys($actionPayload),
     ]);
 
     // ── Convert input fields ──────────────────────────────────────────────────
@@ -781,7 +781,6 @@ protected function convertFieldsToComponents(
     );
 
     // ── Convert footer fields, injecting the payload ──────────────────────────
-    // $actionPayload is captured by value — fully built before this runs
     $convertedFooters = array_map(
         function ($field) use ($nextScreenId, $isTerminal, $actionPayload) {
             $component  = $this->convertFieldToComponent($field, $nextScreenId, $isTerminal);
@@ -811,33 +810,36 @@ protected function convertFieldsToComponents(
 
 /**
  * Get the Meta component name for a field.
- * Must match the name produced by convertFieldToComponent exactly.
+ * Must exactly match the name produced by convertFieldToComponent.
  */
 private function getComponentName(array $field): ?string
 {
     $type    = $field['type'] ?? '';
-    $fieldId = $field['id'] ?? '';
+    $fieldId = $field['id']   ?? '';
 
-    if (empty($fieldId)) {
+    if ($fieldId === '' || $fieldId === null) {
         return null;
     }
 
     return match ($type) {
-        'text'     => 'text_' . $fieldId,
+        'text'     => 'text_'     . $fieldId,
         'textarea' => 'textarea_' . $fieldId,
-        'radio'    => 'radio_' . $fieldId,
+        'radio'    => 'radio_'    . $fieldId,
         'checkbox' => 'checkbox_' . $fieldId,
-        'select'   => 'select_' . $fieldId,
-        'date'     => 'date_' . $fieldId,
-        'chips'    => 'chips_' . $fieldId,
-        'optin'    => 'optin_' . $fieldId,
+        'select'   => 'select_'   . $fieldId,
+        'date'     => 'date_'     . $fieldId,
+        'chips'    => 'chips_'    . $fieldId,
+        'optin'    => 'optin_'    . $fieldId,
         default    => null,
     };
 }
 
 /**
- * Convert a single field to a Meta Flow component.
- * Follows Meta's exact JSON spec for Flow JSON v7.3.
+ * Convert a single builder field to a Meta Flow component array.
+ *
+ * NOTE: Footer payload starts empty here.
+ * convertFieldsToComponents() replaces it with the correct field references
+ * after this method returns — do not set payload values here.
  */
 protected function convertFieldToComponent(
     array $field,
@@ -845,7 +847,7 @@ protected function convertFieldToComponent(
     bool $isTerminal = false
 ): array {
     $type    = $field['type'] ?? 'text';
-    $fieldId = $field['id'] ?? 'field';
+    $fieldId = $field['id']   ?? 'field';
 
     return match ($type) {
 
@@ -860,16 +862,16 @@ protected function convertFieldToComponent(
         ],
         'body' => [
             'type'     => 'TextBody',
-            'text'     => $field['label'] ?? '',
+            'text'     => $field['placeholder'] ?: ($field['label'] ?? ''),
             'markdown' => $field['markdown'] ?? false,
         ],
         'caption' => [
             'type' => 'TextCaption',
-            'text' => $field['label'] ?? '',
+            'text' => $field['placeholder'] ?: ($field['label'] ?? ''),
         ],
         'richtext' => [
             'type' => 'RichText',
-            'text' => $field['label'] ?? '',
+            'text' => $field['placeholder'] ?: ($field['label'] ?? ''),
         ],
 
         // ── Input components ──────────────────────────────────────────────────
@@ -920,6 +922,12 @@ protected function convertFieldToComponent(
             'label'       => $field['label'] ?? '',
             'data-source' => $this->convertOptionsToDataSource($field['options'] ?? []),
         ],
+        'optin' => [
+            'type'     => 'OptIn',
+            'name'     => 'optin_' . $fieldId,
+            'label'    => $field['label'] ?? '',
+            'required' => $field['required'] ?? false,
+        ],
 
         // ── Media ─────────────────────────────────────────────────────────────
         'image' => [
@@ -929,6 +937,7 @@ protected function convertFieldToComponent(
             'scale-type' => $field['scale_type'] ?? 'contain',
         ],
         'media_upload' => [
+            // Meta has no native media-upload — fall back to TextInput
             'type'       => 'TextInput',
             'name'       => 'media_' . $fieldId,
             'label'      => $field['label'] ?? 'Upload File',
@@ -954,32 +963,15 @@ protected function convertFieldToComponent(
                 'payload' => ['url' => $field['url'] ?? ''],
             ],
         ],
-        'optin' => [
-            'type'     => 'OptIn',
-            'name'     => 'optin_' . $fieldId,
-            'label'    => $field['label'] ?? '',
-            'required' => $field['required'] ?? false,
-        ],
 
         // ── Navigation / submit ───────────────────────────────────────────────
-        // NOTE: payload is intentionally empty here — convertFieldsToComponents
-        // injects the correct field references after this method returns.
-        'navigate' => [
+        // Payload starts as empty stdClass — convertFieldsToComponents() replaces
+        // it with the correct ${form.x} / ${data.x} references.
+        'navigate', 'footer' => [
             'type'  => 'Footer',
             'label' => $field['label'] ?? 'Continue',
             'on-click-action' => $isTerminal
-                ? ['name' => 'complete', 'payload' => new \stdClass()]
-                : [
-                    'name'    => 'navigate',
-                    'next'    => ['type' => 'screen', 'name' => $nextScreenId ?? 'NEXT_SCREEN'],
-                    'payload' => new \stdClass(),
-                  ],
-        ],
-        'footer' => [
-            'type'  => 'Footer',
-            'label' => $field['label'] ?? 'Continue',
-            'on-click-action' => $isTerminal
-                ? ['name' => 'complete', 'payload' => new \stdClass()]
+                ? ['name' => 'complete',  'payload' => new \stdClass()]
                 : [
                     'name'    => 'navigate',
                     'next'    => ['type' => 'screen', 'name' => $nextScreenId ?? 'NEXT_SCREEN'],
@@ -990,7 +982,7 @@ protected function convertFieldToComponent(
             'type'  => 'Footer',
             'label' => $field['label'] ?? 'Submit',
             'on-click-action' => $isTerminal
-                ? ['name' => 'complete', 'payload' => new \stdClass()]
+                ? ['name' => 'complete',  'payload' => new \stdClass()]
                 : [
                     'name'    => 'navigate',
                     'next'    => ['type' => 'screen', 'name' => $nextScreenId ?? 'NEXT_SCREEN'],
@@ -1002,29 +994,20 @@ protected function convertFieldToComponent(
         'if_condition' => [
             'type'        => 'If',
             'condition'   => $field['condition'] ?? '${true}',
-            'then-action' => [
-                'name'        => $field['then_action'] ?? 'navigate',
-                'next-screen' => 'NEXT_SCREEN',
-            ],
-            'else-action' => [
-                'name'        => $field['else_action'] ?? 'navigate',
-                'next-screen' => 'CURRENT_SCREEN',
-            ],
+            'then-action' => ['name' => $field['then_action'] ?? 'navigate', 'next-screen' => 'NEXT_SCREEN'],
+            'else-action' => ['name' => $field['else_action'] ?? 'navigate', 'next-screen' => 'CURRENT_SCREEN'],
         ],
         'switch' => [
             'type'  => 'Switch',
             'cases' => array_map(fn($case) => [
                 'condition' => $case['condition'] ?? '',
-                'action'    => [
-                    'name'        => 'navigate',
-                    'next-screen' => $case['next_screen'] ?? 'NEXT_SCREEN',
-                ],
+                'action'    => ['name' => 'navigate', 'next-screen' => $case['next_screen'] ?? 'NEXT_SCREEN'],
             ], $field['cases'] ?? []),
         ],
 
         default => [
             'type' => 'TextBody',
-            'text' => $field['label'] ?? 'Unknown Field Type',
+            'text' => $field['label'] ?? 'Unknown Field Type: ' . $type,
         ],
     };
 }
@@ -1468,7 +1451,7 @@ protected function convertFieldToComponent(
         ], $options);
     }
 
-    protected function getCredentialsFromCompany($company): ?array
+  public function getCredentialsFromCompany($company): ?array
     {
         if (! $company) {
             return null;
@@ -1550,6 +1533,22 @@ protected function convertFieldToComponent(
                 }
             }
         }
+
+        // Validate options for select/radio/checkbox/chips fields
+foreach ($flow->flow_json['screens'] as $screenIndex => $screen) {
+    $screenTitle = $screen['title'] ?? ('Screen ' . ($screenIndex + 1));
+    foreach ($screen['fields'] ?? [] as $field) {
+        $type = $field['type'] ?? '';
+        if (in_array($type, ['radio', 'checkbox', 'select', 'chips'], true)) {
+            if (empty($field['options'] ?? [])) {
+                throw new \Exception(
+                    "\"{$screenTitle}\": The \"{$field['label']}\" field has no options. "
+                    . "Add at least one option before publishing."
+                );
+            }
+        }
+    }
+}
     }
 
     protected function validateRichTextRules(array $screen, int $screenIndex, int $flowId): void

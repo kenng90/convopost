@@ -168,13 +168,20 @@
                                         </td>
                                         <td class="text-right">
                                             @if ($response->status === 'completed' && !empty($response->responses))
-                                                <button
-                                                    wire:click="viewResponse({{ $response->id }})"
-                                                    class="btn btn-primary btn-sm"
-                                                    title="View Response Details"
-                                                >
-                                                    <i class="ni ni-zoom-split-in"></i> View
-                                                </button>
+                                            <button
+    wire:click="viewResponse({{ $response->id }})"
+    wire:loading.class="disabled"
+    wire:target="viewResponse({{ $response->id }})"
+    class="btn btn-primary btn-sm"
+    title="View Response Details"
+>
+    <span wire:loading.remove wire:target="viewResponse({{ $response->id }})">
+        <i class="ni ni-zoom-split-in"></i> View
+    </span>
+    <span wire:loading wire:target="viewResponse({{ $response->id }})">
+        <span class="spinner-border spinner-border-sm me-1"></span> Loading...
+    </span>
+</button>
                                             @else
                                                 <button
                                                     wire:click="viewResponse({{ $response->id }})"
@@ -202,38 +209,62 @@
     </div>
 
     {{-- View Response Modal --}}
-    @if ($selectedResponse)
-        <div class="modal d-block" style="background: rgba(0,0,0,0.5);" tabindex="-1">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
+
+@if ($selectedResponse || $loadingResponse)
+    <div class="modal d-block" style="background: rgba(0,0,0,0.6); z-index: 1050;" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered" style="max-height: 92vh;">
+            <div class="modal-content" style="max-height: 92vh; display: flex; flex-direction: column;">
+
+                {{-- Loading State --}}
+                @if ($loadingResponse)
+                    <div class="modal-body text-center py-5 flex-grow-1 d-flex align-items-center justify-content-center">
                         <div>
-                            <h5 class="modal-title">Response Details</h5>
+                            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+                            <h5 class="mb-1">Loading Response...</h5>
+                            <p class="text-muted">Fetching data and field labels</p>
+                        </div>
+                    </div>
+                @else
+                    {{-- HEADER - Always visible --}}
+                    <div class="modal-header border-bottom">
+                        <div>
+                            <h5 class="modal-title mb-0">Response Details</h5>
                             <small class="text-muted">
-                                {{ $selectedResponse['contact_name'] ?? 'Unknown' }} — {{ $selectedResponse['contact_phone'] }}
+                                {{ $selectedResponse['contact_name'] ?? 'Unknown' }} — 
+                                {{ $selectedResponse['contact_phone'] ?? '' }}
                             </small>
                         </div>
-                        <button type="button" class="close" wire:click="closeViewResponse">
-                            <span>&times;</span>
-                        </button>
+                        <button 
+    type="button" 
+    class="close fs-4"
+    style="margin-top: -4px;"
+    wire:click="closeViewResponse"
+    wire:loading.attr="disabled"
+>
+    <span aria-hidden="true">&times;</span>
+</button>
                     </div>
-                    <div class="modal-body">
+
+                    {{-- BODY - Scrollable --}}
+                    <div class="modal-body" style="overflow-y: auto; flex: 1 1 auto; min-height: 0;">
+                        <!-- Metadata -->
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <p class="small text-muted mb-1">Flow</p>
-                                <p class="font-weight-600">{{ $selectedResponse['flow_name'] ?? ('Flow #' . $selectedResponse['whatsapp_flow_id']) }}</p>
+                                <p class="font-weight-600">{{ $selectedResponse['flow_name'] ?? '' }}</p>
                             </div>
                             <div class="col-md-6">
                                 <p class="small text-muted mb-1">Status</p>
                                 @php
-                                    $badge = match($selectedResponse['status']) {
+                                    $badge = match($selectedResponse['status'] ?? '') {
                                         'completed' => 'badge-success',
-                                        'abandoned'  => 'badge-warning',
-                                        'failed'     => 'badge-danger',
-                                        default      => 'badge-info',
+                                        'abandoned' => 'badge-warning',
+                                        'failed'    => 'badge-danger',
+                                        'pending'   => 'badge-info',
+                                        default     => 'badge-secondary',
                                     };
                                 @endphp
-                                <span class="badge {{ $badge }}">{{ ucfirst($selectedResponse['status']) }}</span>
+                                <span class="badge {{ $badge }}">{{ ucfirst($selectedResponse['status'] ?? 'unknown') }}</span>
                             </div>
                         </div>
 
@@ -252,52 +283,64 @@
 
                         <h6 class="font-weight-600 mb-3">Form Responses</h6>
 
-                        @if (!empty($selectedResponse['responses']))
-                            @foreach ($selectedResponse['responses'] as $key => $value)
-                                @php
-                                    // Convert field keys like "text_1_name", "radio_2", "textarea_2" into readable labels
-                                    // Strip type prefix + numeric ID: "textarea_2" → "", "text_1_full_name" → "full name"
-                                    $stripped = preg_replace('/^(text|textarea|radio|checkbox|select|date|chips|optin|media|dropdown)_\d+_?/i', '', $key);
-                                    // If nothing left after stripping, humanise the full key (e.g. "textarea_2" → "Textarea 2")
-                                    $label = $stripped
-                                        ? ucwords(str_replace('_', ' ', $stripped))
-                                        : ucwords(str_replace('_', ' ', $key));
-                                @endphp
-                                <div class="card border-0 bg-light p-3 mb-2">
-                                    <p class="small text-muted mb-1">{{ $label }}</p>
-                                    <p class="font-weight-600 text-break mb-0">
-                                        @if (is_array($value))
-                                            {{ implode(', ', $value) }}
-                                        @else
-                                            {{ $value ?: '—' }}
-                                        @endif
-                                    </p>
+                        <div class="responses-scroll-area" style="max-height: 380px; overflow-y: auto; padding-right: 12px;">
+                            @if (!empty($selectedResponse['responses_with_labels']))
+                                @foreach ($selectedResponse['responses_with_labels'] as $item)
+                                    <div class="card border-0 bg-light p-3 mb-3">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <p class="small text-muted mb-1 font-weight-600">
+                                                    {{ $item['label'] }}
+                                                </p>
+                                                @if ($item['screen'])
+                                                    <small class="text-xs text-gray-500">— {{ $item['screen'] }}</small>
+                                                @endif
+                                            </div>
+                                            <small class="font-mono text-xs text-gray-400">{{ $item['key'] }}</small>
+                                        </div>
+                                        
+                                        <p class="font-weight-600 text-break mb-0">
+                                            @if (is_array($item['value']))
+                                                {{ implode(', ', $item['value']) }}
+                                            @elseif (is_bool($item['value']))
+                                                {{ $item['value'] ? '✅ Yes' : '❌ No' }}
+                                            @else
+                                                {{ $item['value'] ?: '—' }}
+                                            @endif
+                                        </p>
+                                    </div>
+                                @endforeach
+                            @elseif (!empty($selectedResponse['responses_missing']))
+                                <div class="alert alert-warning">
+                                    <strong>No form answers received from Meta.</strong><br>
+                                    <small>Add input fields in Flow Builder and Re-publish.</small>
                                 </div>
-                            @endforeach
-                        @elseif (!empty($selectedResponse['responses_missing']))
-                            <div class="alert alert-warning mb-0">
-                                <strong>No form answers received from Meta.</strong><br>
-                                <small>This happens when the published flow has no input fields (text, radio, dropdown, etc.), or the flow on Meta is outdated.
-                                <br><strong>To fix:</strong> add input fields to your flow in the flow builder, then click <em>Re-publish</em> to push the updated version to Meta.</small>
-                            </div>
-                        @else
-                            <div class="alert alert-info mb-0">
-                                <i class="ni ni-notification-70 mr-1"></i>
-                                No form responses yet — the contact hasn't submitted the form.
-                            </div>
-                        @endif
+                            @else
+                                <div class="alert alert-info">
+                                    <i class="ni ni-notification-70 mr-1"></i>
+                                    No form responses yet.
+                                </div>
+                            @endif
+                        </div>
+                    </div>
 
-                        @if (!empty($selectedResponse['notes']))
-                            <hr>
-                            <h6 class="font-weight-600">Notes</h6>
-                            <p class="text-muted">{{ $selectedResponse['notes'] }}</p>
-                        @endif
-                    </div>
+                    {{-- FOOTER --}}
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" wire:click="closeViewResponse">Close</button>
+                        <button 
+                            type="button" 
+                            class="btn btn-secondary btn-sm"
+                            wire:click="closeViewResponse"
+                            wire:loading.attr="disabled"
+                        >
+                            <span wire:loading.remove>Close</span>
+                            <span wire:loading>
+                                <span class="spinner-border spinner-border-sm me-1"></span>Closing...
+                            </span>
+                        </button>
                     </div>
-                </div>
+                @endif
             </div>
         </div>
-    @endif
+    </div>
+@endif
 </div>

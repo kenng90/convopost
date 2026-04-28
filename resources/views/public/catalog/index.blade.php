@@ -437,7 +437,7 @@
                                 @endif
                                 
                                 @if(isset($item['price']))
-                                    <div class="product-price">${{ number_format((float)$item['price'], 2) }}</div>
+                                    <div class="product-price">ksh{{ number_format((float)$item['price'], 2) }}</div>
                                 @endif
                                 
                                 <!-- Variants Selection -->

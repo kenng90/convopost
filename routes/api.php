@@ -34,7 +34,7 @@ Route::middleware('auth:sanctum')->get('/accessible-companies', function (Reques
 });
 
 
-// Route::post('/api-login', [LoginController::class, 'login']);
+// Route::post('/login', [LoginController::class, 'login']);
 Route::post('/v2/login', [LoginController::class, 'login']);
 
 // Invoice payment routes (public - no auth required, but validates ownership via UUID)

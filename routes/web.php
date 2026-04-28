@@ -15,6 +15,7 @@ use App\Http\Controllers\SettingsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Spatie\WelcomeNotification\WelcomesNewUsers;
+use App\Http\Controllers\FlowBuilderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -168,6 +169,17 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
 
     // WhatsApp Flows (for flow builder)
     Route::get('/api/whatsapp-flows', [App\Http\Controllers\FlowsController::class, 'listForBuilder'])->name('whatsapp-flows.list-builder');
+    // Load a flow's data for the builder
+
+   // WhatsApp Flow Builder routes (API for the visual builder)
+Route::prefix('api/flow-builder')->name('flow-builder.')->group(function () {
+    Route::get('/{flow}', [App\Http\Controllers\FlowBuilderController::class, 'load'])->name('load');
+    Route::post('/', [App\Http\Controllers\FlowBuilderController::class, 'store'])->name('store');
+    Route::put('/{flow}', [App\Http\Controllers\FlowBuilderController::class, 'update'])->name('update');
+    Route::post('/{flow}/publish', [App\Http\Controllers\FlowBuilderController::class, 'publish'])->name('publish');
+    Route::post('/{flow}/republish', [App\Http\Controllers\FlowBuilderController::class, 'republish'])->name('republish');
+    Route::get('/endpoint-url', [App\Http\Controllers\Api\FlowBuilderController::class, 'endpointUrl'])->name('endpoint-url');
+});
 
     // Reports Routes
     Route::controller(ReportsController::class)->prefix('reports')->name('reports.')->group(function () {

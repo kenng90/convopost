@@ -14,32 +14,35 @@ class FlowsController extends Controller
     /**
      * Show flows management or builder page
      */
-    public function index(?int $id = null): View
-    {
-        $flow = null;
+   /**
+ * Show WhatsApp Flows list or builder page
+ */
+/**
+ * Show WhatsApp Flows list or builder page
+ */
+/**
+ * Show WhatsApp Flows list or builder page
+ */
+public function index(?int $id = null)
+{
+    if ($id) {
+        $companyId = auth()->user()->company_id;
 
-        // If an ID is provided (from edit route), fetch the flow
-        if ($id) {
-            $companyId = auth()->user()->company_id;
-            $flow = WhatsappFlow::where('id', $id)
-                ->where('company_id', $companyId)
-                ->first();
+        $flow = WhatsappFlow::where('id', $id)
+            ->where('company_id', $companyId)
+            ->first();
 
-            if ($flow) {
-                return view('flows.builder', ['flow' => $flow]);
-            }
-            // If flow not found, just show empty builder
+        if ($flow) {
+            return view('livewire.flows-builder', ['flowId' => $flow->id]);
         }
-
-        // Check if we're in create mode by checking the request path
-        $path = request()->path();
-        if ($path === 'whatsapp-flows/create' || str_ends_with($path, '/edit')) {
-            return view('flows.builder');
-        }
-
-        // Otherwise show the list page
-        return view('flows.index');
     }
+
+    if (request()->path() === 'whatsapp-flows/create') {
+        return view('livewire.flows-builder', ['flowId' => null]);
+    }
+
+    return view('flows.index');
+}
 
     /**
      * Get all flows for the Flowmaker flow builder (to select in WhatsApp Flow node)
