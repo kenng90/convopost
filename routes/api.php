@@ -19,23 +19,41 @@ use Modules\Invoice\Http\Controllers\InvoiceController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
-Route::post('/login', [LoginController::class, 'login']);
+
+Route::middleware('auth:sanctum')->get('/accessible-companies', function (Request $request) {
+    $user = $request->user();
+    $companies = $user->accessibleCompanies();
+
+    return response()->json([
+        'success' => true,
+        'companies' => $companies->map(fn($c) => [
+            'id' => $c->id,
+            'name' => $c->name,
+        ])->toArray(),
+    ]);
+});
+
+
+// Route::post('/login', [LoginController::class, 'login']);
 Route::post('/v2/login', [LoginController::class, 'login']);
 
-// Invoice payment routes (public - no auth required)
+// Invoice payment routes (public - no auth required, but validates ownership via UUID)
 Route::prefix('invoice')->group(function () {
-    // Public payment initiation
-    Route::post('/{invoice}/pay', [InvoiceController::class, 'initiatePayment'])
-        ->name('invoice.pay');
-
-    // Public payment status check
-    Route::get('/{invoice}/payment/{payment}/status', [InvoiceController::class, 'checkPaymentStatus'])
-        ->name('invoice.payment.status');
-
-    // Payment callback (no middleware)
+    // Payment callback (no middleware) - signature validation inside controller
     Route::post('/payment/callback', [InvoiceController::class, 'handleCallback'])
         ->withoutMiddleware(['api'])
         ->name('invoice.payment.callback');
+
+    // Public payment routes (with rate limiting)
+    Route::middleware('throttle:10,1')->group(function () {
+        // Public payment initiation (uses UUID for route binding)
+        Route::post('/{invoice:public_uuid}/pay', [InvoiceController::class, 'initiatePayment'])
+            ->name('invoice.pay');
+
+        // Public payment status check (uses UUID for route binding)
+        Route::get('/{invoice:public_uuid}/payment/{payment}/status', [InvoiceController::class, 'checkPaymentStatus'])
+            ->name('invoice.payment.status');
+    });
 
     // Authenticated routes
     Route::middleware('auth:sanctum')->group(function () {
@@ -45,7 +63,7 @@ Route::prefix('invoice')->group(function () {
         Route::get('/list', [InvoiceController::class, 'listInvoices'])
             ->name('invoice.list');
 
-        Route::get('/{invoice}', [InvoiceController::class, 'show'])
+        Route::get('/{invoice:id}', [InvoiceController::class, 'show'])
             ->name('invoice.show');
     });
 });

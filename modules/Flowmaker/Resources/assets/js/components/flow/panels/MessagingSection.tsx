@@ -157,6 +157,25 @@ const messagingActions = [
       };
       return actions.createNodeBase('whatsapp_catalog', position, data);
     }
+  },
+  {
+    icon: Database,
+    label: "Send WhatsApp Flow",
+    bgColor: "bg-blue-100",
+    textColor: "text-blue-600",
+    onClick: (actions: ReturnType<typeof useFlowActions>) => {
+      const position = { x: 250, y: 100 };
+      const data: NodeData = {
+        label: "Send WhatsApp Flow",
+        type: "whatsapp_flow",
+        settings: {
+          whatsappFlowId: undefined,
+          header: "Complete the form",
+          footer: "Your responses help us serve you better"
+        }
+      };
+      return actions.createNodeBase('whatsapp_flow', position, data);
+    }
   }
 ];
 

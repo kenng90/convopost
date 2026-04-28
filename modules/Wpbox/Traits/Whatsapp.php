@@ -356,6 +356,97 @@ trait Whatsapp
                             } catch (\Throwable $th) {
                                 //throw $th;
                             }
+                        }else if($value['messages'][0]['interactive']['type']=="nfm_reply"){
+                            // WhatsApp Flow completion — user submitted the form
+                            try {
+                                $nfmReply     = $value['messages'][0]['interactive']['nfm_reply'] ?? [];
+                                $responseJson = json_decode($nfmReply['response_json'] ?? '{}', true) ?? [];
+                                $flowToken    = $responseJson['flow_token'] ?? null;
+
+                                \Illuminate\Support\Facades\Log::info('WhatsApp Flow nfm_reply received', [
+                                    'contact_id' => $contact->id,
+                                    'flow_token' => $flowToken,
+                                    'response'   => $responseJson,
+                                ]);
+
+                                // Strip internal keys — store only user-submitted field data
+                                $internalKeys = ['flow_token', 'version', 'action', 'screen', 'name'];
+                                $formData     = array_filter(
+                                    $responseJson,
+                                    fn ($k) => ! in_array($k, $internalKeys, true),
+                                    ARRAY_FILTER_USE_KEY
+                                );
+
+                                // Find and mark the response record as completed
+                                if ($flowToken && str_starts_with($flowToken, 'flow_')) {
+                                    $parts      = explode('_', $flowToken);
+                                    $responseId = $parts[1] ?? null;
+
+                                    if ($responseId) {
+                                        $flowResponse = \App\Models\WhatsappFlowResponse::find($responseId);
+                                        if ($flowResponse) {
+                                            // Always update — nfm_reply is authoritative for form data
+                                            // (flows webhook may have stored empty data if it ran first)
+                                            if (! empty($formData) || $flowResponse->status === 'pending') {
+                                                $flowResponse->markCompleted(! empty($formData) ? $formData : $responseJson);
+
+                                                \Illuminate\Support\Facades\Log::info('WhatsApp Flow response marked completed via nfm_reply', [
+                                                    'response_id' => $responseId,
+                                                    'field_count' => count($formData),
+                                                    'fields'      => array_keys($formData),
+                                                ]);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Store a synthetic message so the chat history shows the submission
+                                $messageContent = __('WhatsApp Flow completed');
+                                $message = $contact->sendMessage($messageContent, true, false, "TEXT", $messageID);
+
+                                // Trigger Flowmaker to resume automation from the waiting flow node
+                                if ($message) {
+                                    // $message->extra = json_encode($formData ?: $responseJson);
+
+                                    // Always store the complete raw payload. The flow_token is needed by the
+// WhatsAppFlow node to locate the DB response record. Storing only $formData
+// loses the token when fields are present, and falls back to just {flow_token}
+// when $formData is empty — making field data unreachable in the node.
+$message->extra = json_encode($responseJson);
+                                    $message->save();
+
+                                    // Use the company owner, not the contact's assigned user.
+                                    // Contacts often have user_id = null (unassigned), which
+                                    // would prevent the event from firing.
+                                    $company     = \App\Models\Company::find($contact->company_id);
+                                    $companyUser = $company ? \App\Models\User::find($company->user_id) : null;
+
+                                    // Fallback to contact's assigned user if company owner not found
+                                    if (! $companyUser) {
+                                        $companyUser = \App\Models\User::find($contact->user_id);
+                                    }
+
+                                    if ($companyUser) {
+                                        \Illuminate\Support\Facades\Log::info('WhatsApp Flow nfm_reply: dispatching ContactReplies', [
+                                            'contact_id'      => $contact->id,
+                                            'company_user_id' => $companyUser->id,
+                                            'has_form_data'   => ! empty($formData),
+                                        ]);
+                                        event(new \Modules\Wpbox\Events\ContactReplies($companyUser, $message, $contact));
+                                    } else {
+                                        \Illuminate\Support\Facades\Log::error('WhatsApp Flow nfm_reply: could not find company user — ContactReplies not dispatched', [
+                                            'contact_id' => $contact->id,
+                                            'company_id' => $contact->company_id,
+                                        ]);
+                                    }
+                                }
+
+                            } catch (\Throwable $th) {
+                                \Illuminate\Support\Facades\Log::error('WhatsApp Flow nfm_reply handling error', [
+                                    'error' => $th->getMessage(),
+                                    'contact_id' => $contact->id ?? null,
+                                ]);
+                            }
                         }
                     }else if($type=="contacts"||$type=="contact"){
                         $message=$contact->sendMessage(__("Contact message is sent. But the message format is unsupported"),true,false,"TEXT",$messageID);

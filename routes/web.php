@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\SocialController;
 use App\Http\Controllers\CompaniesController;
 use App\Http\Controllers\CreditsController;
 use App\Http\Controllers\CRUD\PostsController;
+use App\Http\Controllers\FlowsController;
 use App\Http\Controllers\FrontEndController;
 use App\Http\Controllers\ListCatalogController;
 use App\Http\Controllers\PlansController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\SettingsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Spatie\WelcomeNotification\WelcomesNewUsers;
+use App\Http\Controllers\FlowBuilderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -51,6 +53,11 @@ Route::middleware('web', WelcomesNewUsers::class)->group(function () {
 });
 
 //AUTH
+Route::get('/session-test', function () {
+    session(['ping' => 'pong']);
+    return session('ping');
+});
+
 Route::middleware('web')->group(function () {
     Route::get('/login/google', [SocialController::class, 'googleRedirectToProvider'])->name('google.login');
     Route::get('/login/google/redirect', [SocialController::class, 'googleHandleProviderCallback']);
@@ -160,6 +167,20 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
         Route::delete('/api/list-catalogs/{id}/manage/items/{itemId}', 'deleteItem')->name('catalogs.items.delete');
     });
 
+    // WhatsApp Flows (for flow builder)
+    Route::get('/api/whatsapp-flows', [App\Http\Controllers\FlowsController::class, 'listForBuilder'])->name('whatsapp-flows.list-builder');
+    // Load a flow's data for the builder
+
+   // WhatsApp Flow Builder routes (API for the visual builder)
+Route::prefix('api/flow-builder')->name('flow-builder.')->group(function () {
+    Route::get('/{flow}', [App\Http\Controllers\FlowBuilderController::class, 'load'])->name('load');
+    Route::post('/', [App\Http\Controllers\FlowBuilderController::class, 'store'])->name('store');
+    Route::put('/{flow}', [App\Http\Controllers\FlowBuilderController::class, 'update'])->name('update');
+    Route::post('/{flow}/publish', [App\Http\Controllers\FlowBuilderController::class, 'publish'])->name('publish');
+    Route::post('/{flow}/republish', [App\Http\Controllers\FlowBuilderController::class, 'republish'])->name('republish');
+    Route::get('/endpoint-url', [App\Http\Controllers\Api\FlowBuilderController::class, 'endpointUrl'])->name('endpoint-url');
+});
+
     // Reports Routes
     Route::controller(ReportsController::class)->prefix('reports')->name('reports.')->group(function () {
         Route::get('/', 'dashboard')->name('dashboard');
@@ -167,6 +188,26 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
         Route::get('/payments', 'payments')->name('payments');
         Route::get('/reconciliation', 'reconciliation')->name('reconciliation');
         Route::get('/daily-summary', 'dailySummary')->name('daily-summary');
+    });
+
+    // WhatsApp Flows Routes (separate from Flowmaker module)
+Route::controller(FlowsController::class)->prefix('whatsapp-flows')->name('whatsapp-flows.')->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'index')->name('create');
+    Route::get('/{id}/edit', 'index')->name('edit');
+    Route::get('/responses/dashboard', function () {
+        return view('whatsapp-flows-responses');
+    })->name('responses');
+
+        // API endpoints
+        Route::get('/api/list', 'list')->name('list');
+        Route::get('/api/{id}', 'getFlow')->name('show');
+        Route::post('/api', 'create')->name('store');
+        Route::put('/api/{id}', 'update')->name('update');
+        Route::delete('/api/{id}', 'delete')->name('delete');
+        Route::post('/api/{id}/publish', 'publish')->name('publish');
+        Route::post('/api/{id}/archive', 'archive')->name('archive');
+        Route::post('/api/{id}/publish-to-meta', 'publishToMeta')->name('publish-to-meta');
     });
 });
 
@@ -177,5 +218,6 @@ Route::middleware('web')->group(function () {
 
 //Static pages or vendor by alias
 Route::middleware('web')->group(function () {
-    Route::get('/{alias}', [FrontEndController::class, 'staticPage'])->name('static-page');
+    Route::get('/{alias}', [FrontEndController::class, 'staticPage'])->name('static-page')
+        ->where('alias', '^(?!flows|whatsapp-flows|dashboard|home|reports|reports/|api/|login|logout|password|register|forgot-password).*');
 });

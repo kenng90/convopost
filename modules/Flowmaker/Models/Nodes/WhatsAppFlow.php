@@ -1,0 +1,560 @@
+<?php
+
+namespace Modules\Flowmaker\Models\Nodes;
+
+use App\Models\WhatsappFlow as WhatsappFlowModel;
+use App\Models\WhatsappFlowResponse;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Modules\Wpbox\Models\Message;
+
+class WhatsAppFlow extends Node
+{
+    // public function listenForReply($message, $data)
+    // {
+    //     Log::info('WhatsApp Flow: listening for flow completion', ['nodeId' => $this->id]);
+
+    //     $extraData = $data->extra ?? null;
+    //     $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+    //     $contact = \Modules\Flowmaker\Models\Contact::find($contactId);
+
+    //     if ($extraData == null || empty($extraData)) {
+    //         Log::info('WhatsApp Flow: no response data received');
+    //         return;
+    //     }
+
+    //     // Extract response data (should be an array of form responses)
+    //     $rawData = is_string($extraData) ? json_decode($extraData, true) : $extraData;
+
+    //     // Strip internal Meta keys — keep only user-submitted field values
+    //     $internalKeys = ['flow_token', 'version', 'action', 'screen', 'name'];
+    //     $responseData = is_array($rawData)
+    //         ? array_filter($rawData, fn ($k) => ! in_array($k, $internalKeys, true), ARRAY_FILTER_USE_KEY)
+    //         : [];
+
+    //     Log::info('WhatsApp Flow: response data received', [
+    //         'contactId'    => $contactId,
+    //         'rawData'      => $rawData,
+    //         'responseData' => $responseData,
+    //     ]);
+
+    //     // Get the settings to find the flow response record
+    //     $settings = $this->getDataAsArray()['settings'] ?? [];
+    //     $flowId = $settings['whatsappFlowId'] ?? null;
+
+    //     if (!$flowId) {
+    //         Log::error('WhatsApp Flow: no WhatsApp Flow configured');
+    //         return;
+    //     }
+
+    //     $whatsappFlow = WhatsappFlowModel::find($flowId);
+    //     if (!$whatsappFlow) {
+    //         Log::error('WhatsApp Flow: flow not found', ['flowId' => $flowId]);
+    //         return;
+    //     }
+
+    //     // Find the response record — prefer the ID stored in contact state (set when the
+    //     // flow was sent), then fall back to a DB query.
+    //     $responseId = $contact->getContactStateValue($this->flow_id, 'whatsapp_flow_response_id');
+    //     $flowResponse = $responseId ? WhatsappFlowResponse::find($responseId) : null;
+
+    //     if (!$flowResponse) {
+    //         $flowResponse = WhatsappFlowResponse::where([
+    //             'whatsapp_flow_id' => $flowId,
+    //             'flow_id'          => $this->flow_id,
+    //             'flow_node_id'     => $this->id,
+    //             'contact_id'       => $contactId,
+    //         ])->latest()->first();
+    //     }
+
+    //     if (!$flowResponse) {
+    //         Log::warning('WhatsApp Flow: flow response record not found, creating one');
+    //         $flowResponse = WhatsappFlowResponse::create([
+    //             'company_id'       => $contact->company_id,
+    //             'whatsapp_flow_id' => $flowId,
+    //             'flow_id'          => $this->flow_id,
+    //             'flow_node_id'     => $this->id,
+    //             'contact_id'       => $contactId,
+    //             'contact_phone'    => $contact->phone,
+    //             'contact_name'     => $contact->name,
+    //             'status'           => 'pending',
+    //         ]);
+    //     }
+
+    //     // Only call markCompleted if there are actual form field values.
+    //     // The nfm_reply webhook handler runs first and already marked the record
+    //     // as completed with whatever Meta sent. If responseData is empty here it
+    //     // means Meta didn't include any form fields — don't overwrite with empty data.
+    //     if (!empty($responseData)) {
+    //         $flowResponse->markCompleted($responseData);
+    //         Log::info('WhatsApp Flow: updated response with form data', [
+    //             'flowResponseId' => $flowResponse->id,
+    //             'fieldCount'     => count($responseData),
+    //         ]);
+    //     } elseif ($flowResponse->status !== 'completed') {
+    //         // No form fields but record still pending — mark as completed
+    //         $flowResponse->markCompleted([]);
+    //         Log::info('WhatsApp Flow: marked as completed (no form fields)', [
+    //             'flowResponseId' => $flowResponse->id,
+    //         ]);
+    //     } else {
+    //         Log::info('WhatsApp Flow: response already completed by webhook handler', [
+    //             'flowResponseId' => $flowResponse->id,
+    //             'existingFields' => count($flowResponse->responses ?? []),
+    //         ]);
+    //     }
+
+    //     // Clear the waiting state
+    //     $contact->clearContactState($this->flow_id, 'current_node');
+
+    //     // Store responses in contact state for downstream nodes to access
+    //     $contact->setContactState($this->flow_id, 'whatsapp_flow_responses', json_encode($responseData));
+
+    //     // Check for conditional routing
+    //     $settings = $this->getDataAsArray()['settings'] ?? [];
+    //     $conditions = $settings['conditions'] ?? [];
+
+    //     if (!empty($conditions)) {
+    //         Log::info('WhatsApp Flow: evaluating conditions', ['conditionCount' => count($conditions)]);
+
+    //         // Evaluate each condition in order
+    //         foreach ($conditions as $conditionIndex => $condition) {
+    //             if ($this->evaluateCondition($condition, $responseData)) {
+    //                 Log::info('WhatsApp Flow: condition matched', ['conditionIndex' => $conditionIndex]);
+    //                 $nextNode = $this->getNextNodeId("condition_{$conditionIndex}");
+    //                 if ($nextNode) {
+    //                     Log::info('WhatsApp Flow: routing to condition match node', ['conditionIndex' => $conditionIndex]);
+    //                     $nextNode->process($message, $data);
+    //                     return;
+    //                 }
+    //             }
+    //         }
+
+    //         // No condition matched - route to else
+    //         Log::info('WhatsApp Flow: no conditions matched, routing to else');
+    //         $nextNode = $this->getNextNodeId('else');
+    //         if ($nextNode) {
+    //             $nextNode->process($message, $data);
+    //         }
+    //     } else {
+    //         // No conditions - route to onFlowCompleted handle
+    //         $nextNode = $this->getNextNodeId('onFlowCompleted');
+    //         if ($nextNode) {
+    //             Log::info('WhatsApp Flow: routing to onFlowCompleted node');
+    //             $nextNode->process($message, $data);
+    //         } else {
+    //             Log::info('WhatsApp Flow: no onFlowCompleted node connected');
+    //         }
+    //     }
+    // }
+
+    public function listenForReply($message, $data)
+{
+    Log::info('WhatsApp Flow: listening for flow completion', ['nodeId' => $this->id]);
+
+    $extraData = $data->extra ?? null;
+    $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+    $contact   = \Modules\Flowmaker\Models\Contact::find($contactId);
+
+    if ($extraData == null || empty($extraData)) {
+        Log::info('WhatsApp Flow: no response data received');
+        return;
+    }
+
+    // Decode the raw payload from extra (always the full Meta nfm_reply response_json)
+    $rawData = is_string($extraData) ? json_decode($extraData, true) : $extraData;
+    $flowToken = $rawData['flow_token'] ?? null;
+
+    // Strip internal Meta keys — keep only user-submitted field values
+    $internalKeys   = ['flow_token', 'version', 'action', 'screen', 'name'];
+    $responseData   = is_array($rawData)
+        ? array_filter($rawData, fn($k) => !in_array($k, $internalKeys, true), ARRAY_FILTER_USE_KEY)
+        : [];
+
+    Log::info('WhatsApp Flow: response data received', [
+        'contactId'    => $contactId,
+        'rawData'      => $rawData,
+        'responseData' => $responseData,
+        'flowToken'    => $flowToken,
+    ]);
+
+    // Get settings
+    $settings = $this->getDataAsArray()['settings'] ?? [];
+    $flowId   = $settings['whatsappFlowId'] ?? null;
+
+    if (!$flowId) {
+        Log::error('WhatsApp Flow: no WhatsApp Flow configured');
+        return;
+    }
+
+    $whatsappFlow = WhatsappFlowModel::find($flowId);
+    if (!$whatsappFlow) {
+        Log::error('WhatsApp Flow: flow not found', ['flowId' => $flowId]);
+        return;
+    }
+
+    // ── Locate the response record ────────────────────────────────────────────
+    // Priority 1: contact state (most reliable — set when the flow was sent)
+    $responseId   = $contact->getContactStateValue($this->flow_id, 'whatsapp_flow_response_id');
+    $flowResponse = $responseId ? WhatsappFlowResponse::find($responseId) : null;
+
+    // Priority 2: match by flow_token stored in the DB record
+    if (!$flowResponse && $flowToken) {
+        $flowResponse = WhatsappFlowResponse::where('flow_token', $flowToken)->first();
+    }
+
+    // Priority 3: latest pending record for this contact+flow
+    if (!$flowResponse) {
+        $flowResponse = WhatsappFlowResponse::where([
+            'whatsapp_flow_id' => $flowId,
+            'flow_id'          => $this->flow_id,
+            'flow_node_id'     => $this->id,
+            'contact_id'       => $contactId,
+        ])->latest()->first();
+    }
+
+    if (!$flowResponse) {
+        Log::warning('WhatsApp Flow: flow response record not found, creating one');
+        $flowResponse = WhatsappFlowResponse::create([
+            'company_id'       => $contact->company_id,
+            'whatsapp_flow_id' => $flowId,
+            'flow_id'          => $this->flow_id,
+            'flow_node_id'     => $this->id,
+            'contact_id'       => $contactId,
+            'contact_phone'    => $contact->phone,
+            'contact_name'     => $contact->name,
+            'status'           => 'pending',
+        ]);
+    }
+
+    // ── Resolve the actual field data ─────────────────────────────────────────
+    // If nfm_reply had no fields in extra, load from DB — the webhook handler
+    // may have already stored them via markCompleted() before this node ran.
+    if (empty($responseData) && $flowResponse->status === 'completed') {
+        $dbResponses = $flowResponse->responses ?? [];
+        if (!empty($dbResponses)) {
+            $responseData = $dbResponses;
+            Log::info('WhatsApp Flow: loaded response data from DB record (extra had no fields)', [
+                'flowResponseId' => $flowResponse->id,
+                'fieldCount'     => count($responseData),
+                'fields'         => array_keys($responseData),
+            ]);
+        }
+    }
+
+    // ── Persist the response data ─────────────────────────────────────────────
+    if (!empty($responseData)) {
+        $flowResponse->markCompleted($responseData);
+        Log::info('WhatsApp Flow: updated response with form data', [
+            'flowResponseId' => $flowResponse->id,
+            'fieldCount'     => count($responseData),
+        ]);
+    } elseif ($flowResponse->status !== 'completed') {
+        $flowResponse->markCompleted([]);
+        Log::info('WhatsApp Flow: marked as completed (no form fields)', [
+            'flowResponseId' => $flowResponse->id,
+        ]);
+    } else {
+        Log::info('WhatsApp Flow: response already completed by webhook handler', [
+            'flowResponseId'  => $flowResponse->id,
+            'existingFields'  => count($flowResponse->responses ?? []),
+        ]);
+    }
+
+    // Clear the waiting state
+    $contact->clearContactState($this->flow_id, 'current_node');
+
+    // Store responses in contact state for downstream nodes (e.g. message templates using {{field_name}})
+    $contact->setContactState($this->flow_id, 'whatsapp_flow_responses', json_encode($responseData));
+
+    Log::info('WhatsApp Flow: final responseData going to routing', [
+        'fieldCount' => count($responseData),
+        'fields'     => array_keys($responseData),
+        'values'     => $responseData,
+    ]);
+
+    // ── Route to next node ────────────────────────────────────────────────────
+    $conditions = $settings['conditions'] ?? [];
+
+    if (!empty($conditions)) {
+        Log::info('WhatsApp Flow: evaluating conditions', ['conditionCount' => count($conditions)]);
+
+        foreach ($conditions as $conditionIndex => $condition) {
+            if ($this->evaluateCondition($condition, $responseData)) {
+                Log::info('WhatsApp Flow: condition matched', ['conditionIndex' => $conditionIndex]);
+                $nextNode = $this->getNextNodeId("condition_{$conditionIndex}");
+                if ($nextNode) {
+                    $nextNode->process($message, $data);
+                    return;
+                }
+            }
+        }
+
+        Log::info('WhatsApp Flow: no conditions matched, routing to else');
+        $nextNode = $this->getNextNodeId('else');
+        if ($nextNode) {
+            $nextNode->process($message, $data);
+        }
+    } else {
+        $nextNode = $this->getNextNodeId('onFlowCompleted');
+        if ($nextNode) {
+            Log::info('WhatsApp Flow: routing to onFlowCompleted node');
+            $nextNode->process($message, $data);
+        } else {
+            Log::info('WhatsApp Flow: no onFlowCompleted node connected');
+        }
+    }
+}
+    public function process($message, $data)
+    {
+        Log::info('WhatsApp Flow: processing', ['isStartNode' => $this->isStartNode, 'nodeId' => $this->id]);
+
+        if ($this->isStartNode) {
+            // Check if we're resuming (user completed the flow) by checking if extra data exists
+            $extraData = $data->extra ?? null;
+
+            if (!empty($extraData)) {
+                // User has completed the flow - resume and listen for reply
+                Log::info('WhatsApp Flow: resuming after flow completion', ['extraData' => $extraData]);
+                $this->listenForReply($message, $data);
+            } else {
+                // No extra data — but check if we're already waiting for this flow.
+                // sendMessage() fires ContactReplies internally (with extra=null) before
+                // our explicit dispatch (with extra=flow_token). That first event would
+                // incorrectly re-send the form. Guard against it by checking current_node.
+                $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+                $contact   = \Modules\Flowmaker\Models\Contact::find($contactId);
+                $currentNode = $contact ? $contact->getContactStateValue($this->flow_id, 'current_node') : '';
+
+                if ($currentNode === $this->id) {
+                    Log::info('WhatsApp Flow: already waiting for completion — ignoring trigger without response data', [
+                        'nodeId' => $this->id,
+                    ]);
+                    return ['success' => true];
+                }
+
+                // First time — send the flow
+                Log::info('WhatsApp Flow: sending flow for first time');
+                return $this->sendFlow($message, $data);
+            }
+            return ['success' => true];
+        }
+
+        return $this->sendFlow($message, $data);
+    }
+
+    /**
+     * Send the WhatsApp Flow to the contact via Meta's interactive flow message API
+     */
+    private function sendFlow($message, $data)
+    {
+        $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+        $contact = \Modules\Flowmaker\Models\Contact::find($contactId);
+        $settings = $this->getDataAsArray()['settings'] ?? [];
+
+        $flowId = $settings['whatsappFlowId'] ?? null;
+
+        if (!$flowId) {
+            Log::error('WhatsApp Flow: no WhatsApp Flow configured in node settings');
+            return ['success' => false];
+        }
+
+        $whatsappFlow = WhatsappFlowModel::find($flowId);
+        if (!$whatsappFlow) {
+            Log::error('WhatsApp Flow: flow not found', ['flowId' => $flowId]);
+            return ['success' => false];
+        }
+
+        if (empty($whatsappFlow->meta_flow_id)) {
+            Log::error('WhatsApp Flow: flow has no Meta Flow ID — publish it to Meta first', ['flowId' => $flowId]);
+            return ['success' => false];
+        }
+
+        $contact->setContactState($this->flow_id, 'whatsapp_flow_id', $flowId);
+        $contact->setContactState($this->flow_id, 'whatsapp_flow_name', $whatsappFlow->name);
+
+        try {
+            $flowResponse = WhatsappFlowResponse::create([
+                'company_id' => $contact->company_id,
+                'whatsapp_flow_id' => $flowId,
+                'flow_id' => $this->flow_id,
+                'flow_node_id' => $this->id,
+                'contact_id' => $contactId,
+                'contact_phone' => $contact->phone,
+                'contact_name' => $contact->name,
+                'status' => 'pending',
+                'sent_at' => now(),
+            ]);
+
+            $contact->setContactState($this->flow_id, 'whatsapp_flow_response_id', $flowResponse->id);
+
+            // Get company API credentials
+            $company = \App\Models\Company::find($contact->company_id);
+            $accessToken = $company->getConfig('whatsapp_permanent_access_token', '');
+            $phoneId = $company->getConfig('whatsapp_phone_number_id', '');
+
+            // Determine the first screen from the stored flow JSON
+            $flowJson = is_array($whatsappFlow->flow_json) ? $whatsappFlow->flow_json : [];
+            $screens = $flowJson['screens'] ?? [];
+            $firstScreenId = !empty($screens) ? ($screens[0]['id'] ?? 'WELCOME') : 'WELCOME';
+
+            $header = $contact->changeVariables($settings['header'] ?? 'Complete the form', $this->flow_id);
+            $footer = $contact->changeVariables($settings['footer'] ?? 'Your responses help us serve you better', $this->flow_id);
+            $flowToken = 'flow_' . $flowResponse->id . '_' . time();
+
+            $payload = [
+                'messaging_product' => 'whatsapp',
+                'to' => $contact->phone,
+                'type' => 'interactive',
+                'interactive' => [
+                    'type' => 'flow',
+                    'body' => [
+                        'text' => $header,
+                    ],
+                    'footer' => [
+                        'text' => $footer,
+                    ],
+                    'action' => [
+                        'name' => 'flow',
+                        'parameters' => [
+                            'flow_message_version' => '3',
+                            'flow_token'           => $flowToken,
+                            'flow_id'              => $whatsappFlow->meta_flow_id,
+                            'flow_cta'             => 'Open Form',
+                            'flow_action' => 'navigate',
+                        ],
+                    ],
+                ],
+            ];
+        
+
+            // Store token on the DB record for reliable lookup on completion
+            $flowResponse->update(['flow_token' => $flowToken]);
+            // Store token so webhook can match the completion back to this contact/flow
+            $contact->setContactState($this->flow_id, 'flow_token', $flowToken);
+
+            Log::info('WhatsApp Flow: sending interactive flow message', [
+                'metaFlowId' => $whatsappFlow->meta_flow_id,
+                'phone' => $contact->phone,
+                'firstScreen' => $firstScreenId,
+                'flowToken' => $flowToken,
+            ]);
+
+            $url = 'https://graph.facebook.com/v19.0/' . $phoneId . '/messages';
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $accessToken,
+                'Content-Type' => 'application/json',
+            ])->post($url, $payload);
+
+            $responseBody = $response->json();
+
+            Log::info('WhatsApp Flow: Meta API response', [
+                'status' => $response->status(),
+                'body' => $responseBody,
+            ]);
+
+            if (!$response->successful()) {
+                Log::error('WhatsApp Flow: Meta API call failed', ['error' => $responseBody]);
+                return ['success' => false];
+            }
+
+            // Record the sent message
+            $fbMessageId = $responseBody['messages'][0]['id'] ?? null;
+            Message::create([
+                'contact_id' => $contact->id,
+                'company_id' => $contact->company_id,
+                'value' => $header,
+                'is_message_by_contact' => false,
+                'is_campign_messages' => false,
+                'status' => 1,
+                'fb_message_id' => $fbMessageId,
+            ]);
+
+            Log::info('WhatsApp Flow: flow sent successfully', [
+                'flowId' => $flowId,
+                'metaFlowId' => $whatsappFlow->meta_flow_id,
+                'phone' => $contact->phone,
+                'fbMessageId' => $fbMessageId,
+            ]);
+
+            // Park on this node and wait for flow completion via the dedicated webhook
+            $contact->setContactState($this->flow_id, 'current_node', $this->id);
+
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Flow: failed to send flow', [
+                'error' => $e->getMessage(),
+            ]);
+            return ['success' => false];
+        }
+
+        return ['success' => true];
+    }
+
+    /**
+     * Evaluate a condition against response data.
+     *
+     * Condition format:
+     * {
+     *   fieldName: "contact_preference",
+     *   operator: "==",
+     *   value: "yes"
+     * }
+     */
+    protected function evaluateCondition(array $condition, array $responseData): bool
+    {
+        $fieldName = $condition['fieldName'] ?? '';
+        $operator = $condition['operator'] ?? '==';
+        $expectedValue = $condition['value'] ?? '';
+
+        if (empty($fieldName)) {
+            Log::warning('WhatsApp Flow: condition missing field name');
+            return false;
+        }
+
+        $actualValue = $responseData[$fieldName] ?? '';
+
+        // Convert array to string if needed
+        if (is_array($actualValue)) {
+            $actualValue = implode(',', $actualValue);
+        }
+
+        $actualValue = (string) $actualValue;
+        $expectedValue = (string) $expectedValue;
+
+        Log::debug('WhatsApp Flow: evaluating condition', [
+            'fieldName' => $fieldName,
+            'operator' => $operator,
+            'expectedValue' => $expectedValue,
+            'actualValue' => $actualValue,
+        ]);
+
+        // Evaluate based on operator
+        switch ($operator) {
+            case '==':
+                return strtolower($actualValue) === strtolower($expectedValue);
+            case '!=':
+                return strtolower($actualValue) !== strtolower($expectedValue);
+            case 'contains':
+                return stripos($actualValue, $expectedValue) !== false;
+            case 'starts':
+                return strpos(strtolower($actualValue), strtolower($expectedValue)) === 0;
+            default:
+                Log::warning('WhatsApp Flow: unknown operator', ['operator' => $operator]);
+                return false;
+        }
+    }
+
+    /**
+     * Get the next node by handle ID
+     */
+    protected function getNextNodeId($handleId = null)
+    {
+        foreach ($this->outgoingEdges as $edge) {
+            $sourceHandle = $edge->getSourceHandle() ?? '';
+            if ($handleId === null || str_contains($sourceHandle, $handleId)) {
+                return $edge->getTarget();
+            }
+        }
+        return null;
+    }
+}

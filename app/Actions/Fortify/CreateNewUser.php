@@ -86,6 +86,7 @@ class CreateNewUser implements CreatesNewUsers
         ]);
 
         $user->company_id = $lastCompanyId;
+        $user->save(); 
 
         return $user;
     }

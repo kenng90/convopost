@@ -1,6 +1,7 @@
 {
     "alias": "wpboxlanding",
-    "description": "",
+    "version": "1.0",
+    "description": "Landing page for WPBox WhatsApp CRM platform",
     "keywords": [],
     "active": 1,
     "order": 0,
