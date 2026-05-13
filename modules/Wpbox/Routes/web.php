@@ -31,8 +31,10 @@ Route::group([
         Route::post('campaigns', 'CampaignsController@store')->name('campaigns.store');
         Route::put('campaigns/{campaign}', 'CampaignsController@update')->name('campaigns.update');
         Route::get('campaigns/del/{campaign}', 'CampaignsController@destroy')->name('campaigns.delete');
-
-        //Templates
+        Route::post('/campaigns/parse-file', 'CampaignsController@parseFile')->name('campaigns.parse-file');
+        Route::get('/campaigns/create/{type?}', 'CampaignsController@create')->name('campaigns.create');
+        Route::post('/campaigns/store',  'CampaignsController@store')->name('campaigns.store');
+       //Templates
         Route::get('templates', 'TemplatesController@index')->name('templates.index');
         Route::get('templates/create', 'TemplatesController@create')->name('templates.create');
         Route::post('templates/store', 'TemplatesController@store')->name('templates.store');
