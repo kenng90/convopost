@@ -150,7 +150,7 @@
                                 @endif
 
                                 @if ( (config('settings.app_code_name','')=="whatssupport" || config('settings.app_code_name','')=="wpbox") && auth()->user()->hasRole('owner'))
-                                    @if (\Illuminate\Support\Facades\Route::has('whatsappcall.settings'))
+                                    @if (\Illuminate\Support\Facades\Route::has('whatsappcall.settings') && auth()->user()->canUsePlanPlugin('whatsappcall'))
                                     <a href="{{ route('whatsappcall.settings') }}" class="dropdown-item d-flex align-items-center">
                                             <i class="ni ni-world text-success mr-2"></i>
                                             <span>{{ __('Whatsapp Calls') }}</span>
@@ -158,24 +158,8 @@
                                     @endif
                                 @endif
 
-                                <!-- Catalogs Management -->
-                                @if (auth()->check())
-                                <a href="/catalogs" class="dropdown-item d-flex align-items-center">
-                                    <i class="ni ni-folder-17 text-info mr-2"></i>
-                                    <span>{{ __('Manage Catalogs') }}</span>
-                                </a>
-                                @endif
-
-                                <!-- WhatsApp Flows -->
-                                @if (auth()->check())
-                                <a href="{{ route('whatsapp-flows.index') }}" class="dropdown-item d-flex align-items-center @if(request()->is('whatsapp-flows*')) active @endif">
-                                    <i class="ni ni-send text-purple mr-2"></i>
-                                    <span>{{ __('WhatsApp Flows') }}</span>
-                                </a>
-                                @endif
-
                                 <!-- Reports -->
-                                @if (auth()->check())
+                                @if (auth()->user()->hasRole('owner'))
                                     <div class="dropdown-divider"></div>
                                     <h6 class="dropdown-header text-xs text-muted">{{ __('Reports') }}</h6>
 
@@ -186,10 +170,12 @@
                                     </a>
                                     @endif
 
-                                    <a href="/whatsapp-flows/responses/dashboard" class="dropdown-item d-flex align-items-center @if(request()->is('whatsapp-flows/responses/dashboard*')) active @endif">
+                                    @if (auth()->user()->canUsePlanPlugin('whatsappflows') && Route::has('whatsapp-flows.responses'))
+                                    <a href="{{ route('whatsapp-flows.responses') }}" class="dropdown-item d-flex align-items-center @if(request()->is('whatsapp-flows/responses*')) active @endif">
                                         <i class="ni ni-collection text-success mr-2"></i>
                                         <span>{{ __('WhatsApp Flow Reports') }}</span>
                                     </a>
+                                    @endif
                                 @endif
 
                                 <!-- Management Menu Items -->

@@ -141,6 +141,7 @@ const messagingActions = [
     }
   },
   {
+    type: 'whatsapp_catalog',
     icon: Database,
     label: "WhatsApp catalog",
     bgColor: "bg-purple-100",
@@ -159,6 +160,7 @@ const messagingActions = [
     }
   },
   {
+    type: 'whatsapp_flow',
     icon: Database,
     label: "Send WhatsApp Flow",
     bgColor: "bg-blue-100",
@@ -179,12 +181,31 @@ const messagingActions = [
   }
 ];
 
+declare global {
+  interface Window {
+    data?: {
+      planPlugins?: {
+        whatsappflows?: boolean;
+        whatsappcatalog?: boolean;
+      };
+    };
+  }
+}
+
 export const MessagingSection = ({ searchQuery }: MessagingSectionProps) => {
   const actions = useFlowActions();
 
-  const filteredActions = messagingActions.filter(action => 
-    action.label.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const planPlugins = window.data?.planPlugins ?? {};
+
+  const filteredActions = messagingActions.filter(action => {
+    if (action.type === 'whatsapp_catalog' && !planPlugins.whatsappcatalog) {
+      return false;
+    }
+    if (action.type === 'whatsapp_flow' && !planPlugins.whatsappflows) {
+      return false;
+    }
+    return action.label.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   if (filteredActions.length === 0) return null;
 

@@ -85,6 +85,8 @@ class Main extends Controller
             }
         }
 
+        $company = auth()->user()->currentCompany();
+
         $data = [
             'flow' => $flow,
             'variables' => $variables,
@@ -94,6 +96,10 @@ class Main extends Controller
             'trainedFiles' => $trainedFiles,
             'agents' => $agents,
             'groups' => $groups,
+            'planPlugins' => [
+                'whatsappflows' => $company ? $company->hasPlanPlugin('whatsappflows') : false,
+                'whatsappcatalog' => $company ? $company->hasPlanPlugin('whatsappcatalog') : false,
+            ],
         ];
 
         return view('flowmaker::index')->with('data', json_encode($data));
