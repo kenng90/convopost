@@ -123,7 +123,7 @@
                                             @endif
                                         </td>
                                         <td>
-                                            {{ count($flow->flow_json['screens'] ?? []) }}
+                                            {{ (int) $flow->screens_count }}
                                         </td>
                                         <td>
                                             @if ($flow->meta_flow_id)

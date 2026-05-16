@@ -217,7 +217,7 @@ class CampaignsController extends Controller
         return $variables;
     }
 
-    public function create(Request $request){
+    public function create(Request $request, $type = null){
         $templates=[];
         foreach (Template::where('status','APPROVED')->get() as $key => $template) {
             $templates[$template->id]=$template->name." - ".$template->language;
@@ -309,100 +309,408 @@ class CampaignsController extends Controller
             $dataToSend['sources'] = collect([0 => __('All')])->union($dataToSend['sources']);
         }
 
+        // If type is specified → show specific form
+    if (in_array($type, ['file', 'group', 'quick'])) {
+        return view($this->view_path . 'create_' . $type, $dataToSend);
+    }
         return view($this->view_path.'create', $dataToSend);
     }
 
 
-    public function store(Request $request) {  
-        //Create the campaign
-        $campaign = $this->provider::create([
-            'name'=>$request->has('name') ? $request->name:"template_message_".now(),
-            'timestamp_for_delivery'=>$request->has('send_now')?null:$request->send_time,
-            'variables'=>$request->has('paramvalues')?json_encode($request->paramvalues):"",
-            'variables_match'=>json_encode($request->parammatch),
-            'template_id'=>$request->template_id,
-            'group_id'=>$request->group_id.""=="0"?null:$request->group_id,
-            'contact_id'=>$request->contact_id,
-            'total_contacts'=>Contact::count(),
+    public function parseFile(Request $request)
+    {
+        $request->validate([
+            'contact_file' => 'required|file|mimes:csv,xlsx,xls,txt',
         ]);
 
-        //Check if type is bot
-        $isBot=$request->has('type') && $request->type === 'bot';
-        if($isBot) {
-            $campaign->is_bot = true;
-            $campaign->bot_type= $request->reply_type;
-            $campaign->trigger= $request->trigger;
-            $campaign->save();
+        $file = $request->file('contact_file');
+        $ext  = strtolower($file->getClientOriginalExtension());
+
+        if ($ext === 'csv' || $ext === 'txt') {
+            $data = $this->parseCsvFile($file->getRealPath());
+        } else {
+            $data = $this->parseXlsxFile($file->getRealPath());
         }
 
-        $isAPI=$request->has('type') && $request->type === 'api';
-        if($isAPI) {
-            $campaign->is_api = true;
-            $campaign->save();
-        }
-
-        $isReminder=$request->has('type') && $request->type === 'reminder';
-        if($isReminder) {
-            $campaign->is_reminder = true;
-            $campaign->save();
-
-            //Create the reminder
-            $reminder = \Modules\Reminders\Models\Remineder::create([
-                'campaign_id' => $campaign->id,
-                'name' => $request->has('name') ? $request->name:"template_message_".now(),
-                'source_id' => $request->source_id == 0 ? null : $request->source_id,
-                'type' => $request->reminder_type,
-                'time' => $request->reminder_time,
-                'time_type' => $request->reminder_unit,
-                'status' => 1,
-            ]);
-        }
-
-        if ($request->hasFile('pdf')) {
-            $campaign->media_link = $this->saveDocument(
-                "",
-                $request->pdf,
-            );
-            $campaign->update();
-        }
-        if ($request->hasFile('imageupload')) {
-            $campaign->media_link = $this->saveDocument(
-                "",
-                $request->imageupload,
-            );
-            $campaign->update();
-        }
-
-    
-
-        
-         if($isBot) {
-            //Bot campaign
-            return redirect()->route('replies.index',['type'=>'bot'])->withStatus(__('You have created a new bot.'));
-         } else if($isAPI) {
-            //API campaign
-            return redirect()->route('wpbox.api.index',['type'=>'api'])->withStatus(__('You have created new API Campaigns.'));
-         }
-         else if($isReminder) {
-            //Reminder campaign
-            return redirect()->route('reminders.reminders.index')->withStatus(__('You have created a new reminder.'));
-         }
-         else{
-            //Regular campaign
-            //Make the actual messages
-            $campaign->makeMessages($request);
-
-            if($request->has('contact_id')){
-                return redirect()->route('chat.index')->withStatus(__('Message will be send shortly. Please note that if new contact, it will not appear in this list until the contact start interacting with you!'));
-            }else{
-                return redirect()->route($this->webroute_path.'index')->withStatus(__('Campaign is ready to be send'));
-            }
-         }
-        
-
-       
-    
+        return response()->json($data);
     }
+
+    // ── private helpers ───────────────────────────────────────────────────
+
+    private function parseCsvFile(string $path): array
+    {
+        $rows    = [];
+        $headers = [];
+
+        if (($handle = fopen($path, 'r')) !== false) {
+            $first = true;
+            while (($row = fgetcsv($handle)) !== false) {
+                if ($first) {
+                    $headers = array_map('trim', $row);
+                    $first   = false;
+                } else {
+                    $rows[] = $row;
+                }
+            }
+            fclose($handle);
+        }
+
+        return [
+            'headers'   => $headers,
+            'rows'      => $rows,
+            'row_count' => count($rows),
+        ];
+    }
+
+    private function parseXlsxFile(string $path): array
+    {
+        // Requires phpoffice/phpspreadsheet
+        // composer require phpoffice/phpspreadsheet
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+        $sheet       = $spreadsheet->getActiveSheet();
+        $data        = $sheet->toArray(null, true, true, false);
+
+        $headers = array_map('trim', (array) array_shift($data));
+        $rows    = array_values($data);
+
+        return [
+            'headers'   => $headers,
+            'rows'      => $rows,
+            'row_count' => count($rows),
+        ];
+    }
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION B — store() additions
+// ════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Add this block at the TOP of store(), before the existing
+     *   $campaign = $this->provider::create([...]);
+     *
+     * It handles broadcast_type=file entirely and returns early.
+     */
+
+    // ┌─ paste from here ──────────────────────────────────────────────────────
+    // public function store(Request $request)
+    // {
+    //     // ── FILE BROADCAST ────────────────────────────────────────────────────
+    //     if ($request->input('broadcast_type') === 'file') {
+    //         return $this->storeFileBroadcast($request);
+    //     }
+
+    //     // ── everything below is the ORIGINAL store() body — unchanged ─────────
+
+    //     $campaign = $this->provider::create([
+    //         'name'                 => $request->has('name') ? $request->name : 'template_message_' . now(),
+    //         'timestamp_for_delivery' => $request->has('send_now') ? null : $request->send_time,
+    //         'variables'            => $request->has('paramvalues') ? json_encode($request->paramvalues) : '',
+    //         'variables_match'      => json_encode($request->parammatch),
+    //         'template_id'          => $request->template_id,
+    //         'group_id'             => $request->group_id . '' === '0' ? null : $request->group_id,
+    //         'contact_id'           => $request->contact_id,
+    //         'total_contacts'       => Contact::count(),
+    //     ]);
+
+    //     $isBot = $request->has('type') && $request->type === 'bot';
+    //     if ($isBot) {
+    //         $campaign->is_bot    = true;
+    //         $campaign->bot_type  = $request->reply_type;
+    //         $campaign->trigger   = $request->trigger;
+    //         $campaign->save();
+    //     }
+
+    //     $isAPI = $request->has('type') && $request->type === 'api';
+    //     if ($isAPI) {
+    //         $campaign->is_api = true;
+    //         $campaign->save();
+    //     }
+
+    //     $isReminder = $request->has('type') && $request->type === 'reminder';
+    //     if ($isReminder) {
+    //         $campaign->is_reminder = true;
+    //         $campaign->save();
+
+    //         $reminder = \Modules\Reminders\Models\Remineder::create([
+    //             'campaign_id' => $campaign->id,
+    //             'name'        => $request->has('name') ? $request->name : 'template_message_' . now(),
+    //             'source_id'   => $request->source_id == 0 ? null : $request->source_id,
+    //             'type'        => $request->reminder_type,
+    //             'time'        => $request->reminder_time,
+    //             'time_type'   => $request->reminder_unit,
+    //             'status'      => 1,
+    //         ]);
+    //     }
+
+    //     if ($request->hasFile('pdf')) {
+    //         $campaign->media_link = $this->saveDocument('', $request->pdf);
+    //         $campaign->update();
+    //     }
+    //     if ($request->hasFile('imageupload')) {
+    //         $campaign->media_link = $this->saveDocument('', $request->imageupload);
+    //         $campaign->update();
+    //     }
+
+    //     if ($isBot) {
+    //         return redirect()->route('replies.index', ['type' => 'bot'])->withStatus(__('You have created a new bot.'));
+    //     } elseif ($isAPI) {
+    //         return redirect()->route('wpbox.api.index', ['type' => 'api'])->withStatus(__('You have created new API Campaigns.'));
+    //     } elseif ($isReminder) {
+    //         return redirect()->route('reminders.reminders.index')->withStatus(__('You have created a new reminder.'));
+    //     } else {
+    //         $campaign->makeMessages($request);
+    //         if ($request->has('contact_id')) {
+    //             return redirect()->route('chat.index')->withStatus(__('Message will be send shortly. Please note that if new contact, it will not appear in this list until the contact start interacting with you!'));
+    //         } else {
+    //             return redirect()->route($this->webroute_path . 'index')->withStatus(__('Campaign is ready to be send'));
+    //         }
+    //     }
+    // }
+    // └─ end of new store() ───────────────────────────────────────────────────
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION C — storeFileBroadcast()   (new private method)
+// ════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Handle the file-broadcast form submission.
+     *
+     * Flow:
+     *  1. Parse the uploaded file → get headers + rows.
+     *  2. Create the Campaign record (no group_id, file-based).
+     *  3. For every data row:
+     *     a. Resolve the phone number from the chosen column.
+     *     b. Find-or-create the Contact.
+     *     c. Build the per-row paramvalues by merging:
+     *           static values (from form)  ←  overridden by file column value
+     *        according to the file_column_map submitted by the view.
+     *     d. Create a Message record (mirrors what Campaign::makeMessages() does
+     *        for regular broadcasts — adapt the field names to your Message model).
+     */
+    private function storeFileBroadcast(Request $request)
+    {
+        $request->validate([
+            'contact_file' => 'required|file|mimes:csv,xlsx,xls,txt',
+            'template_id'  => 'required',
+            'phone_column' => 'required|string',
+        ]);
+
+        // ── 1. Parse file ─────────────────────────────────────────────────────
+        $file = $request->file('contact_file');
+        $ext  = strtolower($file->getClientOriginalExtension());
+        $data = $ext === 'csv' || $ext === 'txt'
+            ? $this->parseCsvFile($file->getRealPath())
+            : $this->parseXlsxFile($file->getRealPath());
+
+        $headers     = $data['headers'];
+        $rows        = $data['rows'];
+        $phoneColumn = $request->input('phone_column');
+        $phoneIndex  = array_search($phoneColumn, $headers);
+
+        if ($phoneIndex === false) {
+            return back()->withErrors(['phone_column' => __('Selected phone column not found in file.')]);
+        }
+
+        // file_column_map[body][1] => "First Name"  etc.
+        $fileColumnMap = $request->input('file_column_map', []);
+
+        // Static param values entered in the Variables panel
+        $staticParamValues = $request->input('paramvalues', []);
+
+        // ── 2. Create campaign ────────────────────────────────────────────────
+        $campaign = $this->provider::create([
+            'name'                  => $request->has('name') ? $request->name : 'file_broadcast_' . now(),
+            'timestamp_for_delivery'=> $request->has('send_now') ? null : $request->send_time,
+            'variables'             => json_encode($staticParamValues),
+            'variables_match'       => json_encode($request->input('parammatch', [])),
+            'template_id'           => $request->template_id,
+            'group_id'              => null,   // file-based — no group
+            'contact_id'            => null,
+            'total_contacts'        => count($rows),
+            // Mark it so it's easy to identify in the UI / reports
+            // Add a  `broadcast_type` string column to wa_campaings if you want:
+            // 'broadcast_type'     => 'file',
+        ]);
+
+        // ── 3. Iterate rows → create a message per row ───────────────────────
+        $scheduledAt = $request->has('send_now')
+            ? now()
+            : ($request->send_time ? \Carbon\Carbon::parse($request->send_time) : now());
+
+        $rowsQueued = 0;
+
+        foreach ($rows as $row) {
+            // Skip completely empty rows
+            if (empty(array_filter($row))) continue;
+
+            // Pad short rows
+            while (count($row) < count($headers)) {
+                $row[] = '';
+            }
+
+            // ── 3a. Resolve phone ─────────────────────────────────────────
+            $rawPhone = trim($row[$phoneIndex] ?? '');
+            if (empty($rawPhone)) continue;
+
+            // Strip leading + and non-digits for normalisation (adjust to your convention)
+            $phone = preg_replace('/[^0-9]/', '', $rawPhone);
+            if (strlen($phone) < 7) continue;
+
+            // ── 3b. Find or create contact ────────────────────────────────
+            $contact = Contact::firstOrCreate(
+                ['phone' => $phone],
+                ['name'  => $phone, 'subscribed' => 1]
+            );
+
+            // ── 3c. Build per-row paramvalues ─────────────────────────────
+            //
+            // Start with whatever static values the user typed in the
+            // Variables panel, then override each position that has a
+            // file-column mapping.
+            //
+            // $perRowParams = [
+            //   'body'   => ['1' => 'resolved value', '2' => ...],
+            //   'header' => ['1' => 'resolved value'],
+            // ]
+            $perRowParams = $staticParamValues; // deep clone via array assignment in PHP
+
+            foreach (['body', 'header'] as $section) {
+                if (!isset($fileColumnMap[$section])) continue;
+                foreach ($fileColumnMap[$section] as $variableId => $colName) {
+                    if (empty($colName)) continue; // no column selected → keep static
+                    $colIdx = array_search($colName, $headers);
+                    if ($colIdx === false) continue;
+                    $perRowParams[$section][$variableId] = $row[$colIdx] ?? '';
+                }
+            }
+
+            // ── 3d. Create message ────────────────────────────────────────
+            //
+            // Adapt field names to match your actual Message model columns.
+            // This mirrors Campaign::makeMessages() / the Message rows that
+            // sendCampaignMessageToWhatsApp() reads.
+            Message::create([
+                'campaign_id'   => $campaign->id,
+                'contact_id'    => $contact->id,
+                'status'        => 0,                          // PENDING
+                'scchuduled_at' => $scheduledAt,
+                'value'         => json_encode($perRowParams), // per-row variables
+                // If your Message model stores variables separately:
+                // 'variables'  => json_encode($perRowParams),
+            ]);
+
+            $rowsQueued++;
+        }
+
+        // Update campaign with actual count
+        $campaign->total_contacts = $rowsQueued;
+        $campaign->save();
+
+        return redirect()
+            ->route($this->webroute_path . 'index')
+            ->withStatus(__('File broadcast queued for :count contacts.', ['count' => $rowsQueued]));
+    }
+
+     // ── Add this branch at the top of store() ─────────────────────────────────
+     public function store(Request $request)
+     {
+         if ($request->input('broadcast_type') === 'file') {
+             return $this->storeFileBroadcast($request);
+         }
+ 
+         if ($request->input('broadcast_type') === 'quick') {
+             return $this->storeQuickBroadcast($request);
+         }
+ 
+         // … rest of the original store() body unchanged …
+     }
+ 
+     // ── storeQuickBroadcast() ─────────────────────────────────────────────────
+     private function storeQuickBroadcast(Request $request)
+     {
+         $request->validate([
+             'template_id'  => 'required|exists:wa_templates,id',
+             'quick_phones' => 'required|string',
+         ]);
+ 
+         // Parse the raw phone input — split on newlines and/or commas
+         $rawPhones = $request->input('quick_phones', '');
+         $phones = collect(preg_split('/[\n,]+/', $rawPhones))
+             ->map(fn($p) => preg_replace('/\s+/', '', $p))   // strip whitespace
+             ->map(fn($p) => preg_replace('/[^0-9]/', '', $p)) // digits only
+             ->filter(fn($p) => strlen($p) >= 7)               // skip blanks/garbage
+             ->unique()
+             ->values();
+ 
+         if ($phones->isEmpty()) {
+             return back()->withErrors(['quick_phones' => __('No valid phone numbers found.')]);
+         }
+ 
+         // Create campaign — no group_id, no file; contacts are ad-hoc
+         $campaign = $this->provider::create([
+             'name'                   => $request->has('name') && $request->name
+                                             ? $request->name
+                                             : 'quick_broadcast_' . now(),
+             'timestamp_for_delivery' => $request->has('send_now') ? null : $request->send_time,
+             'variables'              => $request->has('paramvalues')
+                                             ? json_encode($request->paramvalues)
+                                             : '',
+             'variables_match'        => json_encode($request->input('parammatch', [])),
+             'template_id'            => $request->template_id,
+             'group_id'               => null,
+             'contact_id'             => null,
+             'total_contacts'         => $phones->count(),
+         ]);
+ 
+         // Handle media uploads (image / video / pdf) — same as regular store()
+         if ($request->hasFile('pdf')) {
+             $campaign->media_link = $this->saveDocument('', $request->pdf);
+             $campaign->save();
+         }
+         if ($request->hasFile('imageupload')) {
+             $campaign->media_link = $this->saveDocument('', $request->imageupload);
+             $campaign->save();
+         }
+ 
+         $scheduledAt = $request->has('send_now')
+             ? now()
+             : ($request->send_time ? \Carbon\Carbon::parse($request->send_time) : now());
+ 
+         $queued = 0;
+ 
+         foreach ($phones as $phone) {
+             // Find or create the contact
+             $contact = Contact::firstOrCreate(
+                 ['phone' => $phone],
+                 ['name'  => $phone, 'subscribed' => 1]
+             );
+ 
+             // Create a pending message — same structure as regular campaign messages
+             Message::create([
+                 'campaign_id'   => $campaign->id,
+                 'contact_id'    => $contact->id,
+                 'status'        => 0,               // PENDING
+                 'scchuduled_at' => $scheduledAt,
+                 'value'         => json_encode($request->input('paramvalues', [])),
+             ]);
+ 
+             $queued++;
+         }
+ 
+         // Update with actual sent count
+         $campaign->total_contacts = $queued;
+         $campaign->save();
+ 
+         return redirect()
+             ->route($this->webroute_path . 'index')
+             ->withStatus(__('Quick broadcast queued for :count contacts.', ['count' => $queued]));
+     }
+ 
+    
+
+ 
 
    
 

@@ -35,6 +35,36 @@ class WhatsappFlow extends MyModel
     }
 
     /**
+     * Minimal columns for dropdowns (id + name only).
+     */
+    public function scopeForSelect($query)
+    {
+        return $query->select([
+            'whatsapp_flows.id',
+            'whatsapp_flows.name',
+        ]);
+    }
+
+    /**
+     * Lightweight query for index/list views (avoids loading large flow_json into sort buffer).
+     */
+    public function scopeForListing($query)
+    {
+        return $query->select([
+            'whatsapp_flows.id',
+            'whatsapp_flows.company_id',
+            'whatsapp_flows.name',
+            'whatsapp_flows.description',
+            'whatsapp_flows.status',
+            'whatsapp_flows.meta_flow_id',
+            'whatsapp_flows.updated_at',
+            'whatsapp_flows.created_at',
+        ])->selectRaw(
+            'COALESCE(JSON_LENGTH(JSON_EXTRACT(whatsapp_flows.flow_json, "$.screens")), 0) as screens_count'
+        );
+    }
+
+    /**
      * Scope to only active flows.
      */
     public function scopeActive($query)
