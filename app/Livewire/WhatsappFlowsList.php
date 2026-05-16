@@ -181,7 +181,8 @@ class WhatsappFlowsList extends Component
     {
         $companyId = auth()->user()->company_id;
 
-        $query = WhatsappFlow::where('company_id', $companyId)
+        $query = WhatsappFlow::forListing()
+            ->where('company_id', $companyId)
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
             ->when($this->search, fn ($q) => $q->where(function ($q2) {
                 $q2->where('name', 'like', '%' . $this->search . '%')

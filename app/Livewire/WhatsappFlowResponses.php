@@ -139,9 +139,13 @@ class WhatsappFlowResponses extends Component
         // ... your existing render logic (unchanged)
         $companyId = auth()->user()->company_id;
 
-        $flows = WhatsappFlow::where('company_id', $companyId)->orderBy('name')->get();
+        $flows = WhatsappFlow::forSelect()
+            ->where('company_id', $companyId)
+            ->orderBy('name')
+            ->get();
 
         $query = WhatsappFlowResponse::where('company_id', $companyId)
+            ->with(['whatsappFlow' => fn ($q) => $q->forSelect()])
             ->when($this->flowId, fn ($q) => $q->where('whatsapp_flow_id', $this->flowId))
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
             ->when($this->dateFrom, fn ($q) => $q->whereDate('created_at', '>=', $this->dateFrom))
