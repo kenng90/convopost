@@ -64,8 +64,10 @@
             @include('partials.input',['type'=>"number", 'name'=>config('settings.limit_orders_name',"Limit orders"),'id'=>"limit_orders",'placeholder'=>"Number of allowed usage",'required'=>false,'additionalInfo'=>"0 is unlimited numbers of usage per plan period",'value'=>(isset($plan)?$plan->limit_orders:null)])
         </div>
    @endif
-   
-   
+
+    <div class="col-md-6">
+        @include('partials.input',['type'=>"number", 'name'=>__('Catalog item limit'),'id'=>"limit_catalog_items",'placeholder'=>"Number of catalog items allowed",'required'=>false,'additionalInfo'=>"0 is unlimited numbers of items per plan period",'value'=>(isset($plan)?($plan->limit_catalog_items ?? 0):null)])
+    </div>
 
 </div>
    

@@ -56,6 +56,7 @@ function loadCatalogs() {
         .then(data => {
             console.log('Catalogs data:', data);
             if (data.success) {
+                displayCatalogItemUsage(data.catalog_item_usage);
                 displayCatalogs(data.catalogs);
             } else {
                 showError('Failed to load catalogs: ' + (data.message || 'Unknown error'));
@@ -65,6 +66,22 @@ function loadCatalogs() {
             console.error('Error loading catalogs:', error);
             showError('Error loading catalogs: ' + error.message);
         });
+}
+
+function displayCatalogItemUsage(usage) {
+    const el = document.getElementById('catalog-item-usage');
+    if (!el || !usage) {
+        return;
+    }
+
+    if (usage.unlimited) {
+        el.textContent = 'Catalog items this period: unlimited';
+    } else {
+        el.textContent = `Catalog items this period: ${usage.used} / ${usage.limit}` +
+            (usage.remaining !== null ? ` (${usage.remaining} remaining)` : '');
+    }
+
+    el.style.display = 'block';
 }
 
 // Display catalogs in table

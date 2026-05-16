@@ -22,6 +22,12 @@
                     {{ $planAttribute['itemsMessage'] }}
                 </div>
 
+                @if (!empty($planAttribute['catalogItemsMessage']))
+                <div class="alert alert-{{ $planAttribute['catalogItemsAlertType'] ?? 'info' }}" role="alert">
+                    {{ $planAttribute['catalogItemsMessage'] }}
+                </div>
+                @endif
+
                 
                     
 

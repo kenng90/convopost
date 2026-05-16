@@ -113,6 +113,7 @@ class PlansController extends Controller
         $plan->price = strip_tags($request->price);
         $plan->limit_items = strip_tags($request->limit_items);
         $plan->limit_views = strip_tags($request->limit_views);
+        $plan->limit_catalog_items = strip_tags($request->input('limit_catalog_items', 0));
 
         if (isset($request->subscribe)) {
             foreach ($request->subscribe as $key => $value) {
@@ -189,6 +190,7 @@ class PlansController extends Controller
         $plan->price = strip_tags($request->price);
         $plan->limit_items = strip_tags($request->limit_items);
         $plan->limit_views = strip_tags($request->limit_views);
+        $plan->limit_catalog_items = strip_tags($request->input('limit_catalog_items', 0));
 
         //Subscriptions plans
         if (isset($request->subscribe)) {

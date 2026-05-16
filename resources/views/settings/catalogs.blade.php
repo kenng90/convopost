@@ -12,6 +12,7 @@
             <div class="mb-4">
                 <h1 class="h3 mb-1">{{ __('Catalog Management') }}</h1>
                 <p class="text-muted">{{ __('Create and manage product catalogs for your WhatsApp flows') }}</p>
+                <p id="catalog-item-usage" class="text-muted small mb-0" style="display: none;"></p>
             </div>
 
             <!-- Import Button -->

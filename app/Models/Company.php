@@ -56,6 +56,7 @@ class Company extends MyModel
             $currentPlan->limit_items = 0;
             $currentPlan->enable_ordering = 1;
             $currentPlan->limit_orders = 0;
+            $currentPlan->limit_catalog_items = 0;
             $currentPlan->period = 1;
         }
         $planInfo['plan'] = $currentPlan->toArray();
@@ -63,6 +64,19 @@ class Company extends MyModel
         //Pure SaaS
         $planInfo['ordersMessage'] = $currentPlan->name.' - '.rtrim(money($currentPlan['price'], config('settings.cashier_currency'), config('settings.do_convertion', true))->format(), '.00').'/'.($currentPlan['period'] == 1 ? __('m') : __('y'));
         $planInfo['itemsMessage'] = $currentPlan->features;
+
+        $catalogLimit = (int) ($currentPlan->limit_catalog_items ?? 0);
+        if ($catalogLimit > 0) {
+            $catalogUsage = app(\App\Services\CatalogItemPlanLimit::class)->getUsageSummary($this);
+            $planInfo['catalogItemsMessage'] = __('Catalog items this period: :used of :limit', [
+                'used' => $catalogUsage['used'],
+                'limit' => $catalogUsage['limit'],
+            ]);
+            $planInfo['catalogItemsAlertType'] = $catalogUsage['remaining'] === 0 ? 'warning' : 'info';
+        } else {
+            $planInfo['catalogItemsMessage'] = __('Catalog items: unlimited');
+            $planInfo['catalogItemsAlertType'] = 'success';
+        }
 
         $plugins = $currentPlan->getConfig('plugins', null);
 

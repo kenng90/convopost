@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Company;
 use App\Models\ListCatalog;
+use App\Services\CatalogItemPlanLimit;
 use App\Services\ExcelImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class ListCatalogController extends Controller
 {
-    protected $excelService;
-
-    public function __construct(ExcelImportService $excelService)
-    {
-        $this->excelService = $excelService;
+    public function __construct(
+        protected ExcelImportService $excelService,
+        protected CatalogItemPlanLimit $catalogItemPlanLimit,
+    ) {
     }
 
     /**
@@ -98,6 +99,17 @@ class ListCatalogController extends Controller
             // Validate items
             $this->excelService->validateItems($transformedItems);
 
+            $company = Company::findOrFail(auth()->user()->company_id);
+            $itemCount = count($transformedItems);
+
+            if (! $this->catalogItemPlanLimit->canAdd($company, $itemCount)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $this->catalogItemPlanLimit->limitExceededMessage($company, $itemCount),
+                    'usage' => $this->catalogItemPlanLimit->getUsageSummary($company),
+                ], 403);
+            }
+
             // Create catalog
             $catalogData = [
                 'company_id' => auth()->user()->company_id,
@@ -115,6 +127,8 @@ class ListCatalogController extends Controller
             ];
 
             $catalog = ListCatalog::create($catalogData);
+
+            $this->catalogItemPlanLimit->recordUsage($company->id, $itemCount);
 
             // Clean up original file
             unlink($fullPath);
@@ -239,9 +253,14 @@ class ListCatalogController extends Controller
                     ];
                 });
 
+            $company = Company::find(auth()->user()->company_id);
+
             return response()->json([
                 'success' => true,
                 'catalogs' => $catalogs,
+                'catalog_item_usage' => $company
+                    ? $this->catalogItemPlanLimit->getUsageSummary($company)
+                    : null,
             ]);
 
         } catch (\Exception $e) {
@@ -455,6 +474,16 @@ class ListCatalogController extends Controller
                 ], 400);
             }
 
+            $company = Company::findOrFail($companyId);
+
+            if (! $this->catalogItemPlanLimit->canAdd($company, 1)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $this->catalogItemPlanLimit->limitExceededMessage($company, 1),
+                    'usage' => $this->catalogItemPlanLimit->getUsageSummary($company),
+                ], 403);
+            }
+
             // Add new item
             $newItem = [
                 'id' => $validated['id'],
@@ -472,11 +501,14 @@ class ListCatalogController extends Controller
             $catalog->items = $items;
             $catalog->save();
 
+            $this->catalogItemPlanLimit->recordUsage($company->id, 1);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Item added successfully',
                 'item' => $newItem,
                 'items' => $items,
+                'usage' => $this->catalogItemPlanLimit->getUsageSummary($company),
             ]);
 
         } catch (\Exception $e) {
