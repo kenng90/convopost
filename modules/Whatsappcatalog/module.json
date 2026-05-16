@@ -1,0 +1,33 @@
+{
+    "alias": "whatsappcatalog",
+    "name": "WhatsApp Catalog",
+    "description": "Product catalogs for WhatsApp commerce and flows",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Whatsappcatalog\\Providers\\Main"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "vendor_fields": [
+        {
+            "separator": "WhatsApp Catalog",
+            "icon": "🛍️",
+            "title": "Enable WhatsApp Catalog",
+            "key": "whatsapp_catalog_enabled",
+            "ftype": "bool",
+            "value": false
+        }
+    ],
+    "ownermenus": [
+        {
+            "name": "Catalogs",
+            "icon": "ni ni-folder-17 text-info",
+            "route": "catalogs.page",
+            "onlyin": "wpbox,whatssupport",
+            "priority": 3
+        }
+    ]
+}

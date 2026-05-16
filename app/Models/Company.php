@@ -76,6 +76,17 @@ class Company extends MyModel
 
     }
 
+    /**
+     * Whether the company's plan includes a plugin/module alias.
+     * When the plan has no plugin restriction (null), all plugins are allowed.
+     */
+    public function hasPlanPlugin(string $alias): bool
+    {
+        $allowed = $this->getPlanAttribute()['allowedPluginsPerPlan'];
+
+        return $allowed === null || in_array($alias, $allowed, true);
+    }
+
     public function getLinkAttribute()
     {
         if (config('settings.wildcard_domain_ready')) {

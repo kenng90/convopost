@@ -134,6 +134,20 @@ class User extends Authenticatable
         return $this->plan_id ? $this->plan_id : intval(config('settings.free_pricing_id'));
     }
 
+    /**
+     * Whether this user may use a plan-gated plugin in the owner portal.
+     */
+    public function canUsePlanPlugin(string $alias): bool
+    {
+        if ($this->hasRole('admin') && ! session()->has('impersonate')) {
+            return false;
+        }
+
+        $company = $this->currentCompany();
+
+        return $company && $company->hasPlanPlugin($alias);
+    }
+
     public function getExtraMenus()
     {
         $menus = [];

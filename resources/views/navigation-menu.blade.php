@@ -106,7 +106,7 @@
                                 </x-dropdown-link>
                             @endif
 
-                            <!-- Catalog Management -->
+                            @if (auth()->user()->canUsePlanPlugin('whatsappcatalog') && Route::has('catalogs.page'))
                             <div class="block px-4 py-2 text-xs text-gray-400 mt-2">
                                 {{ __('Catalogs') }}
                             </div>
@@ -114,6 +114,7 @@
                             <x-dropdown-link href="{{ route('catalogs.page') }}">
                                 {{ __('Manage Catalogs') }}
                             </x-dropdown-link>
+                            @endif
 
                             <div class="border-t border-gray-200"></div>
 
@@ -178,10 +179,11 @@
                     </x-responsive-nav-link> -->
                 @endif
 
-                <!-- Catalog Management -->
+                @if (auth()->user()->canUsePlanPlugin('whatsappcatalog') && Route::has('catalogs.page'))
                 <x-responsive-nav-link href="{{ route('catalogs.page') }}" :active="request()->routeIs('catalogs.page')">
                     {{ __('Manage Catalogs') }}
                 </x-responsive-nav-link>
+                @endif
 
                 <!-- Authentication -->
                 <form method="POST" action="{{ route('logout') }}" x-data>

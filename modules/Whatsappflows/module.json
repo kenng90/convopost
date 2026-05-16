@@ -1,0 +1,40 @@
+{
+    "alias": "whatsappflows",
+    "name": "WhatsApp Flows",
+    "description": "Build and publish interactive WhatsApp Flow forms",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Whatsappflows\\Providers\\Main"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "vendor_fields": [
+        {
+            "separator": "WhatsApp Flows",
+            "icon": "📋",
+            "title": "Enable WhatsApp Flows",
+            "key": "whatsapp_flows_enabled",
+            "ftype": "bool",
+            "value": false
+        }
+    ],
+    "ownermenus": [
+        {
+            "name": "WhatsApp Flows",
+            "icon": "ni ni-send text-purple",
+            "route": "whatsapp-flows.index",
+            "onlyin": "wpbox,whatssupport",
+            "priority": 3
+        },
+        {
+            "name": "Flow Responses",
+            "icon": "ni ni-collection text-success",
+            "route": "whatsapp-flows.responses",
+            "onlyin": "wpbox,whatssupport",
+            "priority": 4
+        }
+    ]
+}
