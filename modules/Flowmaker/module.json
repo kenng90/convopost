@@ -14,7 +14,7 @@
     "requires": [],
     "ownermenus":[
         {
-            "name":"Flows",
+            "name":"Flow builder",
             "icon":"ni ni-controller text-blue",
             "route":"flows.index",
             "color":"#2dce89",

@@ -192,21 +192,7 @@ class User extends Authenticatable
                 }
             }
         } elseif ($this->hasRole('owner')) {
-            $allowedPluginsPerPlan = auth()->user()->company ? auth()->user()->company->getPlanAttribute()['allowedPluginsPerPlan'] : null;
-            foreach (Module::all() as $key => $module) {
-                if (is_array($module->get('ownermenus')) && ($module->get('alwayson') || $allowedPluginsPerPlan == null || in_array($module->get('alias'), $allowedPluginsPerPlan))) {
-                    foreach ($module->get('ownermenus') as $key => $menu) {
-
-                        if (isset($menu['onlyin'])) {
-                            if(str_contains( $menu['onlyin'],config('settings.app_code_name'))) {
-                                array_push($menus, $menu);
-                            }
-                        } else {
-                            array_push($menus, $menu);
-                        }
-                    }
-                }
-            }
+            $menus = $this->collectOwnerModuleMenus();
         } elseif ($this->hasRole('staff')) {
             foreach (Module::all() as $key => $module) {
                 if (is_array($module->get('staffmenus'))) {
@@ -223,6 +209,51 @@ class User extends Authenticatable
         });
 
         return $menus;
+    }
+
+    /**
+     * Raw owner menus from enabled modules (before job-based grouping).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function collectOwnerModuleMenus(): array
+    {
+        $menus = [];
+        $allowedPluginsPerPlan = $this->company
+            ? $this->company->getPlanAttribute()['allowedPluginsPerPlan']
+            : null;
+
+        foreach (Module::all() as $module) {
+            if (! is_array($module->get('ownermenus'))) {
+                continue;
+            }
+
+            if (! ($module->get('alwayson') || $allowedPluginsPerPlan === null || in_array($module->get('alias'), $allowedPluginsPerPlan, true))) {
+                continue;
+            }
+
+            foreach ($module->get('ownermenus') as $menu) {
+                if (isset($menu['onlyin']) && ! str_contains($menu['onlyin'], config('settings.app_code_name'))) {
+                    continue;
+                }
+
+                $menus[] = $menu;
+            }
+        }
+
+        usort($menus, fn ($a, $b) => ($a['priority'] ?? 100) <=> ($b['priority'] ?? 100));
+
+        return $menus;
+    }
+
+    /**
+     * Owner sidebar navigation grouped by job (inbox, automations, etc.).
+     *
+     * @return array<int, array{label: string, menus: array<int, array<string, mixed>>}>
+     */
+    public function getOwnerNavigationSections(): array
+    {
+        return app(\App\Services\OwnerNavigationBuilder::class)->build($this);
     }
 
     public function setImpersonating($id)

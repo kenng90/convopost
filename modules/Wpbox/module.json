@@ -367,11 +367,11 @@
         },
         {
             "id":"more",
-            "name":"Settings",
+            "name":"WhatsApp & team",
             "icon":"ni ni-settings text-green",
             "route":"api.info",
             "isGroup":true,
-            "onlyin": "wpbox",
+            "onlyin": "wpbox,whatssupport",
             "menus":[ 
                 {
                     "name":"Agents",

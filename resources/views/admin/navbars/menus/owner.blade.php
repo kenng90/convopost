@@ -6,7 +6,11 @@
         </a>
     </li>
 
-    @include('admin.navbars.menus.extra')
+    @if (config('owner-navigation.enabled', true))
+        @include('admin.navbars.menus.extra-grouped')
+    @else
+        @include('admin.navbars.menus.extra')
+    @endif
 
     <!-- Management items moved to profile dropdown -->
     
@@ -16,11 +20,11 @@
 
 </ul>
 @if (config('vendorlinks.enable',false))
-<hr class="my-3">
+<!-- <hr class="my-3"> -->
 <h6 class="navbar-heading p-0 text-muted">
     <span class="docs-normal">{{__(config('vendorlinks.name',""))}}</span>
 </h6>
-<ul class="navbar-nav mb-md-3">
+<ul class="navbar-nav mb-md-1">
     @if (strlen(config('vendorlinks.link1link',""))>4)
         <li class="nav-item">
             <a class="nav-link" href="{{config('vendorlinks.link1link',"")}}" target="_blank">

@@ -39,15 +39,7 @@
     "aliases": {},
     "files": [],
     "requires": [],
-    "ownermenus": [
-        {
-            "name": "Calls",
-            "icon": "ni ni-mobile-button text-green",
-            "route": "whatsappcall.calls.index",
-            "onlyin": "none",
-            "priority": 2
-        }
-    ],
+    "ownermenus": [],
     "vendor_fields": [
         {
             "separator": "Calling",
