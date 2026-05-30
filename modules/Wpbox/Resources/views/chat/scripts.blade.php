@@ -112,8 +112,7 @@
             
             getChatsJS();
         }else{
-            //Same chat
-            
+            getChatJS(chatList.activeChat.id);
         }
     }
 
@@ -745,6 +744,46 @@
                         console.error('Error reopening chat:', error);
                         js.notify('Error reopening chat', 'danger');
                     });
+            },
+            isCallBrief(message) {
+                return message && (message.is_call_brief === true || message.is_call_brief === 1 || message.is_call_brief === '1');
+            },
+            callBriefPayload(message) {
+                if (!message) return {};
+                if (message.call_brief_payload && typeof message.call_brief_payload === 'object') {
+                    return message.call_brief_payload;
+                }
+                if (typeof message.call_brief_payload === 'string') {
+                    try { return JSON.parse(message.call_brief_payload); } catch (e) { return {}; }
+                }
+                return {};
+            },
+            callBriefTitle(message) {
+                var p = this.callBriefPayload(message);
+                var parts = [@json(__('AI call'))];
+                if (p.duration_seconds) {
+                    var m = Math.floor(p.duration_seconds / 60);
+                    var s = p.duration_seconds % 60;
+                    parts.push(m > 0 ? (m + 'm ' + String(s).padStart(2, '0') + 's') : (s + 's'));
+                }
+                if (p.handoff_requested) {
+                    parts.push(@json(__('handoff requested')));
+                }
+                return parts.join(' · ');
+            },
+            callBriefBullets(message) {
+                return this.callBriefPayload(message).summary_bullets || [];
+            },
+            callBriefFields(message) {
+                return this.callBriefPayload(message).fields || [];
+            },
+            callBriefFieldIcon(status) {
+                switch (status) {
+                    case 'confirmed': return '✓';
+                    case 'corrected': return '↻';
+                    case 'missing': return '✗';
+                    default: return '~';
+                }
             },
         },
     })

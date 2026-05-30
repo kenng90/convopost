@@ -93,27 +93,7 @@ class ReportService
 
         $invoices = $query->get();
 
-        $payments = $invoices->map(function ($invoice) {
-            return [
-                'invoice_id' => $invoice->id,
-                'invoice_number' => $invoice->invoice_number,
-                'public_uuid' => $invoice->public_uuid,
-                'customer_name' => $invoice->customer_name,
-                'customer_phone' => $invoice->customer_phone,
-                'customer_email' => $invoice->customer_email,
-                'invoice_amount' => (float) $invoice->amount,
-                'total_paid' => $invoice->getTotalPaidAmount(),
-                'remaining' => $invoice->getRemainingAmount(),
-                'status' => $invoice->status,
-                'created_at' => $invoice->created_at->toDateTimeString(),
-                'sent_at' => $invoice->sent_at?->toDateTimeString(),
-                'paid_at' => $invoice->paid_at?->toDateTimeString(),
-                'payment_count' => $invoice->payments()->count(),
-                'successful_payments' => $invoice->payments()->where('status', 'success')->count(),
-                'pending_payments' => $invoice->payments()->where('status', 'pending')->count(),
-                'failed_payments' => $invoice->payments()->where('status', 'failed')->count(),
-            ];
-        });
+        $payments = $invoices->map(fn ($invoice) => $this->formatInvoiceForPaymentsReport($invoice));
 
         // Calculate summary
         $summary = $this->calculatePaymentSummary($payments);
@@ -128,6 +108,47 @@ class ReportService
                 'end_date' => $endDate,
                 'invoice_status' => $invoiceStatus,
             ],
+        ];
+    }
+
+    /**
+     * Format a single invoice row for the payments report (including modal preview data).
+     */
+    public function formatInvoiceForPaymentsReport(Invoice $invoice): array
+    {
+        $invoicePayments = $invoice->payments;
+        $totalPaid = (float) $invoicePayments->where('status', 'success')->sum('amount');
+
+        return [
+            'invoice_id' => $invoice->id,
+            'invoice_number' => $invoice->invoice_number,
+            'public_uuid' => $invoice->public_uuid,
+            'customer_name' => $invoice->customer_name,
+            'customer_phone' => $invoice->customer_phone,
+            'customer_email' => $invoice->customer_email,
+            'currency' => $invoice->currency,
+            'items' => $invoice->items ?? [],
+            'invoice_amount' => (float) $invoice->amount,
+            'total_paid' => $totalPaid,
+            'remaining' => max(0, (float) $invoice->amount - $totalPaid),
+            'status' => $invoice->status,
+            'created_at' => $invoice->created_at->toDateTimeString(),
+            'sent_at' => $invoice->sent_at?->toDateTimeString(),
+            'paid_at' => $invoice->paid_at?->toDateTimeString(),
+            'payment_count' => $invoicePayments->count(),
+            'successful_payments' => $invoicePayments->where('status', 'success')->count(),
+            'pending_payments' => $invoicePayments->where('status', 'pending')->count(),
+            'failed_payments' => $invoicePayments->where('status', 'failed')->count(),
+            'payment_records' => $invoicePayments->map(function ($payment) {
+                return [
+                    'id' => $payment->id,
+                    'amount' => (float) $payment->amount,
+                    'status' => $payment->status,
+                    'mpesa_receipt_number' => $payment->mpesa_receipt_number,
+                    'mpesa_checkout_request_id' => $payment->mpesa_checkout_request_id,
+                    'created_at' => $payment->created_at->toDateTimeString(),
+                ];
+            })->values()->all(),
         ];
     }
 
@@ -200,7 +221,7 @@ class ReportService
             'reconciled' => count($reconciled),
             'with_discrepancies' => count($discrepancies),
             'pending' => count($pending),
-            'reconciliation_rate' => $payments->count() > 0 ? 
+            'reconciliation_rate' => $payments->count() > 0 ?
                 round((count($reconciled) / $payments->count()) * 100, 2) : 0,
             'total_amount' => (float) $payments->sum('amount'),
             'reconciled_amount' => collect($reconciled)->sum('amount'),
@@ -311,7 +332,7 @@ class ReportService
             'total_amount' => (float) $transactions->sum('amount'),
             'successful_amount' => (float) $transactions->where('status', 'success')->sum('amount'),
             'pending_amount' => (float) $transactions->where('status', 'pending')->sum('amount'),
-            'success_rate' => $transactions->count() > 0 ? 
+            'success_rate' => $transactions->count() > 0 ?
                 round(($statusCounts->get('success', 0) / $transactions->count()) * 100, 2) : 0,
         ];
     }
@@ -334,7 +355,7 @@ class ReportService
             'total_invoice_amount' => (float) $payments->sum('invoice_amount'),
             'total_paid_amount' => (float) $payments->sum('total_paid'),
             'total_pending_amount' => (float) $payments->sum('remaining'),
-            'collection_rate' => $payments->sum('invoice_amount') > 0 ? 
+            'collection_rate' => $payments->sum('invoice_amount') > 0 ?
                 round(($payments->sum('total_paid') / $payments->sum('invoice_amount')) * 100, 2) : 0,
         ];
     }
@@ -344,7 +365,7 @@ class ReportService
      */
     private function isReconciled(InvoicePayment $payment): bool
     {
-        if (!$payment->response_data) {
+        if (! $payment->response_data) {
             return false;
         }
 
@@ -367,7 +388,7 @@ class ReportService
      */
     private function getAmountFromResponse(InvoicePayment $payment): ?float
     {
-        if (!$payment->response_data) {
+        if (! $payment->response_data) {
             return null;
         }
 
@@ -391,11 +412,11 @@ class ReportService
     {
         $issues = [];
 
-        if (!$payment->mpesa_receipt_number) {
+        if (! $payment->mpesa_receipt_number) {
             $issues[] = 'Missing M-Pesa receipt number';
         }
 
-        if (!$payment->response_data) {
+        if (! $payment->response_data) {
             $issues[] = 'Missing response data';
         }
 
@@ -412,7 +433,7 @@ class ReportService
      */
     private function getFailureReason(InvoicePayment $payment): string
     {
-        if (!$payment->response_data) {
+        if (! $payment->response_data) {
             return 'No response data';
         }
 

@@ -13,6 +13,9 @@ use Laravel\Sanctum\PersonalAccessToken;
 use Modules\Whatsappcall\Events\CallEnded;
 use Modules\Whatsappcall\Events\IncomingCall;
 use Modules\Whatsappcall\Models\Call as CallModel;
+use Modules\Whatsappcall\Services\AiCallDispatchService;
+use Modules\Whatsappcall\Services\CallHandlingResolver;
+use Modules\Whatsappcall\Support\CallContactResolver;
 use Modules\Wpbox\Models\Contact;
 
 trait WhatsappCall
@@ -365,14 +368,16 @@ trait WhatsappCall
 
                 //From
                 $from = $value['calls'][0]['from'] ?? null;
-                //Find the contact by phone number
-                $contact = Contact::where('phone', $from)->orWhere('phone', '+'.$from)->where('company_id', $company->id)->first();
+                $contact = $company
+                    ? CallContactResolver::findByPhone((int) $company->id, $from)
+                    : null;
 
                 //Find existing call by wa_call_id
                 $call = CallModel::where('wa_call_id', $waCallId)->first();
                 if ($call) {
                     $call->update([
                         'status' => strtolower($event),
+                        'contact_id' => $contact?->id ?? $call->contact_id,
                     ]);
                 } else {
                     $call = CallModel::create([
@@ -385,25 +390,8 @@ trait WhatsappCall
                         'meta' => $value,
                     ]);
                 }
-                // Broadcast incoming connect to Pusher for instant UI update
                 if (strtolower($event) === 'connect' && $company) {
-                    try {
-                        event(new IncomingCall((int) $company->id, [
-                            'id' => $call->id,
-                            'wa_user_id' => $call->wa_user_id,
-                            'status' => $call->status,
-                            'contact_id' => $call->contact_id,
-                            'contact_name' => optional(Contact::find($call->contact_id))->name,
-                            'contact_avatar' => optional(Contact::find($call->contact_id))->avatar,
-                            'wa_call_id' => $waCallId,
-                            'offer' => [
-                                'sdp' => data_get($value, 'calls.0.session.sdp'),
-                                'type' => data_get($value, 'calls.0.session.sdp_type', 'offer'),
-                            ],
-                        ]));
-                    } catch (\Throwable $th) {
-                        Log::error('IncomingCall broadcast error', ['e' => $th->getMessage()]);
-                    }
+                    $this->handleIncomingConnect($call, $company, $value, $waCallId);
                 }
 
                 // Broadcast terminate to close UI
@@ -452,6 +440,48 @@ trait WhatsappCall
             Log::error($th);
 
             return response()->json(['ok' => false]);
+        }
+    }
+
+    protected function handleIncomingConnect(CallModel $call, Company $company, array $webhookValue, ?string $waCallId): void
+    {
+        $resolver = app(CallHandlingResolver::class);
+
+        if ($resolver->shouldUseAi($company)) {
+            $dispatched = app(AiCallDispatchService::class)->dispatch($call, $company, $webhookValue);
+            if ($dispatched) {
+                Log::info('WhatsApp call dispatched to AI worker', ['call_id' => $call->id, 'company_id' => $company->id]);
+
+                return;
+            }
+
+            Log::warning('AI worker dispatch failed; falling back to live agents', [
+                'call_id' => $call->id,
+                'company_id' => $company->id,
+            ]);
+        }
+
+        $this->broadcastIncomingCallToAgents($call, $company, $webhookValue, $waCallId);
+    }
+
+    protected function broadcastIncomingCallToAgents(CallModel $call, Company $company, array $webhookValue, ?string $waCallId): void
+    {
+        try {
+            event(new IncomingCall((int) $company->id, [
+                'id' => $call->id,
+                'wa_user_id' => $call->wa_user_id,
+                'status' => $call->status,
+                'contact_id' => $call->contact_id,
+                'contact_name' => optional(Contact::find($call->contact_id))->name,
+                'contact_avatar' => optional(Contact::find($call->contact_id))->avatar,
+                'wa_call_id' => $waCallId,
+                'offer' => [
+                    'sdp' => data_get($webhookValue, 'calls.0.session.sdp'),
+                    'type' => data_get($webhookValue, 'calls.0.session.sdp_type', 'offer'),
+                ],
+            ]));
+        } catch (\Throwable $th) {
+            Log::error('IncomingCall broadcast error', ['e' => $th->getMessage()]);
         }
     }
 }

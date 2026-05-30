@@ -25,23 +25,9 @@
              COLUMN 1 — Campaign settings + phone number input
         ══════════════════════════════════════════════════════════════ --}}
         <div class="col-xl-4">
-
-            {{-- Campaign card — same partial as group --}}
-            <div class="card shadow">
-                <div class="card-header bg-white border-0">
-                    <div class="row align-items-center">
-                        <div class="col-8">
-                            <h3 class="mb-0">{{__('Campaign')}}</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    @include('wpbox::campaigns.new.campaign_quick')
-                </div>
-            </div>
-
-            {{-- Phone numbers card --}}
-            <div class="card shadow mt-4">
+       
+        {{-- Phone numbers card --}}
+            <div class="card shadow mt-0">
                 <div class="card-header bg-white border-0">
                     <div class="row align-items-center">
                         <div class="col-8">
@@ -58,7 +44,7 @@
                                   id="quick_phones"
                                   class="form-control"
                                   rows="8"
-                                  placeholder="{{__('One number per line, or comma-separated.\nInclude country code, e.g:\n254712345678\n254723456789')}}"></textarea>
+                                  placeholder="{{__('One number per line, or comma-separated.\nInclude country code, e.g:\n254712345678\n254723456789')}}">{{ old('quick_phones', request()->query('quick_phones', '')) }}</textarea>
                         <small class="text-muted">
                             {{__('Include country code. One per line or comma-separated.')}}
                         </small>
@@ -70,6 +56,21 @@
                     </div>
                 </div>
             </div>
+            {{-- Campaign card — same partial as group --}}
+            <div class="card shadow">
+                <div class="card-header bg-white border-0">
+                    <div class="row align-items-center">
+                        <div class="col-8">
+                            <h3 class="mb-0">{{__('Campaign')}}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @include('wpbox::campaigns.new.campaign_quick')
+                </div>
+            </div>
+
+           
 
         </div>{{-- /col-xl-4 --}}
 
@@ -79,6 +80,7 @@
              COLUMN 2 — Variables (identical to create_group)
         ══════════════════════════════════════════════════════════════ --}}
         <div class="col-xl-4">
+        
             <div class="card shadow">
                 <div class="card-header bg-white border-0">
                     <div class="row align-items-center">
@@ -141,27 +143,33 @@
 var vuec = null;
 var component = @json($selectedTemplateComponents);
 
-// ── Apply: redirect with template_id in URL (same as create_group) ────────────
-function submitJustCampign() {
-    event.preventDefault();
-    var params = new URLSearchParams();
-    var fields = ['name', 'template_id', 'send_time', 'send_now', 'broadcast_type'];
-    fields.forEach(function (name) {
-        var el = document.querySelector('[name="' + name + '"]');
-        if (!el) return;
-        if (el.type === 'checkbox' || el.type === 'radio') {
-            if (el.checked) params.append(name, el.value);
-        } else if (el.value !== '') {
-            params.append(name, el.value);
-        }
-    });
-    // Also carry across phones so the user doesn't lose what they typed
-    var phones = document.getElementById('quick_phones');
-    if (phones && phones.value.trim()) {
-        params.append('quick_phones', phones.value.trim());
+// ── Apply: reload page with form state in query string (same as create_group) ─
+function submitJustCampign(e) {
+    if (e) {
+        e.preventDefault();
     }
-    window.location.href = window.location.protocol + '//' + window.location.host
-                         + window.location.pathname + '?' + params.toString();
+
+    var form = document.getElementById('campign');
+    if (!form) {
+        return;
+    }
+
+    var phonesEl = document.getElementById('quick_phones');
+    if (phonesEl && phonesEl.value.trim()) {
+        sessionStorage.setItem('quick_broadcast_phones', phonesEl.value);
+    }
+
+    var formData = new FormData(form);
+    var params = new URLSearchParams();
+
+    formData.forEach(function (value, key) {
+        if (value instanceof File && value.size === 0) {
+            return;
+        }
+        params.append(key, value);
+    });
+
+    window.location.href = window.location.pathname + '?' + params.toString();
 }
 
 // ── Parse phone numbers from textarea ────────────────────────────────────────
@@ -197,17 +205,17 @@ function updatePhoneCount() {
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    // Restore phones if coming back from Apply redirect
-    @if(request()->has('quick_phones'))
-        var phonesEl = document.getElementById('quick_phones');
-        if (phonesEl) phonesEl.value = @json(request('quick_phones'));
-    @endif
-
     // Live count as user types
     var phonesTextarea = document.getElementById('quick_phones');
     if (phonesTextarea) {
+        if (!phonesTextarea.value.trim()) {
+            var storedPhones = sessionStorage.getItem('quick_broadcast_phones');
+            if (storedPhones) {
+                phonesTextarea.value = storedPhones;
+            }
+        }
+
         phonesTextarea.addEventListener('input', updatePhoneCount);
-        // Run once on load in case value was restored
         updatePhoneCount();
     }
 
@@ -220,6 +228,8 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('{{ __("Please enter at least one phone number.") }}');
             return false;
         }
+
+        sessionStorage.removeItem('quick_broadcast_phones');
         if (!document.getElementById('template_id') ||
             !document.getElementById('template_id').value) {
             e.preventDefault();

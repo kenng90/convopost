@@ -20,7 +20,116 @@
       let localStream = null;
       let preAcceptStarted = false;
       let readyToAccept = false;
+      let finalAcceptSent = false;
+      let callInProgress = false;
       let ringAudio = null;
+      const waCurrentUserId = @json(auth()->id());
+
+      function waitForIceGathering(pc, timeoutMs = 12000){
+        return new Promise((resolve, reject) => {
+          if(pc.iceGatheringState === 'complete'){
+            resolve();
+            return;
+          }
+          const timer = setTimeout(() => reject(new Error('ICE gathering timeout')), timeoutMs);
+          const onChange = () => {
+            if(pc.iceGatheringState === 'complete'){
+              clearTimeout(timer);
+              pc.removeEventListener('icegatheringstatechange', onChange);
+              resolve();
+            }
+          };
+          pc.addEventListener('icegatheringstatechange', onChange);
+        });
+      }
+
+      function isPeerConnectionEnded(pc){
+        if(!pc){ return true; }
+        const conn = pc.connectionState;
+        const ice = pc.iceConnectionState;
+        return conn === 'failed' || conn === 'closed' || ice === 'failed' || ice === 'closed';
+      }
+
+      function localAnswerSdp(){
+        return normalizeLineEndings(peerConnection?.localDescription?.sdp || '');
+      }
+
+      async function sendFinalAcceptOnce(){
+        if(finalAcceptSent || !readyToAccept || !activeCall?.id || !localAnswerSdp()){
+          return;
+        }
+        finalAcceptSent = true;
+        try{
+          const result = await acceptWithSdp(localAnswerSdp());
+          if(result && result.ok){
+            switchModalToInCall();
+          }
+          return result;
+        }catch(e){
+          finalAcceptSent = false;
+          throw e;
+        }
+      }
+
+      function resetModalToRinging(){
+        const status = document.getElementById('waIncomingCallStatus');
+        if(status){
+          status.innerText = '{{ __('Ringing') }}';
+          status.className = 'badge badge-success';
+        }
+        const acceptBtn = document.getElementById('waAcceptBtn');
+        const declineBtn = document.getElementById('waDeclineBtn');
+        const endBtn = document.getElementById('waEndCallBtn');
+        const closeBtn = document.getElementById('waIncomingCallCloseBtn');
+        if(acceptBtn){ acceptBtn.style.display = ''; }
+        if(declineBtn){ declineBtn.style.display = ''; }
+        if(endBtn){ endBtn.style.display = 'none'; }
+        if(closeBtn){ closeBtn.style.display = ''; }
+      }
+
+      function switchModalToInCall(){
+        callInProgress = true;
+        showing = true;
+        const status = document.getElementById('waIncomingCallStatus');
+        if(status){
+          status.innerText = '{{ __('Connected') }}';
+          status.className = 'badge badge-primary';
+        }
+        const acceptBtn = document.getElementById('waAcceptBtn');
+        const declineBtn = document.getElementById('waDeclineBtn');
+        const endBtn = document.getElementById('waEndCallBtn');
+        const closeBtn = document.getElementById('waIncomingCallCloseBtn');
+        if(acceptBtn){ acceptBtn.style.display = 'none'; }
+        if(declineBtn){ declineBtn.style.display = 'none'; }
+        if(endBtn){ endBtn.style.display = ''; }
+        if(closeBtn){ closeBtn.style.display = 'none'; }
+        const $modal = $('#waIncomingCall');
+        if($modal.length && !$modal.parent().is('body')){
+          $modal.appendTo('body');
+        }
+        $modal.modal({ backdrop: 'static', keyboard: false });
+        $modal.modal('show');
+      }
+
+      async function endActiveCall(){
+        const callId = activeCall?.id;
+        if(!callId){ return; }
+        try{
+          const form = new FormData();
+          form.append('call_id', callId);
+          await fetch(terminateUrl, {
+            method: 'POST',
+            body: form,
+            headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            credentials: 'same-origin',
+          });
+        }catch(e){
+          console.error('[UIC] End call error', e);
+        }
+        document.getElementById(`waCallToast_${callId}`)?.remove();
+        $('#waIncomingCall').modal('hide');
+        cleanupCall({ force: true });
+      }
 
       var activeChatID = null;
       var permissionStatus = null;
@@ -166,10 +275,15 @@
         // Populate
         const name = call.contact_name || '{{ __('Unknown') }}';
         const number = call.wa_user_id || '';
-        const avatar = call.contact_avatar || '/img/placeholder-user.png';
         document.getElementById(`waCallName_${call.id}`).innerText = name;
         document.getElementById(`waCallNumber_${call.id}`).innerText = number;
-        document.getElementById(`waCallAvatar_${call.id}`).src = avatar;
+        const avatarEl = document.getElementById(`waCallAvatar_${call.id}`);
+        if(call.contact_avatar && avatarEl){
+          avatarEl.src = call.contact_avatar;
+          avatarEl.style.display = '';
+        } else if(avatarEl){
+          avatarEl.style.display = 'none';
+        }
 
         // Bind
         document.getElementById(`waCallDecline_${call.id}`).addEventListener('click', () => {
@@ -184,8 +298,9 @@
             activeCall = call;
             if(!preAcceptStarted){
               preAcceptStarted = true;
-              const answer = await setupPeerAndCreateAnswer(call.offer || {});
-              const pre = await preAcceptWithSdp(answer.sdp);
+              finalAcceptSent = false;
+              await setupPeerAndCreateAnswer(call.offer || {});
+              const pre = await preAcceptWithSdp(localAnswerSdp());
               if(!(pre && pre.ok)){
                 console.error('[UIC] Pre-accept failed (card)', pre);
                 return;
@@ -193,8 +308,8 @@
             }
             readyToAccept = true;
             // If already connected, finalize accept immediately
-            if(peerConnection && peerConnection.connectionState === 'connected' && peerConnection.localDescription){
-              await acceptWithSdp(peerConnection.localDescription.sdp);
+            if(peerConnection && peerConnection.connectionState === 'connected' && localAnswerSdp()){
+              await sendFinalAcceptOnce();
             }
           }catch(e){ console.error('[UIC] Accept error (card)', e); }
         });
@@ -206,6 +321,7 @@
       }
 
       function switchToastToConnected(callId){
+        switchModalToInCall();
         const badge = document.getElementById(`waCallBadge_${callId}`);
         const actions = document.getElementById(`waCallActions_${callId}`);
         if(badge){ badge.innerText = '{{ __('Connected') }}'; badge.style.background = '#3b82f6'; }
@@ -214,17 +330,7 @@
           if (ringAudio) { try { ringAudio.pause(); ringAudio = null; }catch(e){
             console.error('[UIC] Switch toast to connected error', e);
           } }
-          document.getElementById(`waCallStop_${callId}`).addEventListener('click', async () => {
-            try{
-              if(activeCall?.id){
-                const form = new FormData();
-                form.append('call_id', activeCall.id);
-                await fetch(terminateUrl, { method:'POST', body: form, headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}, credentials: 'same-origin' });
-              }
-            }catch(_){ }
-            cleanupCall();
-            document.getElementById(`waCallToast_${callId}`)?.remove();
-          });
+          document.getElementById(`waCallStop_${callId}`).addEventListener('click', () => endActiveCall());
         }
       }
 
@@ -232,33 +338,44 @@
       window.wpCallEnded = function(call){
         try{
           console.info('[UIC] Call ended broadcast', call);
+          if(peerConnection && !isPeerConnectionEnded(peerConnection)){
+            console.info('[UIC] Ignoring CallEnded — call still active in browser');
+            return;
+          }
           const cardId = call?.id ? `waCallToast_${call.id}` : null;
           if(cardId){ document.getElementById(cardId)?.remove(); }
           if (ringAudio) { try { ringAudio.pause(); ringAudio = null; }catch(e){
-            console.error('[UIC] Switch toast to connected error', e);
+            console.error('[UIC] Call ended handler error', e);
           } }
-          cleanupCall();
+          $('#waIncomingCall').modal('hide');
+          cleanupCall({ force: true });
         }catch(e){
           console.error('[UIC] Call ended broadcast error', e);
         }
       };
 
-      // Close UI on claimed by another agent
       window.wpCallClaimed = function(call){
         try{
+          if(call?.handled_by && Number(call.handled_by) === Number(waCurrentUserId)){
+            return;
+          }
+          if(!call?.handled_by){
+            return;
+          }
           console.info('[UIC] Call claimed by another agent', call);
-          // If this call matches our active toast, remove it
           const cardId = call?.id ? `waCallToast_${call.id}` : null;
           if(cardId){ document.getElementById(cardId)?.remove(); }
-            // keep cleanup minimal; we didn't start media if not accepted
-            readyToAccept = false;
-            activeCall = false;
-            if (ringAudio) { try { ringAudio.pause(); ringAudio = null; }catch(e){
-              console.error('[UIC] Call claimed by another agent error', e);
-            } 
+          $('#waIncomingCall').modal('hide');
+          readyToAccept = false;
+          callInProgress = false;
+          activeCall = null;
+          if (ringAudio) {
+            try { ringAudio.pause(); ringAudio = null; } catch(e) {
+              console.error('[UIC] Call claimed cleanup error', e);
+            }
           }
         }catch(e){
-          console.error('[UIC] Call claimed by another agent error', e);
+          console.error('[UIC] Call claimed handler error', e);
         }
       };
 
@@ -321,7 +438,11 @@
 
       //setInterval(pollIncoming, 4000);
 
-      function cleanupCall() {
+      function cleanupCall(options = {}) {
+        const force = options.force === true;
+        if(!force && callInProgress && peerConnection && !isPeerConnectionEnded(peerConnection)){
+          return;
+        }
         console.debug('[WebRTC] Cleaning up call');
 
         // Stop ringing
@@ -351,7 +472,10 @@
 
         // Reset call state variables
         readyToAccept = false;
-        activeCall = false;
+        finalAcceptSent = false;
+        callInProgress = false;
+        activeCall = null;
+        resetModalToRinging();
 
         // Remove any dynamic <audio> elements
         document.querySelectorAll('audio[autoplay]').forEach(audio => audio.remove());
@@ -379,8 +503,8 @@
         };
         peerConnection.oniceconnectionstatechange = () => {
           console.debug('[WebRTC] iceConnectionState', peerConnection.iceConnectionState);
-          if (['failed', 'disconnected', 'closed'].includes(peerConnection.iceConnectionState)) {
-              console.warn('[WebRTC] ICE state ended, cleaning up...');
+          if (isPeerConnectionEnded(peerConnection)) {
+              console.warn('[WebRTC] ICE state ended, cleaning up...', peerConnection.iceConnectionState);
               cleanupCall();
           }
       };
@@ -389,12 +513,12 @@
           console.debug('[WebRTC] connectionState', peerConnection.connectionState);
           if (peerConnection.connectionState === 'connected') {
               if(activeCall?.id){ switchToastToConnected(activeCall.id); }
-              if (readyToAccept && activeCall && peerConnection.localDescription) {
+              if (readyToAccept && activeCall && localAnswerSdp()) {
                   console.info('[UIC] Calling final accept...');
-                  acceptWithSdp(peerConnection.localDescription.sdp).catch(() => {});
+                  sendFinalAcceptOnce().catch((err) => console.error('[UIC] Final accept error', err));
               }
-          } else if (['failed', 'disconnected', 'closed'].includes(peerConnection.connectionState)) {
-              console.warn('[WebRTC] Connection ended, cleaning up...');
+          } else if (isPeerConnectionEnded(peerConnection)) {
+              console.warn('[WebRTC] Connection ended, cleaning up...', peerConnection.connectionState);
               cleanupCall();
           }
       };
@@ -440,8 +564,10 @@
         // Normalize line endings in local SDP too
         const normalizedLocal = new RTCSessionDescription({ type: 'answer', sdp: normalizeLineEndings(answer.sdp) });
         await peerConnection.setLocalDescription(normalizedLocal);
-        console.debug('[WebRTC] setLocalDescription done');
-        return answer;
+        await waitForIceGathering(peerConnection);
+        const sdpWithIce = localAnswerSdp();
+        console.debug('[WebRTC] ICE gathering complete', { sdpLen: sdpWithIce.length });
+        return { type: 'answer', sdp: sdpWithIce };
       }
 
       async function preAcceptWithSdp(answerSdp){
@@ -475,12 +601,15 @@
           if(!preAcceptStarted){
             document.getElementById('waIncomingCallStatus').innerText = '{{ __('Preparing') }}';
             preAcceptStarted = true;
+            finalAcceptSent = false;
+            const callSnapshot = activeCall;
             if (peerConnection || localStream) {
                 cleanupCall();
+                activeCall = callSnapshot;
             }
-            const answer = await setupPeerAndCreateAnswer(activeCall.offer || {});
+            await setupPeerAndCreateAnswer(activeCall.offer || {});
             document.getElementById('waIncomingCallStatus').innerText = '{{ __('Pre-accepting') }}';
-            const pre = await preAcceptWithSdp(answer.sdp);
+            const pre = await preAcceptWithSdp(localAnswerSdp());
             if(!(pre && pre.ok)){
               console.error('[UIC] Pre-accept failed (on click)', pre);
               document.getElementById('waIncomingCallStatus').innerText = '{{ __('Failed') }}';
@@ -493,18 +622,21 @@
           readyToAccept = true;
           document.getElementById('waIncomingCallStatus').innerText = '{{ __('Connecting') }}';
           // If already connected by now, proceed to accept immediately
-          if(peerConnection && peerConnection.connectionState === 'connected' && peerConnection.localDescription){
+          if(peerConnection && peerConnection.connectionState === 'connected' && localAnswerSdp()){
             console.info('[UIC] Already connected, sending final accept...');
-            await acceptWithSdp(peerConnection.localDescription.sdp);
+            await sendFinalAcceptOnce();
           }
         }catch(e){ console.error('[UIC] Accept flow error', e); document.getElementById('waIncomingCallStatus').innerText = '{{ __('Failed') }}'; }
       });
 
       document.getElementById('waDeclineBtn').addEventListener('click', function(){
         $('#waIncomingCall').modal('hide');
-        showing = false;
-        activeCall = null;
-        try{ if(peerConnection){ peerConnection.close(); peerConnection = null; } if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; } console.info('[UIC] Call declined and cleaned up'); }catch(_){}
+        cleanupCall({ force: true });
+        console.info('[UIC] Call declined and cleaned up');
+      });
+
+      document.getElementById('waEndCallBtn').addEventListener('click', function(){
+        endActiveCall();
       });
 
 
@@ -731,7 +863,14 @@
 
 
 
-      $('#waIncomingCall').on('hidden.bs.modal', function(){ showing = false; activeCall = null; document.getElementById('waCallLinkWrap').style.display='none';});
+      $('#waIncomingCall').on('hidden.bs.modal', function(){
+        if(callInProgress && peerConnection && !isPeerConnectionEnded(peerConnection)){
+          $('#waIncomingCall').modal('show');
+          return;
+        }
+        showing = false;
+        document.getElementById('waCallLinkWrap').style.display = 'none';
+      });
     });
 
   </script>

@@ -5,8 +5,16 @@
         </div>
     </div>
     <div class="col-auto" :style="{ 'max-width': ( message.is_campign_messages==1?'440px':'65%'  )    }">
-        <div class="card border-radius-xl"  :class="[ {'bg-white message-contact': message.is_message_by_contact==1}, {'bg-primary !important': message.is_note==1},{'bg-default message-agent': message.is_message_by_contact==0&& message.is_note==0} ] ">
+        <div class="card border-radius-xl"  :class="[ {'bg-white message-contact': message.is_message_by_contact==1}, {'bg-primary !important': message.is_note==1}, {'bg-info !important': message.is_call_brief==1}, {'bg-default message-agent': message.is_message_by_contact==0&& message.is_note==0 && message.is_call_brief!=1} ] ">
             <div class="card-body py-2 px-3" >
+                <div v-if="isCallBrief(message)" class="wa-call-brief text-left">
+                    <div class="d-flex align-items-center mb-2" style="gap: 8px;">
+                        <span style="font-size: 1.25rem;">📞</span>
+                        <strong class="text-white">{{ __('Call summary') }}</strong>
+                    </div>
+                    <p v-html="formatIt(message.value || '')" class="mb-0 text-white" style="white-space: pre-wrap; text-align: left !important; font-size: 0.875rem;"></p>
+                </div>
+                <template v-else>
                 <img class="mb-2 inChatImage" v-if="message.header_image" :src="message.header_image" />
                 <a v-if="message.header_document" :href="message.header_document" target="_blank" type="button" class="btn btn-secondary btn-lg btn-block">{{ __('Document link')}}</a>
                 <a v-if="message.header_location" :href="message.header_location" target="_blank" type="button" class="btn btn-secondary btn-lg btn-block">{{ __('See location')}}</a>
@@ -28,8 +36,9 @@
                 <p v-if="message.footer_text" class="text-muted text-xs text-white" style="opacity: 0.8">@{{ message.footer_text }}</p>
 
                 <a :href="button.type=='URL'?button.url:( button.name=='cta_url'?button.parameters.url:( button.type=='reply'?'#':'')) " target="_blank" v-for="(button, indexButton) in parseJSON(message.buttons)" type="button" class="btn btn-secondary btn-lg btn-block">@{{  button.text? button.text:( button.name=='cta_url'?button.parameters.display_text:( button.type=='reply'?button.reply.title:''))  }}</a>
+                </template>
 
-                <div   class="box-sizing: content-box; d-flex text-sm opacity-6 align-items-center" :class="[  {'text-white': message.is_message_by_contact==0} ,  {'justify-content-end': message.is_message_by_contact==0},{'text-right': message.is_message_by_contact==0} ]">
+                <div class="box-sizing: content-box; d-flex text-sm opacity-6 align-items-center" :class="[ {'text-white': message.is_message_by_contact==0 || message.is_call_brief==1 || message.is_note==1} , {'justify-content-end': message.is_message_by_contact==0},{'text-right': message.is_message_by_contact==0} ]">
                     <svg class="mr-2" width="12" fill="currentColor"  viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7l233.4-233.3c12.5-12.5 32.8-12.5 45.3 0Z"/></svg>
                     <small> @{{ momentHM(message.created_at) }} </small>
                     <small class="ml-1" v-if="!message.is_message_by_contact&&message.sender_name&&message.sender_name.length>0">- @{{message.sender_name}} </small>

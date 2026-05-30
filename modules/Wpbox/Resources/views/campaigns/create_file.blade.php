@@ -18,13 +18,72 @@
     <input type="hidden" name="broadcast_type" value="file">
 
     <div class="container-fluid mt--7">
+        @if ($errors->any())
+            <div class="alert alert-danger">
+                <ul class="mb-0 pl-3">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
         <div class="row">
 
             {{-- ══════════════════════════════════════════════════════
                  COLUMN 1 — Campaign name + template + file upload
             ══════════════════════════════════════════════════════ --}}
             <div class="col-xl-4">
+          
+          
+                {{-- Campaign card — same partial as group --}}
+            <div class="card shadow">
+            {{-- File upload card --}}
+                <div class="card shadow mt-0">
+                    <div class="card-header bg-white border-0">
+                        <h3 class="mb-0">📤 {{__('Contact File')}}</h3>
+                    </div>
+                    <div class="card-body">
 
+                        <div class="form-group">
+                            <label class="form-control-label">
+                                {{__('Upload CSV or Excel file')}} <span class="text-danger">*</span>
+                            </label>
+                            <input type="file" name="contact_file" id="contact_file"
+                                   accept=".csv,.xlsx,.xls" class="form-control">
+                            <small class="text-muted">
+                                {{__('First row must be column headers. One column must contain phone numbers.')}}
+                            </small>
+                        </div>
+
+                        {{-- Parsing spinner --}}
+                        <div id="file-parsing" style="display:none;" class="text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ml-2 text-muted">{{__('Reading file...')}}</span>
+                        </div>
+
+                        {{-- Badges --}}
+                        <div id="file-meta" style="display:none;" class="mt-2">
+                            <span class="badge badge-success" id="file-row-count"></span>
+                            <span class="badge badge-info ml-1" id="file-col-count"></span>
+                        </div>
+
+                        {{-- Phone column picker --}}
+                        <div id="phone-column-wrapper" style="display:none;" class="mt-3">
+                            <div class="form-group mb-0">
+                                <label class="form-control-label">
+                                    {{__('Phone number column')}} <span class="text-danger">*</span>
+                                </label>
+                                <select name="phone_column" id="phone_column" class="form-control">
+                                    <option value="">-- {{__('Select column')}} --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            
+            </div>
+           
                 <div class="card shadow">
                     <div class="card-header bg-white border-0">
                         <h3 class="mb-0">{{__('Campaign')}}</h3>
@@ -68,67 +127,24 @@
                             </small>
                         </div>
 
-                        <div class="form-group">
-                            <div class="custom-control custom-toggle">
-                                <input type="checkbox" name="send_now" id="send_now"
-                                       class="custom-control-input"
-                                       {{ isset($_GET['send_now']) ? 'checked' : '' }}>
-                                <label class="custom-control-label" for="send_now"
-                                       data-label-off="{{__('Schedule send')}}"
-                                       data-label-on="{{__('Send now')}}">
-                                </label>
-                            </div>
-                        </div>
+                        <div class="form-group d-flex align-items-center gap-2">
+    <strong class="mr-3">{{__('Ignore schedule time and send now')}}</strong>
+    <div class="custom-control custom-toggle">
+        <input type="checkbox" name="send_now" id="send_now"
+               class="custom-control-input"
+               {{ isset($_GET['send_now']) ? 'checked' : '' }}>
+        <label class="custom-control-label" for="send_now"
+               data-label-off="{{__('Schedule send')}}"
+               data-label-on="{{__('Send now')}}">
+        </label>
+    </div>
+</div>
 
                     </div>
-                </div>
-
-                {{-- File upload card --}}
-                <div class="card shadow mt-4">
-                    <div class="card-header bg-white border-0">
-                        <h3 class="mb-0">📤 {{__('Contact File')}}</h3>
                     </div>
-                    <div class="card-body">
-
-                        <div class="form-group">
-                            <label class="form-control-label">
-                                {{__('Upload CSV or Excel file')}} <span class="text-danger">*</span>
-                            </label>
-                            <input type="file" name="contact_file" id="contact_file"
-                                   accept=".csv,.xlsx,.xls" class="form-control">
-                            <small class="text-muted">
-                                {{__('First row must be column headers. One column must contain phone numbers.')}}
-                            </small>
-                        </div>
-
-                        {{-- Parsing spinner --}}
-                        <div id="file-parsing" style="display:none;" class="text-center py-2">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                            <span class="ml-2 text-muted">{{__('Reading file...')}}</span>
-                        </div>
-
-                        {{-- Badges --}}
-                        <div id="file-meta" style="display:none;" class="mt-2">
-                            <span class="badge badge-success" id="file-row-count"></span>
-                            <span class="badge badge-info ml-1" id="file-col-count"></span>
-                        </div>
-
-                        {{-- Phone column picker --}}
-                        <div id="phone-column-wrapper" style="display:none;" class="mt-3">
-                            <div class="form-group mb-0">
-                                <label class="form-control-label">
-                                    {{__('Phone number column')}} <span class="text-danger">*</span>
-                                </label>
-                                <select name="phone_column" id="phone_column" class="form-control">
-                                    <option value="">-- {{__('Select column')}} --</option>
-                                </select>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
             </div>{{-- /col 1 --}}
+
+           
 
             {{-- ══════════════════════════════════════════════════════
                  COLUMN 2 — Variable → file column mapping
@@ -194,7 +210,7 @@
                         </p>
                         <button type="submit" id="send-btn"
                                 class="btn btn-success btn-lg btn-block"
-                                style="display:none;">
+                                disabled>
                             🚀 {{__('Send campaign')}}
                         </button>
                     </div>
@@ -386,9 +402,10 @@ function buildVariableMappers() {
                 }
 
                 html +=   '</label>'
+                      +   '<input type="hidden" name="parammatch[' + section + '][' + item.id + ']" value="-2">'
                       +   '<select name="file_column_map[' + section + '][' + item.id + ']"'
                       +           ' id="map_' + section + '_' + item.id + '"'
-                      +           ' class="form-control" required>'
+                      +           ' class="form-control file-column-map" required>'
                       +     buildColOptions(parsedHeaders, '-- {{ __("Select column") }} --')
                       +   '</select>'
                       +   '<small class="text-muted">'
@@ -435,7 +452,9 @@ function buildVariableMappers() {
                                 + parsedRows.length
                                 + ' {{ __("contacts from your file.") }}';
     }
-    if (sendBtn) sendBtn.style.display = '';
+    if (sendBtn) {
+        sendBtn.disabled = false;
+    }
 }
 
 // ── CSV parser ────────────────────────────────────────────────────────────────

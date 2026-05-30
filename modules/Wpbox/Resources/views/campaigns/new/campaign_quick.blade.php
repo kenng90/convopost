@@ -38,7 +38,7 @@
         'checked' => isset($_GET['send_now']),
     ])
 
-    <button onclick="submitJustCampign()" class="btn btn-success mt-4">
+    <button type="button" onclick="submitJustCampign(event)" class="btn btn-success mt-4">
         {{ __('Apply') }}
     </button>
 

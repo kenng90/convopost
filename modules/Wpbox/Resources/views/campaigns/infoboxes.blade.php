@@ -10,7 +10,7 @@
                     <div class="row">
                         <div class="col">
                             <h5 class="card-title text-uppercase text-muted mb-0">{{ __('Template')}}</h5>
-                            <span class="h2 font-weight-bold mb-0">{{  $item->template->name }}</span>
+                            <span class="h2 font-weight-bold mb-0">{{ $item->template->name ?? __('Unknown template') }}</span>
                         </div>
                         <div class="col-auto">
                             <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
@@ -53,7 +53,12 @@
                         </div>
                         <p class="mt-3 mb-0 text-sm">
                             <span class="text mr-2">
-                                {{ round(($item->send_to/$total_contacts)*100,2)  }}% {{__('of your contacts')}}</span>
+                                @if ($total_contacts > 0)
+                                    {{ round(($item->send_to / $total_contacts) * 100, 2) }}% {{ __('of your contacts') }}
+                                @else
+                                    0% {{ __('of your contacts') }}
+                                @endif
+                            </span>
                         </p>
                     </div>
                 </div>

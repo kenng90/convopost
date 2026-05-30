@@ -32,6 +32,7 @@
         </div>
 </div>
 @include('wpbox::chat.scripts')
+@includeIf('whatsappcall::chat.call_brief_scripts')
 @foreach($sidebarModules as $module)
     @include($module['script'])
 @endforeach

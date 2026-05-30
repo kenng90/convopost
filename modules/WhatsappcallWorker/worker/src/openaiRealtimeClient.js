@@ -1,0 +1,294 @@
+import WebSocket from 'ws';
+import { config } from './config.js';
+import { logInfo, logWarn, logError, logDebug } from './logger.js';
+import { bumpEvent } from './sessionDebug.js';
+
+export class OpenAIRealtimeClient {
+  constructor(options) {
+    this.instructions = options.instructions;
+    this.debug = options.debug ?? null;
+    this.onAudioDelta = options.onAudioDelta;
+    this.onUserTranscript = options.onUserTranscript;
+    this.onAssistantTranscript = options.onAssistantTranscript;
+    this.onError = options.onError;
+    this.ws = null;
+    this.sessionReady = false;
+    this.closed = false;
+    /** @type {string[]} */
+    this.transcriptLines = [];
+    this.currentAssistantText = '';
+    this.connectStartedAt = Date.now();
+  }
+
+  connect() {
+    return new Promise((resolve, reject) => {
+      if (!config.openaiApiKey) {
+        const err = new Error('OPENAI_API_KEY is not set in worker process');
+        logError('OpenAI connect aborted', { reason: err.message });
+        reject(err);
+        return;
+      }
+
+      const model = config.openaiRealtimeModel;
+      const url = `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`;
+
+      logInfo('Connecting to OpenAI Realtime (GA)', { model, url_host: 'api.openai.com' });
+
+      this.ws = new WebSocket(url, {
+        headers: {
+          Authorization: `Bearer ${config.openaiApiKey}`,
+        },
+      });
+
+      const fail = (err) => {
+        if (!this.closed) {
+          logError('OpenAI Realtime connection failed', {
+            message: err?.message || String(err),
+            elapsed_ms: Date.now() - this.connectStartedAt,
+          });
+          this.onError?.(err);
+          reject(err);
+        }
+      };
+
+      this.ws.on('error', (err) => {
+        logError('OpenAI WebSocket error', { message: err.message, code: err.code });
+        fail(err);
+      });
+
+      this.ws.on('open', () => {
+        logInfo('OpenAI WebSocket open', {
+          model,
+          elapsed_ms: Date.now() - this.connectStartedAt,
+        });
+        if (this.debug) this.debug.openai_connected = true;
+      });
+
+      this.ws.on('message', (raw) => {
+        let event;
+        try {
+          event = JSON.parse(raw.toString());
+        } catch (e) {
+          logWarn('OpenAI invalid JSON event', { error: e.message });
+          return;
+        }
+
+        this.handleEvent(event, resolve, fail);
+      });
+
+      this.ws.on('close', (code, reason) => {
+        this.closed = true;
+        logInfo('OpenAI WebSocket closed', {
+          code,
+          reason: reason?.toString() || '',
+        });
+      });
+
+      setTimeout(() => {
+        if (!this.sessionReady && !this.closed) {
+          fail(new Error('OpenAI session.updated timeout after 20s — check API key and model access'));
+        }
+      }, 20000);
+    });
+  }
+
+  handleEvent(event, resolveReady, fail) {
+    const type = event.type;
+    if (this.debug) bumpEvent(this.debug, type);
+
+    logDebug('OpenAI event', {
+      type,
+      ...(type === 'error' ? { error: event.error } : {}),
+      ...(type === 'response.done' ? { status: event.response?.status } : {}),
+    });
+
+    if (type === 'error') {
+      const msg = event.error?.message || JSON.stringify(event.error || event);
+      logError('OpenAI error event', { message: msg, code: event.error?.code, type: event.error?.type });
+      fail(new Error(msg));
+      return;
+    }
+
+    if (type === 'session.created') {
+      logInfo('OpenAI session.created — sending session.update');
+      this.sendSessionUpdate();
+      return;
+    }
+
+    if (type === 'session.updated') {
+      if (!this.sessionReady) {
+        this.sessionReady = true;
+        if (this.debug) this.debug.openai_session_ready = true;
+        logInfo('OpenAI session ready', { elapsed_ms: Date.now() - this.connectStartedAt });
+        resolveReady();
+      }
+      return;
+    }
+
+    if (type === 'response.created') {
+      logInfo('OpenAI response.created', { response_id: event.response?.id });
+      return;
+    }
+
+    if (
+      type === 'response.audio.delta' ||
+      type === 'response.output_audio.delta'
+    ) {
+      const delta = event.delta;
+      if (typeof delta === 'string' && delta.length > 0) {
+        this.onAudioDelta?.(delta);
+      } else {
+        logDebug('OpenAI audio delta empty', { type });
+      }
+      return;
+    }
+
+    if (type === 'response.audio_transcript.delta' || type === 'response.output_audio_transcript.delta') {
+      const delta = event.delta ?? '';
+      if (typeof delta === 'string') {
+        this.currentAssistantText += delta;
+        this.onAssistantTranscript?.(delta);
+      }
+      return;
+    }
+
+    if (
+      type === 'response.audio_transcript.done' ||
+      type === 'response.output_audio_transcript.done'
+    ) {
+      const text = event.transcript ?? this.currentAssistantText;
+      if (text) {
+        logInfo('OpenAI assistant said', { text: text.slice(0, 200) });
+        this.transcriptLines.push(`[AI] ${text}`);
+        this.currentAssistantText = '';
+      }
+      return;
+    }
+
+    if (
+      type === 'conversation.item.input_audio_transcription.completed' ||
+      type === 'conversation.item.input_audio_transcription.done'
+    ) {
+      const text = event.transcript ?? '';
+      if (text) {
+        logInfo('Caller said (transcription)', { text: text.slice(0, 200) });
+        this.transcriptLines.push(`[Caller] ${text}`);
+        this.onUserTranscript?.(text);
+      }
+      return;
+    }
+
+    if (type === 'response.done') {
+      logInfo('OpenAI response.done', {
+        status: event.response?.status,
+        output_items: event.response?.output?.length,
+      });
+      return;
+    }
+
+    if (type === 'input_audio_buffer.speech_started') {
+      logInfo('Caller started speaking (VAD)');
+      return;
+    }
+
+    if (type === 'input_audio_buffer.speech_stopped') {
+      logInfo('Caller stopped speaking (VAD)');
+      return;
+    }
+
+    if (type === 'response.output_item.added') {
+      logDebug('OpenAI output item added', { item: event.item?.type });
+      return;
+    }
+  }
+
+  sendSessionUpdate() {
+    logInfo('Sending session.update (GA)', {
+      instructions_chars: this.instructions?.length || 0,
+      voice: config.openaiVoice,
+      model: config.openaiRealtimeModel,
+    });
+    this.send({
+      type: 'session.update',
+      session: {
+        type: 'realtime',
+        model: config.openaiRealtimeModel,
+        instructions: this.instructions,
+        output_modalities: ['audio'],
+        audio: {
+          input: {
+            format: {
+              type: 'audio/pcm',
+              rate: config.openaiAudioRate,
+            },
+            turn_detection: {
+              type: 'server_vad',
+              threshold: config.openaiVadThreshold,
+              prefix_padding_ms: config.openaiVadPrefixMs,
+              silence_duration_ms: config.openaiVadSilenceMs,
+            },
+            transcription: {
+              model: config.openaiTranscriptionModel,
+            },
+          },
+          output: {
+            format: {
+              type: 'audio/pcm',
+              rate: config.openaiAudioRate,
+            },
+            voice: config.openaiVoice,
+          },
+        },
+      },
+    });
+  }
+
+  triggerInitialGreeting() {
+    logInfo('Triggering initial AI greeting (response.create)');
+    if (this.debug) this.debug.initial_greeting_sent = true;
+    this.send({
+      type: 'response.create',
+      response: {
+        output_modalities: ['audio'],
+        instructions:
+          'The caller just connected on a WhatsApp voice call. Greet them warmly and briefly, then ask how you can help.',
+      },
+    });
+  }
+
+  appendAudioPcm16Base64(base64Audio) {
+    if (!this.sessionReady || this.closed) return;
+    this.send({
+      type: 'input_audio_buffer.append',
+      audio: base64Audio,
+    });
+  }
+
+  getTranscript() {
+    const lines = [...this.transcriptLines];
+    if (this.currentAssistantText) {
+      lines.push(`[AI] ${this.currentAssistantText}`);
+    }
+    return lines.join('\n');
+  }
+
+  send(payload) {
+    if (this.closed || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      logDebug('OpenAI send skipped — socket not open', { type: payload.type, readyState: this.ws?.readyState });
+      return;
+    }
+    this.ws.send(JSON.stringify(payload));
+  }
+
+  close() {
+    if (this.closed) return;
+    this.closed = true;
+    try {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.close();
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+}

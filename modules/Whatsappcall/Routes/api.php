@@ -1,19 +1,20 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Modules\Whatsappcall\Http\Controllers\CallWorkerController;
+use Modules\Whatsappcall\Http\Middleware\ValidateAiWorkerSecret;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
-*/
-
-Route::middleware('auth:api')->get('/whatsappcall', function (Request $request) {
-    return $request->user();
-});
+Route::prefix('api/whatsappcall/worker')
+    ->middleware(ValidateAiWorkerSecret::class)
+    ->group(function () {
+        Route::get('calls/{call}', [CallWorkerController::class, 'show'])
+            ->whereNumber('call');
+        Route::post('calls/{call}/pre-accept', [CallWorkerController::class, 'preAccept'])
+            ->whereNumber('call');
+        Route::post('calls/{call}/accept', [CallWorkerController::class, 'accept'])
+            ->whereNumber('call');
+        Route::post('calls/{call}/terminate', [CallWorkerController::class, 'terminate'])
+            ->whereNumber('call');
+        Route::post('calls/{call}/complete', [CallWorkerController::class, 'complete'])
+            ->whereNumber('call');
+    });

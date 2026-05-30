@@ -1,0 +1,14 @@
+{
+    "alias": "whatsappcallworker",
+    "name": "WhatsApp Call AI Worker",
+    "description": "Built-in Node media worker for WhatsApp AI voice calls",
+    "keywords": ["whatsapp", "voice", "ai", "webrtc"],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\WhatsappcallWorker\\Providers\\Main"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": ["whatsappcall"]
+}
