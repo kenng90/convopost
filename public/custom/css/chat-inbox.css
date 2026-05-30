@@ -1,0 +1,414 @@
+/**
+ * Scoped chat inbox UI (v2). Only applies under #chatList.wpbox-inbox-v2.
+ * Accent colors follow theme via --primary.
+ */
+#chatList.wpbox-inbox-v2 {
+    --wpbox-chat-accent: var(--primary, #128c7e);
+    --wpbox-chat-outgoing: var(--wpbox-chat-accent);
+    --wpbox-chat-page-bg: #f0f2f5;
+    --wpbox-chat-surface: #ffffff;
+    --wpbox-chat-muted: #6b7280;
+    --wpbox-chat-border: #e5e7eb;
+    --wpbox-chat-radius: 12px;
+    --wpbox-chat-radius-lg: 16px;
+    --wpbox-chat-viewport-height: calc(100vh - 1rem);
+
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    gap: 0;
+    padding: 1.25rem 1.5rem 1.5rem;
+    height: var(--wpbox-chat-viewport-height);
+    max-height: var(--wpbox-chat-viewport-height);
+    min-height: 0;
+    overflow: hidden;
+    background: var(--wpbox-chat-page-bg);
+    box-sizing: border-box;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-inbox-chat-column {
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+#chatList.wpbox-inbox-v2 #sideApps {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    flex-shrink: 0;
+}
+
+#chatList.wpbox-inbox-v2 #chatAndTools {
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    border-radius: 0 var(--wpbox-chat-radius-lg) var(--wpbox-chat-radius-lg) 0;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+#chatList.wpbox-inbox-v2 #chatAndToolsContent {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#chatList.wpbox-inbox-v2 .contact-list {
+    background: var(--wpbox-chat-surface);
+    border: 1px solid var(--wpbox-chat-border) !important;
+    border-right: none !important;
+    border-radius: var(--wpbox-chat-radius-lg) 0 0 var(--wpbox-chat-radius-lg) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    max-height: 100%;
+    min-height: 0;
+    margin-bottom: 0 !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#chatList.wpbox-inbox-v2 .contact-list .card-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#chatList.wpbox-inbox-v2 .contact-list .card-header {
+    background: var(--wpbox-chat-surface);
+    border-bottom: 1px solid var(--wpbox-chat-border) !important;
+    padding: 1.25rem 1rem 1rem !important;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-inbox-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: -0.02em;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-inbox-count.badge {
+    background: var(--wpbox-chat-accent) !important;
+    color: #fff !important;
+    font-weight: 600;
+    font-size: 0.7rem;
+    padding: 0.2em 0.55em;
+    vertical-align: middle;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-search-wrap .form-control,
+#chatList.wpbox-inbox-v2 .wpbox-search-wrap .input-group-text {
+    background: #f3f4f6 !important;
+    border: 1px solid var(--wpbox-chat-border) !important;
+    border-radius: 999px !important;
+    font-size: 0.875rem;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-search-wrap .form-control {
+    padding: 0.65rem 1rem !important;
+    border-right: none !important;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-search-wrap .input-group-append > div,
+#chatList.wpbox-inbox-v2 .wpbox-search-wrap .input-group-text {
+    border-left: none !important;
+    border-radius: 0 999px 999px 0 !important;
+    color: var(--wpbox-chat-muted);
+}
+
+#chatList.wpbox-inbox-v2 .contact-list .nav-pills {
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+#chatList.wpbox-inbox-v2 .contact-list .nav-pills .nav-link {
+    border-radius: 999px !important;
+    padding: 0.4rem 0.85rem !important;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--wpbox-chat-muted) !important;
+    background: #f3f4f6 !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+#chatList.wpbox-inbox-v2 .contact-list .nav-pills .nav-link.active {
+    background: var(--wpbox-chat-accent) !important;
+    color: #fff !important;
+}
+
+#chatList.wpbox-inbox-v2 .contact-list .nav-pills .badge {
+    background: rgba(255, 255, 255, 0.25) !important;
+    color: inherit !important;
+    margin-left: 0.25rem;
+}
+
+#chatList.wpbox-inbox-v2 .contact-list .nav-pills .nav-link:not(.active) .badge-primary {
+    background: var(--wpbox-chat-accent) !important;
+    color: #fff !important;
+}
+
+#chatList.wpbox-inbox-v2 .contact-list .card-body > .d-block {
+    border-radius: var(--wpbox-chat-radius);
+    margin-bottom: 0.15rem;
+    transition: background 0.15s ease;
+}
+
+#chatList.wpbox-inbox-v2 .contact-selected {
+    background: color-mix(in srgb, var(--wpbox-chat-accent) 10%, #fff) !important;
+    box-shadow: inset 3px 0 0 var(--wpbox-chat-accent);
+}
+
+#chatList.wpbox-inbox-v2 .contact-list .card-body h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+#chatList.wpbox-inbox-v2 .contact-selected h4,
+#chatList.wpbox-inbox-v2 .contact-list h4.text-primary {
+    color: var(--wpbox-chat-accent) !important;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-avatar,
+#chatList.wpbox-inbox-v2 .avatar.avatar-content.bg-gradient-success {
+    background: var(--wpbox-chat-accent) !important;
+    color: #fff !important;
+    font-weight: 600;
+    border-radius: 50% !important;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-unread-dot .fill-primary,
+#chatList.wpbox-inbox-v2 .wpbox-unread-dot svg {
+    fill: var(--wpbox-chat-accent) !important;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-contact-preview {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+#chatList.wpbox-inbox-v2 .theChatHolder {
+    background: var(--wpbox-chat-surface);
+    border: 1px solid var(--wpbox-chat-border) !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-chat-header.card-header {
+    background: var(--wpbox-chat-surface);
+    border-bottom: 1px solid var(--wpbox-chat-border) !important;
+    padding: 1rem 1.25rem !important;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-chat-header__main h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-chat-header__phone {
+    font-size: 0.8rem;
+    color: var(--wpbox-chat-muted);
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-template-notice {
+    flex: 1 1 100%;
+    text-align: center;
+    padding: 0.5rem 1rem;
+    border-radius: var(--wpbox-chat-radius);
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-template-notice.badge-danger {
+    background: #fef3c7 !important;
+    color: #92400e !important;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-template-notice.badge-warning {
+    background: #fff7ed !important;
+    color: #9a3412 !important;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-template-notice.badge-success {
+    background: #ecfdf5 !important;
+    color: #065f46 !important;
+}
+
+#chatList.wpbox-inbox-v2 #chatMessages {
+    background: #f7f8fa !important;
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    padding-bottom: 2rem !important; 
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 1rem 1.25rem !important;
+}
+
+#chatList.wpbox-inbox-v2 .message-separator {
+    padding: 1.25rem 0 0.75rem;
+}
+
+#chatList.wpbox-inbox-v2 .message-separator span {
+    background: #e5e7eb;
+    color: #4b5563;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+#chatList.wpbox-inbox-v2 .message-separator::before {
+    background-color: var(--wpbox-chat-border);
+}
+
+#chatList.wpbox-inbox-v2 .message-agent {
+    background: var(--wpbox-chat-outgoing) !important;
+    border: none !important;
+    border-radius: 1rem 1rem 0.2rem 1rem !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+#chatList.wpbox-inbox-v2 .message-contact {
+    background: #fff !important;
+    border: 1px solid var(--wpbox-chat-border) !important;
+    border-radius: 1rem 1rem 1rem 0.2rem !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+#chatList.wpbox-inbox-v2 #chatMessages .bg-success,
+#chatList.wpbox-inbox-v2 #chatMessages .message-agent.bg-default {
+    background: var(--wpbox-chat-outgoing) !important;
+}
+
+#chatList.wpbox-inbox-v2 .theChatHolder > .card-footer {
+    background: var(--wpbox-chat-surface);
+    border-top: 1px solid var(--wpbox-chat-border) !important;
+    padding: 0 1rem 1rem !important;
+    flex-shrink: 0;
+}
+
+#chatList.wpbox-inbox-v2 .theChatHolder .card-footer .nav-pills {
+    border-bottom: 1px solid var(--wpbox-chat-border);
+    margin: 0 -0.5rem 0.75rem !important;
+    padding: 0 0.5rem;
+    gap: 0.5rem;
+}
+
+#chatList.wpbox-inbox-v2 .theChatHolder .card-footer .nav-pills .nav-link {
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--wpbox-chat-muted) !important;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.75rem 0.5rem !important;
+    border-bottom: 2px solid transparent;
+    box-shadow: none !important;
+}
+
+#chatList.wpbox-inbox-v2 .theChatHolder .card-footer .nav-pills .nav-link.active {
+    color: var(--wpbox-chat-accent) !important;
+    border-bottom-color: var(--wpbox-chat-accent) !important;
+    background: transparent !important;
+}
+
+#chatList.wpbox-inbox-v2 #emoji-btn {
+    border-radius: 999px 0 0 999px !important;
+    border: 1px solid var(--wpbox-chat-border) !important;
+    border-right: none !important;
+    background: #f9fafb !important;
+}
+
+#chatList.wpbox-inbox-v2 #chatTabsContent input#message {
+    border: 1px solid var(--wpbox-chat-border) !important;
+    border-left: none !important;
+    border-radius: 0 999px 999px 0 !important;
+    background: #f9fafb !important;
+    padding: 0.65rem 1rem !important;
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-send-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    background: var(--wpbox-chat-accent) !important;
+    border: none !important;
+    color: #fff !important;
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--wpbox-chat-accent) 35%, transparent);
+}
+
+#chatList.wpbox-inbox-v2 .wpbox-send-btn:hover {
+    filter: brightness(1.05);
+}
+
+#chatList.wpbox-inbox-v2 #sideApps .sideBarApps {
+    border-radius: 0 var(--wpbox-chat-radius-lg) var(--wpbox-chat-radius-lg) 0;
+}
+
+#chatList.wpbox-inbox-v2 #sideApps #sideBarButtons.card {
+    background: #f9fafb;
+    border-color: var(--wpbox-chat-border) !important;
+    border-radius: 0 var(--wpbox-chat-radius-lg) 0 0;
+}
+
+#chatList.wpbox-inbox-v2 #sideApps .sideBarIconApps {
+    border-radius: 12px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+#chatList.wpbox-inbox-v2 #sideApps .currentSideApp.card {
+    border-color: var(--wpbox-chat-border) !important;
+}
+
+@media (max-width: 768px) {
+    #chatList.wpbox-inbox-v2 {
+        grid-template-columns: 1fr;
+        padding: 0.5rem;
+        --wpbox-chat-viewport-height: calc(100vh - 9rem);
+        height: var(--wpbox-chat-viewport-height);
+        max-height: var(--wpbox-chat-viewport-height);
+    }
+
+    #chatList.wpbox-inbox-v2 #chatMessages {
+        height: auto !important;
+    }
+
+    #chatList.wpbox-inbox-v2 .contact-list {
+        border-radius: var(--wpbox-chat-radius-lg) !important;
+        border-right: 1px solid var(--wpbox-chat-border) !important;
+    }
+
+    #chatList.wpbox-inbox-v2 #chatAndTools {
+        border-radius: var(--wpbox-chat-radius-lg);
+    }
+
+    #chatList.wpbox-inbox-v2 .wpbox-template-notice.hide-onmobile {
+        display: flex !important;
+    }
+}
