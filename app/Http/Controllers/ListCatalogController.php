@@ -8,6 +8,7 @@ use App\Services\CatalogItemPlanLimit;
 use App\Services\ExcelImportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ListCatalogController extends Controller
 {
@@ -22,7 +23,7 @@ class ListCatalogController extends Controller
      */
     public function previewExcel(Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -36,7 +37,7 @@ class ListCatalogController extends Controller
 
             $file = $request->file('file');
             $path = $file->store('temp');
-            $fullPath = storage_path('app/' . $path);
+            $fullPath = storage_path('app/'.$path);
 
             // Parse the Excel file
             $parseResult = $this->excelService->parseExcel($fullPath);
@@ -44,16 +45,25 @@ class ListCatalogController extends Controller
             // Clean up temp file
             unlink($fullPath);
 
+            $columnMapping = $parseResult['column_mapping'];
+            $previewItems = $this->excelService->transformItems(
+                array_slice($parseResult['items'], 0, 5),
+                $columnMapping
+            );
+
             return response()->json([
                 'success' => true,
-                'items' => $this->excelService->previewItems($parseResult['items']),
+                'items' => $this->excelService->previewItems($previewItems),
                 'columns' => $parseResult['columns'],
+                'column_mapping' => $columnMapping,
+                'template_headers' => ExcelImportService::TEMPLATE_HEADERS,
                 'total_count' => $parseResult['total_count'],
                 'headers' => $parseResult['headers'],
             ]);
 
         } catch (\Exception $e) {
             Log::error('Excel preview failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -66,7 +76,7 @@ class ListCatalogController extends Controller
      */
     public function importExcel(Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -77,20 +87,21 @@ class ListCatalogController extends Controller
             $request->validate([
                 'file' => 'required|file|mimes:xlsx,xls,csv',
                 'catalogName' => 'required|string|max:255',
-                'columnMapping' => 'required|json',
+                'columnMapping' => 'nullable|json',
             ]);
 
             $file = $request->file('file');
             $catalogName = $request->input('catalogName');
-            $columnMapping = json_decode($request->input('columnMapping'), true);
 
             $path = $file->store('catalogs');
-            $fullPath = storage_path('app/' . $path);
+            $fullPath = storage_path('app/'.$path);
 
-            // Parse Excel
             $parseResult = $this->excelService->parseExcel($fullPath);
 
-            // Transform items using column mapping
+            $columnMapping = $request->filled('columnMapping')
+                ? json_decode($request->input('columnMapping'), true)
+                : $parseResult['column_mapping'];
+
             $transformedItems = $this->excelService->transformItems(
                 $parseResult['items'],
                 $columnMapping
@@ -135,7 +146,7 @@ class ListCatalogController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Catalog '{$catalogName}' created with " . count($transformedItems) . ' items.',
+                'message' => "Catalog '{$catalogName}' created with ".count($transformedItems).' items.',
                 'catalogId' => $catalog->id,
                 'items' => $transformedItems,
                 'itemCount' => count($transformedItems),
@@ -143,6 +154,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Excel import failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -151,11 +163,27 @@ class ListCatalogController extends Controller
     }
 
     /**
+     * Download standardized catalog import template (.xlsx)
+     */
+    public function downloadImportTemplate(): StreamedResponse
+    {
+        if (! auth()->check()) {
+            abort(401);
+        }
+
+        return response()->streamDownload(function () {
+            $this->excelService->writeTemplateToPath('php://output');
+        }, 'catalog-import-template.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
      * Test API endpoint and get preview
      */
     public function testAPI(Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -176,7 +204,7 @@ class ListCatalogController extends Controller
             // Make API call
             $response = \Illuminate\Support\Facades\Http::timeout(10)->get($url, $params);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 return response()->json([
                     'success' => false,
                     'message' => "API returned status {$response->status()}",
@@ -189,7 +217,7 @@ class ListCatalogController extends Controller
             // Extract data from response path
             $items = $this->getValueByPath($data, $responseDataPath);
 
-            if (!is_array($items)) {
+            if (! is_array($items)) {
                 return response()->json([
                     'success' => false,
                     'message' => "Data at path '{$responseDataPath}' is not an array",
@@ -214,6 +242,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('API test failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -226,7 +255,7 @@ class ListCatalogController extends Controller
      */
     public function listCatalogs()
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -265,6 +294,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('List catalogs failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -277,7 +307,7 @@ class ListCatalogController extends Controller
      */
     public function getCatalog($id)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -314,6 +344,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Get catalog failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Catalog not found',
@@ -326,7 +357,7 @@ class ListCatalogController extends Controller
      */
     public function updateCatalog(Request $request, $id)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -361,6 +392,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Update catalog failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -373,7 +405,7 @@ class ListCatalogController extends Controller
      */
     public function deleteCatalog($id)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -394,6 +426,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Delete catalog failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -406,7 +439,7 @@ class ListCatalogController extends Controller
      */
     public function getItems($id)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -426,6 +459,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Get catalog items failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Catalog not found',
@@ -438,7 +472,7 @@ class ListCatalogController extends Controller
      */
     public function addItem(Request $request, $id)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -513,6 +547,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Add item failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -525,7 +560,7 @@ class ListCatalogController extends Controller
      */
     public function updateItem(Request $request, $id, $itemId)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -589,6 +624,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Update item failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -601,7 +637,7 @@ class ListCatalogController extends Controller
      */
     public function deleteItem($id, $itemId)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -617,7 +653,7 @@ class ListCatalogController extends Controller
             $items = $catalog->items ?? [];
 
             // Find and remove item
-            $items = array_filter($items, function($item) use ($itemId) {
+            $items = array_filter($items, function ($item) use ($itemId) {
                 return $item['id'] !== $itemId;
             });
 
@@ -635,6 +671,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Delete item failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),

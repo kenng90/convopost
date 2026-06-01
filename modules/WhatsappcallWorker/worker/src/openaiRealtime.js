@@ -3,18 +3,20 @@ import { logInfo, logWarn, logError } from './logger.js';
 import { runStubAiSession } from './stubAiSession.js';
 import { runRealtimeCallSession } from './realtimeCallSession.js';
 import { createSessionDebug, addWarning } from './sessionDebug.js';
+import { resolveOpenAiApiKey } from './openaiKey.js';
 
 /**
  * Run AI voice session — OpenAI Realtime when configured, otherwise stub.
  */
 export async function runAiSession(ctx) {
+  const openaiApiKey = resolveOpenAiApiKey(ctx.payload);
   const debug = createSessionDebug('unknown');
   debug.worker_mode = config.workerMode;
-  debug.openai_configured = Boolean(config.openaiApiKey);
+  debug.openai_configured = Boolean(openaiApiKey);
   debug.openai_model = config.openaiRealtimeModel;
+  debug.openai_key_source = openaiApiKey ? 'company' : 'none';
 
-  const useRealtime =
-    config.workerMode === 'realtime' && Boolean(config.openaiApiKey);
+  const useRealtime = config.workerMode === 'realtime' && Boolean(openaiApiKey);
 
   if (useRealtime) {
     debug.session_type = 'realtime';
@@ -23,19 +25,19 @@ export async function runAiSession(ctx) {
       voice: config.openaiVoice,
       instructions_chars: buildInstructionPreview(ctx.payload),
     });
-    return runRealtimeCallSession({ ...ctx, debug });
+    return runRealtimeCallSession({ ...ctx, openaiApiKey, debug });
   }
 
   debug.session_type = 'stub';
 
-  if (config.workerMode === 'realtime' && !config.openaiApiKey) {
+  if (config.workerMode === 'realtime' && !openaiApiKey) {
     addWarning(
       debug,
-      'WORKER_MODE=realtime but OPENAI_API_KEY is empty in worker process — falling back to STUB (no spoken audio)',
+      'WORKER_MODE=realtime but no OpenAI API key for this call — falling back to STUB (no spoken audio)',
     );
     logError(
-      'OPENAI_API_KEY missing in worker environment. ' +
-        'Ensure OPENAI_API_KEY is in Laravel .env and restart: php artisan whatsappcall:worker',
+      'OpenAI API key missing for this call. ' +
+        'Company OpenAI API key missing — add it under WhatsApp Calling → AI voice settings.',
     );
   } else {
     logWarn('Running STUB session (no spoken AI)', { worker_mode: config.workerMode });

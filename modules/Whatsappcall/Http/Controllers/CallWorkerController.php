@@ -152,6 +152,7 @@ class CallWorkerController extends Controller
         $structured['handoff_reason'] = $validated['handoff_reason'] ?? $structured['handoff_reason'] ?? null;
         if (is_array($workerDebug)) {
             $structured['worker_debug'] = $workerDebug;
+            $structured = $this->applyAiFailureFromWorkerDebug($structured, $workerDebug);
         }
 
         $call = $briefService->completeAiCall($call, array_merge($validated, [
@@ -268,5 +269,65 @@ class CallWorkerController extends Controller
         }
 
         return response()->json(['ok' => true, 'success' => true]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $structured
+     * @param  array<string, mixed>  $workerDebug
+     * @return array<string, mixed>
+     */
+    private function applyAiFailureFromWorkerDebug(array $structured, array $workerDebug): array
+    {
+        $errors = $workerDebug['errors'] ?? [];
+        if (! is_array($errors) || $errors === []) {
+            return $structured;
+        }
+
+        $messages = collect($errors)
+            ->map(fn ($e) => is_array($e) ? ($e['message'] ?? '') : (string) $e)
+            ->filter()
+            ->implode(' ');
+
+        if ($messages === '') {
+            return $structured;
+        }
+
+        $lower = strtolower($messages);
+        $failure = null;
+        $userMessage = null;
+
+        if (str_contains($lower, 'quota') || str_contains($lower, 'billing')) {
+            $failure = 'openai_quota';
+            $userMessage = __('Voice AI stopped: OpenAI account has no quota or billing. Add credits at platform.openai.com for the API key in WhatsApp Calling → AI voice settings.');
+        } elseif (str_contains($lower, 'invalid_api_key') || str_contains($lower, 'incorrect api key')) {
+            $failure = 'openai_invalid_key';
+            $userMessage = __('Voice AI stopped: OpenAI API key is invalid. Update the key under WhatsApp Calling → AI voice settings.');
+        } elseif (($workerDebug['audio_out_chunks'] ?? 0) === 0 && ($workerDebug['session_type'] ?? '') === 'realtime') {
+            $failure = 'openai_no_audio';
+            $userMessage = __('Voice AI could not speak on this call. Check OpenAI billing, Realtime API access, and the model gpt-realtime on your key.');
+        }
+
+        if ($failure === null) {
+            return $structured;
+        }
+
+        $structured['ai_failure'] = $failure;
+        $structured['ai_failure_message'] = $userMessage;
+        $bullets = $structured['summary_bullets'] ?? [];
+        if (! is_array($bullets)) {
+            $bullets = [];
+        }
+        if ($userMessage && ! in_array($userMessage, $bullets, true)) {
+            array_unshift($bullets, $userMessage);
+        }
+        $structured['summary_bullets'] = $bullets;
+        $structured['summary'] = $bullets[0] ?? $structured['summary'] ?? null;
+
+        Log::error('CallWorkerController: voice AI failure recorded on call brief', [
+            'ai_failure' => $failure,
+            'openai_error' => mb_substr($messages, 0, 300),
+        ]);
+
+        return $structured;
     }
 }

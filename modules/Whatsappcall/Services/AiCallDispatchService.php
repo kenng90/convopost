@@ -13,6 +13,7 @@ class AiCallDispatchService
 {
     public function __construct(
         protected WhatsappAgentContextService $contextService,
+        protected CompanyVoiceOpenAiKeyResolver $openAiKeyResolver,
     ) {
     }
 
@@ -67,6 +68,16 @@ class AiCallDispatchService
             true
         ) ?: [];
 
+        $openAiKey = $this->openAiKeyResolver->resolve($company);
+        if (! $openAiKey) {
+            Log::error('AiCallDispatchService: no company OpenAI API key — add under WhatsApp Calling → AI voice settings', [
+                'call_id' => $call->id,
+                'company_id' => $company->id,
+            ]);
+
+            return false;
+        }
+
         $context = $this->contextService->buildForCompany(
             $company,
             $this->contextService->defaultVectorQuery($company)
@@ -91,6 +102,7 @@ class AiCallDispatchService
             'system_context' => $context['system_context'],
             'vector_context' => $context['vector_context'],
             'flow_id' => $context['flow_id'],
+            'openai_api_key' => $openAiKey,
             'worker_callback_base' => rtrim(config('whatsappcall.laravel_callback_url', 'http://127.0.0.1:8000'), '/').'/api/whatsappcall/worker',
             'laravel_base_url' => rtrim(config('whatsappcall.laravel_callback_url', 'http://127.0.0.1:8000'), '/'),
             'meta' => $webhookValue,
@@ -114,11 +126,7 @@ class AiCallDispatchService
                 ]);
 
                 if (($health['mode'] ?? '') === 'stub') {
-                    Log::warning('AiCallDispatchService: worker is in STUB mode — caller will hear silence. Set OPENAI_API_KEY in .env and restart: php artisan whatsappcall:worker --install', [
-                        'call_id' => $call->id,
-                    ]);
-                } elseif (($health['openai_configured'] ?? false) === false) {
-                    Log::warning('AiCallDispatchService: worker has no OpenAI API key configured', [
+                    Log::warning('AiCallDispatchService: worker is in STUB mode — caller will hear silence. Restart worker: php artisan whatsappcall:worker --install', [
                         'call_id' => $call->id,
                     ]);
                 }
@@ -160,10 +168,10 @@ class AiCallDispatchService
                 'worker_version' => $response->json('version'),
                 'worker_mode' => $response->json('worker_mode'),
                 'openai_configured' => $response->json('openai_configured'),
+                'openai_key_source' => 'company',
                 'session_id' => $response->json('session_id'),
                 'flow_id' => $context['flow_id'],
                 'system_context_chars' => strlen($context['system_context'] ?? ''),
-                'response_body' => $response->json(),
             ]);
 
             if ($response->json('worker_mode') === null && $response->json('version') === null) {

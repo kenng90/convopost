@@ -4,8 +4,9 @@ namespace App\Services;
 
 use App\Models\CatalogItemUsage;
 use App\Models\Company;
+use App\Models\ListCatalog;
 use App\Models\Plans;
-use Carbon\Carbon;
+use App\Scopes\CompanyScope;
 
 class CatalogItemPlanLimit
 {
@@ -38,11 +39,25 @@ class CatalogItemPlanLimit
         return $plan->period == 2 ? 365 : 30;
     }
 
+    /**
+     * Count items currently stored across all catalogs for the company.
+     */
+    public function countActiveItems(int $companyId): int
+    {
+        return (int) ListCatalog::withoutGlobalScope(CompanyScope::class)
+            ->where('company_id', $companyId)
+            ->get()
+            ->sum(fn (ListCatalog $catalog) => count($catalog->items ?? []));
+    }
+
+    /**
+     * Historical additions in the plan period (audit only; not used for limit enforcement).
+     */
     public function usageInPeriod(int $companyId, Plans $plan): int
     {
         return (int) CatalogItemUsage::query()
             ->where('company_id', $companyId)
-            ->where('created_at', '>=', Carbon::now()->subDays($this->getPeriodDays($plan)))
+            ->where('created_at', '>=', now()->subDays($this->getPeriodDays($plan)))
             ->sum('quantity');
     }
 
@@ -60,7 +75,7 @@ class CatalogItemPlanLimit
             return true;
         }
 
-        return ($this->usageInPeriod($company->id, $plan) + $additional) <= $limit;
+        return ($this->countActiveItems($company->id) + $additional) <= $limit;
     }
 
     /**
@@ -70,7 +85,7 @@ class CatalogItemPlanLimit
     {
         $plan = $this->resolvePlanForCompany($company);
         $limit = $this->getAllowedLimit($plan);
-        $used = $this->usageInPeriod($company->id, $plan);
+        $used = $this->countActiveItems($company->id);
 
         return [
             'used' => $used,
@@ -100,7 +115,7 @@ class CatalogItemPlanLimit
             return '';
         }
 
-        return __('You have reached your catalog item limit for this plan period (:used of :limit). Upgrade your plan or wait for the next billing period.', [
+        return __('You have reached your catalog item limit (:used of :limit). Delete unused items or upgrade your plan.', [
             'used' => $summary['used'],
             'limit' => $summary['limit'],
         ]);

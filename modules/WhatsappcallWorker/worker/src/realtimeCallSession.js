@@ -10,9 +10,9 @@ import { waitForCallEnd } from './callHangup.js';
  * Production OpenAI Realtime voice session for a connected WhatsApp call.
  * Returns a completion payload for Laravel (posted by incomingHandler).
  */
-export async function runRealtimeCallSession({ payload, laravel, startedAt, peerConnection, audioSource, debug }) {
-  if (!config.openaiApiKey) {
-    throw new Error('OPENAI_API_KEY is required for realtime mode');
+export async function runRealtimeCallSession({ payload, laravel, startedAt, peerConnection, audioSource, openaiApiKey, debug }) {
+  if (!openaiApiKey) {
+    throw new Error('OpenAI API key is required for realtime mode');
   }
   if (!audioSource) {
     throw new Error('Audio source missing — WebRTC outbound track not configured');
@@ -26,7 +26,7 @@ export async function runRealtimeCallSession({ payload, laravel, startedAt, peer
     has_vector_context: Boolean(payload.vector_context),
   });
 
-  const realtime = new OpenAIRealtimeClient({ instructions, debug });
+  const realtime = new OpenAIRealtimeClient({ instructions, apiKey: openaiApiKey, debug });
   let bridge = null;
   let remoteTrack = null;
   let ended = false;

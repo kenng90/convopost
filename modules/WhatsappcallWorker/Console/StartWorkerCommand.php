@@ -47,8 +47,7 @@ class StartWorkerCommand extends Command
         $callbackUrl = rtrim(config('whatsappcall.laravel_callback_url', 'http://127.0.0.1:8000'), '/');
         $secret = config('whatsappcall.ai_worker_secret', '');
 
-        $openAiKey = config('wpbox.openai_api_key', env('OPENAI_API_KEY', ''));
-        $workerMode = env('WHATSAPP_AI_WORKER_MODE', $openAiKey ? 'realtime' : 'stub');
+        $workerMode = env('WHATSAPP_AI_WORKER_MODE', 'realtime');
 
         $this->syncWorkerEnvFile($workerPath, [
             'PORT' => (string) $port,
@@ -58,7 +57,6 @@ class StartWorkerCommand extends Command
             'WHATSAPP_AI_WORKER_SECRET' => $secret,
             'WORKER_MODE' => $workerMode,
             'WHATSAPP_AI_WORKER_MODE' => $workerMode,
-            'OPENAI_API_KEY' => $openAiKey,
             'OPENAI_REALTIME_MODEL' => env('OPENAI_REALTIME_MODEL', 'gpt-realtime'),
             'OPENAI_REALTIME_VOICE' => env('OPENAI_REALTIME_VOICE', 'alloy'),
             'WORKER_DEBUG' => '1',
@@ -72,17 +70,12 @@ class StartWorkerCommand extends Command
             'WHATSAPP_AI_WORKER_SECRET' => $secret,
             'WORKER_MODE' => $workerMode,
             'WHATSAPP_AI_WORKER_MODE' => $workerMode,
-            'OPENAI_API_KEY' => $openAiKey,
             'OPENAI_REALTIME_MODEL' => env('OPENAI_REALTIME_MODEL', 'gpt-realtime'),
             'OPENAI_REALTIME_VOICE' => env('OPENAI_REALTIME_VOICE', 'alloy'),
         ]);
 
         $this->info("Starting WhatsApp AI worker on http://{$host}:{$port} (mode={$workerMode})");
-        $this->line('OpenAI API key: '.($openAiKey ? substr($openAiKey, 0, 7).'...'.substr($openAiKey, -4).' ('.strlen($openAiKey).' chars)' : 'NOT SET — spoken AI will not work'));
-        if ($workerMode === 'realtime' && ! $openAiKey) {
-            $this->warn('WORKER_MODE=realtime but OPENAI_API_KEY is empty. Calls will fall back to STUB (silent).');
-            $this->line('Set OPENAI_API_KEY in Laravel .env (config wpbox.openai_api_key) and restart this command.');
-        }
+        $this->line('Each company must provide its own OpenAI API key in WhatsApp Calling → AI voice settings.');
         $this->line('Worker → Laravel callbacks: '.$callbackUrl.'/api/whatsappcall/worker');
         $this->line('WhatsApp Calling setup → AI worker URL: http://'.$host.':'.$port);
         if (str_contains(config('app.url', ''), 'ngrok')) {

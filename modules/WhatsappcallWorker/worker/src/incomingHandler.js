@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { config, WORKER_VERSION } from './config.js';
+import { resolveOpenAiApiKey } from './openaiKey.js';
 import { LaravelClient } from './laravelClient.js';
 import { createWhatsAppAnswer } from './webrtcSession.js';
 import { runAiSession } from './openaiRealtime.js';
@@ -35,11 +36,14 @@ export function handleIncoming(payload) {
     });
   });
 
+  const openaiApiKey = resolveOpenAiApiKey(payload);
+
   logInfo('Incoming call queued', {
     call_id: callId,
     session_id: sessionId,
     worker_mode: config.workerMode,
-    openai_key: maskSecret(config.openaiApiKey),
+    openai_key: maskSecret(openaiApiKey),
+    openai_key_source: openaiApiKey ? 'company' : 'none',
     flow_id: payload.flow_id,
     sdp_chars: payload.offer?.sdp?.length,
   });
@@ -50,7 +54,7 @@ export function handleIncoming(payload) {
     session_id: sessionId,
     status: 'queued',
     worker_mode: config.workerMode,
-    openai_configured: Boolean(config.openaiApiKey),
+    openai_configured: Boolean(openaiApiKey),
   };
 }
 

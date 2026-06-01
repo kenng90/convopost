@@ -1,14 +1,43 @@
 <div class="card mt-4">
     <div class="card-header">{{ __('Inbound call handling') }}</div>
     <div class="card-body">
+        @php($aiVoiceReady = $settings['ai_voice_ready'] ?? false)
+        @php($aiHandlingSelected = in_array($settings['call_handling'] ?? 'live', ['ai', 'ai_after_hours'], true))
+
+        @if($aiHandlingSelected && ! $aiVoiceReady)
+            <div class="alert alert-danger" role="alert">
+                <strong>{{ __('AI voice is not configured') }}</strong>
+                <p class="mb-0 mt-1">{{ __('You selected AI call handling but no OpenAI API key is saved. Incoming calls will ring live agents instead until you add your key below. Voice AI usage is billed only to your OpenAI account — we do not use the platform .env key.') }}</p>
+            </div>
+        @endif
+
+        <div class="form-group">
+            <label>{{ __('OpenAI API key (voice Realtime)') }} <span class="text-danger">*</span></label>
+            <input type="password" class="form-control" name="ai_openai_api_key" autocomplete="off"
+                placeholder="{{ ($settings['ai_openai_api_key_set'] ?? false) ? __('Leave blank to keep current key') : 'sk-...' }}">
+            <small class="text-muted d-block">
+                {{ __('Required to enable AI voice agents. All Realtime voice usage is charged to your OpenAI account (platform.openai.com).') }}
+                @if($settings['ai_openai_api_key_set'] ?? false)
+                    <span class="text-success d-block mt-1">{{ __('Key saved — AI voice can be enabled.') }}</span>
+                @else
+                    <span class="text-danger d-block mt-1">{{ __('No key saved — you cannot use AI voice agents until you add one.') }}</span>
+                @endif
+            </small>
+        </div>
+
         <div class="form-group">
             <label>{{ __('Who answers WhatsApp voice calls') }}</label>
             <select class="form-control" name="call_handling">
                 <option value="live" {{ ($settings['call_handling'] ?? 'live') === 'live' ? 'selected' : '' }}>{{ __('Live agents (browser)') }}</option>
-                <option value="ai" {{ ($settings['call_handling'] ?? '') === 'ai' ? 'selected' : '' }}>{{ __('AI voice agent only') }}</option>
-                <option value="ai_after_hours" {{ ($settings['call_handling'] ?? '') === 'ai_after_hours' ? 'selected' : '' }}>{{ __('AI after hours, live agents during business hours') }}</option>
+                <option value="ai" {{ ($settings['call_handling'] ?? '') === 'ai' ? 'selected' : '' }} {{ ! $aiVoiceReady ? 'disabled' : '' }}>{{ __('AI voice agent only') }}</option>
+                <option value="ai_after_hours" {{ ($settings['call_handling'] ?? '') === 'ai_after_hours' ? 'selected' : '' }} {{ ! $aiVoiceReady ? 'disabled' : '' }}>{{ __('AI after hours, live agents during business hours') }}</option>
             </select>
-            <small class="text-muted d-block">{{ __('AI mode sends calls to the media worker only — agents will not see a ringing modal.') }}</small>
+            <small class="text-muted d-block">
+                {{ __('AI modes require your OpenAI API key above. Without it, only live agent mode is available.') }}
+                @if(! $aiVoiceReady)
+                    <span class="text-danger d-block">{{ __('Save an OpenAI API key first to select AI voice handling.') }}</span>
+                @endif
+            </small>
         </div>
 
         <div class="row">
@@ -32,6 +61,14 @@
                     </label>
                 </div>
             </div>
+        </div>
+
+        <div class="form-group">
+            <label class="d-block">
+                <input type="checkbox" name="ai_send_invoice_after_call" value="1" {{ ($settings['ai_send_invoice_after_call'] ?? true) ? 'checked' : '' }}>
+                {{ __('Send WhatsApp invoice after voice call when customer orders a catalog product') }}
+            </label>
+            <small class="text-muted d-block">{{ __('Runs when the call ends — matches products from catalogs above against what the caller said. Not used for text chat flows.') }}</small>
         </div>
 
         <div class="form-group">
@@ -78,7 +115,7 @@
         <div class="form-group">
             <label>{{ __('AI greeting (optional)') }}</label>
             <textarea class="form-control" name="ai_greeting" rows="2">{{ $settings['ai_greeting'] ?? '' }}</textarea>
-            <small class="text-muted d-block">{{ __('Spoken AI uses OpenAI Realtime (WORKER_MODE=realtime + OPENAI_API_KEY). Also used to seed vector search at call start.') }}</small>
+            <small class="text-muted d-block">{{ __('Spoken AI uses OpenAI Realtime on your API key. Also used to seed vector search at call start.') }}</small>
         </div>
 
         <div class="form-group mb-0">

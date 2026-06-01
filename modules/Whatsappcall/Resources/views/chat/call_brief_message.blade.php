@@ -35,6 +35,10 @@
         <strong>{{ __('Missing') }}:</strong> @{{ callBriefPayload(message).missing_required.join(', ') }}
     </div>
 
+    <div v-if="callBriefPayload(message).ai_failure_message" class="mb-2 small alert alert-warning py-2 px-2 mb-2" style="color: #856404; background: rgba(255,193,7,0.25); border: none;">
+        <strong>{{ __('AI issue') }}:</strong> @{{ callBriefPayload(message).ai_failure_message }}
+    </div>
+
     <div v-if="callBriefPayload(message).handoff_reason" class="mb-2 small">
         <strong>{{ __('Handoff reason') }}:</strong> @{{ callBriefPayload(message).handoff_reason }}
     </div>

@@ -5,13 +5,12 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '..', '.env'), override: false });
 
-export const WORKER_VERSION = '1.3.1';
+export const WORKER_VERSION = '1.4.0';
 
 const openaiKey = process.env.OPENAI_API_KEY || '';
 const workerModeEnv = (process.env.WORKER_MODE || process.env.WHATSAPP_AI_WORKER_MODE || '').toLowerCase();
-const workerMode =
-  workerModeEnv ||
-  (openaiKey ? 'realtime' : 'stub');
+/** Default realtime — each call supplies company OpenAI key from Laravel; env key is optional fallback. */
+const workerMode = workerModeEnv || 'realtime';
 
 export const config = {
   version: WORKER_VERSION,

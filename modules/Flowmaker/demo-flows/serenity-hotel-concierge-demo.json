@@ -1,0 +1,891 @@
+{
+  "nodes": [
+    {
+      "id": "keyword_trigger-menu",
+      "type": "keyword_trigger",
+      "position": { "x": -400, "y": 80 },
+      "data": {
+        "keywords": [
+          { "id": "kw-menu", "value": "MENU", "matchType": "exact" },
+          { "id": "kw-menu-contains", "value": "menu", "matchType": "contains" }
+        ],
+        "settings": []
+      }
+    },
+    {
+      "id": "keyword_trigger-book",
+      "type": "keyword_trigger",
+      "position": { "x": -400, "y": 520 },
+      "data": {
+        "keywords": [
+          { "id": "kw-book", "value": "BOOK", "matchType": "exact" },
+          { "id": "kw-book-contains", "value": "book spa", "matchType": "contains" }
+        ],
+        "settings": []
+      }
+    },
+    {
+      "id": "keyword_trigger-tour",
+      "type": "keyword_trigger",
+      "position": { "x": -400, "y": 960 },
+      "data": {
+        "keywords": [
+          { "id": "kw-tour", "value": "TOUR", "matchType": "exact" }
+        ],
+        "settings": []
+      }
+    },
+    {
+      "id": "incoming_message-fallback",
+      "type": "incomingMessage",
+      "position": { "x": -400, "y": 1480 },
+      "data": {
+        "label": "On Message",
+        "type": "incoming_message",
+        "settings": []
+      }
+    },
+    {
+      "id": "keyword_trigger-afterhours",
+      "type": "keyword_trigger",
+      "position": { "x": -400, "y": 300 },
+      "data": {
+        "keywords": [
+          { "id": "kw-afterhours", "value": "AFTERHOURS", "matchType": "exact" },
+          { "id": "kw-afterhours-contains", "value": "after hours", "matchType": "contains" }
+        ],
+        "settings": []
+      }
+    },
+    {
+      "id": "message-welcome",
+      "type": "message",
+      "position": { "x": 480, "y": 40 },
+      "data": {
+        "label": "Send Message",
+        "type": "message",
+        "settings": {
+          "message": "Welcome to *Serenity Boutique Hotel*, {{contact_name}}! 🌿\n\nOur live concierge is available daily, 7:00 AM – 10:00 PM.\n\nChoose an option below, or reply *AFTERHOURS* if you are messaging outside those times."
+        }
+      }
+    },
+    {
+      "id": "quick_replies-main",
+      "type": "quick_replies",
+      "position": { "x": 880, "y": 20 },
+      "data": {
+        "label": "Quick Replies Message",
+        "type": "quick_replies",
+        "settings": {
+          "header": "Guest Services",
+          "body": "How may we assist you today?",
+          "footer": "Reply anytime — we are here for you",
+          "button1": "Spa & Wellness",
+          "button2": "In-Room Dining",
+          "button3": "Talk to Concierge",
+          "activeButtons": 3,
+          "listButtonName": null,
+          "button4": null,
+          "button5": null,
+          "button6": null,
+          "button7": null,
+          "button8": null,
+          "button9": null,
+          "button10": null
+        }
+      }
+    },
+    {
+      "id": "list_message-spa",
+      "type": "list_message",
+      "position": { "x": 1320, "y": -80 },
+      "data": {
+        "label": "List Message",
+        "type": "list_message",
+        "settings": {
+          "header": "Spa & Wellness",
+          "body": "Select a treatment to view details and availability.",
+          "footer": "All prices in local currency",
+          "buttonText": "View treatments",
+          "sections": [
+            {
+              "id": "section-spa",
+              "title": "Signature Treatments",
+              "rows": [
+                {
+                  "id": "row-signature-massage",
+                  "title": "Serenity Signature Massage (60 min)",
+                  "description": "Full-body aromatherapy massage — KES 8,500"
+                },
+                {
+                  "id": "row-facial",
+                  "title": "Radiance Facial (45 min)",
+                  "description": "Hydrating facial with organic botanicals — KES 6,200"
+                },
+                {
+                  "id": "row-couples",
+                  "title": "Couples Retreat Package (90 min)",
+                  "description": "Side-by-side massage + champagne — KES 15,000"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "message-spa-selected",
+      "type": "message",
+      "position": { "x": 1780, "y": -80 },
+      "data": {
+        "label": "Send Message",
+        "type": "message",
+        "settings": {
+          "message": "Excellent choice! A spa coordinator will confirm your preferred date and time within 15 minutes.\n\nReply *BOOK* to browse our full catalog and complete your reservation."
+        }
+      }
+    },
+    {
+      "id": "image-dining",
+      "type": "image",
+      "position": { "x": 1320, "y": 200 },
+      "data": {
+        "label": "Send Image",
+        "type": "image",
+        "settings": {
+          "imageUrl": "https://your-cdn.example.com/hotel/restaurant-hero.jpg"
+        }
+      }
+    },
+    {
+      "id": "pdf-room-service",
+      "type": "pdf",
+      "position": { "x": 1680, "y": 200 },
+      "data": {
+        "label": "Send PDF",
+        "type": "pdf",
+        "settings": {
+          "pdfUrl": "https://your-cdn.example.com/hotel/room-service-menu.pdf"
+        }
+      }
+    },
+    {
+      "id": "branch-vip",
+      "type": "branch",
+      "position": { "x": 1320, "y": 480 },
+      "data": {
+        "label": "Branch",
+        "type": "branch",
+        "settings": {
+          "webhookVariables": [],
+          "conditions": [
+            {
+              "id": "cond-vip",
+              "nodeId": "branch-vip",
+              "variableId": "contact_name",
+              "operator": "contains",
+              "value": "VIP"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "assign_group-concierge",
+      "type": "assign_group",
+      "position": { "x": 1920, "y": 420 },
+      "data": {
+        "label": "Assign to Group",
+        "type": "assign_group",
+        "settings": {
+          "groupId": "none",
+          "action": "add"
+        }
+      }
+    },
+    {
+      "id": "assign_agent-concierge",
+      "type": "assign_agent",
+      "position": { "x": 2320, "y": 420 },
+      "data": {
+        "label": "Assign to Agent",
+        "type": "assign_agent",
+        "settings": {
+          "agentId": "none"
+        }
+      }
+    },
+    {
+      "id": "message-queue-standard",
+      "type": "message",
+      "position": { "x": 1920, "y": 580 },
+      "data": {
+        "label": "Send Message",
+        "type": "message",
+        "settings": {
+          "message": "Thank you, {{contact_name}}. You are #3 in our concierge queue. A team member will join this chat shortly.\n\nAverage wait time: under 5 minutes."
+        }
+      }
+    },
+    {
+      "id": "message-after-hours",
+      "type": "message",
+      "position": { "x": 480, "y": 280 },
+      "data": {
+        "label": "Send Message",
+        "type": "message",
+        "settings": {
+          "message": "Thank you for contacting Serenity Hotel. 🌙\n\nOur live concierge is available daily from 7:00 AM to 10:00 PM. Your message has been logged and we will respond first thing in the morning.\n\nFor urgent in-room needs, dial *0* from your room phone."
+        }
+      }
+    },
+    {
+      "id": "counter-promo",
+      "type": "counter",
+      "position": { "x": 80, "y": 520 },
+      "data": {
+        "settings": {
+          "counter": {
+            "maxExecutions": 2,
+            "period": "last_30_days"
+          }
+        }
+      }
+    },
+    {
+      "id": "check_pricing-credits",
+      "type": "check_pricing",
+      "position": { "x": 560, "y": 520 },
+      "data": {
+        "settings": {
+          "pricing": {
+            "freeExecutions": 5
+          }
+        }
+      }
+    },
+    {
+      "id": "template-booking",
+      "type": "template",
+      "position": { "x": 1040, "y": 480 },
+      "data": {
+        "label": "Template Message",
+        "type": "template",
+        "settings": {
+          "selectedTemplateId": null,
+          "parameters": [],
+          "fileUrl": null,
+          "videoUrl": null
+        }
+      }
+    },
+    {
+      "id": "whatsapp_catalog-spa",
+      "type": "whatsapp_catalog",
+      "position": { "x": 1440, "y": 480 },
+      "data": {
+        "label": "WhatsApp Catalog",
+        "type": "whatsapp_catalog",
+        "settings": {
+          "catalogId": "",
+          "header": "Browse spa packages & add-ons"
+        }
+      }
+    },
+    {
+      "id": "whatsapp_flow-checkin",
+      "type": "whatsapp_flow",
+      "position": { "x": 1880, "y": 460 },
+      "data": {
+        "label": "Send WhatsApp Flow",
+        "type": "whatsapp_flow",
+        "settings": {
+          "whatsappFlowId": "",
+          "header": "Complete your spa booking",
+          "footer": "Secure form — takes under 2 minutes",
+          "conditions": []
+        }
+      }
+    },
+    {
+      "id": "message-billing-blocked",
+      "type": "message",
+      "position": { "x": 1040, "y": 720 },
+      "data": {
+        "label": "Send Message",
+        "type": "message",
+        "settings": {
+          "message": "We are unable to process automated bookings at the moment due to account limits. Please reply *MENU* to reach our concierge team, who can assist you manually."
+        }
+      }
+    },
+    {
+      "id": "message-promo-exhausted",
+      "type": "message",
+      "position": { "x": 560, "y": 720 },
+      "data": {
+        "label": "Send Message",
+        "type": "message",
+        "settings": {
+          "message": "You have already used your complimentary spa booking offers this month (limit: 2 per guest).\n\nReply *MENU* for standard rates or to speak with our team."
+        }
+      }
+    },
+    {
+      "id": "message-tour-intro",
+      "type": "message",
+      "position": { "x": 80, "y": 960 },
+      "data": {
+        "label": "Send Message",
+        "type": "message",
+        "settings": {
+          "message": "Discover Serenity Hotel — where every detail is designed for your comfort. Here is a virtual tour of our property and amenities."
+        }
+      }
+    },
+    {
+      "id": "image-lobby",
+      "type": "image",
+      "position": { "x": 480, "y": 940 },
+      "data": {
+        "label": "Send Image",
+        "type": "image",
+        "settings": {
+          "imageUrl": "https://your-cdn.example.com/hotel/lobby.jpg"
+        }
+      }
+    },
+    {
+      "id": "pdf-fact-sheet",
+      "type": "pdf",
+      "position": { "x": 880, "y": 940 },
+      "data": {
+        "label": "Send PDF",
+        "type": "pdf",
+        "settings": {
+          "pdfUrl": "https://your-cdn.example.com/hotel/property-fact-sheet.pdf"
+        }
+      }
+    },
+    {
+      "id": "video-property",
+      "type": "video",
+      "position": { "x": 1280, "y": 940 },
+      "data": {
+        "label": "Send Video",
+        "type": "video",
+        "settings": {
+          "videoUrl": "https://your-cdn.example.com/hotel/property-tour.mp4"
+        }
+      }
+    },
+    {
+      "id": "template-followup",
+      "type": "template",
+      "position": { "x": 1680, "y": 940 },
+      "data": {
+        "label": "Template Message",
+        "type": "template",
+        "settings": {
+          "selectedTemplateId": null,
+          "parameters": [],
+          "fileUrl": null,
+          "videoUrl": null
+        }
+      }
+    },
+    {
+      "id": "openai-concierge",
+      "type": "openai",
+      "position": { "x": 80, "y": 1480 },
+      "data": {
+        "label": "OpenAI",
+        "type": "openai",
+        "settings": {
+          "openai": {
+            "model": "gpt-4o-mini",
+            "prompt": null,
+            "systemPrompt": null,
+            "temperature": 0.7,
+            "maxTokens": 800,
+            "responseHandling": "reply",
+            "variableName": null
+          },
+          "llm": {
+            "model": "openai/gpt-4o-mini",
+            "systemPrompt": "You are the AI concierge for Serenity Boutique Hotel. Be warm, professional, and concise (max 3 short paragraphs). You help with room service hours, spa bookings, local recommendations, and hotel policies. If the guest needs human help, suggest they type MENU. Never invent prices — say a concierge will confirm. Guest name: {{contact_name}}.",
+            "prompt": "The guest just sent: \"{{last_message}}\"\n\nRespond helpfully in plain text suitable for WhatsApp.",
+            "temperature": 0.6,
+            "maxTokens": 800,
+            "variableName": "ai_concierge_reply",
+            "intentions": [
+              {
+                "id": "intent-booking",
+                "name": "booking_request",
+                "description": "Guest wants to book spa, dining, or an experience"
+              },
+              {
+                "id": "intent-complaint",
+                "name": "complaint",
+                "description": "Guest expresses dissatisfaction or reports a problem"
+              },
+              {
+                "id": "intent-general",
+                "name": "general_inquiry",
+                "description": "General questions about the hotel or area"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "question-preference",
+      "type": "question",
+      "position": { "x": 480, "y": 1500 },
+      "data": {
+        "label": "Question",
+        "type": "question",
+        "settings": {
+          "question": "To personalise your stay, what is most important to you during this visit?\n\n(e.g. quiet relaxation, business productivity, family activities)",
+          "variableName": "guest_priority"
+        }
+      }
+    },
+    {
+      "id": "datastore-profile",
+      "type": "datastore",
+      "position": { "x": 880, "y": 1500 },
+      "data": {
+        "label": "Set Variable",
+        "type": "datastore",
+        "settings": {
+          "dataStore": {
+            "name": null,
+            "type": "database",
+            "connectionDetails": []
+          },
+          "variableName": "guest_profile_note",
+          "variableValue": "Priority: {{guest_priority}} | AI intent: {{ai_concierge_reply_intent}} | Handled via WhatsApp concierge flow"
+        }
+      }
+    },
+    {
+      "id": "http-crm-sync",
+      "type": "http",
+      "position": { "x": 1280, "y": 1480 },
+      "data": {
+        "settings": {
+          "http": {
+            "method": "POST",
+            "url": "https://your-pms.example.com/api/v1/guest-notes",
+            "headers": [
+              { "id": "h-content-type", "key": "Content-Type", "value": "application/json" },
+              { "id": "h-auth", "key": "Authorization", "value": "Bearer YOUR_API_TOKEN" }
+            ],
+            "params": [
+              { "id": "p-phone", "key": "phone", "value": "{{contact_phone}}" },
+              { "id": "p-name", "key": "name", "value": "{{contact_name}}" },
+              { "id": "p-note", "key": "note", "value": "{{guest_profile_note}}" }
+            ],
+            "responseVar": "crm_sync_result"
+          }
+        }
+      }
+    },
+    {
+      "id": "assign_agent-ai-handoff",
+      "type": "assign_agent",
+      "position": { "x": 1680, "y": 1480 },
+      "data": {
+        "label": "Assign to Agent",
+        "type": "assign_agent",
+        "settings": {
+          "agentId": "none"
+        }
+      }
+    },
+    {
+      "id": "assign_group-guest-relations",
+      "type": "assign_group",
+      "position": { "x": 2080, "y": 1480 },
+      "data": {
+        "label": "Assign to Group",
+        "type": "assign_group",
+        "settings": {
+          "groupId": "none",
+          "action": "add"
+        }
+      }
+    },
+    {
+      "id": "end-menu-spa",
+      "type": "end",
+      "position": { "x": 2180, "y": -80 },
+      "data": { "label": "End Flow", "settings": [] }
+    },
+    {
+      "id": "end-menu-dining",
+      "type": "end",
+      "position": { "x": 2080, "y": 200 },
+      "data": { "label": "End Flow", "settings": [] }
+    },
+    {
+      "id": "end-menu-vip",
+      "type": "end",
+      "position": { "x": 2720, "y": 420 },
+      "data": { "label": "End Flow", "settings": [] }
+    },
+    {
+      "id": "end-menu-queue",
+      "type": "end",
+      "position": { "x": 2320, "y": 580 },
+      "data": { "label": "End Flow", "settings": [] }
+    },
+    {
+      "id": "end-after-hours",
+      "type": "end",
+      "position": { "x": 880, "y": 280 },
+      "data": { "label": "End Flow", "settings": [] }
+    },
+    {
+      "id": "end-booking-success",
+      "type": "end",
+      "position": { "x": 2320, "y": 480 },
+      "data": { "label": "End Flow", "settings": [] }
+    },
+    {
+      "id": "end-booking-billing",
+      "type": "end",
+      "position": { "x": 1440, "y": 720 },
+      "data": { "label": "End Flow", "settings": [] }
+    },
+    {
+      "id": "end-booking-promo",
+      "type": "end",
+      "position": { "x": 960, "y": 720 },
+      "data": { "label": "End Flow", "settings": [] }
+    },
+    {
+      "id": "end-tour",
+      "type": "end",
+      "position": { "x": 2080, "y": 960 },
+      "data": { "label": "End Flow", "settings": [] }
+    },
+    {
+      "id": "end-ai-path",
+      "type": "end",
+      "position": { "x": 2480, "y": 1480 },
+      "data": { "label": "End Flow", "settings": [] }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-menu-to-welcome",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "keyword_trigger-menu",
+      "sourceHandle": "keyword-kw-menu",
+      "target": "message-welcome"
+    },
+    {
+      "id": "e-menu-contains-to-welcome",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "keyword_trigger-menu",
+      "sourceHandle": "keyword-kw-menu-contains",
+      "target": "message-welcome"
+    },
+    {
+      "id": "e-afterhours-to-message",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "keyword_trigger-afterhours",
+      "sourceHandle": "keyword-kw-afterhours",
+      "target": "message-after-hours"
+    },
+    {
+      "id": "e-afterhours-contains-to-message",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "keyword_trigger-afterhours",
+      "sourceHandle": "keyword-kw-afterhours-contains",
+      "target": "message-after-hours"
+    },
+    {
+      "id": "e-welcome-to-qr",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "message-welcome",
+      "target": "quick_replies-main"
+    },
+    {
+      "id": "e-qr-spa",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "quick_replies-main",
+      "sourceHandle": "button-1",
+      "target": "list_message-spa"
+    },
+    {
+      "id": "e-qr-dining",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "quick_replies-main",
+      "sourceHandle": "button-2",
+      "target": "image-dining"
+    },
+    {
+      "id": "e-qr-concierge",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "quick_replies-main",
+      "sourceHandle": "button-3",
+      "target": "branch-vip"
+    },
+    {
+      "id": "e-spa-row",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "list_message-spa",
+      "sourceHandle": "section-spa-row-signature-massage",
+      "target": "message-spa-selected"
+    },
+    {
+      "id": "e-spa-confirm-end",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "message-spa-selected",
+      "target": "end-menu-spa"
+    },
+    {
+      "id": "e-dining-to-pdf",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "image-dining",
+      "target": "pdf-room-service"
+    },
+    {
+      "id": "e-dining-end",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "pdf-room-service",
+      "target": "end-menu-dining"
+    },
+    {
+      "id": "e-vip-true",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "branch-vip",
+      "sourceHandle": "condition-cond-vip-true",
+      "target": "assign_group-concierge"
+    },
+    {
+      "id": "e-vip-false",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "branch-vip",
+      "sourceHandle": "condition-cond-vip-false",
+      "target": "message-queue-standard"
+    },
+    {
+      "id": "e-vip-group-agent",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "assign_group-concierge",
+      "target": "assign_agent-concierge"
+    },
+    {
+      "id": "e-vip-agent-end",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "assign_agent-concierge",
+      "target": "end-menu-vip"
+    },
+    {
+      "id": "e-queue-end",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "message-queue-standard",
+      "target": "end-menu-queue"
+    },
+    {
+      "id": "e-after-hours-end",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "message-after-hours",
+      "target": "end-after-hours"
+    },
+    {
+      "id": "e-book-to-counter",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "keyword_trigger-book",
+      "sourceHandle": "keyword-kw-book",
+      "target": "counter-promo"
+    },
+    {
+      "id": "e-counter-true",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "counter-promo",
+      "sourceHandle": "true",
+      "target": "check_pricing-credits"
+    },
+    {
+      "id": "e-counter-false",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "counter-promo",
+      "sourceHandle": "false",
+      "target": "message-promo-exhausted"
+    },
+    {
+      "id": "e-pricing-true",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "check_pricing-credits",
+      "sourceHandle": "true",
+      "target": "template-booking"
+    },
+    {
+      "id": "e-pricing-false",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "check_pricing-credits",
+      "sourceHandle": "false",
+      "target": "message-billing-blocked"
+    },
+    {
+      "id": "e-template-catalog",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "template-booking",
+      "sourceHandle": "always",
+      "target": "whatsapp_catalog-spa"
+    },
+    {
+      "id": "e-catalog-flow",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "whatsapp_catalog-spa",
+      "sourceHandle": "onProductSelected",
+      "target": "whatsapp_flow-checkin"
+    },
+    {
+      "id": "e-flow-complete",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "whatsapp_flow-checkin",
+      "sourceHandle": "onFlowCompleted",
+      "target": "end-booking-success"
+    },
+    {
+      "id": "e-billing-end",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "message-billing-blocked",
+      "target": "end-booking-billing"
+    },
+    {
+      "id": "e-promo-end",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "message-promo-exhausted",
+      "target": "end-booking-promo"
+    },
+    {
+      "id": "e-tour-start",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "keyword_trigger-tour",
+      "sourceHandle": "keyword-kw-tour",
+      "target": "message-tour-intro"
+    },
+    {
+      "id": "e-tour-image",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "message-tour-intro",
+      "target": "image-lobby"
+    },
+    {
+      "id": "e-tour-pdf",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "image-lobby",
+      "target": "pdf-fact-sheet"
+    },
+    {
+      "id": "e-tour-video",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "pdf-fact-sheet",
+      "target": "video-property"
+    },
+    {
+      "id": "e-tour-template",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "video-property",
+      "target": "template-followup"
+    },
+    {
+      "id": "e-tour-end",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "template-followup",
+      "sourceHandle": "always",
+      "target": "end-tour"
+    },
+    {
+      "id": "e-fallback-to-ai",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "incoming_message-fallback",
+      "target": "openai-concierge"
+    },
+    {
+      "id": "e-ai-question",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "openai-concierge",
+      "target": "question-preference"
+    },
+    {
+      "id": "e-question-datastore",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "question-preference",
+      "target": "datastore-profile"
+    },
+    {
+      "id": "e-datastore-http",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "datastore-profile",
+      "target": "http-crm-sync"
+    },
+    {
+      "id": "e-http-agent",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "http-crm-sync",
+      "target": "assign_agent-ai-handoff"
+    },
+    {
+      "id": "e-agent-group",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "assign_agent-ai-handoff",
+      "target": "assign_group-guest-relations"
+    },
+    {
+      "id": "e-ai-end",
+      "animated": true,
+      "style": { "stroke": "#000000" },
+      "source": "assign_group-guest-relations",
+      "target": "end-ai-path"
+    }
+  ]
+}

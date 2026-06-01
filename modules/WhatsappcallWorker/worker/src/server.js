@@ -16,6 +16,7 @@ app.get('/health', (_req, res) => {
     mode: config.workerMode,
     realtime_model: config.openaiRealtimeModel,
     openai_configured: Boolean(config.openaiApiKey),
+    per_company_openai_keys: true,
     active_sessions: getActiveSessionCount(),
   });
 });

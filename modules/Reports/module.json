@@ -10,15 +10,6 @@
     "aliases": {},
     "files": [],
     "requires": [],
-    "staffmenus": [
-        {
-            "name": "Reports",
-            "icon": "ni ni-chart-bar-32 text-primary",
-            "route": "reports.index",
-            "onlyin": "wpbox,whatssupport",
-            "color": "#2dce89",
-            "priority": 5
-        }
-    ],
+    "staffmenus": [],
     "ownermenus": []
 }

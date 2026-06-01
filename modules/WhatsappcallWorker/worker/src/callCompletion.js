@@ -2,11 +2,12 @@ import { logInfo, logError, logWarn } from './logger.js';
 import { createSessionDebug, finalizeDebug, addError } from './sessionDebug.js';
 import { buildCallBriefStructured } from './callBriefSummary.js';
 import { config } from './config.js';
+import { resolveOpenAiApiKey } from './openaiKey.js';
 
 export function buildErrorCompletionPayload({ payload, startedAt, debug, errorMessage }) {
   const sessionDebug = debug ?? createSessionDebug('error');
   sessionDebug.worker_mode = config.workerMode;
-  sessionDebug.openai_configured = Boolean(config.openaiApiKey);
+  sessionDebug.openai_configured = Boolean(resolveOpenAiApiKey(payload));
   if (errorMessage) {
     addError(sessionDebug, errorMessage);
   }

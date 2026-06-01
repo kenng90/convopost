@@ -7,6 +7,7 @@ use App\Models\ListCatalog;
 use Illuminate\Http\Request;
 use Modules\Contacts\Models\Field;
 use Modules\Flowmaker\Models\Flow;
+use Modules\Whatsappcall\Services\CompanyVoiceOpenAiKeyResolver;
 
 class SetupController extends Controller
 {
@@ -33,6 +34,9 @@ class SetupController extends Controller
             'ai_flow_id' => (int) $company->getConfig('whatsapp_ai_flow_id', 0) ?: null,
             'ai_catalog_ids' => json_decode($company->getConfig('whatsapp_ai_catalog_ids', '[]'), true) ?: [],
             'ai_enable_vector_search' => filter_var($company->getConfig('whatsapp_ai_enable_vector_search', true), FILTER_VALIDATE_BOOLEAN),
+            'ai_send_invoice_after_call' => filter_var($company->getConfig('whatsapp_ai_send_invoice_after_call', true), FILTER_VALIDATE_BOOLEAN),
+            'ai_openai_api_key_set' => app(CompanyVoiceOpenAiKeyResolver::class)->isConfigured($company),
+            'ai_voice_ready' => app(CompanyVoiceOpenAiKeyResolver::class)->isConfigured($company),
         ];
 
         $flows = class_exists(Flow::class)
@@ -65,9 +69,22 @@ class SetupController extends Controller
             'ai_catalog_ids' => 'nullable|array',
             'ai_catalog_ids.*' => 'integer',
             'ai_enable_vector_search' => 'sometimes|boolean',
+            'ai_send_invoice_after_call' => 'sometimes|boolean',
+            'ai_openai_api_key' => 'nullable|string|max:500',
         ]);
 
         $company = $this->getCompany();
+
+        $existingOpenAiKey = trim((string) $company->getConfig('whatsapp_ai_openai_api_key', ''));
+        $incomingOpenAiKey = trim((string) ($validated['ai_openai_api_key'] ?? ''));
+        $willHaveOpenAiKey = $incomingOpenAiKey !== '' || $existingOpenAiKey !== '';
+
+        if (in_array($validated['call_handling'], ['ai', 'ai_after_hours'], true) && ! $willHaveOpenAiKey) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', __('AI voice agents require your own OpenAI API key. Add one under OpenAI API key (voice Realtime) before enabling AI call handling.'));
+        }
+
         $company->setConfig('whatsapp_calling_enabled', $validated['enabled'] ?? false);
         $company->setConfig('whatsapp_calling_inbound_allowed', $validated['inbound_allowed'] ?? true);
         $company->setConfig('whatsapp_calling_hours_status', $validated['hours_status']);
@@ -94,6 +111,11 @@ class SetupController extends Controller
         $company->setConfig('whatsapp_ai_flow_id', $validated['ai_flow_id'] ?: '');
         $company->setConfig('whatsapp_ai_catalog_ids', json_encode(array_values($validated['ai_catalog_ids'] ?? [])));
         $company->setConfig('whatsapp_ai_enable_vector_search', $request->boolean('ai_enable_vector_search', true));
+        $company->setConfig('whatsapp_ai_send_invoice_after_call', $request->boolean('ai_send_invoice_after_call', true));
+
+        if (! empty($validated['ai_openai_api_key'])) {
+            $company->setConfig('whatsapp_ai_openai_api_key', trim($validated['ai_openai_api_key']));
+        }
 
         $days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
         $weekly = [];

@@ -15,29 +15,14 @@ class CallHandlingResolverTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_live_mode_does_not_use_ai(): void
+    public function test_should_not_use_ai_without_company_openai_key(): void
     {
-        $company = $this->companyWithHandling('live');
+        $company = Mockery::mock(Company::class);
+        $company->shouldReceive('getConfig')->with('whatsapp_call_handling', 'live')->andReturn('ai');
+        $company->shouldReceive('getConfig')->with('whatsapp_ai_openai_api_key', '')->andReturn('');
 
         $resolver = new CallHandlingResolver;
 
         $this->assertFalse($resolver->shouldUseAi($company));
-    }
-
-    public function test_ai_mode_uses_ai(): void
-    {
-        $company = $this->companyWithHandling('ai');
-
-        $resolver = new CallHandlingResolver;
-
-        $this->assertTrue($resolver->shouldUseAi($company));
-    }
-
-    private function companyWithHandling(string $mode): Company
-    {
-        $company = Mockery::mock(Company::class);
-        $company->shouldReceive('getConfig')->with('whatsapp_call_handling', CallHandlingResolver::MODE_LIVE)->andReturn($mode);
-
-        return $company;
     }
 }

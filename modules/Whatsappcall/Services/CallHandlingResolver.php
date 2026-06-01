@@ -30,7 +30,11 @@ class CallHandlingResolver
 
     public function shouldUseAi(Company $company): bool
     {
-        return $this->resolve($company) === self::MODE_AI;
+        if ($this->resolve($company) !== self::MODE_AI) {
+            return false;
+        }
+
+        return app(CompanyVoiceOpenAiKeyResolver::class)->isConfigured($company);
     }
 
     public function isWithinBusinessHours(Company $company): bool

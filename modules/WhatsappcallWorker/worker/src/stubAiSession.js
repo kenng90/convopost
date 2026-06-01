@@ -13,8 +13,8 @@ export async function runStubAiSession({ payload, startedAt, debug }) {
   logInfo('STUB session active — caller will hear silence', {
     duration_ms: durationMs,
     worker_mode: config.workerMode,
-    openai_key_set: Boolean(config.openaiApiKey),
-    hint: 'Set WHATSAPP_AI_WORKER_MODE=realtime and OPENAI_API_KEY, then restart worker',
+    openai_key_set: false,
+    hint: 'Add company OpenAI API key in WhatsApp Calling setup',
   });
 
   await sleep(Math.min(durationMs, 3000));
@@ -43,7 +43,7 @@ export async function runStubAiSession({ payload, startedAt, debug }) {
     intent: 'general_inquiry',
     urgency: 'medium',
     summary_bullets: [
-      'STUB mode — no spoken AI audio (check worker OPENAI_API_KEY and WHATSAPP_AI_WORKER_MODE=realtime).',
+      'STUB mode — no spoken AI audio (add company OpenAI API key in WhatsApp Calling setup).',
       payload.ai_greeting
         ? `Configured greeting (text only): ${payload.ai_greeting.slice(0, 80)}`
         : 'AI voice agent handled the call in stub mode.',

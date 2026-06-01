@@ -68,7 +68,7 @@ class Company extends MyModel
         $catalogLimit = (int) ($currentPlan->limit_catalog_items ?? 0);
         if ($catalogLimit > 0) {
             $catalogUsage = app(\App\Services\CatalogItemPlanLimit::class)->getUsageSummary($this);
-            $planInfo['catalogItemsMessage'] = __('Catalog items this period: :used of :limit', [
+            $planInfo['catalogItemsMessage'] = __('Catalog items: :used of :limit', [
                 'used' => $catalogUsage['used'],
                 'limit' => $catalogUsage['limit'],
             ]);

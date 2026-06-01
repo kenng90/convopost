@@ -1,6 +1,24 @@
 // Catalog Manager
 console.log('Catalog manager script loaded');
 
+function formatCatalogPrice(amount) {
+    let normalized = amount;
+
+    if (typeof normalized === 'string') {
+        normalized = normalized.trim()
+            .replace(/^\s*(ksh|kes|usd)\s*/i, '')
+            .replace(/^\$+/, '')
+            .replace(/,/g, '');
+    }
+
+    const value = parseFloat(normalized) || 0;
+
+    return 'KSh ' + value.toLocaleString('en-KE', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Content Loaded - Starting to initialize catalog manager');
@@ -16,7 +34,10 @@ document.addEventListener('DOMContentLoaded', function() {
 function setupFileInputHandlers() {
     const fileInput = document.getElementById('catalogFile');
     if (fileInput) {
-        fileInput.addEventListener('change', updateFileName);
+        fileInput.addEventListener('change', () => {
+            updateFileName();
+            previewImportFile();
+        });
     }
 
     const dropZone = document.getElementById('dropZone');
@@ -38,6 +59,7 @@ function setupFileInputHandlers() {
             if (e.dataTransfer.files.length > 0) {
                 fileInput.files = e.dataTransfer.files;
                 updateFileName();
+                previewImportFile();
             }
         });
     }
@@ -75,9 +97,9 @@ function displayCatalogItemUsage(usage) {
     }
 
     if (usage.unlimited) {
-        el.textContent = 'Catalog items this period: unlimited';
+        el.textContent = 'Catalog items: unlimited';
     } else {
-        el.textContent = `Catalog items this period: ${usage.used} / ${usage.limit}` +
+        el.textContent = `Catalog items: ${usage.used} / ${usage.limit}` +
             (usage.remaining !== null ? ` (${usage.remaining} remaining)` : '');
     }
 
@@ -151,11 +173,61 @@ function displayCatalogs(catalogs) {
 function updateFileName() {
     const fileInput = document.getElementById('catalogFile');
     const fileName = document.getElementById('fileName');
+    const previewStatus = document.getElementById('importPreviewStatus');
+
     if (fileInput && fileInput.files.length > 0) {
         fileName.textContent = '✓ ' + fileInput.files[0].name;
     } else {
         fileName.textContent = '';
+        if (previewStatus) {
+            previewStatus.style.display = 'none';
+            previewStatus.textContent = '';
+        }
     }
+}
+
+// Validate file headers against the standard template via preview API
+function previewImportFile() {
+    const fileInput = document.getElementById('catalogFile');
+    const previewStatus = document.getElementById('importPreviewStatus');
+
+    if (!fileInput || !fileInput.files.length || !previewStatus) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    previewStatus.style.display = 'block';
+    previewStatus.className = 'text-sm mt-2 text-muted';
+    previewStatus.textContent = 'Checking columns...';
+
+    fetch('/api/list-catalogs/preview-excel', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            previewStatus.className = 'text-sm mt-2 text-danger';
+            previewStatus.textContent = data.message || 'Could not read file';
+            return;
+        }
+
+        const mapped = data.column_mapping || {};
+        const mappedLabels = Object.values(mapped);
+        const itemCount = data.total_count || 0;
+
+        previewStatus.className = 'text-sm mt-2 text-success';
+        previewStatus.textContent = `✓ ${itemCount} row(s) found. Mapped columns: ${mappedLabels.join(', ')}`;
+    })
+    .catch(error => {
+        previewStatus.className = 'text-sm mt-2 text-danger';
+        previewStatus.textContent = 'Error checking file: ' + error.message;
+    });
 }
 
 // Submit import form
@@ -178,14 +250,7 @@ function submitImportForm() {
     formData.append('file', file);
     formData.append('catalogName', catalogName.value);
 
-    // Get column mapping from file - use defaults
-    const columnMapping = {
-        id: 'id',
-        title: 'title',
-        description: 'description',
-        price: 'price'
-    };
-    formData.append('columnMapping', JSON.stringify(columnMapping));
+    // Column mapping is resolved server-side from spreadsheet headers
 
     // Show loading state
     const btn = document.querySelector('[onclick="submitImportForm()"]');
@@ -213,6 +278,11 @@ function submitImportForm() {
             showSuccess(data.message);
             document.getElementById('catalogImportForm').reset();
             document.getElementById('fileName').textContent = '';
+            const previewStatus = document.getElementById('importPreviewStatus');
+            if (previewStatus) {
+                previewStatus.style.display = 'none';
+                previewStatus.textContent = '';
+            }
             // Close modal
             const modal = document.getElementById('catalogImportModal');
             if (modal && window.$ && window.$.fn.modal) {
@@ -274,8 +344,18 @@ function displayCatalogPreview(catalog) {
     // Add rows
     catalog.items.forEach(item => {
         html += '<tr>';
-        Object.values(item).forEach(value => {
-            html += `<td>${value || '-'}</td>`;
+        Object.entries(item).forEach(([key, value]) => {
+            let display = value;
+
+            if (key === 'price') {
+                display = formatCatalogPrice(value);
+            } else if (Array.isArray(value)) {
+                display = value.join(', ');
+            } else if (value === null || value === undefined || value === '') {
+                display = '-';
+            }
+
+            html += `<td>${display}</td>`;
         });
         html += '</tr>';
     });
@@ -496,7 +576,7 @@ function displayItems(items) {
                 </td>
                 <td>
                     <small>
-                        $${parseFloat(item.price || 0).toFixed(2)}
+                        ${formatCatalogPrice(item.price)}
                         <br><span class="badge ${badgeClass}">${item.stockStatus || 'In Stock'}</span>
                     </small>
                 </td>

@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\SocialController;
 use App\Http\Controllers\CompaniesController;
 use App\Http\Controllers\CreditsController;
 use App\Http\Controllers\CRUD\PostsController;
+use App\Http\Controllers\FlowBuilderController;
 use App\Http\Controllers\FlowsController;
 use App\Http\Controllers\FrontEndController;
 use App\Http\Controllers\ListCatalogController;
@@ -15,7 +16,6 @@ use App\Http\Controllers\SettingsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Spatie\WelcomeNotification\WelcomesNewUsers;
-use App\Http\Controllers\FlowBuilderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +55,7 @@ Route::middleware('web', WelcomesNewUsers::class)->group(function () {
 //AUTH
 Route::get('/session-test', function () {
     session(['ping' => 'pong']);
+
     return session('ping');
 });
 
@@ -153,6 +154,7 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
         Route::get('/catalogs', [SettingsController::class, 'catalogs'])->name('catalogs.page');
 
         Route::controller(ListCatalogController::class)->group(function () {
+            Route::get('/api/list-catalogs/import-template', 'downloadImportTemplate')->name('catalogs.import-template');
             Route::post('/api/list-catalogs/preview-excel', 'previewExcel')->name('catalogs.preview-excel');
             Route::post('/api/list-catalogs/import-excel', 'importExcel')->name('catalogs.import-excel');
             Route::post('/api/list-catalogs/test-api', 'testAPI')->name('catalogs.test-api');

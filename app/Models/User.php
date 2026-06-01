@@ -67,7 +67,7 @@ class User extends Authenticatable
 
     public function currentCompany()
     {
-        if (!$this->hasRole('owner') && !$this->hasRole('staff')) {
+        if (! $this->hasRole('owner') && ! $this->hasRole('staff')) {
             return null;
         }
 
@@ -195,17 +195,32 @@ class User extends Authenticatable
             $menus = $this->collectOwnerModuleMenus();
         } elseif ($this->hasRole('staff')) {
             foreach (Module::all() as $key => $module) {
-                if (is_array($module->get('staffmenus'))) {
-                    foreach ($module->get('staffmenus') as $key => $menu) {
-                        array_push($menus, $menu);
+                if (($module->get('alias') ?? '') === 'reports') {
+                    continue;
+                }
+
+                if (! is_array($module->get('staffmenus'))) {
+                    continue;
+                }
+
+                foreach ($module->get('staffmenus') as $menu) {
+                    if (isset($menu['onlyin']) && ! str_contains((string) $menu['onlyin'], config('settings.app_code_name'))) {
+                        continue;
                     }
+
+                    $routeName = $menu['route'] ?? '';
+                    if ($routeName === '' || ! \Illuminate\Support\Facades\Route::has($routeName)) {
+                        continue;
+                    }
+
+                    $menus[] = $menu;
                 }
             }
         }
 
         //Sort the menus by priority
         usort($menus, function ($a, $b) {
-            return (isset($a['priority'])?$a['priority']:100) <=> (isset($b['priority'])?$b['priority']:100);
+            return (isset($a['priority']) ? $a['priority'] : 100) <=> (isset($b['priority']) ? $b['priority'] : 100);
         });
 
         return $menus;
@@ -304,10 +319,9 @@ class User extends Authenticatable
     {
         parent::booted();
 
-
         static::updated(function ($user) {
 
-            Log::info('User updated: ' . $user->email);
+            Log::info('User updated: '.$user->email);
             if ($user->hasRole('admin')) {
                 // Update the translation table with the latest admin user info
                 // Assuming the translation table is 'ltu_contributors' as per seeder

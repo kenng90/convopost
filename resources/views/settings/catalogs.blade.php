@@ -71,6 +71,19 @@
                         <input type="text" id="catalogName" name="catalogName" placeholder="e.g., Summer Products" class="form-control" required>
                     </div>
 
+                    <div class="form-group">
+                        <label>{{ __('Import template') }}</label>
+                        <p class="text-sm text-muted mb-2">
+                            {{ __('Use these column headers in row 1 of your spreadsheet:') }}
+                            <strong>Item ID, Title, Description, Price, Category, Image URL, Stock Status, Variants, Tags</strong>.
+                            {{ __('Item ID and Title are required. Enter prices in Kenyan Shillings (KSh).') }}
+                        </p>
+                        <a href="{{ route('catalogs.import-template') }}" class="btn btn-sm btn-outline-primary" download>
+                            <i class="ni ni-cloud-download-95 mr-1"></i>
+                            {{ __('Download Excel template') }}
+                        </a>
+                    </div>
+
                     <!-- File Upload -->
                     <div class="form-group">
                         <label>{{ __('Upload Excel/CSV File') }}</label>
@@ -83,6 +96,7 @@
                             <input type="file" id="catalogFile" name="file" class="d-none" accept=".xlsx,.xls,.csv" required>
                         </div>
                         <p id="fileName" class="text-sm text-muted mt-2"></p>
+                        <p id="importPreviewStatus" class="text-sm mt-2" style="display: none;"></p>
                     </div>
                 </form>
             </div>
@@ -187,7 +201,7 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label>{{ __('Price') }} <small class="text-muted">(Optional)</small></label>
+                                        <label>{{ __('Price (KSh)') }} <small class="text-muted">(Optional)</small></label>
                                         <input type="number" id="newItemPrice" class="form-control" step="0.01" min="0" placeholder="0.00">
                                     </div>
                                 </div>
@@ -243,7 +257,7 @@
                                     <th>{{ __('ID') }}</th>
                                     <th>{{ __('Title') }}</th>
                                     <th>{{ __('Category') }}</th>
-                                    <th>{{ __('Price & Stock') }}</th>
+                                    <th>{{ __('Price (KSh) & Stock') }}</th>
                                     <th>{{ __('Tags & Variants') }}</th>
                                     <th>{{ __('Actions') }}</th>
                                 </tr>
@@ -284,7 +298,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>{{ __('Price') }} <small class="text-muted">(Optional)</small></label>
+                            <label>{{ __('Price (KSh)') }} <small class="text-muted">(Optional)</small></label>
                             <input type="number" id="editItemPrice" class="form-control" step="0.01" min="0">
                         </div>
                     </div>
@@ -330,6 +344,26 @@
     </div>
 </div>
 
-<script src="{{ asset('js/catalog-manager.js') }}"></script>
+<script src="{{ asset('js/catalog-manager.js') }}?v={{ filemtime(public_path('js/catalog-manager.js')) }}"></script>
+<script>
+    // Override cached catalog-manager.js if needed — catalog prices are always KSh
+    function formatCatalogPrice(amount) {
+        let normalized = amount;
+
+        if (typeof normalized === 'string') {
+            normalized = normalized.trim()
+                .replace(/^\s*(ksh|kes|usd)\s*/i, '')
+                .replace(/^\$+/, '')
+                .replace(/,/g, '');
+        }
+
+        const value = parseFloat(normalized) || 0;
+
+        return 'KSh ' + value.toLocaleString('en-KE', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    }
+</script>
 
 @endsection

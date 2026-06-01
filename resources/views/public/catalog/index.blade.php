@@ -437,7 +437,7 @@
                                 @endif
                                 
                                 @if(isset($item['price']))
-                                    <div class="product-price">ksh{{ number_format((float)$item['price'], 2) }}</div>
+                                    <div class="product-price">KSh {{ number_format((float) $item['price'], 2) }}</div>
                                 @endif
                                 
                                 <!-- Variants Selection -->
@@ -493,7 +493,7 @@
         <div class="cart-footer">
             <div class="cart-total">
                 <span>Total:</span>
-                <span id="cartTotal">$0.00</span>
+                <span id="cartTotal">KSh 0.00</span>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <button class="checkout-btn" id="checkoutBtn" onclick="proceedToCheckout()" disabled style="background-color: #25D366;">
@@ -520,6 +520,15 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        function formatKsh(amount) {
+            const value = parseFloat(amount) || 0;
+
+            return 'KSh ' + value.toLocaleString('en-KE', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+        }
+
         // Cart state with selected variants
         let cart = JSON.parse(localStorage.getItem('catalog_{{ $catalog->id }}_cart')) || [];
         let selectedVariants = {};
@@ -621,7 +630,7 @@
             if (cart.length === 0) {
                 cartItemsDiv.innerHTML = '<div class="empty-cart"><div class="empty-cart-icon"><i class="fas fa-shopping-bag"></i></div><p>Your cart is empty</p></div>';
                 cartBadge.style.display = 'none';
-                cartTotal.textContent = '$0.00';
+                cartTotal.textContent = formatKsh(0);
                 checkoutBtn.disabled = true;
                 return;
             }
@@ -648,13 +657,13 @@
                         </button>
                         <div class="cart-item-title">${item.title}</div>
                         ${variantText}
-                        <div class="cart-item-qty">$${price.toFixed(2)} × ${item.quantity} = $${itemTotal.toFixed(2)}</div>
+                        <div class="cart-item-qty">${formatKsh(price)} × ${item.quantity} = ${formatKsh(itemTotal)}</div>
                     </div>
                 `;
             });
 
             cartItemsDiv.innerHTML = html;
-            cartTotal.textContent = '$' + total.toFixed(2);
+            cartTotal.textContent = formatKsh(total);
             checkoutBtn.disabled = false;
             document.getElementById('invoiceBtn').disabled = false;
         }
@@ -684,12 +693,12 @@
                 if (item.variant) {
                     itemLine += ` (${item.variant})`;
                 }
-                itemLine += ` (x${item.quantity}) - $${price.toFixed(2)} = $${itemTotal.toFixed(2)}\n`;
+                itemLine += ` (x${item.quantity}) - ${formatKsh(price)} = ${formatKsh(itemTotal)}\n`;
 
                 orderMessage += itemLine;
             });
 
-            orderMessage += `\n💰 *Total: $${total.toFixed(2)}*\n`;
+            orderMessage += `\n💰 *Total: ${formatKsh(total)}*\n`;
             orderMessage += "\nPlease confirm this order.";
 
             // Get company WhatsApp number from data

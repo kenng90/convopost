@@ -88,6 +88,22 @@ class CallBriefService
             ]);
         }
 
+        if ($contact && $company) {
+            try {
+                app(VoiceCallInvoiceService::class)->maybeSendAfterCall(
+                    $call->fresh() ?? $call,
+                    $contact,
+                    $company,
+                    $data['transcript'] ?? null
+                );
+            } catch (\Throwable $th) {
+                Log::warning('CallBriefService: voice invoice after call failed', [
+                    'call_id' => $call->id,
+                    'error' => $th->getMessage(),
+                ]);
+            }
+        }
+
         $call->refresh();
 
         return $call;

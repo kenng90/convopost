@@ -5,6 +5,7 @@ import { bumpEvent } from './sessionDebug.js';
 
 export class OpenAIRealtimeClient {
   constructor(options) {
+    this.apiKey = options.apiKey;
     this.instructions = options.instructions;
     this.debug = options.debug ?? null;
     this.onAudioDelta = options.onAudioDelta;
@@ -22,8 +23,8 @@ export class OpenAIRealtimeClient {
 
   connect() {
     return new Promise((resolve, reject) => {
-      if (!config.openaiApiKey) {
-        const err = new Error('OPENAI_API_KEY is not set in worker process');
+      if (!this.apiKey) {
+        const err = new Error('OpenAI API key is not set for this call');
         logError('OpenAI connect aborted', { reason: err.message });
         reject(err);
         return;
@@ -36,7 +37,7 @@ export class OpenAIRealtimeClient {
 
       this.ws = new WebSocket(url, {
         headers: {
-          Authorization: `Bearer ${config.openaiApiKey}`,
+          Authorization: `Bearer ${this.apiKey}`,
         },
       });
 

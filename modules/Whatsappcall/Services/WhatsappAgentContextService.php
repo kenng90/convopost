@@ -67,6 +67,13 @@ class WhatsappAgentContextService
             }
         }
 
+        if ($catalogIds !== [] && filter_var(
+            $company->getConfig('whatsapp_ai_send_invoice_after_call', true),
+            FILTER_VALIDATE_BOOLEAN
+        )) {
+            $parts[] = 'When the caller wants to buy a catalog product, confirm the exact product name and price on the call. After the call ends, a WhatsApp invoice with a payment link is sent automatically — you do not need to run chat flows for this.';
+        }
+
         $vectorContext = '';
         $enableVector = filter_var(
             $company->getConfig('whatsapp_ai_enable_vector_search', true),

@@ -62,16 +62,13 @@ export function logStartupConfig(cfg) {
     max_call_ms: cfg.maxCallDurationMs,
   });
 
-  if (cfg.workerMode === 'realtime' && !cfg.openaiApiKey) {
-    logError(
-      'WORKER_MODE=realtime but OPENAI_API_KEY is missing — calls will fail or fall back to stub. ' +
-        'Set OPENAI_API_KEY in Laravel .env and restart via: php artisan whatsappcall:worker',
-    );
+  if (cfg.workerMode === 'realtime') {
+    logInfo('Voice Realtime uses per-company OpenAI keys from Laravel dispatch (not worker .env).');
   }
 
   if (cfg.workerMode === 'stub') {
     logWarn(
-      'WORKER_MODE=stub — no spoken AI. Set WHATSAPP_AI_WORKER_MODE=realtime and OPENAI_API_KEY for voice.',
+      'WORKER_MODE=stub — no spoken AI. Set WHATSAPP_AI_WORKER_MODE=realtime for voice.',
     );
   }
 }
