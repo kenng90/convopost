@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('whatsapp_flow_responses')) {
+            return;
+        }
+
         Schema::create('whatsapp_flow_responses', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('company_id')->index();

@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use Akaunting\Module\Facade as Module;
+use App\Models\Company;
 use App\Models\Plans;
 use App\Models\User;
+use App\Services\PlanCreditAllocator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,6 +17,10 @@ use Stripe\Exception\InvalidRequestException;
 
 class PlansController extends Controller
 {
+    public function __construct(private readonly PlanCreditAllocator $planCreditAllocator)
+    {
+    }
+
     public function current(): View
     {
 
@@ -25,7 +31,7 @@ class PlansController extends Controller
 
         $theSelectedProcessor = strtolower(config('settings.subscription_processor', 'stripe'));
 
-        $hasPricing=Module::has('pricing');
+        $hasPricing = Module::has('pricing');
         if (
             ! ($theSelectedProcessor == 'stripe' || $theSelectedProcessor == 'local') &&
             auth()->user()->plan_status != 'set_by_admin' &&
@@ -249,11 +255,8 @@ class PlansController extends Controller
     public function subscribe3dStripe(Request $request, Plans $plan, User $user): RedirectResponse
     {
         if ($request->success.'' == 'true') {
-            //Assign user to plan
-            $user->plan_id = $plan->id;
             $user->cancel_url = route('plans.cancel');
-
-            $user->update();
+            $this->assignPlanAndCredits($user, $plan);
 
             return redirect()->route('plans.current')->withStatus(__('Plan update!'));
         } else {
@@ -316,9 +319,7 @@ class PlansController extends Controller
             }
         }
 
-        //Assign user to plan
-        auth()->user()->plan_id = $plan->id;
-        auth()->user()->update();
+        $this->assignPlanAndCredits(auth()->user(), $plan);
 
         return redirect()->route('plans.current')->withStatus(__('Plan update!'));
     }
@@ -327,11 +328,37 @@ class PlansController extends Controller
     {
         $this->adminOnly();
         $user = User::findOrFail($request->user_id);
-        $user->plan_id = $request->plan_id;
-        $user->plan_status = 'set_by_admin';
-        $user->update();
+        $plan = Plans::findOrFail($request->plan_id);
+        $this->assignPlanAndCredits($user, $plan, 'set_by_admin');
 
         return redirect()->route('admin.companies.edit', $request->company_id)->withStatus(__('Plan successfully updated.'));
+    }
+
+    private function assignPlanAndCredits(User $user, Plans $plan, ?string $planStatus = null): void
+    {
+        $user->plan_id = $plan->id;
+        if ($planStatus !== null) {
+            $user->plan_status = $planStatus;
+        }
+        $user->save();
+
+        $company = $this->resolveUserCompany($user);
+        if ($company) {
+            $this->planCreditAllocator->grantForCompany($company, $plan);
+        }
+    }
+
+    private function resolveUserCompany(User $user): ?Company
+    {
+        if ($user->hasRole('owner')) {
+            return Company::where('user_id', $user->id)->first();
+        }
+
+        if ($user->company_id) {
+            return Company::find($user->company_id);
+        }
+
+        return null;
     }
 
     public function isExtended()
