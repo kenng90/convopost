@@ -3,150 +3,240 @@
 namespace App\Services;
 
 use App\Models\Company;
-use Illuminate\Support\Facades\Http;
+use App\Scopes\CompanyScope;
+use App\Services\WhatsApp\OrderInvoiceMessageTemplateService;
+use App\Services\WhatsApp\WhatsAppGraphClient;
+use App\Services\WhatsApp\WhatsAppSessionWindow;
 use Illuminate\Support\Facades\Log;
 use Modules\Invoice\Models\Invoice;
+use Modules\Wpbox\Models\Contact;
+use Modules\Wpbox\Models\Template;
 
 class InvoiceWhatsAppService
 {
-    protected $company;
-    protected $facebookAPI = 'https://graph.facebook.com/v19.0/';
-
-    public function __construct(Company $company)
-    {
-        $this->company = $company;
+    public function __construct(
+        protected Company $company,
+        protected ?WhatsAppSessionWindow $sessionWindow = null,
+        protected ?OrderInvoiceMessageTemplateService $templateService = null,
+    ) {
+        $this->sessionWindow ??= new WhatsAppSessionWindow;
+        $this->templateService ??= new OrderInvoiceMessageTemplateService;
     }
 
     /**
-     * Send invoice via WhatsApp
+     * Send invoice via WhatsApp (session text inside 24h window, template outside).
      */
-    public function sendInvoice(Invoice $invoice): bool
+    public function sendInvoice(Invoice $invoice, ?Contact $contact = null): bool
     {
         try {
-            // Get WhatsApp credentials from company config (same as Wpbox trait)
-            $phoneNumberId = $this->getPhoneID();
-            $accessToken = $this->getToken();
+            $graph = new WhatsAppGraphClient($this->company);
 
-            if (!$phoneNumberId || !$accessToken) {
+            if (! $graph->hasMessagingCredentials()) {
                 Log::warning('WhatsApp credentials not configured for invoice sending', [
                     'company_id' => $this->company->id,
                     'invoice_id' => $invoice->id,
-                    'phone_id' => $phoneNumberId ? 'exists' : 'missing',
-                    'token' => $accessToken ? 'exists' : 'missing',
                 ]);
+
                 return false;
             }
 
-            // Format customer phone number
             $phoneNumber = $this->formatPhoneNumber($invoice->customer_phone);
+            $contact ??= $this->resolveContact($invoice, $phoneNumber);
 
-            // Build invoice message
-            $message = $this->buildInvoiceMessage($invoice);
-
-            // Send WhatsApp message (same format as Wpbox trait)
-            $url = $this->facebookAPI . $phoneNumberId . '/messages';
-
-            $payload = [
-                'messaging_product' => 'whatsapp',
-                'to' => $phoneNumber,
-                'type' => 'text',
-                'text' => [
-                    'body' => $message,
-                    'preview_url' => true,
-                ],
-            ];
-
-            Log::info('Sending invoice via WhatsApp', [
-                'invoice_id' => $invoice->id,
-                'phone' => $phoneNumber,
-                'company_id' => $this->company->id,
-                'url' => $url,
-            ]);
-
-            // Use proper authorization header like Wpbox does
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $accessToken,
-                'Content-Type' => 'application/json',
-            ])->post($url, $payload);
-
-            if (!$response->successful()) {
-                Log::error('Failed to send invoice via WhatsApp', [
-                    'invoice_id' => $invoice->id,
-                    'status' => $response->status(),
-                    'response' => $response->body(),
-                ]);
-                return false;
+            if ($this->sessionWindow->isOpen($contact)) {
+                return $this->sendSessionText($graph, $invoice, $phoneNumber);
             }
 
-            Log::info('Invoice sent via WhatsApp successfully', [
-                'invoice_id' => $invoice->id,
-                'message_id' => $response->json('messages.0.id'),
-            ]);
-
-            return true;
+            return $this->sendOutsideSessionTemplate($graph, $invoice, $phoneNumber);
         } catch (\Exception $e) {
             Log::error('Exception sending invoice via WhatsApp', [
                 'invoice_id' => $invoice->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
+
             return false;
         }
     }
 
-    /**
-     * Get access token (same as Wpbox trait)
-     */
-    private function getToken(): string
+    protected function sendSessionText(WhatsAppGraphClient $graph, Invoice $invoice, string $phoneNumber): bool
     {
-        return $this->company->getConfig('whatsapp_permanent_access_token', '');
+        $message = $this->buildInvoiceMessage($invoice);
+        $response = $graph->sendTextMessage($phoneNumber, $message);
+
+        if ($response['status'] < 200 || $response['status'] >= 300) {
+            Log::error('Failed to send invoice session text via WhatsApp', [
+                'invoice_id' => $invoice->id,
+                'status' => $response['status'],
+                'response' => $response['content'],
+            ]);
+
+            return false;
+        }
+
+        Log::info('Invoice sent via WhatsApp session message', [
+            'invoice_id' => $invoice->id,
+            'message_id' => is_array($response['content']) ? ($response['content']['messages'][0]['id'] ?? null) : null,
+        ]);
+
+        return true;
+    }
+
+    protected function sendOutsideSessionTemplate(WhatsAppGraphClient $graph, Invoice $invoice, string $phoneNumber): bool
+    {
+        $ensure = $this->templateService->ensureForCompany($this->company);
+
+        if (! $ensure['ready']) {
+            Log::warning('Invoice template not ready for outside-session send', [
+                'invoice_id' => $invoice->id,
+                'company_id' => $this->company->id,
+                'template_status' => $ensure['status'],
+                'message' => $ensure['message'],
+            ]);
+
+            return false;
+        }
+
+        $template = $ensure['template'] ?? $this->findApprovedTemplate();
+        if (! $template) {
+            Log::warning('Approved invoice template missing after ensure', [
+                'invoice_id' => $invoice->id,
+                'company_id' => $this->company->id,
+            ]);
+
+            return false;
+        }
+
+        $components = $this->buildTemplateComponents($invoice);
+        $response = $graph->sendTemplateMessage(
+            $phoneNumber,
+            $template->name,
+            $template->language,
+            $components
+        );
+
+        if ($response['status'] < 200 || $response['status'] >= 300) {
+            Log::error('Failed to send invoice template via WhatsApp', [
+                'invoice_id' => $invoice->id,
+                'status' => $response['status'],
+                'response' => $response['content'],
+            ]);
+
+            return false;
+        }
+
+        Log::info('Invoice sent via WhatsApp template', [
+            'invoice_id' => $invoice->id,
+            'template' => $template->name,
+            'message_id' => is_array($response['content']) ? ($response['content']['messages'][0]['id'] ?? null) : null,
+        ]);
+
+        return true;
+    }
+
+    protected function findApprovedTemplate(): ?Template
+    {
+        $name = $this->templateService->getTemplateName($this->company);
+        $language = $this->templateService->getTemplateLanguage($this->company);
+
+        return Template::withoutGlobalScope(CompanyScope::class)
+            ->where('company_id', $this->company->id)
+            ->where('name', $name)
+            ->where('language', $language)
+            ->where('status', 'APPROVED')
+            ->first();
     }
 
     /**
-     * Get phone number ID (same as Wpbox trait)
+     * @return array<int, array<string, mixed>>
      */
-    private function getPhoneID(): string
+    protected function buildTemplateComponents(Invoice $invoice): array
     {
-        return $this->company->getConfig('whatsapp_phone_number_id', '');
+        return [
+            [
+                'type' => 'body',
+                'parameters' => [
+                    ['type' => 'text', 'text' => $invoice->customer_name ?: 'Valued Customer'],
+                    ['type' => 'text', 'text' => (string) $invoice->invoice_number],
+                    ['type' => 'text', 'text' => $this->buildItemsSummary($invoice)],
+                    ['type' => 'text', 'text' => 'KES '.number_format((float) $invoice->amount, 2)],
+                    ['type' => 'text', 'text' => $this->buildPaymentLink($invoice)],
+                ],
+            ],
+        ];
     }
 
-    /**
-     * Build invoice message
-     */
-    private function buildInvoiceMessage(Invoice $invoice): string
+    protected function buildItemsSummary(Invoice $invoice): string
     {
-        // Use UUID if available, fallback to ID for backward compatibility
+        if (! $invoice->items || ! is_array($invoice->items)) {
+            return 'See invoice link for details.';
+        }
+
+        $lines = [];
+        foreach (array_slice($invoice->items, 0, 3) as $item) {
+            $itemTitle = $item['title'] ?? 'Item';
+            $qty = $item['quantity'] ?? 1;
+            $itemTotal = $item['total'] ?? (($item['price'] ?? 0) * $qty);
+            $lines[] = '• '.$itemTitle.' (x'.$qty.') - KES '.number_format((float) $itemTotal, 2);
+        }
+
+        $remaining = count($invoice->items) - 3;
+        if ($remaining > 0) {
+            $lines[] = '• +'.$remaining.' more item(s)';
+        }
+
+        return implode("\n", $lines) ?: 'See invoice link for details.';
+    }
+
+    protected function buildPaymentLink(Invoice $invoice): string
+    {
         $invoiceIdentifier = $invoice->public_uuid ?? $invoice->id;
-        $paymentLink = config('app.url') . '/catalog/pay/' . $invoiceIdentifier;
 
-        // Calculate items summary
+        return rtrim(config('app.url'), '/').'/catalog/pay/'.$invoiceIdentifier;
+    }
+
+    protected function resolveContact(Invoice $invoice, string $phoneNumber): ?Contact
+    {
+        return Contact::query()
+            ->where('company_id', $invoice->company_id)
+            ->where(function ($query) use ($phoneNumber) {
+                $query->where('phone', $phoneNumber)
+                    ->orWhere('phone', '+'.$phoneNumber);
+            })
+            ->first();
+    }
+
+    /**
+     * Build invoice message for session (24h window) sends.
+     */
+    public function buildInvoiceMessage(Invoice $invoice): string
+    {
+        $paymentLink = $this->buildPaymentLink($invoice);
+
         $itemsText = '';
         if ($invoice->items && is_array($invoice->items)) {
             foreach ($invoice->items as $item) {
                 $itemTitle = $item['title'] ?? 'Item';
                 $qty = $item['quantity'] ?? 1;
                 $itemTotal = $item['total'] ?? ($item['price'] * $qty);
-                $itemsText .= "• {$itemTitle} (x{$qty}) - KES " . number_format($itemTotal, 2) . "\n";
+                $itemsText .= "• {$itemTitle} (x{$qty}) - KES ".number_format($itemTotal, 2)."\n";
             }
         }
 
-        $message = "📋 *Invoice #" . $invoice->invoice_number . "*\n\n";
-        $message .= "Hello " . ($invoice->customer_name ?? 'Valued Customer') . ",\n\n";
-        $message .= "Thank you for your order from *" . $this->company->name . "*\n\n";
+        $message = '📋 *Invoice #'.$invoice->invoice_number."*\n\n";
+        $message .= 'Hello '.($invoice->customer_name ?? 'Valued Customer').",\n\n";
+        $message .= 'Thank you for your order from *'.$this->company->name."*\n\n";
 
         if ($itemsText) {
             $message .= "*Items:*\n";
-            $message .= $itemsText . "\n";
+            $message .= $itemsText."\n";
         }
 
-        $message .= "*Total Amount:* KES " . number_format($invoice->amount, 2) . "\n";
-        $message .= "*Status:* " . ucfirst($invoice->status) . "\n\n";
-
+        $message .= '*Total Amount:* KES '.number_format($invoice->amount, 2)."\n";
+        $message .= '*Status:* '.ucfirst($invoice->status)."\n\n";
         $message .= "💳 *Click the link below to view and pay your invoice:*\n";
-        $message .= $paymentLink . "\n\n";
-
+        $message .= $paymentLink."\n\n";
         $message .= "For any questions or concerns, please don't hesitate to contact us.\n\n";
-        $message .= "Thank you for your business! 🙏";
+        $message .= 'Thank you for your business! 🙏';
 
         return $message;
     }
@@ -154,19 +244,16 @@ class InvoiceWhatsAppService
     /**
      * Format phone number for WhatsApp (254XXXXXXXXX format)
      */
-    private function formatPhoneNumber(string $phone): string
+    protected function formatPhoneNumber(string $phone): string
     {
-        // Remove any + prefix
         $phone = ltrim($phone, '+');
 
-        // If starts with 0, replace with 254
         if (str_starts_with($phone, '0')) {
-            $phone = '254' . substr($phone, 1);
+            $phone = '254'.substr($phone, 1);
         }
 
-        // If starts with 7 or 1 (local format without country code)
         if (strlen($phone) === 9 && (str_starts_with($phone, '7') || str_starts_with($phone, '1'))) {
-            $phone = '254' . $phone;
+            $phone = '254'.$phone;
         }
 
         return $phone;

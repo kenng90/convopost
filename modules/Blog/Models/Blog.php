@@ -2,8 +2,8 @@
 
 namespace Modules\Blog\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
 class Blog extends Model
@@ -29,26 +29,25 @@ class Blog extends Model
 
     public function getFeaturedImageAttribute($value)
     {
-        if (!$value) {
+        if (! $value) {
             return null;
         }
-        
+
         if (str_starts_with($value, 'http')) {
             return $value;
         }
-        
-        return config('app.url') . Storage::url($value);
+
+        return url(Storage::url($value));
     }
 
-
-   
     public function clone()
     {
         $clone = $this->replicate();
         //Reset the slug, by adding the id to the title
-        $clone->title = $this->title . ' - ' . __('Copy');
-        $clone->slug = $this->slug . '_'.__('copy');
+        $clone->title = $this->title.' - '.__('Copy');
+        $clone->slug = $this->slug.'_'.__('copy');
         $clone->save();
+
         return $clone;
     }
 
@@ -61,7 +60,7 @@ class Blog extends Model
 
         static::updating(function ($blog) {
             // Calculate read time before updating
-            $blog->read_time = static::calculateReadTime($blog->content); 
+            $blog->read_time = static::calculateReadTime($blog->content);
         });
     }
 
@@ -74,11 +73,11 @@ class Blog extends Model
     {
         // Strip HTML tags and count words
         $wordCount = str_word_count(strip_tags($content));
-        
+
         // Calculate minutes rounded up
         $minutes = ceil($wordCount / 200);
-        
+
         // Ensure minimum 1 minute
         return max(1, $minutes);
     }
-} 
+}

@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\ListCatalog;
 use App\Services\CatalogItemPlanLimit;
 use App\Services\ExcelImportService;
+use App\Services\WhatsApp\OrderInvoiceMessageTemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -15,6 +16,7 @@ class ListCatalogController extends Controller
     public function __construct(
         protected ExcelImportService $excelService,
         protected CatalogItemPlanLimit $catalogItemPlanLimit,
+        protected OrderInvoiceMessageTemplateService $orderInvoiceTemplateService,
     ) {
     }
 
@@ -141,15 +143,27 @@ class ListCatalogController extends Controller
 
             $this->catalogItemPlanLimit->recordUsage($company->id, $itemCount);
 
+            $templateProvision = $this->orderInvoiceTemplateService->ensureForCompany($company);
+
             // Clean up original file
             unlink($fullPath);
 
+            $responseMessage = "Catalog '{$catalogName}' created with ".count($transformedItems).' items.';
+            if (! $templateProvision['ready']) {
+                $responseMessage .= ' '.$templateProvision['message'];
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => "Catalog '{$catalogName}' created with ".count($transformedItems).' items.',
+                'message' => $responseMessage,
                 'catalogId' => $catalog->id,
                 'items' => $transformedItems,
                 'itemCount' => count($transformedItems),
+                'order_template' => [
+                    'ready' => $templateProvision['ready'],
+                    'status' => $templateProvision['status'],
+                    'message' => $templateProvision['message'],
+                ],
             ]);
 
         } catch (\Exception $e) {

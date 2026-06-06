@@ -32,7 +32,7 @@ class VoiceInvoiceSender
             ]);
 
             $whatsAppService = new InvoiceWhatsAppService($company);
-            $whatsAppSent = $whatsAppService->sendInvoice($invoice);
+            $whatsAppSent = $whatsAppService->sendInvoice($invoice, $contact);
 
             if ($whatsAppSent) {
                 $invoice->markAsSent();

