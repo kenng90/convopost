@@ -57,6 +57,9 @@ class Company extends MyModel
             $currentPlan->enable_ordering = 1;
             $currentPlan->limit_orders = 0;
             $currentPlan->limit_catalog_items = 0;
+            $currentPlan->limit_agents = 0;
+            $currentPlan->limit_companies = 0;
+            $currentPlan->limit_integrations = 0;
             $currentPlan->period = 1;
         }
         $planInfo['plan'] = $currentPlan->toArray();
@@ -66,6 +69,15 @@ class Company extends MyModel
         $planInfo['itemsMessage'] = $currentPlan->features;
 
         $catalogLimit = (int) ($currentPlan->limit_catalog_items ?? 0);
+        $planInfo['usageSummary'] = app(\App\Services\PlanUsageLimit::class)->getUsageSummary($this);
+
+        if (config('settings.enable_per_seat_billing', false)) {
+            $owner = $this->user;
+            if ($owner) {
+                $planInfo['seatBillingSummary'] = app(\App\Services\PlanSeatBillingService::class)->getBillingSummary($owner);
+            }
+        }
+
         if ($catalogLimit > 0) {
             $catalogUsage = app(\App\Services\CatalogItemPlanLimit::class)->getUsageSummary($this);
             $planInfo['catalogItemsMessage'] = __('Catalog items: :used of :limit', [

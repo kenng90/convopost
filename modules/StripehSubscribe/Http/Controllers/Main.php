@@ -4,12 +4,10 @@ namespace Modules\StripehSubscribe\Http\Controllers;
 
 use App\Models\Plans;
 use App\Models\User;
+use App\Services\PlanSeatBillingService;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
-
 
 class Main extends Controller
 {
@@ -20,54 +18,56 @@ class Main extends Controller
 
         $plan_id = $plan->id;
         $stripe_price_id = $plan->stripe_id;
-       
+
         //Stripe secret key
         $stripe_secret_key = config('settings.stripe_secret');
         $stripe_key = config('settings.stripe_key');
 
+        $subscriptionBuilder = auth()->user()->newSubscription('default', $stripe_price_id);
+        app(PlanSeatBillingService::class)->applySeatPricesToSubscriptionBuilder(
+            $subscriptionBuilder,
+            auth()->user(),
+            $plan
+        );
 
-        return auth()->user()
-        ->newSubscription('default', $stripe_price_id)
-        ->allowPromotionCodes()
-        ->checkout([
-            'success_url' => route('plans.current'),
-            'cancel_url' => route('plans.current'),
-            'metadata' => [
-                'user_id' => auth()->user()->id,
-                'plan_id' => $plan_id,
-            ]
-        ]);
-
-
-      
-       
+        return $subscriptionBuilder
+            ->allowPromotionCodes()
+            ->checkout([
+                'success_url' => route('plans.current'),
+                'cancel_url' => route('plans.current'),
+                'metadata' => [
+                    'user_id' => auth()->user()->id,
+                    'plan_id' => $plan_id,
+                ],
+            ]);
 
         //Based on the above, we need to create a subscription link
         // Create a Payment Link
-            $response = Http::withBasicAuth($stripe_secret_key, '')
-                ->withHeaders([
-                    'Content-Type' => 'application/x-www-form-urlencoded',
-                ])
-                ->asForm()
-                ->post('https://api.stripe.com/v1/checkout/sessions', [
-                    'mode' => 'subscription',
-                    'line_items[0][price]' => $stripe_price_id,
-                    'line_items[0][quantity]' => 1,
-                    'success_url' => url('/plan'),
-                    'cancel_url' => url('/plan'),
-                    'client_reference_id' => auth()->user()->id,
-                    'allow_promotion_codes' => 'true',
-                    'customer_email' => auth()->user()->email,
-                    'metadata' => [
-                        'user_id' => auth()->user()->id,
-                        'plan_id' => $plan_id,
-                    ]
-                ]);
+        $response = Http::withBasicAuth($stripe_secret_key, '')
+            ->withHeaders([
+                'Content-Type' => 'application/x-www-form-urlencoded',
+            ])
+            ->asForm()
+            ->post('https://api.stripe.com/v1/checkout/sessions', [
+                'mode' => 'subscription',
+                'line_items[0][price]' => $stripe_price_id,
+                'line_items[0][quantity]' => 1,
+                'success_url' => url('/plan'),
+                'cancel_url' => url('/plan'),
+                'client_reference_id' => auth()->user()->id,
+                'allow_promotion_codes' => 'true',
+                'customer_email' => auth()->user()->email,
+                'metadata' => [
+                    'user_id' => auth()->user()->id,
+                    'plan_id' => $plan_id,
+                ],
+            ]);
 
         if ($response->successful()) {
             $paymentLink = $response->json();
+
             return redirect($paymentLink['url']); // Redirect to the payment link
-        }else{
+        } else {
             dd($response->json());
         }
 
@@ -86,7 +86,7 @@ class Main extends Controller
 
         // Find the user
         $user = User::where('id', $userId)->first();
-        if (!$user) {
+        if (! $user) {
             return response('User not found', 404);
         }
 
@@ -94,13 +94,15 @@ class Main extends Controller
         $user->plan_id = $planId;
         $user->plan_status = 'active';
         $user->stripe_subscription_id = $session->subscription;
-        
+
         // Store customer portal URL for later management
         if (isset($session->customer_portal_url)) {
             $user->update_url = $session->customer_portal_url;
         }
-        
+
         $user->save();
+
+        app(PlanSeatBillingService::class)->syncForOwner($user);
 
         return response()->json(['message' => 'Subscription activated successfully']);
     }
@@ -108,43 +110,43 @@ class Main extends Controller
     public function webhook(Request $request)
     {
 
-
         $payload = $request->getContent();
         $sigHeader = $request->header('Stripe-Signature');
         $secret = config('stripeh-subscribe.stripe_webhook_secret');
 
-        if (!$sigHeader) {
+        if (! $sigHeader) {
             return response('Missing signature header', 400);
         }
-    
+
         // Parse Stripe-Signature header
         $signatureParts = [];
         parse_str(str_replace(',', '&', $sigHeader), $signatureParts);
-    
+
         $timestamp = $signatureParts['t'] ?? null;
         $expectedSignature = $signatureParts['v1'] ?? null;
-    
-        if (!$timestamp || !$expectedSignature) {
+
+        if (! $timestamp || ! $expectedSignature) {
             return response('Invalid signature format', 400);
         }
-    
+
         // Create the signed payload
-        $signedPayload = $timestamp . '.' . $payload;
-    
+        $signedPayload = $timestamp.'.'.$payload;
+
         // Compute HMAC-SHA256
         $computedSignature = hash_hmac('sha256', $signedPayload, $secret);
-    
+
         // Compare signatures securely
-        if (!hash_equals($computedSignature, $expectedSignature)) {
+        if (! hash_equals($computedSignature, $expectedSignature)) {
             return response('Invalid signature', 400);
         }
-    
+
         // Handle the event if verification passes
         $event = json_decode($payload);
-    
+
         switch ($event->type) {
             case 'checkout.session.completed':
                 $session = $event->data->object; // Process session data
+
                 return $this->handleCheckoutSessionCompleted($session);
                 break;
 
@@ -153,25 +155,16 @@ class Main extends Controller
                 // Handle successful payment
                 break;
             case 'payment_intent.payment_failed':
-                $paymentIntent = $event->data->object; 
+                $paymentIntent = $event->data->object;
                 // Handle failed payment
                 break;
-    
+
             default:
                 // Handle other event types
                 break;
         }
-    
+
         return response('Webhook handled', 200);
 
-
-
-
-       
-
     }
-
-
-    
-
 }

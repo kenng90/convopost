@@ -28,6 +28,48 @@
                 </div>
                 @endif
 
+                @if (!empty($planAttribute['usageSummary']))
+                <div class="mt-3">
+                    <h4 class="mb-3">{{ __('Plan usage this period') }}</h4>
+                    @foreach ($planAttribute['usageSummary'] as $usage)
+                    <div class="alert alert-{{ $usage['alert'] }}" role="alert">
+                        {{ $usage['label'] }}:
+                        <strong>{{ number_format($usage['used']) }}</strong>
+                        @if ($usage['unlimited'])
+                            / {{ __('Unlimited') }}
+                        @else
+                            / {{ number_format($usage['limit']) }}
+                            @if (! is_null($usage['remaining']))
+                                ({{ __(':count remaining', ['count' => number_format($usage['remaining'])]) }})
+                            @endif
+                        @endif
+                    </div>
+                    @endforeach
+                </div>
+                @endif
+
+                @if (!empty($planAttribute['seatBillingSummary']))
+                <div class="mt-3">
+                    <h4 class="mb-3">{{ __('Billable add-ons') }}</h4>
+                    @foreach ($planAttribute['seatBillingSummary'] as $seat)
+                    <div class="alert alert-info" role="alert">
+                        {{ $seat['label'] }}:
+                        <strong>{{ number_format($seat['used']) }}</strong>
+                        {{ __('used') }}
+                        ({{ __(':count included', ['count' => number_format($seat['included'])]) }})
+                        @if ($seat['billable'] > 0)
+                            — <strong>{{ number_format($seat['billable']) }}</strong> {{ __('billed on Stripe') }}
+                            @if ($seat['unit_price'] > 0)
+                                @ {{ money($seat['unit_price'], config('settings.cashier_currency'), config('settings.do_convertion', true)) }}/{{ __('mo') }}
+                            @endif
+                        @else
+                            — {{ __('No add-on seats') }}
+                        @endif
+                    </div>
+                    @endforeach
+                </div>
+                @endif
+
                 
                     
 

@@ -202,7 +202,7 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
     });
 
     // Reports Routes
-    Route::controller(ReportsController::class)->prefix('reports')->name('reports.')->group(function () {
+    Route::middleware('plan.plugin:reports')->controller(ReportsController::class)->prefix('reports')->name('reports.')->group(function () {
         Route::get('/', 'dashboard')->name('dashboard');
         Route::get('/transactions', 'transactions')->name('transactions');
         Route::get('/payments', 'payments')->name('payments');

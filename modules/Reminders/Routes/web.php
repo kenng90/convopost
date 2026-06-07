@@ -11,26 +11,25 @@
 |
 */
 
-
 Route::group([
-    'middleware' =>['web'],
-    'namespace' => 'Modules\Reminders\Http\Controllers'
+    'middleware' => ['web'],
+    'namespace' => 'Modules\Reminders\Http\Controllers',
 ], function () {
-     //PUBLIC API
-    Route::prefix('api/reminders/reservation')->group(function() {
+    //PUBLIC API
+    Route::prefix('api/reminders/reservation')->group(function () {
         Route::post('makeReservation', 'APIController@createReservation');
     });
 });
 
 Route::group([
-    'middleware' =>[ 'web','impersonate','XssSanitizer','auth'],
-    'namespace' => 'Modules\Reminders\Http\Controllers'
+    'middleware' => ['web', 'impersonate', 'XssSanitizer', 'auth', 'plan.plugin:reminders'],
+    'namespace' => 'Modules\Reminders\Http\Controllers',
 ], function () {
 
     //API
     Route::post('/api/reminders/get-contact-reservations', 'APIController@getContactReservations')->name('reminders.get-contact-reservations');
 
-    Route::prefix('reminders')->group(function() {
+    Route::prefix('reminders')->group(function () {
 
         //Reminders
         Route::get('reminders', 'RemindersController@index')->name('reminders.reminders.index');
@@ -39,9 +38,8 @@ Route::group([
         Route::post('reminders', 'RemindersController@store')->name('reminders.reminders.store');
         Route::put('reminders/{reminder}', 'RemindersController@update')->name('reminders.reminders.update');
         Route::get('reminders/del/{reminder}', 'RemindersController@destroy')->name('reminders.reminders.delete');
-        
 
-         //Source
+        //Source
         Route::get('sources', 'SourcesController@index')->name('reminders.sources.index');
         Route::get('sources/{source}/edit', 'SourcesController@edit')->name('reminders.sources.edit');
         Route::get('sources/create', 'SourcesController@create')->name('reminders.sources.create');
@@ -57,9 +55,5 @@ Route::group([
         Route::put('reservations/{reservation}', 'ReservationsController@update')->name('reminders.reservations.update');
         Route::get('reservations/del/{reservation}', 'ReservationsController@destroy')->name('reminders.reservations.delete');
 
-       
     });
 });
-
-
-

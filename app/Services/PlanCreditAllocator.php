@@ -38,6 +38,23 @@ class PlanCreditAllocator
         return true;
     }
 
+    /**
+     * Replace plan-sourced credits when the owner changes subscription tier.
+     */
+    public function replacePlanCreditsForCompany(Company $company, Plans $plan, ?Carbon $issuedAt = null): bool
+    {
+        if (! config('settings.enable_credits', true)) {
+            return false;
+        }
+
+        Credit::query()
+            ->where('company_id', $company->id)
+            ->where('source', 'like', 'plan:%')
+            ->delete();
+
+        return $this->grantForCompany($company, $plan, $issuedAt);
+    }
+
     public function buildGrantSource(Plans $plan, Carbon $issuedAt): string
     {
         return sprintf('plan:%d:%s', $plan->id, $issuedAt->format('Y-m'));

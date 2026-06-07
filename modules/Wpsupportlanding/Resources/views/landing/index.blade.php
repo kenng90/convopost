@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ConvoConnect — WhatsApp CRM & Automation Platform</title>
+<title>ConvoConnect — WhatsApp Operations & Revenue Platform</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet" />
@@ -316,7 +316,7 @@ tailwind.config = {
       </h1>
 
       <p class="text-lg text-gray-400 leading-relaxed mb-8 max-w-xl">
-        The all-in-one WhatsApp CRM, automation, and campaign platform — with native forms, AI chatbots, and payment collection. Built for teams that move fast.
+        Team inbox, outbound campaigns, visual workflows, in-chat payments, and store integrations — one platform for sales, support, and operations on WhatsApp. AI deflects tier-1 inside your flows; your team closes the rest.
       </p>
 
       <div class="flex flex-wrap gap-3 mb-10">
@@ -378,7 +378,7 @@ tailwind.config = {
         <div class="flex items-center gap-2.5 px-3 py-2.5" style="background:#1f2c34;">
           <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style="background:linear-gradient(135deg,#25D366,#075E54);">CC</div>
           <div class="flex-1 min-w-0">
-            <p class="text-xs font-semibold text-white">ConvoConnect Bot</p>
+            <p class="text-xs font-semibold text-white">StyleHive Support</p>
             <p class="text-xs" style="color:#25D366;">● Online</p>
           </div>
           <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
@@ -388,13 +388,13 @@ tailwind.config = {
         <div class="px-3 py-3 space-y-3 overflow-hidden" style="background:#0b1418; height:calc(100% - 130px);">
           <div class="flex justify-start">
             <div class="bubble-in px-3 py-2 max-w-[80%]">
-              <p class="text-xs text-white">👋 Hi! I'm here to help you book an appointment. What service do you need?</p>
+              <p class="text-xs text-white">👋 Hi John! Your order #1042 is out for delivery. Need anything else?</p>
               <p class="text-right text-xs text-gray-500 mt-1">09:41</p>
             </div>
           </div>
           <div class="flex justify-end">
             <div class="bubble-out px-3 py-2 max-w-[80%]">
-              <p class="text-xs text-white">I need a product demo please</p>
+              <p class="text-xs text-white">Can I reschedule my demo to next week?</p>
               <p class="text-right text-xs text-gray-400 mt-1">09:42 ✓✓</p>
             </div>
           </div>
@@ -472,7 +472,7 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Everything in one platform</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Every tool your WhatsApp<br/>business needs</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">From team inbox to AI automation — ConvoConnect ships every feature you need to run sales, support, and marketing on WhatsApp.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">Team inbox, campaigns, workflows, and payments — run sales, support, and marketing on WhatsApp from one place.</p>
     </div>
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -521,7 +521,7 @@ tailwind.config = {
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Visual no-code flow builder</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Keyword & event triggers</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Conditional routing & branching</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>AI chatbot nodes with your data</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>AI nodes for tier-1 deflection</li>
         </ul>
       </div>
       <!-- Card 5 -->
@@ -577,11 +577,11 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">📖</div>
         <h3 class="font-display font-700 text-lg mb-2">Knowledge Base</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">A help center your customers and AI can both use. Publish articles, embed widgets, train your bot.</p>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Self-service help center for customers and agents. Publish articles, embed widgets, and feed your automation flows.</p>
         <ul class="space-y-2">
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Articles, categories & search</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Embeddable website chat widget</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Train AI chatbot from your docs</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Powers AI flow nodes</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>SEO-optimised public pages</li>
         </ul>
       </div>
@@ -871,9 +871,9 @@ tailwind.config = {
   <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px" style="background:linear-gradient(90deg,transparent,rgba(37,211,102,0.3),transparent);"></div>
   <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
     <div class="text-center mb-16">
-      <div class="badge inline-flex mb-4">Flowmaker</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Automate every<br/>customer touchpoint</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Build powerful WhatsApp automations with a visual flow editor. No developers needed — just drag, connect, and deploy.</p>
+      <div class="badge inline-flex mb-4">Workflow Automation</div>
+      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Orchestrate every<br/>customer touchpoint</h2>
+      <p class="text-gray-400 max-w-xl mx-auto">Build sales, support, and onboarding flows visually — from cart recovery to agent handoff. AI is one node in the graph, not the whole product.</p>
     </div>
 
     <div class="grid lg:grid-cols-2 gap-12 items-center">
@@ -944,13 +944,6 @@ tailwind.config = {
           </div>
         </div>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
-          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">🤖</div>
-          <div>
-            <p class="text-sm font-semibold text-white mb-0.5">AI Chatbot Nodes</p>
-            <p class="text-xs text-gray-500">Deploy an AI assistant trained on your documents, FAQs, and website content. Hands off to agents when needed.</p>
-          </div>
-        </div>
-        <div class="flow-node px-4 py-3.5 flex items-start gap-4">
           <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">⏱️</div>
           <div>
             <p class="text-sm font-semibold text-white mb-0.5">Delay & Wait Nodes</p>
@@ -962,6 +955,13 @@ tailwind.config = {
           <div>
             <p class="text-sm font-semibold text-white mb-0.5">Action & Webhook Nodes</p>
             <p class="text-xs text-gray-500">Update contact fields, tag contacts, assign to agent, send webhook to your system, or trigger another flow.</p>
+          </div>
+        </div>
+        <div class="flow-node px-4 py-3.5 flex items-start gap-4">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">🤖</div>
+          <div>
+            <p class="text-sm font-semibold text-white mb-0.5">AI Flow Nodes</p>
+            <p class="text-xs text-gray-500">Deflect tier-1 FAQs using your docs and knowledge base — then hand off to an agent in the shared inbox when needed.</p>
           </div>
         </div>
       </div>
@@ -1235,18 +1235,18 @@ tailwind.config = {
       </div>
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="flex text-yellow-400 mb-4 text-sm">★★★★★</div>
-        <p class="text-gray-300 text-sm leading-relaxed mb-5">"We replaced three separate tools with ConvoConnect. The shared inbox, campaign builder, and REST API all work exactly as advertised. Our support team handles 3x the volume with the same headcount."</p>
+        <p class="text-gray-300 text-sm leading-relaxed mb-5">"We manage 18 client WhatsApp numbers from one dashboard. Campaigns, inboxes, and flows per brand — that's why agencies choose ConvoConnect over native Meta tools."</p>
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm" style="background:linear-gradient(135deg,#4facfe,#00f2fe);">TN</div>
-          <div><p class="text-sm font-semibold text-white">Taiwo Nwosu</p><p class="text-xs text-gray-500">Head of CX, PayStack Partner</p></div>
+          <div class="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm" style="background:linear-gradient(135deg,#4facfe,#00f2fe);">DO</div>
+          <div><p class="text-sm font-semibold text-white">David Okonkwo</p><p class="text-xs text-gray-500">Founder, WhatsApp Agency (Lagos)</p></div>
         </div>
       </div>
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="flex text-yellow-400 mb-4 text-sm">★★★★★</div>
-        <p class="text-gray-300 text-sm leading-relaxed mb-5">"The WhatsApp Flows feature is a game-changer. We collect lead data, book demos, and process deposits — all inside WhatsApp. Conversion rates from WhatsApp are 5x higher than our web forms."</p>
+        <p class="text-gray-300 text-sm leading-relaxed mb-5">"We replaced three separate tools with ConvoConnect. The shared inbox, campaign builder, and REST API all work exactly as advertised. Our support team handles 3x the volume with the same headcount."</p>
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm" style="background:linear-gradient(135deg,#f093fb,#f5576c);">SK</div>
-          <div><p class="text-sm font-semibold text-white">Sakshi Khanna</p><p class="text-xs text-gray-500">Growth, Shopify Store (Mumbai)</p></div>
+          <div class="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm" style="background:linear-gradient(135deg,#667eea,#764ba2);">TN</div>
+          <div><p class="text-sm font-semibold text-white">Taiwo Nwosu</p><p class="text-xs text-gray-500">Head of CX, PayStack Partner</p></div>
         </div>
       </div>
     </div>
@@ -1316,6 +1316,15 @@ tailwind.config = {
           <p class="text-sm text-gray-400 leading-relaxed">Yes — all plans include a 14-day free trial with no credit card required. You get full access to the plan's features from day one. After the trial, you can subscribe or cancel — no questions asked.</p>
         </div>
       </div>
+      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 7 ? null : 7">
+          <span class="text-sm font-semibold text-white">How is ConvoConnect different from Meta's Business Agent?</span>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 7 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+        <div x-show="open === 7" x-cloak class="px-6 pb-4">
+          <p class="text-sm text-gray-400 leading-relaxed">Meta's Business Agent is great for simple FAQ support inside WhatsApp Business. ConvoConnect is the operations layer: shared team inbox, outbound campaigns, custom workflows, M-Pesa and Stripe payments, multi-number management, and deep integrations — with AI as one step in your flows, not a black-box replacement for your whole stack.</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -1329,7 +1338,7 @@ tailwind.config = {
     <h2 class="font-display text-5xl sm:text-6xl lg:text-7xl font-800 leading-tight mb-6" style="letter-spacing:-0.02em;">
       Start selling on<br/><span class="grad-text">WhatsApp today</span>
     </h2>
-    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Join 2,400+ businesses using ConvoConnect to close more deals, delight customers, and automate their WhatsApp revenue.</p>
+    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Join 2,400+ businesses running team inbox, campaigns, workflows, and payments on WhatsApp with ConvoConnect.</p>
     <div class="flex flex-wrap justify-center gap-4 mb-6">
       <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
         Start Free Today — 14 days free
@@ -1353,7 +1362,7 @@ tailwind.config = {
           </div>
           <span class="font-display font-800 text-lg tracking-tight">Convo<span class="grad-text">Connect</span></span>
         </a>
-        <p class="text-sm text-gray-500 leading-relaxed max-w-xs mb-5">The complete WhatsApp CRM and automation platform for modern businesses. Built on the official Meta WhatsApp Business API.</p>
+        <p class="text-sm text-gray-500 leading-relaxed max-w-xs mb-5">WhatsApp revenue & operations platform — team inbox, campaigns, workflows, and payments. Built on the official Meta WhatsApp Business API.</p>
         <div class="flex items-center gap-3">
           <a href="#" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all">
             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>

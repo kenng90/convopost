@@ -3,21 +3,20 @@
 namespace App\Http\Controllers;
 
 use Akaunting\Module\Facade as Module;
-use App\Models\Company;
+use App\Services\PlanResourceLimit;
+use App\Traits\Fields;
+use App\Traits\Modules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use ZipArchive;
-use Illuminate\Support\Str;
-use App\Traits\Fields;
-use App\Traits\Modules;
 
 class AppsController extends Controller
 {
     use Fields;
     use Modules;
-
 
     public function companyApps(): View
     {
@@ -26,7 +25,6 @@ class AppsController extends Controller
 
         //App fields
         $rawFields = $this->vendorFields($company->getAllConfigs());
-        
 
         $appFields = $this->convertJSONToFields($rawFields);
 
@@ -77,9 +75,15 @@ class AppsController extends Controller
 
     public function updateApps(Request $request): RedirectResponse
     {
-        //Update custom fields
         if ($request->has('custom')) {
-            $this->getCompany()->setMultipleConfig($request->custom);
+            $company = $this->getCompany();
+            $integrationError = app(PlanResourceLimit::class)->validateIntegrationConfigUpdate($company, $request->custom);
+
+            if ($integrationError !== null) {
+                return redirect()->route('admin.apps.company')->withStatus($integrationError);
+            }
+
+            $company->setMultipleConfig($request->custom);
         }
 
         return redirect()->route('admin.apps.company')->withStatus(__('Company app settings successfully updated.'));
@@ -91,7 +95,7 @@ class AppsController extends Controller
         $this->adminOnly();
 
         //1. Get all available apps
-        $appsLink = config('settings.apps_link','https://gist.githubusercontent.com/dimovdaniel/b1621923f8bb30327a6a53a7d6562216/raw/apps.json');
+        $appsLink = config('settings.apps_link', 'https://gist.githubusercontent.com/dimovdaniel/b1621923f8bb30327a6a53a7d6562216/raw/apps.json');
 
         $installed = [];
         foreach (Module::all() as $key => $module) {
@@ -109,16 +113,15 @@ class AppsController extends Controller
 
         //2. Merge info
         foreach ($rawApps as $key => &$app) {
-            
+
             $app->installed = Module::has($app->alias);
-           
+
             if ($app->installed) {
                 $app->version = Module::get($app->alias)->get('version');
-               
+
                 if ($app->version == '') {
                     $app->version = '1.0';
                 }
-              
 
                 //Check if app needs update
                 if ($app->latestVersion) {
@@ -132,8 +135,6 @@ class AppsController extends Controller
                 $app->category = ['tools'];
             }
         }
-
-        
 
         //Filter apps by type
         $apps = [];
@@ -165,6 +166,7 @@ class AppsController extends Controller
                 }
             }
         }
+
         //3. Return view
         return view('apps.index', compact('apps'));
 
@@ -184,28 +186,24 @@ class AppsController extends Controller
             abort(404);
         }
     }
-   
 
     public function store(Request $request): RedirectResponse
     {
-        $this->adminOnly(); 
+        $this->adminOnly();
         if ($request->has('file_url')) {
-            
+
             // Get the file content from URL
             $fileContent = file_get_contents($request->file_url);
 
             // Store the file content to storage/app/appupload
             $fullPath = storage_path('app/appupload/'.basename($request->file_url));
-            
+
             file_put_contents($fullPath, $fileContent);
-        }else{
+        } else {
             $path = $request->appupload->storeAs('appupload', $request->appupload->getClientOriginalName());
             $fullPath = storage_path('app/'.$path);
         }
 
-        
-
-       
         $zip = new ZipArchive;
 
         if ($zip->open($fullPath)) {
@@ -218,7 +216,7 @@ class AppsController extends Controller
             if (strpos($fullPath, '_lang') !== false) {
                 $destination = public_path('../lang');
                 $message = __('Language pack is installed');
-            }else if(strpos($fullPath, '_update') !== false){
+            } elseif (strpos($fullPath, '_update') !== false) {
                 $destination = public_path('../');
                 $message = __('Update is installed. Please go to settings.');
             }

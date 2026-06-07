@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Plans;
 use App\Models\User;
 use App\Services\PlanCreditAllocator;
+use App\Services\PlanSeatBillingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,8 +18,10 @@ use Stripe\Exception\InvalidRequestException;
 
 class PlansController extends Controller
 {
-    public function __construct(private readonly PlanCreditAllocator $planCreditAllocator)
-    {
+    public function __construct(
+        private readonly PlanCreditAllocator $planCreditAllocator,
+        private readonly PlanSeatBillingService $planSeatBillingService,
+    ) {
     }
 
     public function current(): View
@@ -120,6 +123,15 @@ class PlansController extends Controller
         $plan->limit_items = strip_tags($request->limit_items);
         $plan->limit_views = strip_tags($request->limit_views);
         $plan->limit_catalog_items = strip_tags($request->input('limit_catalog_items', 0));
+        $plan->limit_agents = strip_tags($request->input('limit_agents', 0));
+        $plan->limit_companies = strip_tags($request->input('limit_companies', 0));
+        $plan->limit_integrations = strip_tags($request->input('limit_integrations', 0));
+        $plan->included_agent_seats = strip_tags($request->input('included_agent_seats', 0));
+        $plan->stripe_agent_seat_price_id = strip_tags($request->input('stripe_agent_seat_price_id', '')) ?: null;
+        $plan->agent_seat_price = strip_tags($request->input('agent_seat_price', 0));
+        $plan->included_companies = strip_tags($request->input('included_companies', 0));
+        $plan->stripe_company_seat_price_id = strip_tags($request->input('stripe_company_seat_price_id', '')) ?: null;
+        $plan->company_seat_price = strip_tags($request->input('company_seat_price', 0));
 
         if (isset($request->subscribe)) {
             foreach ($request->subscribe as $key => $value) {
@@ -139,6 +151,7 @@ class PlansController extends Controller
         $plan->save();
 
         $this->updatePlanPlugins($plan, $request->pluginsSelector);
+        $this->updatePlanCapabilities($plan, $request->capabilitiesSelector);
 
         return redirect()->route('plans.index')->withStatus(__('Plan successfully created!'));
     }
@@ -197,6 +210,15 @@ class PlansController extends Controller
         $plan->limit_items = strip_tags($request->limit_items);
         $plan->limit_views = strip_tags($request->limit_views);
         $plan->limit_catalog_items = strip_tags($request->input('limit_catalog_items', 0));
+        $plan->limit_agents = strip_tags($request->input('limit_agents', 0));
+        $plan->limit_companies = strip_tags($request->input('limit_companies', 0));
+        $plan->limit_integrations = strip_tags($request->input('limit_integrations', 0));
+        $plan->included_agent_seats = strip_tags($request->input('included_agent_seats', 0));
+        $plan->stripe_agent_seat_price_id = strip_tags($request->input('stripe_agent_seat_price_id', '')) ?: null;
+        $plan->agent_seat_price = strip_tags($request->input('agent_seat_price', 0));
+        $plan->included_companies = strip_tags($request->input('included_companies', 0));
+        $plan->stripe_company_seat_price_id = strip_tags($request->input('stripe_company_seat_price_id', '')) ?: null;
+        $plan->company_seat_price = strip_tags($request->input('company_seat_price', 0));
 
         //Subscriptions plans
         if (isset($request->subscribe)) {
@@ -224,6 +246,7 @@ class PlansController extends Controller
         $plan->update();
 
         $this->updatePlanPlugins($plan, $request->pluginsSelector);
+        $this->updatePlanCapabilities($plan, $request->capabilitiesSelector);
 
         return redirect()->route('plans.index')->withStatus(__('Plan successfully updated!'));
     }
@@ -237,6 +260,15 @@ class PlansController extends Controller
             $plan->setConfig('plugins', null);
         }
 
+    }
+
+    private function updatePlanCapabilities($plan, $capabilitiesSelector): void
+    {
+        if ($capabilitiesSelector) {
+            $plan->setConfig('capabilities', json_encode($capabilitiesSelector));
+        } else {
+            $plan->setConfig('capabilities', null);
+        }
     }
 
     /**
@@ -288,9 +320,16 @@ class PlansController extends Controller
                     //SWAP
                     auth()->user()->subscription('main')->swap($plan_stripe_id);
                     auth()->user()->cancel_url = route('plans.cancel');
+                    $this->planSeatBillingService->syncForOwner(auth()->user());
                 } else {
                     //NEW Stripe subscription
-                    $payment_stripe = auth()->user()->newSubscription('main', $plan_stripe_id)->create($request->stripePaymentId, []);
+                    $subscriptionBuilder = auth()->user()->newSubscription('main', $plan_stripe_id);
+                    $this->planSeatBillingService->applySeatPricesToSubscriptionBuilder(
+                        $subscriptionBuilder,
+                        auth()->user(),
+                        $plan
+                    );
+                    $subscriptionBuilder->create($request->stripePaymentId, []);
                     auth()->user()->cancel_url = route('plans.cancel');
                 }
             } catch (PaymentActionRequired $e) {
@@ -344,13 +383,22 @@ class PlansController extends Controller
 
         $company = $this->resolveUserCompany($user);
         if ($company) {
-            $this->planCreditAllocator->grantForCompany($company, $plan);
+            $this->planCreditAllocator->replacePlanCreditsForCompany($company, $plan);
         }
+
+        app(PlanSeatBillingService::class)->syncForOwner($user);
     }
 
     private function resolveUserCompany(User $user): ?Company
     {
         if ($user->hasRole('owner')) {
+            if (session()->has('company_id')) {
+                $company = Company::find(session('company_id'));
+                if ($company !== null && (int) $company->user_id === (int) $user->id) {
+                    return $company;
+                }
+            }
+
             return Company::where('user_id', $user->id)->first();
         }
 

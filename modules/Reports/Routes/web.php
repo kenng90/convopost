@@ -16,7 +16,7 @@ Route::group([
     'namespace' => 'Modules\Reports\Http\Controllers',
 ], function () {
     Route::group([
-        'middleware' => ['verified', 'web', 'auth', 'impersonate', 'XssSanitizer', 'isOwnerOnPro'],
+        'middleware' => ['verified', 'web', 'auth', 'impersonate', 'XssSanitizer', 'isOwnerOnPro', 'plan.plugin:reports'],
     ], function () {
         Route::prefix('reports')->group(function () {
             Route::get('/', 'Main@index')->name('reports.index');

@@ -18,10 +18,13 @@
             @endforeach
 
             @hasrole('owner')
+            @php($dashboardCompany = auth()->user()->currentCompany())
             @foreach (config('global.reportsOnDashboard') as $reportView)
-               @include($reportView[0])
-               @include($reportView[1])
-               <br />
+                @if($dashboardCompany && $dashboardCompany->hasPlanPlugin($reportView['alias']))
+                    @include($reportView['view'])
+                    @include($reportView['script'])
+                    <br />
+                @endif
             @endforeach
             @endhasrole
             

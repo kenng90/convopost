@@ -13,10 +13,10 @@
 
 Route::group([
     'middleware' => ['web', 'impersonate'],
-    'namespace' => 'Modules\Woolist\Http\Controllers'
+    'namespace' => 'Modules\Woolist\Http\Controllers',
 ], function () {
     Route::group([
-        'middleware' => ['verified', 'web', 'auth', 'impersonate', 'XssSanitizer', 'isOwnerOnPro'],
+        'middleware' => ['verified', 'web', 'auth', 'impersonate', 'XssSanitizer', 'isOwnerOnPro', 'plan.plugin:woolist'],
     ], function () {
         //Force reload
         Route::get('/woolist/getData/{force_reload?}', 'Main@getData');

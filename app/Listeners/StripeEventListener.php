@@ -5,13 +5,16 @@ namespace App\Listeners;
 use App\Models\Plans;
 use App\Models\User;
 use App\Services\PlanCreditAllocator;
+use App\Services\PlanSeatBillingService;
 use Illuminate\Support\Facades\Log;
 use Laravel\Cashier\Events\WebhookHandled;
 
 class StripeEventListener
 {
-    public function __construct(private readonly PlanCreditAllocator $planCreditAllocator)
-    {
+    public function __construct(
+        private readonly PlanCreditAllocator $planCreditAllocator,
+        private readonly PlanSeatBillingService $planSeatBillingService,
+    ) {
     }
 
     /**
@@ -32,8 +35,10 @@ class StripeEventListener
                         $user->save();
 
                         if ($user->company) {
-                            $this->planCreditAllocator->grantForCompany($user->company, $plan);
+                            $this->planCreditAllocator->replacePlanCreditsForCompany($user->company, $plan);
                         }
+
+                        $this->planSeatBillingService->syncForOwner($user);
                     }
                 }
             } catch (\Exception $e) {
