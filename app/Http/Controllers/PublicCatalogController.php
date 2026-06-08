@@ -2,50 +2,72 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PublicCatalogBrowseRequest;
 use App\Models\ListCatalog;
+use App\Services\CatalogItemFilterService;
 use App\Services\InvoiceWhatsAppService;
 use Illuminate\Http\Request;
 use Modules\Invoice\Models\Invoice;
 
 class PublicCatalogController extends Controller
 {
+    public function __construct(
+        protected CatalogItemFilterService $catalogItemFilter,
+    ) {
+    }
+
     /**
      * Display public catalog page
      */
-    public function show($catalogId)
+    public function show(PublicCatalogBrowseRequest $request, $catalogId)
     {
-        // Get catalog with eager loading
         $catalog = ListCatalog::find($catalogId);
 
-        if (!$catalog) {
+        if (! $catalog) {
             return view('public.catalog.not-found', [
-                'message' => 'Catalog not found'
+                'message' => 'Catalog not found',
             ]);
         }
 
-        // Get company details
         $company = $catalog->company;
+        $browse = $this->catalogItemFilter->browse(
+            $catalog->items ?? [],
+            $request->filters(),
+            route('catalog.public', ['catalogId' => $catalog->id])
+        );
 
         return view('public.catalog.index', [
             'catalog' => $catalog,
             'company' => $company,
-            'items' => $catalog->items ?? [],
+            'items' => $browse['items'],
+            'filterOptions' => $browse['filterOptions'],
+            'filters' => $browse['filters'],
+            'totalInCatalog' => $browse['totalInCatalog'],
+            'filteredTotal' => $browse['filteredTotal'],
         ]);
     }
 
     /**
-     * API endpoint to get catalog data
+     * API endpoint to get catalog data (supports search, filters, pagination)
      */
-    public function getItems($catalogId)
+    public function getItems(PublicCatalogBrowseRequest $request, $catalogId)
     {
         $catalog = ListCatalog::find($catalogId);
 
-        if (!$catalog) {
+        if (! $catalog) {
             return response()->json([
                 'success' => false,
-                'message' => 'Catalog not found'
+                'message' => 'Catalog not found',
             ], 404);
         }
+
+        $browse = $this->catalogItemFilter->browse(
+            $catalog->items ?? [],
+            $request->filters(),
+            route('catalog.items', ['catalogId' => $catalog->id])
+        );
+
+        $paginator = $browse['items'];
 
         return response()->json([
             'success' => true,
@@ -53,8 +75,20 @@ class PublicCatalogController extends Controller
                 'id' => $catalog->id,
                 'name' => $catalog->name,
                 'description' => $catalog->description,
-                'items' => $catalog->items ?? [],
-            ]
+            ],
+            'items' => $paginator->items(),
+            'filter_options' => $browse['filterOptions'],
+            'filters' => $browse['filters'],
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+            ],
+            'total_in_catalog' => $browse['totalInCatalog'],
+            'filtered_total' => $browse['filteredTotal'],
         ]);
     }
 
@@ -65,10 +99,10 @@ class PublicCatalogController extends Controller
     {
         $catalog = ListCatalog::find($catalogId);
 
-        if (!$catalog) {
+        if (! $catalog) {
             return response()->json([
                 'success' => false,
-                'message' => 'Catalog not found'
+                'message' => 'Catalog not found',
             ], 404);
         }
 
@@ -83,14 +117,14 @@ class PublicCatalogController extends Controller
             ]);
 
             // Build order message
-            $orderMessage = "📦 *New Order from Catalog: " . $catalog->name . "*\n\n";
+            $orderMessage = '📦 *New Order from Catalog: '.$catalog->name."*\n\n";
 
             if ($validated['customerName'] ?? null) {
-                $orderMessage .= "👤 *Customer:* " . $validated['customerName'] . "\n";
+                $orderMessage .= '👤 *Customer:* '.$validated['customerName']."\n";
             }
 
             if ($validated['customerPhone'] ?? null) {
-                $orderMessage .= "📱 *Phone:* " . $validated['customerPhone'] . "\n";
+                $orderMessage .= '📱 *Phone:* '.$validated['customerPhone']."\n";
             }
 
             $orderMessage .= "\n📋 *Items:*\n";
@@ -102,7 +136,7 @@ class PublicCatalogController extends Controller
                     $itemTotal = ($product['price'] ?? 0) * $item['quantity'];
                     $orderMessage .= "• {$product['title']} (x{$item['quantity']}) - ";
                     if (isset($product['price'])) {
-                        $orderMessage .= "Price: {$product['price']} = " . $itemTotal . "\n";
+                        $orderMessage .= "Price: {$product['price']} = ".$itemTotal."\n";
                         $totalPrice += $itemTotal;
                     } else {
                         $orderMessage .= "\n";
@@ -111,11 +145,11 @@ class PublicCatalogController extends Controller
             }
 
             if ($totalPrice > 0) {
-                $orderMessage .= "\n💰 *Total:* " . $totalPrice . "\n";
+                $orderMessage .= "\n💰 *Total:* ".$totalPrice."\n";
             }
 
             if ($validated['notes'] ?? null) {
-                $orderMessage .= "\n📝 *Notes:* " . $validated['notes'] . "\n";
+                $orderMessage .= "\n📝 *Notes:* ".$validated['notes']."\n";
             }
 
             return response()->json([
@@ -127,7 +161,7 @@ class PublicCatalogController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error generating order: ' . $e->getMessage()
+                'message' => 'Error generating order: '.$e->getMessage(),
             ], 400);
         }
     }
@@ -139,10 +173,10 @@ class PublicCatalogController extends Controller
     {
         $catalog = ListCatalog::find($catalogId);
 
-        if (!$catalog) {
+        if (! $catalog) {
             return response()->json([
                 'success' => false,
-                'message' => 'Catalog not found'
+                'message' => 'Catalog not found',
             ], 404);
         }
 
@@ -219,7 +253,7 @@ class PublicCatalogController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Invoice created successfully' . ($whatsAppSent ? ' and sent via WhatsApp' : ''),
+                'message' => 'Invoice created successfully'.($whatsAppSent ? ' and sent via WhatsApp' : ''),
                 'invoice' => [
                     'id' => $invoiceIdentifier,
                     'invoice_number' => $invoice->invoice_number,
@@ -233,7 +267,7 @@ class PublicCatalogController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error creating invoice: ' . $e->getMessage()
+                'message' => 'Error creating invoice: '.$e->getMessage(),
             ], 400);
         }
     }
@@ -248,10 +282,10 @@ class PublicCatalogController extends Controller
             ->orWhere('id', $invoiceId)
             ->first();
 
-        if (!$invoice) {
+        if (! $invoice) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invoice not found'
+                'message' => 'Invoice not found',
             ], 404);
         }
 
@@ -286,9 +320,9 @@ class PublicCatalogController extends Controller
             ->orWhere('id', $invoiceId)
             ->first();
 
-        if (!$invoice) {
+        if (! $invoice) {
             return view('invoice.not-found', [
-                'message' => 'Invoice not found'
+                'message' => 'Invoice not found',
             ]);
         }
 
@@ -320,7 +354,7 @@ class PublicCatalogController extends Controller
      */
     private function findProductInCatalog($items, $productId)
     {
-        if (!is_array($items)) {
+        if (! is_array($items)) {
             return null;
         }
 

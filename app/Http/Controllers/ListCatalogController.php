@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ManageCatalogItemsRequest;
 use App\Models\Company;
 use App\Models\ListCatalog;
+use App\Services\CatalogItemFilterService;
 use App\Services\CatalogItemPlanLimit;
 use App\Services\ExcelImportService;
 use App\Services\WhatsApp\OrderInvoiceMessageTemplateService;
@@ -17,6 +19,7 @@ class ListCatalogController extends Controller
         protected ExcelImportService $excelService,
         protected CatalogItemPlanLimit $catalogItemPlanLimit,
         protected OrderInvoiceMessageTemplateService $orderInvoiceTemplateService,
+        protected CatalogItemFilterService $catalogItemFilter,
     ) {
     }
 
@@ -449,9 +452,28 @@ class ListCatalogController extends Controller
     }
 
     /**
-     * Get catalog items for management
+     * Display catalog items management page
      */
-    public function getItems($id)
+    public function itemsPage($id)
+    {
+        if (! auth()->check()) {
+            return redirect()->route('login');
+        }
+
+        $companyId = auth()->user()->company_id;
+        $catalog = ListCatalog::where('id', $id)
+            ->where('company_id', $companyId)
+            ->firstOrFail();
+
+        return view('settings.catalog-items', [
+            'catalog' => $catalog,
+        ]);
+    }
+
+    /**
+     * Get catalog items for management (paginated)
+     */
+    public function getItems(ManageCatalogItemsRequest $request, $id)
     {
         if (! auth()->check()) {
             return response()->json([
@@ -466,9 +488,27 @@ class ListCatalogController extends Controller
                 ->where('company_id', $companyId)
                 ->firstOrFail();
 
+            $browse = $this->catalogItemFilter->browse(
+                $catalog->items ?? [],
+                $request->filters(),
+                route('catalogs.items', ['id' => $catalog->id])
+            );
+
+            $paginator = $browse['items'];
+
             return response()->json([
                 'success' => true,
-                'items' => $catalog->items ?? [],
+                'items' => $paginator->items(),
+                'pagination' => [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page' => $paginator->lastPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                    'from' => $paginator->firstItem(),
+                    'to' => $paginator->lastItem(),
+                ],
+                'total_in_catalog' => $browse['totalInCatalog'],
+                'filtered_total' => $browse['filteredTotal'],
             ]);
 
         } catch (\Exception $e) {
@@ -477,6 +517,48 @@ class ListCatalogController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Catalog not found',
+            ], 404);
+        }
+    }
+
+    /**
+     * Get a single catalog item for editing
+     */
+    public function getItem($id, $itemId)
+    {
+        if (! auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        try {
+            $companyId = auth()->user()->company_id;
+            $catalog = ListCatalog::where('id', $id)
+                ->where('company_id', $companyId)
+                ->firstOrFail();
+
+            $item = $this->findProductInCatalog($catalog->items ?? [], $itemId);
+
+            if ($item === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Item not found',
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'item' => $item,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get catalog item failed', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Item not found',
             ], 404);
         }
     }
@@ -710,5 +792,16 @@ class ListCatalogController extends Controller
         }
 
         return $value;
+    }
+
+    private function findProductInCatalog(array $items, string $productId): ?array
+    {
+        foreach ($items as $item) {
+            if (($item['id'] ?? null) === $productId) {
+                return $item;
+            }
+        }
+
+        return null;
     }
 }
