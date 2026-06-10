@@ -90,7 +90,7 @@
                                             <a href="{{ route('admin.companies.switch', $company) }}" class="btn btn-sm btn-primary">
                                                 <i class="fas fa-random"></i> {{ __('Switch') }}
                                             </a>
-                                            @if($company->id != auth()->user()->company_id)
+                                            @if($company->id != auth()->user()->companies()->oldest('id')->value('id'))
                                                 <form action="{{ route('admin.companies.destroy', $company) }}" method="POST" class="d-inline">
                                                     @csrf
                                                     @method('DELETE')

@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\Company;
 use App\Models\Credit;
 use App\Models\Plans;
+use App\Models\User;
 use App\Services\PlanCreditAllocator;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,16 +43,17 @@ class PlanCreditReplaceTest extends TestCase
             'features' => 'Pro',
         ]);
 
-        $company = Company::factory()->create();
+        $owner = User::factory()->create();
+        Company::factory()->create(['user_id' => $owner->id]);
         $issuedAt = Carbon::parse('2026-06-01 10:00:00');
         $allocator = new PlanCreditAllocator;
 
-        $allocator->grantForCompany($company, $oldPlan, $issuedAt);
-        $this->assertSame(1000, $company->fresh()->getTotalRemainingCredits());
+        $allocator->grantForUser($owner, $oldPlan, $issuedAt);
+        $this->assertSame(1000, $owner->fresh()->getTotalRemainingCredits());
 
-        $allocator->replacePlanCreditsForCompany($company, $newPlan, $issuedAt);
+        $allocator->replacePlanCreditsForUser($owner, $newPlan, $issuedAt);
 
-        $this->assertSame(5000, $company->fresh()->getTotalRemainingCredits());
-        $this->assertSame(1, Credit::where('company_id', $company->id)->where('source', 'like', 'plan:%')->count());
+        $this->assertSame(5000, $owner->fresh()->getTotalRemainingCredits());
+        $this->assertSame(1, Credit::where('user_id', $owner->id)->where('source', 'like', 'plan:%')->count());
     }
 }

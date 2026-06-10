@@ -2,9 +2,9 @@
 
 namespace Tests\Unit;
 
-use App\Models\Company;
 use App\Models\Credit;
 use App\Models\Plans;
+use App\Models\User;
 use App\Services\PlanCreditAllocator;
 use Carbon\Carbon;
 use Mockery;
@@ -31,9 +31,9 @@ class PlanCreditAllocatorTest extends TestCase
         $plan->period = 1;
         $plan->credit_amount = 2500;
 
-        $company = Mockery::mock(Company::class)->makePartial();
-        $company->id = 5;
-        $company->shouldReceive('addCredits')
+        $user = Mockery::mock(User::class)->makePartial();
+        $user->id = 5;
+        $user->shouldReceive('addCredits')
             ->once()
             ->with(2500.0, 'plan:10:2026-06', Mockery::type(Carbon::class));
 
@@ -45,7 +45,7 @@ class PlanCreditAllocatorTest extends TestCase
         $allocator = new PlanCreditAllocator;
         $issuedAt = Carbon::parse('2026-06-01 10:00:00');
 
-        $this->assertTrue($allocator->grantForCompany($company, $plan, $issuedAt));
+        $this->assertTrue($allocator->grantForUser($user, $plan, $issuedAt));
     }
 
     public function test_skips_grant_when_period_already_has_credit_entry(): void
@@ -61,9 +61,9 @@ class PlanCreditAllocatorTest extends TestCase
         $plan->period = 1;
         $plan->credit_amount = 2500;
 
-        $company = Mockery::mock(Company::class)->makePartial();
-        $company->id = 5;
-        $company->shouldNotReceive('addCredits');
+        $user = Mockery::mock(User::class)->makePartial();
+        $user->id = 5;
+        $user->shouldNotReceive('addCredits');
 
         $creditAlias = Mockery::mock('alias:'.Credit::class);
         $creditAlias->shouldReceive('query->where->where->exists')
@@ -72,6 +72,6 @@ class PlanCreditAllocatorTest extends TestCase
 
         $allocator = new PlanCreditAllocator;
 
-        $this->assertFalse($allocator->grantForCompany($company, $plan, Carbon::parse('2026-06-10')));
+        $this->assertFalse($allocator->grantForUser($user, $plan, Carbon::parse('2026-06-10')));
     }
 }

@@ -421,10 +421,13 @@ class CompaniesController extends Controller
     {
         $company = Company::findOrFail($companyid);
         if ($this->verifyAccess($company)) {
-            //Set the company
             session(['company_id' => $company->id]);
             session(['company_currency' => $company->currency]);
             session(['company_convertion' => $company->do_covertion]);
+
+            if (auth()->user()->hasRole('owner')) {
+                auth()->user()->forceFill(['company_id' => $company->id])->save();
+            }
 
             return redirect()->route('home');
         } else {
@@ -486,9 +489,10 @@ class CompaniesController extends Controller
 
     public function share(): View
     {
-        $url = auth()->user()->company->getLinkAttribute();
+        $company = auth()->user()->currentCompany();
+        $url = $company?->getLinkAttribute() ?? '';
 
-        return view('companies.share', ['url' => $url, 'name' => auth()->user()->company->name]);
+        return view('companies.share', ['url' => $url, 'name' => $company?->name ?? '']);
     }
 
     public function logoutAndRedirectToRegister(): RedirectResponse

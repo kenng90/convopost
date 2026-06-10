@@ -80,44 +80,14 @@ class Controller extends BaseController
 
     }
 
-    public function getCompany()
+    public function getCompany(): ?Company
     {
-        if (! auth()->user()->hasRole('owner') && ! auth()->user()->hasRole('staff')) {
-            return null;
-        }
+        return auth()->user()?->currentCompany();
+    }
 
-        //If the owner hasn't set auth()->user()->company_id set it now
-        if (auth()->user()->hasRole('owner')) {
-
-            //Check sessions, if there is company ID, then it is set
-            if (session()->has('company_id')) {
-                $company = Company::find(session('company_id'));
-                if ($company == null) {
-                    //There is error, company is not found, or removed
-                   //Continue with the flow
-                }else{
-                    return $company;
-                }
-            }
-
-            if (auth()->user()->company_id == null) {
-                auth()->user()->company_id = Company::where('user_id', auth()->user()->id)->first()->id;
-                auth()->user()->update();
-            }
-            //Get company for currerntly logged in user
-            $company = Company::where('user_id', auth()->user()->id)->first();
-            if ($company == null) {
-                //There is error, company is not found, or removed
-                auth()->logout();
-                abort(403);
-            }
-
-            return Company::where('user_id', auth()->user()->id)->first();
-        } else {
-            //Staff
-            return Company::findOrFail(auth()->user()->company_id);
-        }
-
+    protected function activeCompanyId(): ?int
+    {
+        return $this->getCompany()?->id;
     }
 
     public function ownerOnly()

@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\ListCatalog;
 use App\Services\InvoiceWhatsAppService;
-use App\Services\MpesaService;
 use App\Services\MpesaCallbackValidator;
+use App\Services\MpesaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Modules\Invoice\Models\Invoice;
@@ -20,7 +20,7 @@ class InvoiceController extends Controller
      */
     public function createFromOrder(Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -38,7 +38,7 @@ class InvoiceController extends Controller
                 'description' => 'nullable|string',
             ]);
 
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $company = Company::find($companyId);
             $catalog = ListCatalog::where('id', $validated['catalog_id'])
                 ->where('company_id', $companyId)
@@ -79,14 +79,14 @@ class InvoiceController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Invoice created successfully' . ($whatsAppSent ? ' and sent via WhatsApp' : ''),
+                'message' => 'Invoice created successfully'.($whatsAppSent ? ' and sent via WhatsApp' : ''),
                 'invoice' => $invoice->toInvoiceArray(),
                 'whatsapp_sent' => $whatsAppSent,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to create invoice', [
                 'error' => $e->getMessage(),
-                'company_id' => auth()->user()->company_id ?? null,
+                'company_id' => $this->activeCompanyId() ?? null,
             ]);
 
             return response()->json([
@@ -101,7 +101,7 @@ class InvoiceController extends Controller
      */
     public function show(Invoice $invoice)
     {
-        if (auth()->check() && auth()->user()->company_id !== $invoice->company_id) {
+        if (auth()->check() && ! auth()->user()->ownsCompany($invoice->company_id)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -133,6 +133,7 @@ class InvoiceController extends Controller
                     'provided_phone' => $validated['customer_phone'],
                     'expected_phone' => $invoice->customer_phone,
                 ]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid customer phone number',
@@ -158,12 +159,13 @@ class InvoiceController extends Controller
             // Initialize M-Pesa service
             $mpesaService = new MpesaService($invoice->company);
 
-            if (!$mpesaService->isConfigured()) {
+            if (! $mpesaService->isConfigured()) {
                 $errors = $mpesaService->getConfigErrors();
                 Log::error('M-Pesa not configured for invoice payment', [
                     'invoice_id' => $invoice->id,
                     'errors' => $errors,
                 ]);
+
                 return response()->json([
                     'success' => false,
                     'message' => 'M-Pesa is not configured. Please contact support.',
@@ -185,16 +187,17 @@ class InvoiceController extends Controller
                 amount: $amount,
                 accountReference: "INV-{$invoice->invoice_number}",
                 transactionDesc: "Invoice {$invoice->invoice_number}",
-                callbackUrl: config('app.url') . '/api/invoice/payment/callback'
+                callbackUrl: config('app.url').'/api/invoice/payment/callback'
             );
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 $payment->markAsFailed($result['error']);
                 Log::error('Failed to initiate M-Pesa STK Push', [
                     'invoice_id' => $invoice->id,
                     'payment_id' => $payment->id,
                     'error' => $result['error'],
                 ]);
+
                 return response()->json([
                     'success' => false,
                     'message' => $result['error'],
@@ -246,34 +249,38 @@ class InvoiceController extends Controller
 
             // Validate callback structure and required fields
             $validation = MpesaCallbackValidator::validateStkPushCallback($body);
-            if (!$validation['valid']) {
+            if (! $validation['valid']) {
                 Log::error('Invalid M-Pesa callback structure', [
                     'errors' => $validation['errors'],
                     'body' => $body,
                 ]);
+
                 return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
             }
 
             $checkoutRequestId = $body['CheckoutRequestID'] ?? null;
-            if (!$checkoutRequestId) {
+            if (! $checkoutRequestId) {
                 Log::warning('Invalid callback: missing CheckoutRequestID');
+
                 return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
             }
 
             // Check for duplicate callbacks (replay attack prevention)
-            if (!MpesaCallbackValidator::isNotDuplicate($checkoutRequestId)) {
+            if (! MpesaCallbackValidator::isNotDuplicate($checkoutRequestId)) {
                 Log::warning('Duplicate M-Pesa callback - already processed', [
                     'checkout_request_id' => $checkoutRequestId,
                 ]);
+
                 return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
             }
 
             // Find payment by checkout request ID
             $payment = InvoicePayment::findByCheckoutRequestId($checkoutRequestId);
-            if (!$payment) {
+            if (! $payment) {
                 Log::warning('Payment not found for checkout request', [
                     'checkout_request_id' => $checkoutRequestId,
                 ]);
+
                 return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
             }
 
@@ -326,11 +333,12 @@ class InvoiceController extends Controller
     {
         // Authorization check: Verify customer phone
         $customerPhone = $request->query('customer_phone') ?? $request->input('customer_phone');
-        if (!$customerPhone || $customerPhone !== $invoice->customer_phone) {
+        if (! $customerPhone || $customerPhone !== $invoice->customer_phone) {
             Log::warning('Unauthorized payment status check - phone mismatch', [
                 'invoice_id' => $invoice->id,
                 'provided_phone' => $customerPhone,
             ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -366,14 +374,14 @@ class InvoiceController extends Controller
      */
     public function listInvoices(Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
             ], 401);
         }
 
-        $companyId = auth()->user()->company_id;
+        $companyId = $this->activeCompanyId();
 
         $invoices = Invoice::where('company_id', $companyId)
             ->with('payments')

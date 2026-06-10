@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Akaunting\Module\Facade as Module;
-use App\Models\Company;
 use App\Models\Plans;
 use App\Models\User;
 use App\Services\PlanCreditAllocator;
@@ -51,7 +50,7 @@ class PlansController extends Controller
         $colCounter = [4, 12, 6, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
 
         $currentUserPlan = Plans::withTrashed()->find(auth()->user()->mplanid());
-        $planAttribute = auth()->user()->company->getPlanAttribute();
+        $planAttribute = auth()->user()->currentCompany()?->getPlanAttribute() ?? [];
 
         $data = [
             'col' => $colCounter[count($plans)],
@@ -381,32 +380,9 @@ class PlansController extends Controller
         }
         $user->save();
 
-        $company = $this->resolveUserCompany($user);
-        if ($company) {
-            $this->planCreditAllocator->replacePlanCreditsForCompany($company, $plan);
-        }
+        $this->planCreditAllocator->replacePlanCreditsForUser($user, $plan);
 
         app(PlanSeatBillingService::class)->syncForOwner($user);
-    }
-
-    private function resolveUserCompany(User $user): ?Company
-    {
-        if ($user->hasRole('owner')) {
-            if (session()->has('company_id')) {
-                $company = Company::find(session('company_id'));
-                if ($company !== null && (int) $company->user_id === (int) $user->id) {
-                    return $company;
-                }
-            }
-
-            return Company::where('user_id', $user->id)->first();
-        }
-
-        if ($user->company_id) {
-            return Company::find($user->company_id);
-        }
-
-        return null;
     }
 
     public function isExtended()

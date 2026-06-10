@@ -115,7 +115,7 @@ class ListCatalogController extends Controller
             // Validate items
             $this->excelService->validateItems($transformedItems);
 
-            $company = Company::findOrFail(auth()->user()->company_id);
+            $company = $this->getCompany() ?? abort(403);
             $itemCount = count($transformedItems);
 
             if (! $this->catalogItemPlanLimit->canAdd($company, $itemCount)) {
@@ -128,7 +128,7 @@ class ListCatalogController extends Controller
 
             // Create catalog
             $catalogData = [
-                'company_id' => auth()->user()->company_id,
+                'company_id' => $this->activeCompanyId(),
                 'name' => $catalogName,
                 'version' => 1,
                 'items' => $transformedItems,
@@ -280,7 +280,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
 
             $catalogs = ListCatalog::where('company_id', $companyId)
                 ->where('parent_id', null) // Only root catalogs
@@ -299,7 +299,7 @@ class ListCatalogController extends Controller
                     ];
                 });
 
-            $company = Company::find(auth()->user()->company_id);
+            $company = $this->getCompany();
 
             return response()->json([
                 'success' => true,
@@ -332,7 +332,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -382,7 +382,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -430,7 +430,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -460,7 +460,7 @@ class ListCatalogController extends Controller
             return redirect()->route('login');
         }
 
-        $companyId = auth()->user()->company_id;
+        $companyId = $this->activeCompanyId();
         $catalog = ListCatalog::where('id', $id)
             ->where('company_id', $companyId)
             ->firstOrFail();
@@ -483,7 +483,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -534,7 +534,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -576,7 +576,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -664,7 +664,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -741,7 +741,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();

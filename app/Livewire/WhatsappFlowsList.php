@@ -13,13 +13,21 @@ class WhatsappFlowsList extends Component
     use WithPagination;
 
     public string $search = '';
+
     public string $statusFilter = '';
+
     public ?int $confirmDeleteId = null;
+
     public ?array $previewFlow = null;
+
     public ?string $previewScreenId = null;
+
     public ?string $metaPreviewUrl = null;
+
     public ?string $metaPreviewExpiry = null;
+
     public bool $metaPreviewLoading = false;
+
     public ?string $metaPreviewError = null;
 
     protected $queryString = [
@@ -50,27 +58,29 @@ class WhatsappFlowsList extends Component
     public function deleteFlow(int $id): void
     {
         $flow = WhatsappFlow::where('id', $id)
-            ->where('company_id', auth()->user()->company_id)
+            ->where('company_id', auth()->user()->activeCompanyId())
             ->first();
 
         if (! $flow) {
             $this->dispatch('showNotification', type: 'error', message: 'Flow not found.');
+
             return;
         }
 
-        $name       = $flow->name;
+        $name = $flow->name;
         $metaFlowId = $flow->meta_flow_id;
 
         // If flow was published to Meta, delete it there first
         if ($metaFlowId) {
             $service = new WhatsappMetaFlowService();
-            $result  = $service->deleteFlowOnMeta($flow);
+            $result = $service->deleteFlowOnMeta($flow);
 
             if (! $result['success']) {
                 // Still delete locally but warn the user about Meta
                 $flow->delete();
                 $this->confirmDeleteId = null;
-                $this->dispatch('showNotification', type: 'error', message: "Flow \"{$name}\" deleted locally, but Meta deletion failed: " . $result['message']);
+                $this->dispatch('showNotification', type: 'error', message: "Flow \"{$name}\" deleted locally, but Meta deletion failed: ".$result['message']);
+
                 return;
             }
         }
@@ -87,16 +97,16 @@ class WhatsappFlowsList extends Component
 
     public function syncStatuses(): void
     {
-        $user    = auth()->user();
-        $company = \App\Models\Company::find($user->company_id);
+        $company = auth()->user()?->currentCompany();
 
         if (! $company) {
             $this->dispatch('showNotification', type: 'error', message: 'Company not found.');
+
             return;
         }
 
         $service = new WhatsappMetaFlowService();
-        $result  = $service->syncAllStatuses($company);
+        $result = $service->syncAllStatuses($company);
 
         $type = $result['success'] ? 'success' : 'error';
         $this->dispatch('showNotification', type: $type, message: $result['message']);
@@ -105,15 +115,15 @@ class WhatsappFlowsList extends Component
     public function openPreview(int $id): void
     {
         $flow = WhatsappFlow::where('id', $id)
-            ->where('company_id', auth()->user()->company_id)
+            ->where('company_id', auth()->user()->activeCompanyId())
             ->first();
 
         if (! $flow) {
             return;
         }
 
-        $this->previewFlow      = $flow->toArray();
-        $this->metaPreviewUrl   = null;
+        $this->previewFlow = $flow->toArray();
+        $this->metaPreviewUrl = null;
         $this->metaPreviewExpiry = null;
         $this->metaPreviewError = null;
 
@@ -131,16 +141,17 @@ class WhatsappFlowsList extends Component
     private function fetchMetaPreviewUrl(WhatsappFlow $flow): void
     {
         try {
-            $company     = \App\Models\Company::find($flow->company_id);
+            $company = \App\Models\Company::find($flow->company_id);
             $accessToken = $company?->getConfig('whatsapp_permanent_access_token', '');
 
             if (empty($accessToken)) {
                 $this->metaPreviewError = 'WhatsApp access token not configured.';
+
                 return;
             }
 
             $apiVersion = 'v19.0';
-            $url        = "https://graph.facebook.com/{$apiVersion}/{$flow->meta_flow_id}";
+            $url = "https://graph.facebook.com/{$apiVersion}/{$flow->meta_flow_id}";
 
             $response = \Illuminate\Support\Facades\Http::withToken($accessToken)
                 ->timeout(15)
@@ -148,7 +159,7 @@ class WhatsappFlowsList extends Component
 
             if ($response->successful()) {
                 $data = $response->json();
-                $this->metaPreviewUrl    = $data['preview']['preview_url'] ?? null;
+                $this->metaPreviewUrl = $data['preview']['preview_url'] ?? null;
                 $this->metaPreviewExpiry = $data['preview']['expires_at'] ?? null;
 
                 if (! $this->metaPreviewUrl) {
@@ -156,10 +167,10 @@ class WhatsappFlowsList extends Component
                 }
             } else {
                 $error = $response->json()['error']['message'] ?? 'Unknown error';
-                $this->metaPreviewError = 'Could not fetch preview from Meta: ' . $error;
+                $this->metaPreviewError = 'Could not fetch preview from Meta: '.$error;
             }
         } catch (\Exception $e) {
-            $this->metaPreviewError = 'Error fetching Meta preview: ' . $e->getMessage();
+            $this->metaPreviewError = 'Error fetching Meta preview: '.$e->getMessage();
         }
     }
 
@@ -170,23 +181,23 @@ class WhatsappFlowsList extends Component
 
     public function closePreview(): void
     {
-        $this->previewFlow      = null;
-        $this->previewScreenId  = null;
-        $this->metaPreviewUrl   = null;
+        $this->previewFlow = null;
+        $this->previewScreenId = null;
+        $this->metaPreviewUrl = null;
         $this->metaPreviewExpiry = null;
         $this->metaPreviewError = null;
     }
 
     public function render(): View
     {
-        $companyId = auth()->user()->company_id;
+        $companyId = auth()->user()->activeCompanyId();
 
         $query = WhatsappFlow::forListing()
             ->where('company_id', $companyId)
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
             ->when($this->search, fn ($q) => $q->where(function ($q2) {
-                $q2->where('name', 'like', '%' . $this->search . '%')
-                   ->orWhere('description', 'like', '%' . $this->search . '%');
+                $q2->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('description', 'like', '%'.$this->search.'%');
             }))
             ->orderByDesc('updated_at');
 

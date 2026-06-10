@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\WhatsappFlow;
 use App\Services\WhatsappMetaFlowService;
 use Illuminate\Http\JsonResponse;
@@ -25,7 +24,8 @@ class FlowBuilderController extends Controller
 {
     public function __construct(
         private WhatsappMetaFlowService $metaService
-    ) {}
+    ) {
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // LOAD
@@ -37,32 +37,32 @@ class FlowBuilderController extends Controller
         \Log::info('FlowBuilderController@load called', [
             'flow_id' => $flow->id,
             'flow_name' => $flow->name ?? 'N/A',
-            'company_id' => $flow->company_id
+            'company_id' => $flow->company_id,
         ]);
-    
+
         $this->authorizeFlow($flow);
-    
-        $company     = $flow->company;
-        $endpointUrl = config('app.url') . '/webhook/wpbox/flows/'
-            . ($company?->getConfig('plain_token', '') ?: 'unknown');
-    
+
+        $company = $flow->company;
+        $endpointUrl = config('app.url').'/webhook/wpbox/flows/'
+            .($company?->getConfig('plain_token', '') ?: 'unknown');
+
         \Log::info('Returning flow data as JSON', [
             'flow_id' => $flow->id,
             'screens_count' => count($flow->flow_json['screens'] ?? []),
-            'meta_flow_id' => $flow->meta_flow_id
+            'meta_flow_id' => $flow->meta_flow_id,
         ]);
-    
+
         return response()->json([
             'flow' => [
-                'id'           => $flow->id,
-                'name'         => $flow->name,
-                'description'  => $flow->description ?? '',
-                'category'     => $flow->category ?? 'OTHER',
-                'status'       => $flow->status,
+                'id' => $flow->id,
+                'name' => $flow->name,
+                'description' => $flow->description ?? '',
+                'category' => $flow->category ?? 'OTHER',
+                'status' => $flow->status,
                 'meta_flow_id' => $flow->meta_flow_id,
-                'meta_error'   => $flow->meta_error,
+                'meta_error' => $flow->meta_error,
                 'published_at' => $flow->published_at?->toIso8601String(),
-                'screens'      => $flow->flow_json['screens'] ?? [],
+                'screens' => $flow->flow_json['screens'] ?? [],
             ],
             'endpoint_url' => $endpointUrl,
         ]);
@@ -102,26 +102,26 @@ class FlowBuilderController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'        => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category'    => 'nullable|string',
-            'screens'     => 'required|array',
+            'category' => 'nullable|string',
+            'screens' => 'required|array',
         ]);
 
-        $user    = Auth::user();
-        $company = $user->company;
+        $user = Auth::user();
+        $company = $user->currentCompany();
 
         if (! $company) {
             return response()->json(['error' => 'No company found.'], 422);
         }
 
         $flow = WhatsappFlow::create([
-            'company_id'  => $company->id,
-            'name'        => $data['name'],
+            'company_id' => $company->id,
+            'name' => $data['name'],
             'description' => $data['description'] ?? '',
-            'category'    => $data['category'] ?? 'OTHER',
-            'flow_json'   => ['screens' => $data['screens']],
-            'status'      => 'draft',
+            'category' => $data['category'] ?? 'OTHER',
+            'flow_json' => ['screens' => $data['screens']],
+            'status' => 'draft',
         ]);
 
         return response()->json([
@@ -136,17 +136,17 @@ class FlowBuilderController extends Controller
         $this->authorizeFlow($flow);
 
         $data = $request->validate([
-            'name'        => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category'    => 'nullable|string',
-            'screens'     => 'required|array',
+            'category' => 'nullable|string',
+            'screens' => 'required|array',
         ]);
 
         $flow->update([
-            'name'        => $data['name'],
+            'name' => $data['name'],
             'description' => $data['description'] ?? $flow->description,
-            'category'    => $data['category'] ?? $flow->category,
-            'flow_json'   => ['screens' => $data['screens']],
+            'category' => $data['category'] ?? $flow->category,
+            'flow_json' => ['screens' => $data['screens']],
         ]);
 
         return response()->json([
@@ -166,14 +166,14 @@ class FlowBuilderController extends Controller
 
         // Persist latest screens before publishing
         $data = $request->validate([
-            'name'        => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category'    => 'nullable|string',
-            'screens'     => 'required|array',
+            'category' => 'nullable|string',
+            'screens' => 'required|array',
         ]);
 
         $flow->update([
-            'name'      => $data['name'],
+            'name' => $data['name'],
             'flow_json' => ['screens' => $data['screens']],
         ]);
 
@@ -181,8 +181,8 @@ class FlowBuilderController extends Controller
 
         if ($result['success']) {
             return response()->json([
-                'success'      => true,
-                'message'      => 'Flow published to Meta successfully.',
+                'success' => true,
+                'message' => 'Flow published to Meta successfully.',
                 'meta_flow_id' => $result['meta_flow_id'],
             ]);
         }
@@ -190,11 +190,10 @@ class FlowBuilderController extends Controller
         return response()->json([
             'success' => false,
             'message' => $result['message'] ?? 'Publish failed.',
-            'error'   => $result['error'] ?? null,
+            'error' => $result['error'] ?? null,
         ], 422);
     }
 
-    
     // ─────────────────────────────────────────────────────────────────────────
     // RE-PUBLISH
     // POST /api/flow-builder/{flow}/republish
@@ -205,12 +204,12 @@ class FlowBuilderController extends Controller
         $this->authorizeFlow($flow);
 
         $data = $request->validate([
-            'name'    => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'screens' => 'required|array',
         ]);
 
         $flow->update([
-            'name'      => $data['name'],
+            'name' => $data['name'],
             'flow_json' => ['screens' => $data['screens']],
         ]);
 
@@ -241,12 +240,12 @@ class FlowBuilderController extends Controller
 
     public function endpointUrl(): JsonResponse
     {
-        $user    = Auth::user();
-        $company = $user->company;
-        $token   = $company?->getConfig('plain_token', '') ?: 'unknown';
+        $user = Auth::user();
+        $company = $user->currentCompany();
+        $token = $company?->getConfig('plain_token', '') ?: 'unknown';
 
         return response()->json([
-            'url' => config('app.url') . '/webhook/wpbox/flows/' . $token,
+            'url' => config('app.url').'/webhook/wpbox/flows/'.$token,
         ]);
     }
 
@@ -255,7 +254,7 @@ class FlowBuilderController extends Controller
     private function authorizeFlow(WhatsappFlow $flow): void
     {
         $user = Auth::user();
-        if ($flow->company_id !== $user->company?->id) {
+        if (! $user->ownsCompany($flow->company_id)) {
             abort(403, 'Unauthorized.');
         }
     }

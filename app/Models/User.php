@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Akaunting\Module\Facade as Module;
 use App\Traits\HasConfig;
+use App\Traits\HasCredit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -22,6 +23,7 @@ class User extends Authenticatable
     use Billable;
     use HasApiTokens;
     use HasConfig;
+    use HasCredit;
     use HasFactory;
     use HasProfilePhoto;
     use HasRoles;
@@ -71,34 +73,59 @@ class User extends Authenticatable
             return null;
         }
 
-        //If the owner hasn't set company_id set it now
         if ($this->hasRole('owner')) {
-            //Check sessions, if there is company ID, then it is set
             if (session()->has('company_id')) {
-                $company = Company::find(session('company_id'));
-                if ($company != null) {
+                $company = Company::query()
+                    ->where('id', session('company_id'))
+                    ->where('user_id', $this->id)
+                    ->first();
+
+                if ($company !== null) {
                     return $company;
                 }
             }
 
-            if ($this->company_id == null) {
-                $this->company_id = Company::where('user_id', $this->id)->first()->id;
-                $this->update();
+            if ($this->company_id !== null) {
+                $company = Company::query()
+                    ->where('id', $this->company_id)
+                    ->where('user_id', $this->id)
+                    ->first();
+
+                if ($company !== null) {
+                    return $company;
+                }
             }
 
-            //Get company for current user
-            $company = Company::where('user_id', $this->id)->first();
-            if ($company == null) {
-                //There is error, company is not found, or removed
+            $company = Company::query()->where('user_id', $this->id)->oldest('id')->first();
+
+            if ($company === null) {
                 auth()->logout();
                 abort(403);
             }
 
-            return Company::where('user_id', $this->id)->first();
-        } else {
-            //Staff
-            return Company::findOrFail($this->company_id);
+            return $company;
         }
+
+        return Company::findOrFail($this->company_id);
+    }
+
+    public function activeCompanyId(): ?int
+    {
+        return $this->currentCompany()?->id;
+    }
+
+    public function ownsCompany(Company|int $company): bool
+    {
+        $companyId = $company instanceof Company ? $company->id : $company;
+
+        if ($this->hasRole('owner')) {
+            return Company::query()
+                ->where('id', $companyId)
+                ->where('user_id', $this->id)
+                ->exists();
+        }
+
+        return (int) $this->company_id === (int) $companyId;
     }
 
     public function getCurrentCompany()

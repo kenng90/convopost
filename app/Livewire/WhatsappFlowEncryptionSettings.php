@@ -12,12 +12,17 @@ class WhatsappFlowEncryptionSettings extends Component
 {
     use EnsuresOpenSsl;
 
-    public bool $hasKey          = false;
-    public string $keyFormat     = '';
-    public string $keyPreview    = '';
-    public string $endpointUrl   = '';
-    public bool $hasPhoneId      = false;
-    public string $phoneIdHint   = '';
+    public bool $hasKey = false;
+
+    public string $keyFormat = '';
+
+    public string $keyPreview = '';
+
+    public string $endpointUrl = '';
+
+    public bool $hasPhoneId = false;
+
+    public string $phoneIdHint = '';
 
     public function mount(): void
     {
@@ -33,28 +38,28 @@ class WhatsappFlowEncryptionSettings extends Component
         }
 
         // Key status
-        $raw          = $company->getConfig('whatsapp_flow_private_key', '');
+        $raw = $company->getConfig('whatsapp_flow_private_key', '');
         $this->hasKey = ! empty(trim($raw));
 
         if ($this->hasKey) {
-            $normalized      = $this->normalizePem($raw);
-            $firstLine       = strtok($normalized, "\n");
+            $normalized = $this->normalizePem($raw);
+            $firstLine = strtok($normalized, "\n");
             $this->keyFormat = str_contains($firstLine, 'BEGIN PRIVATE KEY') ? 'PKCS#8' : 'PKCS#1 (RSA)';
-            $this->keyPreview = substr($normalized, 0, 27) . '...' . substr(trim($normalized), -25);
+            $this->keyPreview = substr($normalized, 0, 27).'...'.substr(trim($normalized), -25);
         }
 
         // Phone Number ID status (required for uploading to Meta)
-        $phoneId           = $company->getConfig('whatsapp_phone_number_id', '');
-        $this->hasPhoneId  = ! empty(trim($phoneId));
+        $phoneId = $company->getConfig('whatsapp_phone_number_id', '');
+        $this->hasPhoneId = ! empty(trim($phoneId));
         $this->phoneIdHint = $this->hasPhoneId
-            ? substr($phoneId, 0, 4) . str_repeat('*', max(0, strlen($phoneId) - 8)) . substr($phoneId, -4)
+            ? substr($phoneId, 0, 4).str_repeat('*', max(0, strlen($phoneId) - 8)).substr($phoneId, -4)
             : '';
 
         // Webhook endpoint URL
-        $user              = auth()->user();
-        $token             = $company->getConfig('plain_token', '') ?: ($user ? $user->getConfig('plain_token', '') : '');
+        $user = auth()->user();
+        $token = $company->getConfig('plain_token', '') ?: ($user ? $user->getConfig('plain_token', '') : '');
         $this->endpointUrl = $token
-            ? rtrim(config('app.url'), '/') . '/webhook/wpbox/flows/' . $token
+            ? rtrim(config('app.url'), '/').'/webhook/wpbox/flows/'.$token
             : '';
     }
 
@@ -68,16 +73,18 @@ class WhatsappFlowEncryptionSettings extends Component
 
             if (! $company) {
                 $this->dispatch('showNotification', type: 'error', message: 'Company not found.');
+
                 return;
             }
 
             if (! $this->hasPhoneId) {
                 $this->dispatch('showNotification', type: 'error', message: 'WhatsApp Phone Number ID is not set. Save it in the Facebook Developer section above first.');
+
                 return;
             }
 
             $service = new WhatsappMetaFlowService();
-            $keys    = $service->generateFlowEncryptionKeys($company);
+            $keys = $service->generateFlowEncryptionKeys($company);
 
             $uploadResult = $service->uploadPublicKeyToMeta($company, $keys['public_key']);
 
@@ -86,12 +93,12 @@ class WhatsappFlowEncryptionSettings extends Component
             if ($uploadResult['success']) {
                 $this->dispatch('showNotification', type: 'success', message: 'Keys generated and uploaded to Meta successfully. All flows will now use the new keypair.');
             } else {
-                $this->dispatch('showNotification', type: 'error', message: 'Key generated but upload failed: ' . $uploadResult['message'] . '. Use "Re-upload Public Key" to retry.');
+                $this->dispatch('showNotification', type: 'error', message: 'Key generated but upload failed: '.$uploadResult['message'].'. Use "Re-upload Public Key" to retry.');
             }
 
         } catch (\Exception $e) {
             Log::error('WhatsappFlowEncryptionSettings: generateAndUploadKeys failed', ['error' => $e->getMessage()]);
-            $this->dispatch('showNotification', type: 'error', message: 'Key generation failed: ' . $e->getMessage());
+            $this->dispatch('showNotification', type: 'error', message: 'Key generation failed: '.$e->getMessage());
         }
     }
 
@@ -106,11 +113,13 @@ class WhatsappFlowEncryptionSettings extends Component
 
             if (! $company) {
                 $this->dispatch('showNotification', type: 'error', message: 'Company not found.');
+
                 return;
             }
 
             if (! $this->hasPhoneId) {
                 $this->dispatch('showNotification', type: 'error', message: 'WhatsApp Phone Number ID is not set. Save it in the Facebook Developer section above first, then retry.');
+
                 return;
             }
 
@@ -118,6 +127,7 @@ class WhatsappFlowEncryptionSettings extends Component
 
             if (empty(trim($raw))) {
                 $this->dispatch('showNotification', type: 'error', message: 'No private key stored. Click "Setup Keys" first.');
+
                 return;
             }
 
@@ -125,36 +135,38 @@ class WhatsappFlowEncryptionSettings extends Component
             try {
                 $privateKey = $this->loadPrivateKey($raw);
             } catch (\Exception $e) {
-                $this->dispatch('showNotification', type: 'error', message: 'Stored private key is invalid: ' . $e->getMessage() . '. Click "Setup Keys" to regenerate.');
+                $this->dispatch('showNotification', type: 'error', message: 'Stored private key is invalid: '.$e->getMessage().'. Click "Setup Keys" to regenerate.');
+
                 return;
             }
 
-            $details      = openssl_pkey_get_details($privateKey);
+            $details = openssl_pkey_get_details($privateKey);
             $publicKeyPem = $details['key'] ?? null;
 
             if (empty($publicKeyPem)) {
                 $this->dispatch('showNotification', type: 'error', message: 'Could not derive public key from stored private key. Click "Setup Keys" to regenerate.');
+
                 return;
             }
 
             Log::info('WhatsappFlowEncryptionSettings: re-uploading public key to Meta', [
-                'company_id'        => $company->id,
+                'company_id' => $company->id,
                 'public_key_length' => strlen($publicKeyPem),
-                'key_format'        => $this->keyFormat,
+                'key_format' => $this->keyFormat,
             ]);
 
-            $service      = new WhatsappMetaFlowService();
+            $service = new WhatsappMetaFlowService();
             $uploadResult = $service->uploadPublicKeyToMeta($company, $publicKeyPem);
 
             if ($uploadResult['success']) {
                 $this->dispatch('showNotification', type: 'success', message: 'Public key re-uploaded to Meta successfully. Trigger the health check again — it should now pass.');
             } else {
-                $this->dispatch('showNotification', type: 'error', message: 'Re-upload failed: ' . $uploadResult['message']);
+                $this->dispatch('showNotification', type: 'error', message: 'Re-upload failed: '.$uploadResult['message']);
             }
 
         } catch (\Exception $e) {
             Log::error('WhatsappFlowEncryptionSettings: reuploadPublicKey failed', ['error' => $e->getMessage()]);
-            $this->dispatch('showNotification', type: 'error', message: 'Re-upload failed: ' . $e->getMessage());
+            $this->dispatch('showNotification', type: 'error', message: 'Re-upload failed: '.$e->getMessage());
         }
     }
 
@@ -167,6 +179,6 @@ class WhatsappFlowEncryptionSettings extends Component
     {
         $user = auth()->user();
 
-        return $user ? \App\Models\Company::find($user->company_id) : null;
+        return $user?->currentCompany();
     }
 }

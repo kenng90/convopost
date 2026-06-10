@@ -34,9 +34,7 @@ class StripeEventListener
                         $user->plan_status = 'active';
                         $user->save();
 
-                        if ($user->company) {
-                            $this->planCreditAllocator->replacePlanCreditsForCompany($user->company, $plan);
-                        }
+                        $this->planCreditAllocator->replacePlanCreditsForUser($user, $plan);
 
                         $this->planSeatBillingService->syncForOwner($user);
                     }

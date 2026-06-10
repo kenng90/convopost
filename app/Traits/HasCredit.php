@@ -10,21 +10,11 @@ use Illuminate\Support\Facades\Log;
 
 trait HasCredit
 {
-    /**
-     * Get all credits for this company
-     *
-     * @return HasMany
-     */
     public function credits()
     {
-        return $this->hasMany(Credit::class);
+        return $this->hasMany(Credit::class, 'user_id');
     }
 
-    /**
-     * Get active credits (not expired)
-     *
-     * @return HasMany
-     */
     public function activeCredits()
     {
         return $this->credits()
@@ -33,28 +23,18 @@ trait HasCredit
                     ->orWhere('expiration_date', '>=', Carbon::now());
             })
             ->where('remaining_credit_amount', '>', 0)
-            ->orderBy('expiration_date', 'asc'); // Use credits that expire soonest first
+            ->orderBy('expiration_date', 'asc');
     }
 
-    /**
-     * Get total remaining credits across all active credit records
-     *
-     * @return int
-     */
     public function getTotalRemainingCredits()
     {
         return $this->activeCredits()->sum('remaining_credit_amount');
     }
 
-    /**
-     * Add credits to the company
-     *
-     * @param  int  $amount
-     * @return Credit
-     */
     public function addCredits(int|float $amount, ?string $source = null, ?Carbon $expirationDate = null)
     {
         return $this->credits()->create([
+            'user_id' => $this->id,
             'credit_amount' => $amount,
             'remaining_credit_amount' => $amount,
             'used_credit_amount' => 0,
@@ -63,12 +43,8 @@ trait HasCredit
         ]);
     }
 
-    /**
-     * Check if there is enough credits to spend, by action name
-     */
     public function hasEnoughCreditsByAction(string $action): bool
     {
-        //If we do have credits system disabled, return true
         if (config('settings.enable_credits', false) == false) {
             return true;
         }
@@ -80,14 +56,8 @@ trait HasCredit
         return $this->hasEnoughCredits($amount);
     }
 
-    /**
-     * Check if there is enough credits to spend
-     *
-     * @param  int  $amount
-     */
     public function hasEnoughCredits(int|float $amount): bool
     {
-        //If we do have credits system disabled, return true
         if (config('settings.enable_credits', false) == false) {
             return true;
         }
@@ -95,10 +65,8 @@ trait HasCredit
         return $this->getTotalRemainingCredits() >= $amount;
     }
 
-    //useCredits by action name
-    public function useCreditsByAction(string $action, int|float $amountBasedOnUsage = 1): bool
+    public function useCreditsByAction(string $action, int|float $amountBasedOnUsage = 1, ?int $companyId = null): bool
     {
-        //If we do have credits system disabled, return true
         if (config('settings.enable_credits', false) == false) {
             return true;
         }
@@ -108,16 +76,11 @@ trait HasCredit
             $amount = (float) $amountBasedOnUsage;
         }
 
-        return $this->useCredits($amount, $action);
+        return $this->useCredits($amount, $action, $companyId);
     }
 
-    /**
-     * Use credits for an action
-     * Returns true if successful, false if insufficient credits
-     */
-    public function useCredits(int|float $amount, string $action): bool
+    public function useCredits(int|float $amount, string $action, ?int $companyId = null): bool
     {
-        //If we do have credits system disabled, return true
         if (config('settings.enable_credits', false) == false) {
             return true;
         }
@@ -141,11 +104,10 @@ trait HasCredit
                 'credit_id' => $credit->id,
                 'action' => $action,
                 'amount' => $spendFromThis,
-                'company_id' => $this->id,
+                'company_id' => $companyId,
             ];
             Log::info('useCredits', [$data]);
 
-            //Add a movement log
             CreditMovement::create($data);
 
             $remainingToSpend -= $spendFromThis;
@@ -158,22 +120,13 @@ trait HasCredit
         return true;
     }
 
-    /**
-     * Get the total remaining credits for the company and the percentage of credits used
-     */
     public function getTotalRemainingCreditsAndPercentageUsed(): array
     {
         return [$this->getTotalRemainingCredits(), $this->getPercentageOfCreditsUsed()];
     }
 
-    /**
-     * Get the percentage of credits used
-     *
-     * @return int
-     */
     public function getPercentageOfCreditsUsed()
     {
-        //This percentage is calculated based on all active credits (including non-expiring buckets)
         $totalCredits = $this->credits()
             ->where(function ($query) {
                 $query->whereNull('expiration_date')
@@ -187,7 +140,6 @@ trait HasCredit
             })
             ->sum('used_credit_amount');
 
-        //Handle division by zero case
         $percentage = $totalCredits > 0 ? round(($usedCredits / $totalCredits) * 100) : 0;
 
         return [$percentage, $totalCredits, $usedCredits];

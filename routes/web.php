@@ -13,6 +13,7 @@ use App\Http\Controllers\PlansController;
 use App\Http\Controllers\PublicCatalogController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\WhatsappFlowResponsesExportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Spatie\WelcomeNotification\WelcomesNewUsers;
@@ -191,6 +192,8 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
             Route::get('/responses/dashboard', function () {
                 return view('whatsapp-flows-responses');
             })->name('responses');
+
+            Route::get('/responses/export', WhatsappFlowResponsesExportController::class)->name('responses.export');
 
             Route::get('/api/list', 'list')->name('list');
             Route::get('/api/{id}', 'getFlow')->name('show');

@@ -1,4 +1,22 @@
 // Catalog Manager
+function formatCatalogPrice(amount) {
+    let normalized = amount;
+
+    if (typeof normalized === 'string') {
+        normalized = normalized.trim()
+            .replace(/^\s*(ksh|kes|usd)\s*/i, '')
+            .replace(/^\$+/, '')
+            .replace(/,/g, '');
+    }
+
+    const value = parseFloat(normalized) || 0;
+
+    return 'KSh ' + value.toLocaleString('en-KE', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
 console.log('Catalog manager script loaded');
 
 // Initialize on DOM ready

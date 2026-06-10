@@ -5,11 +5,12 @@ namespace App\Services;
 use App\Models\Company;
 use App\Models\Credit;
 use App\Models\Plans;
+use App\Models\User;
 use Carbon\Carbon;
 
 class PlanCreditAllocator
 {
-    public function grantForCompany(Company $company, Plans $plan, ?Carbon $issuedAt = null): bool
+    public function grantForUser(User $user, Plans $plan, ?Carbon $issuedAt = null): bool
     {
         if (! config('settings.enable_credits', true)) {
             return false;
@@ -24,7 +25,7 @@ class PlanCreditAllocator
         $source = $this->buildGrantSource($plan, $issuedAt);
 
         $alreadyGranted = Credit::query()
-            ->where('company_id', $company->id)
+            ->where('user_id', $user->id)
             ->where('source', $source)
             ->exists();
 
@@ -33,26 +34,47 @@ class PlanCreditAllocator
         }
 
         $expirationDate = (clone $issuedAt)->addDays($plan->period == 1 ? 30 : 365);
-        $company->addCredits($amount, $source, $expirationDate);
+        $user->addCredits($amount, $source, $expirationDate);
 
         return true;
     }
 
-    /**
-     * Replace plan-sourced credits when the owner changes subscription tier.
-     */
-    public function replacePlanCreditsForCompany(Company $company, Plans $plan, ?Carbon $issuedAt = null): bool
+    public function replacePlanCreditsForUser(User $user, Plans $plan, ?Carbon $issuedAt = null): bool
     {
         if (! config('settings.enable_credits', true)) {
             return false;
         }
 
         Credit::query()
-            ->where('company_id', $company->id)
+            ->where('user_id', $user->id)
             ->where('source', 'like', 'plan:%')
             ->delete();
 
-        return $this->grantForCompany($company, $plan, $issuedAt);
+        return $this->grantForUser($user, $plan, $issuedAt);
+    }
+
+    /**
+     * @deprecated Use grantForUser() — credits are shared at the owner account level.
+     */
+    public function grantForCompany(Company $company, Plans $plan, ?Carbon $issuedAt = null): bool
+    {
+        if ($company->user === null) {
+            return false;
+        }
+
+        return $this->grantForUser($company->user, $plan, $issuedAt);
+    }
+
+    /**
+     * @deprecated Use replacePlanCreditsForUser() — credits are shared at the owner account level.
+     */
+    public function replacePlanCreditsForCompany(Company $company, Plans $plan, ?Carbon $issuedAt = null): bool
+    {
+        if ($company->user === null) {
+            return false;
+        }
+
+        return $this->replacePlanCreditsForUser($company->user, $plan, $issuedAt);
     }
 
     public function buildGrantSource(Plans $plan, Carbon $issuedAt): string

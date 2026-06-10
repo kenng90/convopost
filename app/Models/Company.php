@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\DelegatesSharedCreditsToOwner;
 use App\Traits\HasConfig;
-use App\Traits\HasCredit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Company extends MyModel
 {
+    use DelegatesSharedCreditsToOwner;
     use HasConfig;
-    use HasCredit;
     use HasFactory;
     use SoftDeletes;
 

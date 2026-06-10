@@ -13,22 +13,25 @@ class Credit extends Model
 
     protected $fillable = [
         'company_id',
+        'user_id',
         'credit_amount',
-        'used_credit_amount', 
+        'used_credit_amount',
         'remaining_credit_amount',
         'expiration_date',
-        'source'
+        'source',
     ];
 
     protected $casts = [
-        'expiration_date' => 'date'
+        'expiration_date' => 'date',
     ];
 
-    /**
-     * Get the company that owns these credits
-     */
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }
