@@ -10,7 +10,12 @@ trait HasConfig
 
     private function getRow($key)
     {
-        return Config::where('key', $key)->where('model_type', $this->modelName)->where('model_id', $this->id)->first();
+        return Config::query()
+            ->where('key', $key)
+            ->where('model_type', $this->modelName)
+            ->where('model_id', $this->id)
+            ->orderByDesc('id')
+            ->first();
     }
 
     //Get config for key
@@ -26,7 +31,14 @@ trait HasConfig
 
     public function getAllConfigs()
     {
-        return Config::where('model_type', $this->modelName)->where('model_id', $this->id)->get()->pluck('value', 'key')->toArray();
+        return Config::query()
+            ->where('model_type', $this->modelName)
+            ->where('model_id', $this->id)
+            ->orderByDesc('id')
+            ->get()
+            ->unique('key')
+            ->pluck('value', 'key')
+            ->toArray();
     }
 
     public function deleteAllConfigs()
@@ -38,21 +50,18 @@ trait HasConfig
     {
         if ($configs) {
             foreach ($configs as $key => $value) {
-                $data = $this->getRow($key);
-                if ($data) {
-                    //Update
-                    $data->value = $value;
-                    $data->update();
-                } else {
-                    //Insert
-                    Config::create([
-                        'key' => $key,
-                        'value' => $value,
-                        'model_type' => $this->modelName,
-                        'model_id' => $this->id,
-                    ]);
-                }
+                Config::query()
+                    ->where('key', $key)
+                    ->where('model_type', $this->modelName)
+                    ->where('model_id', $this->id)
+                    ->delete();
 
+                Config::create([
+                    'key' => $key,
+                    'value' => $value,
+                    'model_type' => $this->modelName,
+                    'model_id' => $this->id,
+                ]);
             }
         }
 
