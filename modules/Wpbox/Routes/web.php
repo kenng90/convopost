@@ -28,13 +28,11 @@ Route::group([
             //Campaigns
             Route::get('campaigns', 'CampaignsController@index')->name('campaigns.index');
             Route::get('campaigns/{campaign}/show', 'CampaignsController@show')->name('campaigns.show');
-            Route::get('campaigns/create', 'CampaignsController@create')->name('campaigns.create');
+            Route::get('campaigns/create/{type?}', 'CampaignsController@create')->name('campaigns.create');
             Route::post('campaigns', 'CampaignsController@store')->name('campaigns.store');
             Route::put('campaigns/{campaign}', 'CampaignsController@update')->name('campaigns.update');
             Route::get('campaigns/del/{campaign}', 'CampaignsController@destroy')->name('campaigns.delete');
-            Route::post('/campaigns/parse-file', 'CampaignsController@parseFile')->name('campaigns.parse-file');
-            Route::get('/campaigns/create/{type?}', 'CampaignsController@create')->name('campaigns.create');
-            Route::post('/campaigns/store', 'CampaignsController@store')->name('campaigns.store');
+            Route::post('campaigns/parse-file', 'CampaignsController@parseFile')->name('campaigns.parse-file');
 
             //Deactivate and activate bot
             Route::get('campaigns/deactivatebot/{campaign}', 'CampaignsController@deactivateBot')->name('campaigns.deactivatebot');
