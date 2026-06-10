@@ -1341,7 +1341,7 @@ tailwind.config = {
     <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Join 2,400+ businesses running team inbox, campaigns, workflows, and payments on WhatsApp with ConvoConnect.</p>
     <div class="flex flex-wrap justify-center gap-4 mb-6">
       <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
-        Start Free Today — 14 days free
+        Start Free Today
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
       </a>
       <a href="#" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-white rounded-xl border border-white/10 hover:border-white/20 transition-all hover:bg-white/5">Contact Sales</a>

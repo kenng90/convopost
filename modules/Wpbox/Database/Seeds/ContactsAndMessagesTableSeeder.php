@@ -5,15 +5,12 @@ namespace Modules\Wpbox\Database\Seeds;
 use App\Models\Company;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use App\Models\User;
-use Modules\Contacts\Models\Field;
-use Modules\Wpbox\Models\Reply;
 use Illuminate\Support\Facades\DB;
+use Modules\Contacts\Models\Field;
 use Modules\Contacts\Models\Group;
 use Modules\Wpbox\Models\Contact;
 use Modules\Wpbox\Models\Message;
+use Modules\Wpbox\Models\Reply;
 
 class ContactsAndMessagesTableSeeder extends Seeder
 {
@@ -29,88 +26,86 @@ class ContactsAndMessagesTableSeeder extends Seeder
         //Contact fields and groups
 
         //Fields [rating,orders_made,email]
-        $rating=Field::create([
-            'name'=>"rating",
-            'company_id'=>1,
-            'type'=>"text"
+        $rating = Field::create([
+            'name' => 'rating',
+            'company_id' => 1,
+            'type' => 'text',
         ]);
-        $orders_made=Field::create([
-            'name'=>"orders_made",
-            'company_id'=>1,
-            'type'=>"number"
+        $orders_made = Field::create([
+            'name' => 'orders_made',
+            'company_id' => 1,
+            'type' => 'number',
         ]);
-        $email=Field::create([
-            'name'=>"email",
-            'company_id'=>1,
-            'type'=>"email"
+        $email = Field::create([
+            'name' => 'email',
+            'company_id' => 1,
+            'type' => 'email',
         ]);
 
+        $active = Group::create([
+            'name' => 'Active clients',
+            'company_id' => 1,
+        ]);
+        $noactive = Group::create([
+            'name' => 'Potential clients',
+            'company_id' => 1,
+        ]);
+        $europe = Group::create([
+            'name' => 'Europe clients',
+            'company_id' => 1,
+        ]);
 
-        $active=Group::create([
-            'name'=>"Active clients",
-            'company_id'=>1,
-        ]);
-        $noactive=Group::create([
-            'name'=>"Potential clients",
-            'company_id'=>1,
-        ]);
-        $europe=Group::create([
-            'name'=>"Europe clients",
-            'company_id'=>1,
-        ]);
-       
         //Contact 1
-        $demoContact1=Contact::create([
-            'name' => 'Daniel Dimov',
-            'phone' =>  '+38978203673',
-            'avatar'=> 'https://secure.gravatar.com/avatar/e2909c35cdbad84bf2b6059fe7eab2444cd6bd9fbf8af59918a1d0f4901c8ad2?s=128',
-            'company_id'=>1,
-            'has_chat'=>true,
+        $demoContact1 = Contact::create([
+            'name' => 'Kenneth',
+            'phone' => '+10000000002',
+            'avatar' => 'https://i.pravatar.cc/300?u=demo-contact-1',
+            'company_id' => 1,
+            'has_chat' => true,
             'created_at' => now()->subHour(),
             'updated_at' => now()->subHour(),
-            'last_support_reply_at'=>now(),
-            'last_reply_at'=>now(),
-            "last_message"=>"Sure, you can visit us from 09AM - 08PM",
-            "is_last_message_by_contact"=>false,  
-            "email"=>"daniel@mobidonia.com"  
+            'last_support_reply_at' => now(),
+            'last_reply_at' => now(),
+            'last_message' => 'Sure, you can visit us from 09AM - 08PM',
+            'is_last_message_by_contact' => false,
+            'email' => 'kenneth@convoconnect.io',
         ]);
         $demoContact1->fields()->attach($rating->id, ['value' => 5]);
         $demoContact1->fields()->attach($orders_made->id, ['value' => 10]);
-        $demoContact1->groups()->sync([$active->id,$europe->id]);
-        
+        $demoContact1->groups()->sync([$active->id, $europe->id]);
 
-         //Contact 2
-         $demoContact2=Contact::create([
+        //Contact 2
+        $demoContact2 = Contact::create([
             'name' => 'Aleksandra Dimova',
-            'phone' =>  '+38978514084',
-            'avatar'=> 'https://ca.slack-edge.com/T0JNGF37X-U109XCZC1-a1e054cf2aa3-512',
-            'company_id'=>1,
-            'has_chat'=>true,
-            'last_reply_at'=>now(),
-            'last_support_reply_at'=>now(),
+            'phone' => '+38978514084',
+            'avatar' => 'https://ca.slack-edge.com/T0JNGF37X-U109XCZC1-a1e054cf2aa3-512',
+            'company_id' => 1,
+            'has_chat' => true,
+            'last_reply_at' => now(),
+            'last_support_reply_at' => now(),
             'created_at' => now()->subHour(2),
             'updated_at' => now()->subHour(2),
-            "last_message"=>"Thanks for the information. I'll review the details.",
-            "is_last_message_by_contact"=>true, 
-            "email"=>"aleks@mobidonia.com"
+            'last_message' => "Thanks for the information. I'll review the details.",
+            'is_last_message_by_contact' => true,
+            'email' => 'contact2@example.com',
         ]);
         $demoContact2->fields()->attach($rating->id, ['value' => 5]);
         $demoContact2->fields()->attach($orders_made->id, ['value' => 0]);
-        $demoContact2->groups()->sync([$noactive->id,$europe->id]);
+        $demoContact2->groups()->sync([$noactive->id, $europe->id]);
 
         //Add 7 other contacts
-        for($i=0;$i<15;$i++){
+        for ($i = 0; $i < 15; $i++) {
             Contact::create([
                 'name' => \Faker\Factory::create()->name(),
-                'phone' =>  '+' . \Faker\Factory::create()->numerify('###########'),
-                'avatar'=> 'https://i.pravatar.cc/300?u=' . \Faker\Factory::create()->uuid(),
-                'last_message'=>\Faker\Factory::create()->sentence(),
-                'last_reply_at'=>now()->subHour(2+$i),
-                'last_support_reply_at'=>now()->subHour(2+$i),
-                'company_id'=>1,
-                'has_chat'=>true,
-                'created_at' => now()->subHour(2+$i),
-                'updated_at' => now()->subHour(2+$i),
+                'phone' => '+'.\Faker\Factory::create()->numerify('###########'),
+                'avatar' => 'https://i.pravatar.cc/300?u='.\Faker\Factory::create()->uuid(),
+                'last_message' => \Faker\Factory::create()->sentence(),
+                'last_reply_at' => now()->subHour(2 + $i),
+                'last_support_reply_at' => now()->subHour(2 + $i),
+                'company_id' => 1,
+                'has_chat' => true,
+                'created_at' => now()->subHour(2 + $i),
+                'updated_at' => now()->subHour(2 + $i),
             ]);
         }
 
@@ -128,7 +123,7 @@ class ContactsAndMessagesTableSeeder extends Seeder
                 'is_message_by_contact' => true,
             ],
             [
-                'value' => "Noted! Thin crust it is. What type of sauce would you prefer? We have marinara, garlic white sauce, and pesto.",
+                'value' => 'Noted! Thin crust it is. What type of sauce would you prefer? We have marinara, garlic white sauce, and pesto.',
                 'is_message_by_contact' => false,
             ],
             [
@@ -144,7 +139,7 @@ class ContactsAndMessagesTableSeeder extends Seeder
                 'is_message_by_contact' => true,
             ],
             [
-                'value' => "Mozzarella it is. And what about the main toppings? We offer pepperoni, sausage, mushrooms, onions, bell peppers, and olives.",
+                'value' => 'Mozzarella it is. And what about the main toppings? We offer pepperoni, sausage, mushrooms, onions, bell peppers, and olives.',
                 'is_message_by_contact' => false,
             ],
             [
@@ -152,7 +147,7 @@ class ContactsAndMessagesTableSeeder extends Seeder
                 'is_message_by_contact' => true,
             ],
             [
-                'value' => "Perfect, pepperoni and mushrooms. Any additional toppings? We also have options like bacon, spinach, tomatoes, and pineapple.",
+                'value' => 'Perfect, pepperoni and mushrooms. Any additional toppings? We also have options like bacon, spinach, tomatoes, and pineapple.',
                 'is_message_by_contact' => false,
             ],
             [
@@ -160,7 +155,7 @@ class ContactsAndMessagesTableSeeder extends Seeder
                 'is_message_by_contact' => true,
             ],
             [
-                'value' => "Bacon and tomatoes, got it. Lastly, any extra flavor with herbs or spices? We have options like garlic, oregano, and red pepper flakes.",
+                'value' => 'Bacon and tomatoes, got it. Lastly, any extra flavor with herbs or spices? We have options like garlic, oregano, and red pepper flakes.',
                 'is_message_by_contact' => false,
             ],
             [
@@ -188,21 +183,19 @@ class ContactsAndMessagesTableSeeder extends Seeder
                 'is_message_by_contact' => false,
             ],
         ];
-        
 
         //
-         foreach ($messagesArray as $key => $message) {
-            $demoContact1->sendDemoMessage($message['value'],$message['is_message_by_contact']);
-         }
+        foreach ($messagesArray as $key => $message) {
+            $demoContact1->sendDemoMessage($message['value'], $message['is_message_by_contact']);
+        }
 
-
-         $messagesArray = [
+        $messagesArray = [
             [
                 'value' => "Hi, I'm interested in renting a space for a party. Can you provide me with some information?",
                 'is_message_by_contact' => true,
             ],
             [
-                'value' => "Certainly! We offer various event spaces for rent. Could you please let us know the date and approximate number of guests for your party?",
+                'value' => 'Certainly! We offer various event spaces for rent. Could you please let us know the date and approximate number of guests for your party?',
                 'is_message_by_contact' => false,
             ],
             [
@@ -210,7 +203,7 @@ class ContactsAndMessagesTableSeeder extends Seeder
                 'is_message_by_contact' => true,
             ],
             [
-                'value' => "Great! Our event spaces can accommodate that size. Do you have any specific theme or requirements for the party?",
+                'value' => 'Great! Our event spaces can accommodate that size. Do you have any specific theme or requirements for the party?',
                 'is_message_by_contact' => false,
             ],
             [
@@ -218,7 +211,7 @@ class ContactsAndMessagesTableSeeder extends Seeder
                 'is_message_by_contact' => true,
             ],
             [
-                'value' => "Sounds like a fun theme! We can definitely arrange decorations to match. Are you looking for any particular amenities, like audio systems or catering services?",
+                'value' => 'Sounds like a fun theme! We can definitely arrange decorations to match. Are you looking for any particular amenities, like audio systems or catering services?',
                 'is_message_by_contact' => false,
             ],
             [
@@ -226,7 +219,7 @@ class ContactsAndMessagesTableSeeder extends Seeder
                 'is_message_by_contact' => true,
             ],
             [
-                'value' => "Certainly! We have different catering packages, including finger foods, buffet, and sit-down dinner options. I can send you the menu for you to choose from.",
+                'value' => 'Certainly! We have different catering packages, including finger foods, buffet, and sit-down dinner options. I can send you the menu for you to choose from.',
                 'is_message_by_contact' => false,
             ],
             [
@@ -248,15 +241,14 @@ class ContactsAndMessagesTableSeeder extends Seeder
             [
                 'value' => "Thanks for the information. I'll review the details and get back to you soon.",
                 'is_message_by_contact' => true,
-            ]
+            ],
         ];
 
         foreach ($messagesArray as $key => $message) {
-            $demoContact2->sendDemoMessage($message['value'],$message['is_message_by_contact']);
-         }
+            $demoContact2->sendDemoMessage($message['value'], $message['is_message_by_contact']);
+        }
 
-
-         //Add a note
+        //Add a note
         try {
             Message::create([
                 'contact_id' => 1,
@@ -268,7 +260,7 @@ class ContactsAndMessagesTableSeeder extends Seeder
                 'header_location' => '',
                 'header_document' => '',
                 'buttons' => '[]',
-                'value' => 'Daniel is looking for pizza that we need to add in our menu. Pizza with magic mushrooms',
+                'value' => 'Kenneth is looking for pizza that we need to add in our menu. Pizza with magic mushrooms',
                 'error' => '',
                 'is_campign_messages' => 0,
                 'is_message_by_contact' => 0,
@@ -285,66 +277,61 @@ class ContactsAndMessagesTableSeeder extends Seeder
                 'original_message' => '',
                 'sender_name' => 'Company owner',
                 'extra' => '',
-                'is_note' => 1
+                'is_note' => 1,
             ]);
         } catch (\Exception $e) {
-            
-        }
 
+        }
 
         //Add some replies
         $replies = [
             [
-                "name" => "Working Time",
-                "text" => "Our working time is from 9AM - 10PM every day except Sunday when we work from 9AM-2PM.",
-                "trigger" => "working time"
+                'name' => 'Working Time',
+                'text' => 'Our working time is from 9AM - 10PM every day except Sunday when we work from 9AM-2PM.',
+                'trigger' => 'working time',
             ],
             [
-                "name" => "Working Time 2",
-                "text" => "Our working time is from 9AM - 10PM every day except Sunday when we work from 9AM-2PM.",
-                "trigger" => "working hours"
+                'name' => 'Working Time 2',
+                'text' => 'Our working time is from 9AM - 10PM every day except Sunday when we work from 9AM-2PM.',
+                'trigger' => 'working hours',
             ],
             [
-                "name" => "Script info",
-                "text" => "Hi, glad to have your interest. In this demo we are acting like a pizza restaurant. So ask us about our working time, delivery, menu and our simple bot will reply.",
-                "trigger" => "cool script"
-            ]
+                'name' => 'Script info',
+                'text' => 'Hi, glad to have your interest. In this demo we are acting like a pizza restaurant. So ask us about our working time, delivery, menu and our simple bot will reply.',
+                'trigger' => 'cool script',
+            ],
 
-            
         ];
 
         foreach ($replies as $key => $reply) {
             Reply::create([
-                'name'=>$reply['name'],
-                'text'=>$reply['text'],
-                'trigger'=>$reply['trigger'],
-                'type'=>3,
-                'company_id'=>1
+                'name' => $reply['name'],
+                'text' => $reply['text'],
+                'trigger' => $reply['trigger'],
+                'type' => 3,
+                'company_id' => 1,
             ]);
-           
-         }
 
-
-        //SETUP THE ClOUD API
-        $company=Company::findOrFail(1);
-
-        //Get  demo token from .env
-        if(config('settings.demo_val1')){
-            $company->setConfig('whatsapp_permanent_access_token',config('settings.demo_val1',""));
-            $company->setConfig('whatsapp_phone_number_id',config('settings.demo_val2',""));
-            $company->setConfig('whatsapp_business_account_id',config('settings.demo_val3',""));       
         }
 
+        //SETUP THE ClOUD API
+        $company = Company::findOrFail(1);
 
-        $company->setConfig('whatsapp_webhook_verified',"yes");
-        $company->setConfig('whatsapp_settings_done',"yes");
-        $company->setConfig('plain_token',"wi9DM0WGlvjtSzx7O8mXB6rEHOIWXbZzQPGZtyzd8622eb1d");
-        $company->setConfig('black_listed_phone_numbers','601158554611,+601158554611,6285176999198,+6285176999198');
+        //Get  demo token from .env
+        if (config('settings.demo_val1')) {
+            $company->setConfig('whatsapp_permanent_access_token', config('settings.demo_val1', ''));
+            $company->setConfig('whatsapp_phone_number_id', config('settings.demo_val2', ''));
+            $company->setConfig('whatsapp_business_account_id', config('settings.demo_val3', ''));
+        }
 
+        $company->setConfig('whatsapp_webhook_verified', 'yes');
+        $company->setConfig('whatsapp_settings_done', 'yes');
+        $company->setConfig('plain_token', 'wi9DM0WGlvjtSzx7O8mXB6rEHOIWXbZzQPGZtyzd8622eb1d');
+        $company->setConfig('black_listed_phone_numbers', '601158554611,+601158554611,6285176999198,+6285176999198');
 
         //The Personal Access Tokens
         DB::table('personal_access_tokens')->insertGetId([
-            'tokenable_type' =>'App\Models\User',
+            'tokenable_type' => 'App\Models\User',
             'tokenable_id' => 2,
             'name' => 'Whatstapp',
             'token' => '1b823baa3f0ae42edcedd2160a9ceb3c8186823254bf835a421e8aef0cfdb912',
@@ -353,11 +340,6 @@ class ContactsAndMessagesTableSeeder extends Seeder
             'updated_at' => now(),
         ]);
 
-        
-
-
-
-        
         Model::reguard();
     }
 }

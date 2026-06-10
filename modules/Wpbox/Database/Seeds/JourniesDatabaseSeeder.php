@@ -42,7 +42,7 @@ class JourniesDatabaseSeeder extends Seeder
                     'read_by' => 0,
                     'total_contacts' => 2,
                     'timestamp_for_delivery' => null,
-                    'variables' => '{"header":{"1":"Daniel"}}',
+                    'variables' => '{"header":{"1":"Kenneth"}}',
                     'variables_match' => '{"header":{"1":"-1"}}',
                     'media_link' => null,
                     'company_id' => 1,
@@ -58,7 +58,7 @@ class JourniesDatabaseSeeder extends Seeder
                     'is_bot' => 0,
                     'is_api' => 1,
                     'is_active' => 1,
-                    'is_reminder' => 0
+                    'is_reminder' => 0,
                 ],
                 [
                     'id' => 2,
@@ -69,7 +69,7 @@ class JourniesDatabaseSeeder extends Seeder
                     'read_by' => 0,
                     'total_contacts' => 2,
                     'timestamp_for_delivery' => null,
-                    'variables' => '{"header":{"1":"123"},"body":{"1":"Daniel","2":"12.04.2025"}}',
+                    'variables' => '{"header":{"1":"123"},"body":{"1":"Kenneth","2":"12.04.2025"}}',
                     'variables_match' => '{"header":{"1":"-2"},"body":{"1":"-1","2":"-2"}}',
                     'media_link' => null,
                     'company_id' => 1,
@@ -85,7 +85,7 @@ class JourniesDatabaseSeeder extends Seeder
                     'is_bot' => 0,
                     'is_api' => 1,
                     'is_active' => 1,
-                    'is_reminder' => 0
+                    'is_reminder' => 0,
                 ],
                 [
                     'id' => 3,
@@ -112,7 +112,7 @@ class JourniesDatabaseSeeder extends Seeder
                     'is_bot' => 0,
                     'is_api' => 1,
                     'is_active' => 1,
-                    'is_reminder' => 0
+                    'is_reminder' => 0,
                 ],
                 [
                     'id' => 4,
@@ -139,7 +139,7 @@ class JourniesDatabaseSeeder extends Seeder
                     'is_bot' => 0,
                     'is_api' => 1,
                     'is_active' => 1,
-                    'is_reminder' => 0
+                    'is_reminder' => 0,
                 ],
                 [
                     'id' => 5,
@@ -150,7 +150,7 @@ class JourniesDatabaseSeeder extends Seeder
                     'read_by' => 0,
                     'total_contacts' => 2,
                     'timestamp_for_delivery' => null,
-                    'variables' => '{"body":{"1":"Daniel"}}',
+                    'variables' => '{"body":{"1":"Kenneth"}}',
                     'variables_match' => '{"body":{"1":"-1"}}',
                     'media_link' => null,
                     'company_id' => 1,
@@ -166,11 +166,9 @@ class JourniesDatabaseSeeder extends Seeder
                     'is_bot' => 0,
                     'is_api' => 1,
                     'is_active' => 1,
-                    'is_reminder' => 0
-                ]
+                    'is_reminder' => 0,
+                ],
             ]);
-            
-
 
             //Make 2 journies - Marketing and CRM for pizza restaurant
             $journey1 = Journey::create([
@@ -180,11 +178,10 @@ class JourniesDatabaseSeeder extends Seeder
             ]);
 
             $journey2 = Journey::create([
-                'name' => 'Customer Relations Journey', 
+                'name' => 'Customer Relations Journey',
                 'description' => 'Journey for managing customer relationships, feedback and loyalty programs for our pizza restaurant',
                 'company_id' => 1,
             ]);
-
 
             //Add the stages to the journey
             //Add stages for Marketing Journey
@@ -195,15 +192,15 @@ class JourniesDatabaseSeeder extends Seeder
                     'name' => 'Lead',
                     'campaign_id' => 1,
                     'created_at' => '2025-01-03 19:00:25',
-                    'updated_at' => '2025-01-03 19:00:25'
+                    'updated_at' => '2025-01-03 19:00:25',
                 ],
                 [
-                    'id' => 2, 
+                    'id' => 2,
                     'journey_id' => 1,
                     'name' => 'Prospect',
                     'campaign_id' => 4,
                     'created_at' => '2025-01-03 19:00:50',
-                    'updated_at' => '2025-01-03 19:00:50'
+                    'updated_at' => '2025-01-03 19:00:50',
                 ],
                 [
                     'id' => 3,
@@ -211,8 +208,8 @@ class JourniesDatabaseSeeder extends Seeder
                     'name' => 'Advocate',
                     'campaign_id' => 3,
                     'created_at' => '2025-01-03 19:02:44',
-                    'updated_at' => '2025-01-03 19:02:44'
-                ]
+                    'updated_at' => '2025-01-03 19:02:44',
+                ],
             ]);
 
             //Add stages for Customer Relations Journey
@@ -223,7 +220,7 @@ class JourniesDatabaseSeeder extends Seeder
                     'name' => 'Feedback',
                     'campaign_id' => 5,
                     'created_at' => '2025-01-03 19:03:43',
-                    'updated_at' => '2025-01-03 19:03:43'
+                    'updated_at' => '2025-01-03 19:03:43',
                 ],
                 [
                     'id' => 5,
@@ -231,8 +228,8 @@ class JourniesDatabaseSeeder extends Seeder
                     'name' => 'Closing',
                     'campaign_id' => 2,
                     'created_at' => '2025-01-03 19:04:03',
-                    'updated_at' => '2025-01-03 19:04:03'
-                ]
+                    'updated_at' => '2025-01-03 19:04:03',
+                ],
             ]);
 
             //Add contacts to the journey
@@ -241,12 +238,12 @@ class JourniesDatabaseSeeder extends Seeder
                 'stage_id' => 1,
                 'contact_id' => 1,
                 'created_at' => null,
-                'updated_at' => null
+                'updated_at' => null,
             ]);
 
-        } catch(\Exception $e) {
+        } catch (\Exception $e) {
             //Do nothing
-            Log::error('Error creating journeys: ' . $e->getMessage());
+            Log::error('Error creating journeys: '.$e->getMessage());
         }
 
         Model::reguard();

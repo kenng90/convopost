@@ -3,44 +3,45 @@
 namespace Modules\Flowmaker\Models;
 
 use App\Models\Company;
-use Illuminate\Database\Eloquent\Model;
 use App\Scopes\CompanyScope;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
-use Modules\Flowmaker\Models\Nodes\Edge;
-use Modules\Flowmaker\Models\Nodes\Every;
-use Modules\Flowmaker\Models\Nodes\Node;
-use Modules\Flowmaker\Models\Nodes\End;
-use Modules\Flowmaker\Models\Nodes\Keyword;
-use Modules\Flowmaker\Models\Nodes\Media;
-use Modules\Flowmaker\Models\Nodes\Message;
-use Modules\Flowmaker\Models\Nodes\Template;
-use Modules\Flowmaker\Models\Nodes\Branch;
-use Modules\Flowmaker\Models\Nodes\Buttons;
-use Modules\Flowmaker\Models\Nodes\ListMessage;
-use Modules\Flowmaker\Models\Nodes\LLM;
-use Modules\Flowmaker\Models\Nodes\UserReply;
-use Modules\Flowmaker\Models\Nodes\FlowHTTPNode;
-use Modules\Flowmaker\Models\Nodes\SetVariable;
 use Modules\Flowmaker\Models\Nodes\AssignAgent;
 use Modules\Flowmaker\Models\Nodes\AssignGroup;
+use Modules\Flowmaker\Models\Nodes\Branch;
+use Modules\Flowmaker\Models\Nodes\Buttons;
+use Modules\Flowmaker\Models\Nodes\Edge;
+use Modules\Flowmaker\Models\Nodes\End;
+use Modules\Flowmaker\Models\Nodes\Every;
+use Modules\Flowmaker\Models\Nodes\FlowHTTPNode;
+use Modules\Flowmaker\Models\Nodes\Keyword;
+use Modules\Flowmaker\Models\Nodes\ListMessage;
+use Modules\Flowmaker\Models\Nodes\LLM;
+use Modules\Flowmaker\Models\Nodes\Media;
+use Modules\Flowmaker\Models\Nodes\Message;
 use Modules\Flowmaker\Models\Nodes\MpesaStkPush;
+use Modules\Flowmaker\Models\Nodes\Node;
+use Modules\Flowmaker\Models\Nodes\SetVariable;
+use Modules\Flowmaker\Models\Nodes\Template;
+use Modules\Flowmaker\Models\Nodes\UserReply;
 use Modules\Flowmaker\Models\Nodes\WhatsAppCatalog;
 use Modules\Flowmaker\Models\Nodes\WhatsAppFlow;
-use Modules\Flowmaker\Models\Flowdocument;
 
 class Flow extends Model
 {
     protected $table = 'flows';
+
     public $guarded = [];
 
     // Define any custom methods or scopes here
-    protected static function booted(){
+    protected static function booted()
+    {
         static::addGlobalScope(new CompanyScope);
 
-        static::creating(function ($model){
-           $company_id=session('company_id',null);
-            if($company_id){
-                $model->company_id=$company_id;
+        static::creating(function ($model) {
+            $company_id = session('company_id', null);
+            if ($company_id) {
+                $model->company_id = $company_id;
             }
         });
     }
@@ -50,29 +51,31 @@ class Flow extends Model
         return $this->hasMany(Flowdocument::class);
     }
 
-    public function processMessage($data){
-        Log::info("================================");
+    public function processMessage($data)
+    {
+        Log::info('================================');
         Log::info('Processing message in flow', ['flow' => $this->id, 'data' => $data]);
 
         /*
-        {"flow":2,"data":{"Modules\\Wpbox\\Models\\Message":{"contact_id":1,"company_id":1,"value":"Daniel","header_image":"","header_document":"","header_video":"","header_audio":"","header_location":"","is_message_by_contact":true,"is_campign_messages":false,"status":1,"buttons":"[]","components":"","fb_message_id":"22","updated_at":"2025-04-18T11:16:42.000000Z","created_at":"2025-04-18T11:16:42.000000Z","id":42,"extra":null,"contact":{"id":1,"name":"Daniel Dimov","phone":"+38978203673","avatar":"https://secure.gravatar.com/avatar/e2909c35cdbad84bf2b6059fe7eab2444cd6bd9fbf8af59918a1d0f4901c8ad2?s=128","country_id":124,"company_id":1,"deleted_at":null,"created_at":"2025-04-17T20:23:24.000000Z","updated_at":"2025-04-18T11:15:59.000000Z","last_reply_at":"2025-04-18 11:15:58","last_client_reply_at":"2025-04-18 11:15:58","last_support_reply_at":"2025-04-18 11:08:43","last_message":"Daniel","is_last_message_by_contact":1,"has_chat":1,"resolved_chat":0,"user_id":null,"enabled_ai_bot":1,"subscribed":1,"email":"daniel@mobidonia.com","language":"none"}}}} 
+        Example message payload shape: {"flow":2,"data":{"Modules\\Wpbox\\Models\\Message":{"contact_id":1,"value":"Hi","contact":{"id":1,"name":"Jane Smith"}}}}
         */
-        try{
+        try {
 
             $message = $data->value;
-            Log::info("Message: ".$message);
+            Log::info('Message: '.$message);
 
             $contact = $data->contact_id;
-            Log::info("Contact: ".$contact);
+            Log::info('Contact: '.$contact);
 
-             //Get the Flow's data
+            //Get the Flow's data
             $flowData = json_decode($this->flow_data, false);
 
             Log::info('Flow data', ['flowData' => $flowData]);
 
             // Validate flow data structure
-            if(!$flowData || !isset($flowData->nodes) || !isset($flowData->edges)){
+            if (! $flowData || ! isset($flowData->nodes) || ! isset($flowData->edges)) {
                 Log::error('Invalid flow data structure - missing nodes or edges', ['flowId' => $this->id]);
+
                 return;
             }
 
@@ -88,33 +91,32 @@ class Flow extends Model
                 Log::info('Keyword match detected — resetting contact state and evaluating all keyword triggers');
                 $contact->clearContactState($this->id, 'current_node');
                 $this->processAllKeywordTriggers($flowData->nodes, $flowData->edges, $message, $data);
+
                 return;
             }
 
             $graph = null;
-            try{
+            try {
                 $graph = $this->makeGraph($flowData->nodes, $flowData->edges, $startNode);
                 Log::info('Graph node '.$graph->id);
 
-                if($startNode && $graph->id !== $startNode){
+                if ($startNode && $graph->id !== $startNode) {
                     Log::warning('Stale contact state detected - clearing current_node', ['stale' => $startNode, 'resolved' => $graph->id]);
                     $contact->clearContactState($this->id, 'current_node');
                 }
-            }catch(\Exception $e){
+            } catch (\Exception $e) {
                 Log::error('Error making graph', ['error' => $e->getMessage()]);
             }
 
-            if($graph){
+            if ($graph) {
                 $graph->process($message, $data);
             }
 
-        }catch(\Exception $e){
-            Log::error("Error processing message in flow", ['error' => $e->getMessage()]);
+        } catch (\Exception $e) {
+            Log::error('Error processing message in flow', ['error' => $e->getMessage()]);
         }
 
     }
-
-
 
     /**
      * Process all keyword_trigger nodes in turn.
@@ -138,6 +140,7 @@ class Flow extends Model
             // If the keyword matched (process returned success), stop here
             if (is_array($result) && ($result['success'] ?? false)) {
                 Log::info('Keyword trigger matched', ['nodeId' => $node->id]);
+
                 return;
             }
         }
@@ -145,25 +148,28 @@ class Flow extends Model
         Log::info('No keyword trigger matched the message', ['message' => $message]);
     }
 
-    private function makeGraph($nodes, $edgesArray,$startNode){
+    private function makeGraph($nodes, $edgesArray, $startNode)
+    {
 
-        Log::info('Let make a graph',['nodes' => $nodes, 'edgesArray' => $edgesArray, 'startNode' => $startNode]);
+        Log::info('Let make a graph', ['nodes' => $nodes, 'edgesArray' => $edgesArray, 'startNode' => $startNode]);
         $nodes = $this->buildWiredNodes($nodes, $edgesArray);
 
         Log::info('Nodes', ['nodes' => $nodes]);
 
         //Return the graph, it is the first node
-        if($startNode && isset($nodes[$startNode])){
+        if ($startNode && isset($nodes[$startNode])) {
             Log::info('Using provided start node', ['startNode' => $startNode]);
             $nodes[$startNode]->isStartNode = true;
+
             return $nodes[$startNode];
-        }else{
-            if($startNode){
+        } else {
+            if ($startNode) {
                 Log::warning('Saved start node not found in current flow nodes - stale state, falling back to default start', ['startNode' => $startNode]);
             }
             $foundStartNode = $this->findStartNode($nodes);
             Log::info('Found start node based on position and type', ['startNode' => $foundStartNode->id]);
             $foundStartNode->isStartNode = true;
+
             return $foundStartNode;
         }
     }
@@ -175,76 +181,78 @@ class Flow extends Model
     private function buildWiredNodes($rawNodes, $rawEdgesArray): array
     {
         //Convert the nodes to objects
-        $nodes = array_reduce($rawNodes, function($carry, $node) {
+        $nodes = array_reduce($rawNodes, function ($carry, $node) {
             //Convert the node to an array
-            $nodeArray = (array)$node;
-            if($nodeArray['type'] === 'keyword_trigger'){
+            $nodeArray = (array) $node;
+            if ($nodeArray['type'] === 'keyword_trigger') {
                 $theNewNode = new Keyword($nodeArray, []);
-            }else if($nodeArray['type'] === 'message'){
+            } elseif ($nodeArray['type'] === 'message') {
                 $theNewNode = new Message($nodeArray, []);
-            }else if($nodeArray['type'] === 'incomingMessage'){
+            } elseif ($nodeArray['type'] === 'incomingMessage') {
                 $theNewNode = new Every($nodeArray, []);
-            }else if($nodeArray['type'] === 'end'){
+            } elseif ($nodeArray['type'] === 'end') {
                 $theNewNode = new End($nodeArray, []);
-            }else if($nodeArray['type'] === 'image' || $nodeArray['type'] === 'video' || $nodeArray['type'] === 'pdf'){
+            } elseif ($nodeArray['type'] === 'image' || $nodeArray['type'] === 'video' || $nodeArray['type'] === 'pdf') {
                 $theNewNode = new Media($nodeArray, []);
-            }else if($nodeArray['type'] === 'template'){
+            } elseif ($nodeArray['type'] === 'template') {
                 $theNewNode = new Template($nodeArray, []);
-            }else if($nodeArray['type'] === 'branch'){
+            } elseif ($nodeArray['type'] === 'branch') {
                 $theNewNode = new Branch($nodeArray, []);
-            }else if($nodeArray['type'] === 'quick_replies'){
+            } elseif ($nodeArray['type'] === 'quick_replies') {
                 $theNewNode = new Buttons($nodeArray, []);
-            }else if($nodeArray['type'] === 'list_message'){
+            } elseif ($nodeArray['type'] === 'list_message') {
                 $theNewNode = new ListMessage($nodeArray, []);
-            }else if($nodeArray['type'] === 'openai'){
+            } elseif ($nodeArray['type'] === 'openai') {
                 $theNewNode = new LLM($nodeArray, []);
-            }else if($nodeArray['type'] === 'question'){
+            } elseif ($nodeArray['type'] === 'question') {
                 $theNewNode = new UserReply($nodeArray, []);
-            }else if($nodeArray['type'] === 'http'){
+            } elseif ($nodeArray['type'] === 'http') {
                 Log::info('Creating HTTP node', ['nodeArray' => $nodeArray]);
-                try{
+                try {
                     $theNewNode = new FlowHTTPNode($nodeArray, []);
-                }catch(\Exception $e){
+                } catch (\Exception $e) {
                     Log::error('Error creating HTTP node', ['error' => $e->getMessage()]);
                 }
                 Log::info('HTTP node created', ['theNewNode' => $theNewNode]);
-            }else if($nodeArray['type'] === 'datastore'){
+            } elseif ($nodeArray['type'] === 'datastore') {
                 $theNewNode = new SetVariable($nodeArray, []);
-            }else if($nodeArray['type'] === 'assign_agent'){
+            } elseif ($nodeArray['type'] === 'assign_agent') {
                 $theNewNode = new AssignAgent($nodeArray, []);
-            }else if($nodeArray['type'] === 'assign_group'){
+            } elseif ($nodeArray['type'] === 'assign_group') {
                 $theNewNode = new AssignGroup($nodeArray, []);
-            }else if($nodeArray['type'] === 'mpesa_stk_push'){
+            } elseif ($nodeArray['type'] === 'mpesa_stk_push') {
                 $theNewNode = new MpesaStkPush($nodeArray, []);
-            }else if($nodeArray['type'] === 'whatsapp_catalog'){
+            } elseif ($nodeArray['type'] === 'whatsapp_catalog') {
                 $theNewNode = new WhatsAppCatalog($nodeArray, []);
-            }else if($nodeArray['type'] === 'whatsapp_flow'){
+            } elseif ($nodeArray['type'] === 'whatsapp_flow') {
                 $theNewNode = new WhatsAppFlow($nodeArray, []);
-            }else{
+            } else {
                 $theNewNode = new Node($nodeArray, []);
             }
-            $theNewNode->flow_id=$this->id;
+            $theNewNode->flow_id = $this->id;
             $carry[$nodeArray['id']] = $theNewNode;
+
             return $carry;
         }, []);
 
         //Convert the edges to objects
-        $edges = array_reduce($rawEdgesArray, function($carry, $edge) {
-            $edgeArray = (array)$edge;
+        $edges = array_reduce($rawEdgesArray, function ($carry, $edge) {
+            $edgeArray = (array) $edge;
             $carry[$edgeArray['id']] = new Edge($edgeArray);
+
             return $carry;
         }, []);
 
         //Wire edges to nodes
         foreach ($edges as $edge) {
-            try{
+            try {
                 $source = $nodes[$edge->getSourceId()];
                 $target = $nodes[$edge->getTargetId()];
                 $source->addOutgoingEdge($edge);
                 $target->addIncomingEdge($edge);
                 $edge->setSource($nodes[$edge->getSourceId()]);
                 $edge->setTarget($nodes[$edge->getTargetId()]);
-            }catch(\Exception $e){
+            } catch (\Exception $e) {
                 Log::error('Error adding edge to nodes', ['error' => $e->getMessage()]);
             }
         }
@@ -256,30 +264,31 @@ class Flow extends Model
      * Find the start node based on position and type
      * The start node should be the node with the lowest x position
      * and should be one of these types: keyword_trigger, incoming_message, opening_hours, template
-     * 
-     * @param array $nodes Array of nodes
+     *
+     * @param  array  $nodes  Array of nodes
      * @return Node The start node
      */
-    private function findStartNode(array $nodes) {
+    private function findStartNode(array $nodes)
+    {
         $validTypes = ['keyword_trigger', 'incoming_message', 'incomingMessage'];
         $startNode = null;
         $lowestX = PHP_FLOAT_MAX;
 
         foreach ($nodes as $node) {
             // Skip if not a valid start node type
-            if (!in_array($node->type, $validTypes)) {
+            if (! in_array($node->type, $validTypes)) {
                 continue;
             }
 
             // Get the x position from the node's data
-            $position = $node->position ?? (object)['x' => PHP_FLOAT_MAX];
+            $position = $node->position ?? (object) ['x' => PHP_FLOAT_MAX];
             $x = $position->x ?? PHP_FLOAT_MAX;
 
             Log::info('Checking potential start node', [
                 'id' => $node->id,
                 'type' => $node->type,
                 'x' => $x,
-                'current_lowest_x' => $lowestX
+                'current_lowest_x' => $lowestX,
             ]);
 
             if ($x < $lowestX || $x === $lowestX) {
@@ -288,7 +297,7 @@ class Flow extends Model
             }
         }
 
-        if (!$startNode) {
+        if (! $startNode) {
             Log::error('No valid start node found! Using first node as fallback.');
             $startNode = reset($nodes);
         }
@@ -343,8 +352,9 @@ class Flow extends Model
 
             Log::info('MPesa resume: current_node', ['startNode' => $startNode]);
 
-            if (!$startNode || !isset($flowData->nodes) || !isset($flowData->edges)) {
+            if (! $startNode || ! isset($flowData->nodes) || ! isset($flowData->edges)) {
                 Log::error('MPesa resume: missing flow data or current_node');
+
                 return;
             }
 
