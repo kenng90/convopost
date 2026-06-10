@@ -20,8 +20,45 @@
     fjs.parentNode.insertBefore(js, fjs);
   }(document, 'script', 'facebook-jssdk'));
 
+  var embeddedSignupSession = {
+    waba_id: null,
+    phone_number_id: null,
+  };
+
+  // Meta sends WABA + phone IDs here when embedded signup completes (required by Meta docs)
+  window.addEventListener('message', function (event) {
+    if (!event.origin || !event.origin.endsWith('facebook.com')) {
+      return;
+    }
+
+    try {
+      var data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+      if (!data || data.type !== 'WA_EMBEDDED_SIGNUP') {
+        return;
+      }
+
+      console.log('WA_EMBEDDED_SIGNUP event:', data);
+
+      if (data.event === 'CANCEL') {
+        console.warn('Embedded signup cancelled or abandoned', data.data);
+        return;
+      }
+
+      if (data.data && data.data.waba_id) {
+        embeddedSignupSession.waba_id = data.data.waba_id;
+      }
+      if (data.data && data.data.phone_number_id) {
+        embeddedSignupSession.phone_number_id = data.data.phone_number_id;
+      }
+    } catch (e) {
+      console.log('WA_EMBEDDED_SIGNUP raw message:', event.data);
+    }
+  });
+
   // Facebook Login with JavaScript SDK
   function launchWhatsAppSignup() {
+    embeddedSignupSession.waba_id = null;
+    embeddedSignupSession.phone_number_id = null;
     // Conversion tracking code
     //fbq && fbq('trackCustom', 'WhatsAppOnboardingStart', {appId: 'your-facebook-app-id', feature: 'whatsapp_embedded_signup'});
     
@@ -48,9 +85,22 @@
         document.getElementById('anim').style.display = 'block';
 
 
+        var apiUrl = '/embeddedlogin/api/' + code;
+        if (embeddedSignupSession.waba_id) {
+          apiUrl += '?waba_id=' + encodeURIComponent(embeddedSignupSession.waba_id);
+        }
+        if (embeddedSignupSession.phone_number_id) {
+          apiUrl += (apiUrl.indexOf('?') === -1 ? '?' : '&') + 'phone_number_id=' + encodeURIComponent(embeddedSignupSession.phone_number_id);
+        }
+
+        console.log('Sending embedded signup to backend', {
+          has_waba_id: !!embeddedSignupSession.waba_id,
+          has_phone_number_id: !!embeddedSignupSession.phone_number_id,
+        });
+
         // Your backend will perform a server-to-server call from there to our servers for an access token
         $.ajax({
-          url: '/embeddedlogin/api/'+code,
+          url: apiUrl,
           type: 'GET',
           success: function(result) {
             // Handle success here
