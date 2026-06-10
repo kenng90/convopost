@@ -24,18 +24,20 @@ class SmswpboxDatabaseSeeder extends Seeder
         Model::unguard();
 
         try {
-            $rows = array_map(function (array $template) {
-                return [
-                    'value' => $template['value'],
-                    'key' => $template['key'],
-                    'model_type' => 'App\\Models\\Company',
-                    'model_id' => 1,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }, VendorBrandingScrubber::smsTemplateConfigs());
-
-            DB::table('configs')->insert($rows);
+            foreach (VendorBrandingScrubber::smsTemplateConfigs() as $template) {
+                DB::table('configs')->updateOrInsert(
+                    [
+                        'key' => $template['key'],
+                        'model_type' => 'App\\Models\\Company',
+                        'model_id' => 1,
+                    ],
+                    [
+                        'value' => $template['value'],
+                        'updated_at' => now(),
+                        'created_at' => now(),
+                    ]
+                );
+            }
         } catch (\Exception $e) {
             Log::error('Error creating sms templates: '.$e->getMessage());
         }
