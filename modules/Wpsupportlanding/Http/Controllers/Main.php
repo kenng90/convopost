@@ -1,24 +1,36 @@
 <?php
 
 namespace Modules\Wpsupportlanding\Http\Controllers;
+
+use Akaunting\Module\Facade as Module;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Http;
+use Modules\Blog\Models\Blog;
 
 class Main extends Controller
 {
-    
-
     public function blog()
     {
-        return view('wpsupportlanding::landing.blog');
+        $posts = Blog::query()
+            ->where('status', 'published')
+            ->orderByDesc('created_at')
+            ->paginate(9);
+
+        return view('wpsupportlanding::landing.blog', [
+            'hasBlog' => Module::has('blog'),
+            'posts' => $posts,
+        ]);
     }
 
-    public function blog_post($slug)
+    public function blog_post(string $slug)
     {
-        //Load all the data via API
-        $url = config('app.url').'/api/blog/'.$slug;
-        $data = Http::get($url);
+        $post = Blog::query()
+            ->where('slug', $slug)
+            ->where('status', 'published')
+            ->firstOrFail();
 
-        return view('wpsupportlanding::landing.blog_post', compact('data'));
+        return view('wpsupportlanding::landing.blog_post', [
+            'hasBlog' => Module::has('blog'),
+            'post' => $post,
+        ]);
     }
 }

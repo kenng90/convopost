@@ -93,17 +93,21 @@ class AppServiceProvider extends ServiceProvider
                 if ($module->get('hasReports')) {
                     //Get the reports
                     $reports = $module->get('reports');
-                   
+
                     foreach ($reports as $report) {
-                       // Log::info($report);
+                        // Log::info($report);
                         try {
                             if (isset($report['showOnDashboard']) && $report['showOnDashboard']) {
-                                array_push($reportsOnDashboard, [$report['view'], $report['script']]);
-                             }   
+                                array_push($reportsOnDashboard, [
+                                    'alias' => $module->get('alias'),
+                                    'view' => $report['view'],
+                                    'script' => $report['script'],
+                                ]);
+                            }
                         } catch (\Throwable $th) {
                             //throw $th;
                         }
-                        
+
                     }
                 }
             }
@@ -111,10 +115,6 @@ class AppServiceProvider extends ServiceProvider
             //config(['config.env.0.fields.7.data' => $templatesModules]);
             $settings['modulesWithDashboardInfo'] = $modulesWithDashboardInfo;
             $settings['reportsOnDashboard'] = $reportsOnDashboard;
-
-           
-
-          
 
             //Check if we have the pricing module
             if (! Module::has('pricing')) {

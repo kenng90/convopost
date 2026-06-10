@@ -1,0 +1,9 @@
+{
+    "name": "convocon/voicecall",
+    "description": "Twilio AI voice calls",
+    "autoload": {
+        "psr-4": {
+            "Modules\\Voicecall\\": ""
+        }
+    }
+}

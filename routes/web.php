@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\SocialController;
 use App\Http\Controllers\CompaniesController;
 use App\Http\Controllers\CreditsController;
 use App\Http\Controllers\CRUD\PostsController;
+use App\Http\Controllers\FlowBuilderController;
 use App\Http\Controllers\FlowsController;
 use App\Http\Controllers\FrontEndController;
 use App\Http\Controllers\ListCatalogController;
@@ -12,10 +13,10 @@ use App\Http\Controllers\PlansController;
 use App\Http\Controllers\PublicCatalogController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\WhatsappFlowResponsesExportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Spatie\WelcomeNotification\WelcomesNewUsers;
-use App\Http\Controllers\FlowBuilderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +56,7 @@ Route::middleware('web', WelcomesNewUsers::class)->group(function () {
 //AUTH
 Route::get('/session-test', function () {
     session(['ping' => 'pong']);
+
     return session('ping');
 });
 
@@ -153,6 +155,8 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
         Route::get('/catalogs', [SettingsController::class, 'catalogs'])->name('catalogs.page');
 
         Route::controller(ListCatalogController::class)->group(function () {
+            Route::get('/catalogs/{id}/items', 'itemsPage')->name('catalogs.items.page');
+            Route::get('/api/list-catalogs/import-template', 'downloadImportTemplate')->name('catalogs.import-template');
             Route::post('/api/list-catalogs/preview-excel', 'previewExcel')->name('catalogs.preview-excel');
             Route::post('/api/list-catalogs/import-excel', 'importExcel')->name('catalogs.import-excel');
             Route::post('/api/list-catalogs/test-api', 'testAPI')->name('catalogs.test-api');
@@ -162,6 +166,7 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
             Route::delete('/api/list-catalogs/{id}', 'deleteCatalog')->name('catalogs.delete');
 
             Route::get('/api/list-catalogs/{id}/manage/items', 'getItems')->name('catalogs.items');
+            Route::get('/api/list-catalogs/{id}/manage/items/{itemId}', 'getItem')->name('catalogs.items.show');
             Route::post('/api/list-catalogs/{id}/manage/items', 'addItem')->name('catalogs.items.add');
             Route::put('/api/list-catalogs/{id}/manage/items/{itemId}', 'updateItem')->name('catalogs.items.update');
             Route::delete('/api/list-catalogs/{id}/manage/items/{itemId}', 'deleteItem')->name('catalogs.items.delete');
@@ -188,6 +193,8 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
                 return view('whatsapp-flows-responses');
             })->name('responses');
 
+            Route::get('/responses/export', WhatsappFlowResponsesExportController::class)->name('responses.export');
+
             Route::get('/api/list', 'list')->name('list');
             Route::get('/api/{id}', 'getFlow')->name('show');
             Route::post('/api', 'create')->name('store');
@@ -200,7 +207,7 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
     });
 
     // Reports Routes
-    Route::controller(ReportsController::class)->prefix('reports')->name('reports.')->group(function () {
+    Route::middleware('plan.plugin:reports')->controller(ReportsController::class)->prefix('reports')->name('reports.')->group(function () {
         Route::get('/', 'dashboard')->name('dashboard');
         Route::get('/transactions', 'transactions')->name('transactions');
         Route::get('/payments', 'payments')->name('payments');

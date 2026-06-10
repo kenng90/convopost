@@ -394,6 +394,41 @@
         .overlay.visible {
             display: block;
         }
+
+        .catalog-filters {
+            background: #fff;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .catalog-filters .form-control,
+        .catalog-filters .custom-select {
+            font-size: 14px;
+        }
+
+        .catalog-results-meta {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 16px;
+        }
+
+        .catalog-pagination {
+            margin-top: 24px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 767px) {
+            .catalog-filters .filter-actions {
+                display: flex;
+                gap: 8px;
+            }
+
+            .catalog-filters .filter-actions .btn {
+                flex: 1;
+            }
+        }
     </style>
 </head>
 <body>
@@ -407,73 +442,106 @@
 
     <!-- Main Content -->
     <div class="container grid-container">
-        @if($items && count($items) > 0)
-            <div class="row">
-                @foreach($items as $item)
-                    <div class="col-md-4 col-sm-6 mb-4">
-                        <div class="product-card">
-                            <div class="product-image" @if(isset($item['imageUrl']) && $item['imageUrl']) style="background-image: url('{{ $item['imageUrl'] }}');" @endif>
-                                @if(!isset($item['imageUrl']) || !$item['imageUrl'])
-                                    <i class="fas fa-image"></i>
-                                @endif
-                                <span class="stock-badge stock-{{ strtolower(str_replace(' ', '', $item['stockStatus'] ?? 'In Stock')) }}">
-                                    {{ $item['stockStatus'] ?? 'In Stock' }}
-                                </span>
+        @if($totalInCatalog > 0)
+            <form method="GET" action="{{ route('catalog.public', $catalog->id) }}" class="catalog-filters">
+                <div class="form-row">
+                    <div class="form-group col-md-4 col-12">
+                        <label for="filter-q" class="sr-only">Search</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
                             </div>
-                            <div class="product-body">
-                                @if(isset($item['category']) && $item['category'])
-                                    <div class="product-category">{{ $item['category'] }}</div>
-                                @endif
-                                <div class="product-title">{{ $item['title'] ?? 'Product' }}</div>
-                                <div class="product-description">{{ $item['description'] ?? '' }}</div>
-                                
-                                <!-- Tags -->
-                                @if(isset($item['tags']) && is_array($item['tags']) && count($item['tags']) > 0)
-                                    <div class="product-tags">
-                                        @foreach($item['tags'] as $tag)
-                                            <span class="tag-badge">{{ $tag }}</span>
-                                        @endforeach
-                                    </div>
-                                @endif
-                                
-                                @if(isset($item['price']))
-                                    <div class="product-price">ksh{{ number_format((float)$item['price'], 2) }}</div>
-                                @endif
-                                
-                                <!-- Variants Selection -->
-                                @if(isset($item['variants']) && is_array($item['variants']) && count($item['variants']) > 0)
-                                    <div class="variant-selector">
-                                        <label class="variant-label">{{ count($item['variants']) > 1 ? 'Choose Option' : 'Variant' }}</label>
-                                        <div class="variant-options" data-product-id="{{ $item['id'] }}">
-                                            @foreach($item['variants'] as $variant)
-                                                <button type="button" class="variant-option" data-variant="{{ $variant }}" onclick="selectVariant(this, '{{ $item['id'] }}')">
-                                                    {{ $variant }}
-                                                </button>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endif
-                                
-                                <div class="quantity-selector">
-                                    <button class="quantity-btn" onclick="decreaseQty(this)">−</button>
-                                    <input type="number" class="quantity-input" value="1" min="1" max="999">
-                                    <button class="quantity-btn" onclick="increaseQty(this)">+</button>
-                                </div>
-                                <button class="add-to-cart-btn" onclick="addToCart('{{ $item['id'] }}', '{{ $item['title'] ?? 'Product' }}', {{ (float)($item['price'] ?? 0) }}, this)" @if(($item['stockStatus'] ?? 'In Stock') === 'Out of Stock') disabled @endif>
-                                    @if(($item['stockStatus'] ?? 'In Stock') === 'Out of Stock')
-                                        <i class="fas fa-ban mr-2"></i>Out of Stock
-                                    @else
-                                        <i class="fas fa-shopping-cart mr-2"></i>Add to Cart
-                                    @endif
-                                </button>
-                            </div>
+                            <input type="search" id="filter-q" name="q" class="form-control" placeholder="Search products..." value="{{ $filters['q'] }}">
                         </div>
                     </div>
-                @endforeach
+                    <div class="form-group col-md-2 col-6">
+                        <label for="filter-category" class="sr-only">Category</label>
+                        <select id="filter-category" name="category" class="custom-select">
+                            <option value="">All categories</option>
+                            @foreach($filterOptions['categories'] as $category)
+                                <option value="{{ $category }}" @selected($filters['category'] === $category)>{{ $category }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-group col-md-2 col-6">
+                        <label for="filter-stock" class="sr-only">Stock</label>
+                        <select id="filter-stock" name="stock" class="custom-select">
+                            <option value="">All stock</option>
+                            <option value="In Stock" @selected($filters['stock'] === 'In Stock')>In Stock</option>
+                            <option value="Low Stock" @selected($filters['stock'] === 'Low Stock')>Low Stock</option>
+                            <option value="Out of Stock" @selected($filters['stock'] === 'Out of Stock')>Out of Stock</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-2 col-6">
+                        <label for="filter-tag" class="sr-only">Tag</label>
+                        <select id="filter-tag" name="tag" class="custom-select">
+                            <option value="">All tags</option>
+                            @foreach($filterOptions['tags'] as $tag)
+                                <option value="{{ $tag }}" @selected($filters['tag'] === $tag)>{{ $tag }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-group col-md-2 col-6">
+                        <label for="filter-sort" class="sr-only">Sort</label>
+                        <select id="filter-sort" name="sort" class="custom-select">
+                            <option value="default" @selected($filters['sort'] === 'default')>Default order</option>
+                            <option value="title_asc" @selected($filters['sort'] === 'title_asc')>Name (A–Z)</option>
+                            <option value="title_desc" @selected($filters['sort'] === 'title_desc')>Name (Z–A)</option>
+                            <option value="price_asc" @selected($filters['sort'] === 'price_asc')>Price (low to high)</option>
+                            <option value="price_desc" @selected($filters['sort'] === 'price_desc')>Price (high to low)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row align-items-end">
+                    <div class="form-group col-md-2 col-6">
+                        <label for="filter-min-price" class="small text-muted mb-1">Min price (KSh)</label>
+                        <input type="number" id="filter-min-price" name="min_price" class="form-control" min="0" step="0.01" placeholder="0" value="{{ $filters['min_price'] }}">
+                    </div>
+                    <div class="form-group col-md-2 col-6">
+                        <label for="filter-max-price" class="small text-muted mb-1">Max price (KSh)</label>
+                        <input type="number" id="filter-max-price" name="max_price" class="form-control" min="0" step="0.01" placeholder="Any" value="{{ $filters['max_price'] }}">
+                    </div>
+                    <div class="form-group col-md-8 col-12 filter-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter mr-1"></i> Apply filters
+                        </button>
+                        <a href="{{ route('catalog.public', $catalog->id) }}" class="btn btn-outline-secondary">Clear</a>
+                    </div>
+                </div>
+            </form>
+
+            <div class="catalog-results-meta">
+                @if($filteredTotal > 0)
+                    Showing {{ $items->firstItem() }}–{{ $items->lastItem() }} of {{ $filteredTotal }} product{{ $filteredTotal === 1 ? '' : 's' }}
+                    @if($filteredTotal < $totalInCatalog)
+                        ({{ $totalInCatalog }} total in catalog)
+                    @endif
+                @else
+                    No products match your filters ({{ $totalInCatalog }} in catalog)
+                @endif
             </div>
-        @else
+        @endif
+
+        @if($totalInCatalog === 0)
             <div class="alert alert-info" role="alert">
                 <i class="fas fa-info-circle mr-2"></i>No products available in this catalog yet.
+            </div>
+        @elseif($items->count() > 0)
+            <div class="row">
+                @foreach($items as $item)
+                    @include('public.catalog.partials.product-card', ['item' => $item])
+                @endforeach
+            </div>
+
+            @if($items->hasPages())
+                <div class="catalog-pagination d-flex justify-content-center">
+                    {{ $items->withQueryString()->links('pagination::bootstrap-4') }}
+                </div>
+            @endif
+        @else
+            <div class="alert alert-warning" role="alert">
+                <i class="fas fa-search mr-2"></i>No products match your search or filters.
+                <a href="{{ route('catalog.public', $catalog->id) }}" class="alert-link ml-1">Clear filters</a>
             </div>
         @endif
     </div>
@@ -493,7 +561,7 @@
         <div class="cart-footer">
             <div class="cart-total">
                 <span>Total:</span>
-                <span id="cartTotal">$0.00</span>
+                <span id="cartTotal">KSh 0.00</span>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <button class="checkout-btn" id="checkoutBtn" onclick="proceedToCheckout()" disabled style="background-color: #25D366;">
@@ -520,6 +588,15 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        function formatKsh(amount) {
+            const value = parseFloat(amount) || 0;
+
+            return 'KSh ' + value.toLocaleString('en-KE', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+        }
+
         // Cart state with selected variants
         let cart = JSON.parse(localStorage.getItem('catalog_{{ $catalog->id }}_cart')) || [];
         let selectedVariants = {};
@@ -621,7 +698,7 @@
             if (cart.length === 0) {
                 cartItemsDiv.innerHTML = '<div class="empty-cart"><div class="empty-cart-icon"><i class="fas fa-shopping-bag"></i></div><p>Your cart is empty</p></div>';
                 cartBadge.style.display = 'none';
-                cartTotal.textContent = '$0.00';
+                cartTotal.textContent = formatKsh(0);
                 checkoutBtn.disabled = true;
                 return;
             }
@@ -648,13 +725,13 @@
                         </button>
                         <div class="cart-item-title">${item.title}</div>
                         ${variantText}
-                        <div class="cart-item-qty">$${price.toFixed(2)} × ${item.quantity} = $${itemTotal.toFixed(2)}</div>
+                        <div class="cart-item-qty">${formatKsh(price)} × ${item.quantity} = ${formatKsh(itemTotal)}</div>
                     </div>
                 `;
             });
 
             cartItemsDiv.innerHTML = html;
-            cartTotal.textContent = '$' + total.toFixed(2);
+            cartTotal.textContent = formatKsh(total);
             checkoutBtn.disabled = false;
             document.getElementById('invoiceBtn').disabled = false;
         }
@@ -684,12 +761,12 @@
                 if (item.variant) {
                     itemLine += ` (${item.variant})`;
                 }
-                itemLine += ` (x${item.quantity}) - $${price.toFixed(2)} = $${itemTotal.toFixed(2)}\n`;
+                itemLine += ` (x${item.quantity}) - ${formatKsh(price)} = ${formatKsh(itemTotal)}\n`;
 
                 orderMessage += itemLine;
             });
 
-            orderMessage += `\n💰 *Total: $${total.toFixed(2)}*\n`;
+            orderMessage += `\n💰 *Total: ${formatKsh(total)}*\n`;
             orderMessage += "\nPlease confirm this order.";
 
             // Get company WhatsApp number from data

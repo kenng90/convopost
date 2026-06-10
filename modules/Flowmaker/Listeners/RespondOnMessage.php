@@ -3,52 +3,60 @@
 namespace Modules\Flowmaker\Listeners;
 
 use App\Models\Company;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Flow;
-use Modules\Wpbox\Models\Reply;
 
 class RespondOnMessage
 {
-
-    public function handleMessageByContact($event){
+    public function handleMessageByContact($event)
+    {
         try {
-            $contact=$event->message->contact;
-            $message=$event->message;
-            if($contact->enabled_ai_bot&&!$message->bot_has_replied){
-            
-                //Based on the contact company, find this company firs active AI Bot
-                $company_id= $contact->company_id;
+            $contact = $event->message->contact;
+            $message = $event->message;
+            if ($contact->enabled_ai_bot && ! $message->bot_has_replied) {
+                $company_id = $contact->company_id;
+                $company = Company::findOrFail($company_id);
 
+                Log::info('Message received in flowmaker');
 
-                //Get the company
-                $company=Company::findOrFail($company_id);
+                $flows = Flow::where('company_id', $company_id)->get();
+                $flowsForChat = $this->filterFlowsForChat($company, $flows);
 
-                Log::info("Message received in flowmaker");
-
-                //Get all the flow from the company
-                $flows=Flow::where('company_id',$company_id)->get();
-
-                //Loop through the flows and check if the message matches the flow
-                foreach($flows as $flow){
-                  Log::info("Flow: ".$flow->name);
-                  $flow->processMessage($message);
-                  Log::info("Flow processed");
+                foreach ($flowsForChat as $flow) {
+                    Log::info('Flow: '.$flow->name);
+                    $flow->processMessage($message);
+                    Log::info('Flow processed');
                 }
-                
-                
-    
+
             }
         } catch (\Throwable $th) {
-           
         }
-       
-        
-
-
     }
 
+    /**
+     * Chat runs all company flows except the one assigned to AI voice (knowledge-only there).
+     * If that voice flow is the only flow, it is still used for chat so the bot does not go silent.
+     *
+     * @param  \Illuminate\Database\Eloquent\Collection<int, Flow>|Collection<int, Flow>  $flows
+     * @return Collection<int, Flow>
+     */
+    public function filterFlowsForChat(Company $company, $flows): Collection
+    {
+        $voiceFlowId = (int) $company->getConfig('whatsapp_ai_flow_id', 0);
+        if ($voiceFlowId <= 0) {
+            return $flows instanceof Collection ? $flows : collect($flows);
+        }
 
+        $collection = $flows instanceof Collection ? $flows : collect($flows);
+        $withoutVoice = $collection->reject(fn (Flow $flow) => (int) $flow->id === $voiceFlowId)->values();
+
+        if ($withoutVoice->isEmpty()) {
+            return $collection->values();
+        }
+
+        return $withoutVoice;
+    }
 
     public function subscribe($events)
     {
@@ -57,5 +65,4 @@ class RespondOnMessage
             [RespondOnMessage::class, 'handleMessageByContact']
         );
     }
-
 }

@@ -1,0 +1,22 @@
+{
+  "name": "convocon-whatsappcall-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "WhatsApp Cloud API voice worker for Convocon",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@roamhq/wrtc": "^0.10.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  }
+}

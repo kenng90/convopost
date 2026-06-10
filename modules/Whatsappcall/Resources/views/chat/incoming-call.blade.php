@@ -22,9 +22,10 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Close') }}</button>
+        <button type="button" class="btn btn-secondary" id="waIncomingCallCloseBtn" data-dismiss="modal">{{ __('Close') }}</button>
         <button type="button" class="btn btn-danger" id="waDeclineBtn">{{ __('Decline') }}</button>
         <button type="button" class="btn btn-success" id="waAcceptBtn">{{ __('Accept') }}</button>
+        <button type="button" class="btn btn-danger" id="waEndCallBtn" style="display: none;">{{ __('End call') }}</button>
       </div>
     </div>
   </div>

@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="container-fluid py-4">
-    <div class="row mb-4">
+    <div class="row mb-4 mt-3">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
@@ -169,7 +169,15 @@
                             @foreach($report['payments'] as $payment)
                                 <tr>
                                     <td>
-                                        <strong class="text-dark">{{ $payment['invoice_number'] }}</strong>
+                                        <strong class="text-dark">
+                                            <a href="#"
+                                                class="text-dark invoice-preview-trigger"
+                                                data-toggle="modal"
+                                                data-target="#invoiceModal{{ $payment['invoice_id'] }}"
+                                                onclick="event.preventDefault();">
+                                                {{ $payment['invoice_number'] }}
+                                            </a>
+                                        </strong>
                                     </td>
                                     <td>
                                         <div class="small">{{ $payment['customer_name'] }}</div>
@@ -218,6 +226,10 @@
                         </tbody>
                     </table>
                 </div>
+
+                @foreach($report['payments'] as $payment)
+                    @include('reports.partials.invoice-preview-modal', ['payment' => $payment])
+                @endforeach
             @endif
         </div>
     </div>
@@ -238,6 +250,15 @@
 
     .border-left-danger {
         border-left: 0.25rem solid #dc3545 !important;
+    }
+
+    .invoice-preview-trigger {
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .invoice-preview-trigger:hover {
+        text-decoration: underline;
     }
 </style>
 @endsection

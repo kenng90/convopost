@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Akaunting\Module\Facade as Module;
 use App\Models\Plans;
 use App\Models\User;
+use App\Services\PlanCreditAllocator;
+use App\Services\PlanSeatBillingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,6 +17,12 @@ use Stripe\Exception\InvalidRequestException;
 
 class PlansController extends Controller
 {
+    public function __construct(
+        private readonly PlanCreditAllocator $planCreditAllocator,
+        private readonly PlanSeatBillingService $planSeatBillingService,
+    ) {
+    }
+
     public function current(): View
     {
 
@@ -25,7 +33,7 @@ class PlansController extends Controller
 
         $theSelectedProcessor = strtolower(config('settings.subscription_processor', 'stripe'));
 
-        $hasPricing=Module::has('pricing');
+        $hasPricing = Module::has('pricing');
         if (
             ! ($theSelectedProcessor == 'stripe' || $theSelectedProcessor == 'local') &&
             auth()->user()->plan_status != 'set_by_admin' &&
@@ -42,7 +50,7 @@ class PlansController extends Controller
         $colCounter = [4, 12, 6, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4];
 
         $currentUserPlan = Plans::withTrashed()->find(auth()->user()->mplanid());
-        $planAttribute = auth()->user()->company->getPlanAttribute();
+        $planAttribute = auth()->user()->currentCompany()?->getPlanAttribute() ?? [];
 
         $data = [
             'col' => $colCounter[count($plans)],
@@ -113,6 +121,16 @@ class PlansController extends Controller
         $plan->price = strip_tags($request->price);
         $plan->limit_items = strip_tags($request->limit_items);
         $plan->limit_views = strip_tags($request->limit_views);
+        $plan->limit_catalog_items = strip_tags($request->input('limit_catalog_items', 0));
+        $plan->limit_agents = strip_tags($request->input('limit_agents', 0));
+        $plan->limit_companies = strip_tags($request->input('limit_companies', 0));
+        $plan->limit_integrations = strip_tags($request->input('limit_integrations', 0));
+        $plan->included_agent_seats = strip_tags($request->input('included_agent_seats', 0));
+        $plan->stripe_agent_seat_price_id = strip_tags($request->input('stripe_agent_seat_price_id', '')) ?: null;
+        $plan->agent_seat_price = strip_tags($request->input('agent_seat_price', 0));
+        $plan->included_companies = strip_tags($request->input('included_companies', 0));
+        $plan->stripe_company_seat_price_id = strip_tags($request->input('stripe_company_seat_price_id', '')) ?: null;
+        $plan->company_seat_price = strip_tags($request->input('company_seat_price', 0));
 
         if (isset($request->subscribe)) {
             foreach ($request->subscribe as $key => $value) {
@@ -132,6 +150,7 @@ class PlansController extends Controller
         $plan->save();
 
         $this->updatePlanPlugins($plan, $request->pluginsSelector);
+        $this->updatePlanCapabilities($plan, $request->capabilitiesSelector);
 
         return redirect()->route('plans.index')->withStatus(__('Plan successfully created!'));
     }
@@ -189,6 +208,16 @@ class PlansController extends Controller
         $plan->price = strip_tags($request->price);
         $plan->limit_items = strip_tags($request->limit_items);
         $plan->limit_views = strip_tags($request->limit_views);
+        $plan->limit_catalog_items = strip_tags($request->input('limit_catalog_items', 0));
+        $plan->limit_agents = strip_tags($request->input('limit_agents', 0));
+        $plan->limit_companies = strip_tags($request->input('limit_companies', 0));
+        $plan->limit_integrations = strip_tags($request->input('limit_integrations', 0));
+        $plan->included_agent_seats = strip_tags($request->input('included_agent_seats', 0));
+        $plan->stripe_agent_seat_price_id = strip_tags($request->input('stripe_agent_seat_price_id', '')) ?: null;
+        $plan->agent_seat_price = strip_tags($request->input('agent_seat_price', 0));
+        $plan->included_companies = strip_tags($request->input('included_companies', 0));
+        $plan->stripe_company_seat_price_id = strip_tags($request->input('stripe_company_seat_price_id', '')) ?: null;
+        $plan->company_seat_price = strip_tags($request->input('company_seat_price', 0));
 
         //Subscriptions plans
         if (isset($request->subscribe)) {
@@ -216,6 +245,7 @@ class PlansController extends Controller
         $plan->update();
 
         $this->updatePlanPlugins($plan, $request->pluginsSelector);
+        $this->updatePlanCapabilities($plan, $request->capabilitiesSelector);
 
         return redirect()->route('plans.index')->withStatus(__('Plan successfully updated!'));
     }
@@ -229,6 +259,15 @@ class PlansController extends Controller
             $plan->setConfig('plugins', null);
         }
 
+    }
+
+    private function updatePlanCapabilities($plan, $capabilitiesSelector): void
+    {
+        if ($capabilitiesSelector) {
+            $plan->setConfig('capabilities', json_encode($capabilitiesSelector));
+        } else {
+            $plan->setConfig('capabilities', null);
+        }
     }
 
     /**
@@ -247,11 +286,8 @@ class PlansController extends Controller
     public function subscribe3dStripe(Request $request, Plans $plan, User $user): RedirectResponse
     {
         if ($request->success.'' == 'true') {
-            //Assign user to plan
-            $user->plan_id = $plan->id;
             $user->cancel_url = route('plans.cancel');
-
-            $user->update();
+            $this->assignPlanAndCredits($user, $plan);
 
             return redirect()->route('plans.current')->withStatus(__('Plan update!'));
         } else {
@@ -283,9 +319,16 @@ class PlansController extends Controller
                     //SWAP
                     auth()->user()->subscription('main')->swap($plan_stripe_id);
                     auth()->user()->cancel_url = route('plans.cancel');
+                    $this->planSeatBillingService->syncForOwner(auth()->user());
                 } else {
                     //NEW Stripe subscription
-                    $payment_stripe = auth()->user()->newSubscription('main', $plan_stripe_id)->create($request->stripePaymentId, []);
+                    $subscriptionBuilder = auth()->user()->newSubscription('main', $plan_stripe_id);
+                    $this->planSeatBillingService->applySeatPricesToSubscriptionBuilder(
+                        $subscriptionBuilder,
+                        auth()->user(),
+                        $plan
+                    );
+                    $subscriptionBuilder->create($request->stripePaymentId, []);
                     auth()->user()->cancel_url = route('plans.cancel');
                 }
             } catch (PaymentActionRequired $e) {
@@ -314,9 +357,7 @@ class PlansController extends Controller
             }
         }
 
-        //Assign user to plan
-        auth()->user()->plan_id = $plan->id;
-        auth()->user()->update();
+        $this->assignPlanAndCredits(auth()->user(), $plan);
 
         return redirect()->route('plans.current')->withStatus(__('Plan update!'));
     }
@@ -325,11 +366,23 @@ class PlansController extends Controller
     {
         $this->adminOnly();
         $user = User::findOrFail($request->user_id);
-        $user->plan_id = $request->plan_id;
-        $user->plan_status = 'set_by_admin';
-        $user->update();
+        $plan = Plans::findOrFail($request->plan_id);
+        $this->assignPlanAndCredits($user, $plan, 'set_by_admin');
 
         return redirect()->route('admin.companies.edit', $request->company_id)->withStatus(__('Plan successfully updated.'));
+    }
+
+    private function assignPlanAndCredits(User $user, Plans $plan, ?string $planStatus = null): void
+    {
+        $user->plan_id = $plan->id;
+        if ($planStatus !== null) {
+            $user->plan_status = $planStatus;
+        }
+        $user->save();
+
+        $this->planCreditAllocator->replacePlanCreditsForUser($user, $plan);
+
+        app(PlanSeatBillingService::class)->syncForOwner($user);
     }
 
     public function isExtended()

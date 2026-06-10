@@ -21,20 +21,5 @@
             "value": false
         }
     ],
-    "ownermenus": [
-        {
-            "name": "WhatsApp Flows",
-            "icon": "ni ni-send text-purple",
-            "route": "whatsapp-flows.index",
-            "onlyin": "wpbox,whatssupport",
-            "priority": 3
-        },
-        {
-            "name": "Flow Responses",
-            "icon": "ni ni-collection text-success",
-            "route": "whatsapp-flows.responses",
-            "onlyin": "wpbox,whatssupport",
-            "priority": 4
-        }
-    ]
+    "ownermenus": []
 }

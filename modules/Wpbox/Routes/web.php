@@ -24,17 +24,31 @@ Route::group([
         Route::get('whatsapp/setup', 'DashboardController@setup')->name('whatsapp.setup');
         Route::post('whatsapp/setup', 'DashboardController@savesetup')->name('whatsapp.store');
 
-        //Campaigns
-        Route::get('campaigns', 'CampaignsController@index')->name('campaigns.index');
-        Route::get('campaigns/{campaign}/show', 'CampaignsController@show')->name('campaigns.show');
-        Route::get('campaigns/create', 'CampaignsController@create')->name('campaigns.create');
-        Route::post('campaigns', 'CampaignsController@store')->name('campaigns.store');
-        Route::put('campaigns/{campaign}', 'CampaignsController@update')->name('campaigns.update');
-        Route::get('campaigns/del/{campaign}', 'CampaignsController@destroy')->name('campaigns.delete');
-        Route::post('/campaigns/parse-file', 'CampaignsController@parseFile')->name('campaigns.parse-file');
-        Route::get('/campaigns/create/{type?}', 'CampaignsController@create')->name('campaigns.create');
-        Route::post('/campaigns/store',  'CampaignsController@store')->name('campaigns.store');
-       //Templates
+        Route::middleware('plan.capability:campaigns')->group(function () {
+            //Campaigns
+            Route::get('campaigns', 'CampaignsController@index')->name('campaigns.index');
+            Route::get('campaigns/{campaign}/show', 'CampaignsController@show')->name('campaigns.show');
+            Route::get('campaigns/create', 'CampaignsController@create')->name('campaigns.create');
+            Route::post('campaigns', 'CampaignsController@store')->name('campaigns.store');
+            Route::put('campaigns/{campaign}', 'CampaignsController@update')->name('campaigns.update');
+            Route::get('campaigns/del/{campaign}', 'CampaignsController@destroy')->name('campaigns.delete');
+            Route::post('/campaigns/parse-file', 'CampaignsController@parseFile')->name('campaigns.parse-file');
+            Route::get('/campaigns/create/{type?}', 'CampaignsController@create')->name('campaigns.create');
+            Route::post('/campaigns/store', 'CampaignsController@store')->name('campaigns.store');
+
+            //Deactivate and activate bot
+            Route::get('campaigns/deactivatebot/{campaign}', 'CampaignsController@deactivateBot')->name('campaigns.deactivatebot');
+            Route::get('campaigns/activatebot/{campaign}', 'CampaignsController@activateBot')->name('campaigns.activatebot');
+
+            //Pause and resume campaign
+            Route::get('campaigns/pause/{campaign}', 'CampaignsController@pause')->name('campaigns.pause');
+            Route::get('campaigns/resume/{campaign}', 'CampaignsController@resume')->name('campaigns.resume');
+
+            //Report
+            Route::get('campaigns/report/{campaign}', 'CampaignsController@report')->name('campaigns.report');
+        });
+
+        //Templates
         Route::get('templates', 'TemplatesController@index')->name('templates.index');
         Route::get('templates/create', 'TemplatesController@create')->name('templates.create');
         Route::post('templates/store', 'TemplatesController@store')->name('templates.store');
@@ -52,17 +66,6 @@ Route::group([
         Route::post('replies', 'RepliesController@store')->name('replies.store');
         Route::put('replies/{reply}', 'RepliesController@update')->name('replies.update');
         Route::get('replies/del/{reply}', 'RepliesController@destroy')->name('replies.delete');
-
-        //Deactivate and activate bot
-        Route::get('campaigns/deactivatebot/{campaign}', 'CampaignsController@deactivateBot')->name('campaigns.deactivatebot');
-        Route::get('campaigns/activatebot/{campaign}', 'CampaignsController@activateBot')->name('campaigns.activatebot');
-
-        //Pause and resume campaign
-        Route::get('campaigns/pause/{campaign}', 'CampaignsController@pause')->name('campaigns.pause');
-        Route::get('campaigns/resume/{campaign}', 'CampaignsController@resume')->name('campaigns.resume');
-
-        //Report
-        Route::get('campaigns/report/{campaign}', 'CampaignsController@report')->name('campaigns.report');
 
         //API
         Route::prefix('api/wpbox')->group(function () {

@@ -13,8 +13,8 @@
         <div class="card-header bg-transparent border-bottom-0 d-flex justify-content-between align-items-center">
             <div class="d-flex justify-content-between align-items-center w-100">
                 <h3 class="mb-0">@{{ currentSideAppName }}</h3>
-                <button class="btn btn-sm btn-outline-secondary" @click="toggleSideApp(currentSideApp,currentSideAppName)">
-                    <span class="btn-inner--icon"><i class="ni ni-button-power"></i></span>
+                <button class="btn btn-sm btn-outline-primary" @click="toggleSideApp(currentSideApp,currentSideAppName)">
+                    <span class="btn-inner--icon">  Close</i></span>
                 </button>
             </div>
             

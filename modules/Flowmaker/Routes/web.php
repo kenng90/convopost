@@ -15,7 +15,7 @@ Route::group([
     'namespace' => 'Modules\Flowmaker\Http\Controllers',
 ], function () {
     Route::group([
-        'middleware' => ['web', 'auth', 'impersonate'],
+        'middleware' => ['web', 'auth', 'impersonate', 'plan.plugin:flowmaker'],
     ], function () {
 
         //Flows

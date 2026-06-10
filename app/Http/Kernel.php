@@ -69,9 +69,10 @@ class Kernel extends HttpKernel
         'isCompanyActive' => \App\Http\Middleware\checkActiveCompany::class,
         'isOwnerOnPro' => \App\Http\Middleware\EnsureOwnerIsOnPROPlan::class,
         'verifiedSetup' => \App\Http\Middleware\EnsureSetupIsDone::class,
-        'acivatedProject'   => \App\Http\Middleware\Activation::class,
+        'acivatedProject' => \App\Http\Middleware\Activation::class,
         'impersonate' => \App\Http\Middleware\Impersonate::class,
         'XssSanitizer' => \App\Http\Middleware\XssSanitization::class,
         'plan.plugin' => \App\Http\Middleware\EnsurePlanPlugin::class,
+        'plan.capability' => \App\Http\Middleware\EnsurePlanCapability::class,
     ];
 }

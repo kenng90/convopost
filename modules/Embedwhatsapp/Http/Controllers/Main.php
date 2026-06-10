@@ -2,9 +2,8 @@
 
 namespace Modules\Embedwhatsapp\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Modules\Embedwhatsapp\Models\Whatsappwidget;
 
 class Main extends Controller
@@ -13,18 +12,19 @@ class Main extends Controller
     {
         //Get the widget data
         $widget = Whatsappwidget::where('id', $request->id)->first();
-        if(!$widget){
-            return response()->json(['error'=>'Widget not found'], 404);
-        }else{
-            $imageLink= $widget->getImageLinkAttribute();
+        if (! $widget) {
+            return response()->json(['error' => 'Widget not found'], 404);
+        } else {
+            $imageLink = $widget->getImageLinkAttribute();
             $widget = $widget->toArray();
-            
+
             $widget['message'] = $widget['widget_text'];
-            $widget['url'] = config('app.url')."/uploads/default/wpbox/widget/";
+            $widget['url'] = config('app.url').'/uploads/default/wpbox/widget/';
             $widget['logo'] = config('app.url').$imageLink;
-            $widget['chatlink'] = "https://wa.me/".$widget['phone_number'];
+            $widget['chatlink'] = 'https://wa.me/'.$widget['phone_number'];
         }
-        return response()->view('embedwhatsapp::dynamic_js',$widget)->header('Content-Type', 'application/javascript');
+
+        return response()->view('embedwhatsapp::dynamic_js', $widget)->header('Content-Type', 'application/javascript');
     }
 
     public function create()
@@ -32,13 +32,15 @@ class Main extends Controller
         return view('embedwhatsapp::create');
     }
 
-    private function generateRandomString($length = 10) {
+    private function generateRandomString($length = 10)
+    {
         $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
         $charactersLength = strlen($characters);
         $randomString = '';
         for ($i = 0; $i < $length; $i++) {
             $randomString .= $characters[rand(0, $charactersLength - 1)];
         }
+
         return $randomString;
     }
 
@@ -54,17 +56,16 @@ class Main extends Controller
             'button_text' => 'required',
             'widget_type' => 'required',
             'button_color' => 'required',
-            'header_color' => 'required'
+            'header_color' => 'required',
         ]);
 
         // Create a new widget
         //Check for existing widget
-        $widget = Whatsappwidget::where('company_id', auth()->user()->company_id)->first();
-        if(!$widget){
+        $widget = Whatsappwidget::where('company_id', $this->activeCompanyId())->first();
+        if (! $widget) {
             $widget = new Whatsappwidget();
             $widget->id = $this->generateRandomString(10);
         }
-       
 
         // Assign the validated data to the widget
         $widget->phone_number = $validatedData['phone_number'];
@@ -76,8 +77,7 @@ class Main extends Controller
         $widget->input_field_placeholder = $request->input_field_placeholder;
         $widget->button_color = $validatedData['button_color'];
         $widget->header_color = $validatedData['header_color'];
-        $widget->company_id = auth()->user()->company->id;
-
+        $widget->company_id = $this->activeCompanyId();
 
         // Save the widgets
         $widget->save();
@@ -88,7 +88,7 @@ class Main extends Controller
                 'uploads/companies/',
                 $request->logo,
                 [
-                    ['name'=>'large'],
+                    ['name' => 'large'],
                 ]
             );
             $widget->update();
@@ -106,8 +106,8 @@ class Main extends Controller
     public function edit()
     {
         //Find existing widget
-        $widget = Whatsappwidget::where('company_id', auth()-> user()->company_id)->first();
-        if(!$widget){
+        $widget = Whatsappwidget::where('company_id', $this->activeCompanyId())->first();
+        if (! $widget) {
             $widget = [
                 'logo' => '',
                 'phone_number' => '',
@@ -118,19 +118,19 @@ class Main extends Controller
                 'widget_type' => '1',
                 'input_field_placeholder' => 'Enter your message',
                 'button_color' => '#14c656',
-                'header_color' => '#006654'
+                'header_color' => '#006654',
             ];
-        }else{
+        } else {
 
-            $id=$widget->getAttributes()['id'];
-            $imageLink= $widget->getImageLinkAttribute();
+            $id = $widget->getAttributes()['id'];
+            $imageLink = $widget->getImageLinkAttribute();
             $widget = $widget->toArray();
             $widget['logo'] = $imageLink;
-            $widget['url'] = config('app.url')."/popup/whatsapp?id=".$id;
+            $widget['url'] = config('app.url').'/popup/whatsapp?id='.$id;
 
         }
 
-        return view('embedwhatsapp::edit',['widget'=>$widget]);
+        return view('embedwhatsapp::edit', ['widget' => $widget]);
     }
 
     public function update(Request $request, $id)
@@ -143,5 +143,3 @@ class Main extends Controller
         //
     }
 }
-
-

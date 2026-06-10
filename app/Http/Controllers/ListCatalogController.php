@@ -2,18 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ManageCatalogItemsRequest;
+use App\Models\Company;
 use App\Models\ListCatalog;
+use App\Services\CatalogItemFilterService;
+use App\Services\CatalogItemPlanLimit;
 use App\Services\ExcelImportService;
+use App\Services\WhatsApp\OrderInvoiceMessageTemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ListCatalogController extends Controller
 {
-    protected $excelService;
-
-    public function __construct(ExcelImportService $excelService)
-    {
-        $this->excelService = $excelService;
+    public function __construct(
+        protected ExcelImportService $excelService,
+        protected CatalogItemPlanLimit $catalogItemPlanLimit,
+        protected OrderInvoiceMessageTemplateService $orderInvoiceTemplateService,
+        protected CatalogItemFilterService $catalogItemFilter,
+    ) {
     }
 
     /**
@@ -21,7 +28,7 @@ class ListCatalogController extends Controller
      */
     public function previewExcel(Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -35,7 +42,7 @@ class ListCatalogController extends Controller
 
             $file = $request->file('file');
             $path = $file->store('temp');
-            $fullPath = storage_path('app/' . $path);
+            $fullPath = storage_path('app/'.$path);
 
             // Parse the Excel file
             $parseResult = $this->excelService->parseExcel($fullPath);
@@ -43,16 +50,25 @@ class ListCatalogController extends Controller
             // Clean up temp file
             unlink($fullPath);
 
+            $columnMapping = $parseResult['column_mapping'];
+            $previewItems = $this->excelService->transformItems(
+                array_slice($parseResult['items'], 0, 5),
+                $columnMapping
+            );
+
             return response()->json([
                 'success' => true,
-                'items' => $this->excelService->previewItems($parseResult['items']),
+                'items' => $this->excelService->previewItems($previewItems),
                 'columns' => $parseResult['columns'],
+                'column_mapping' => $columnMapping,
+                'template_headers' => ExcelImportService::TEMPLATE_HEADERS,
                 'total_count' => $parseResult['total_count'],
                 'headers' => $parseResult['headers'],
             ]);
 
         } catch (\Exception $e) {
             Log::error('Excel preview failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -65,7 +81,7 @@ class ListCatalogController extends Controller
      */
     public function importExcel(Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -76,20 +92,21 @@ class ListCatalogController extends Controller
             $request->validate([
                 'file' => 'required|file|mimes:xlsx,xls,csv',
                 'catalogName' => 'required|string|max:255',
-                'columnMapping' => 'required|json',
+                'columnMapping' => 'nullable|json',
             ]);
 
             $file = $request->file('file');
             $catalogName = $request->input('catalogName');
-            $columnMapping = json_decode($request->input('columnMapping'), true);
 
             $path = $file->store('catalogs');
-            $fullPath = storage_path('app/' . $path);
+            $fullPath = storage_path('app/'.$path);
 
-            // Parse Excel
             $parseResult = $this->excelService->parseExcel($fullPath);
 
-            // Transform items using column mapping
+            $columnMapping = $request->filled('columnMapping')
+                ? json_decode($request->input('columnMapping'), true)
+                : $parseResult['column_mapping'];
+
             $transformedItems = $this->excelService->transformItems(
                 $parseResult['items'],
                 $columnMapping
@@ -98,9 +115,20 @@ class ListCatalogController extends Controller
             // Validate items
             $this->excelService->validateItems($transformedItems);
 
+            $company = $this->getCompany() ?? abort(403);
+            $itemCount = count($transformedItems);
+
+            if (! $this->catalogItemPlanLimit->canAdd($company, $itemCount)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $this->catalogItemPlanLimit->limitExceededMessage($company, $itemCount),
+                    'usage' => $this->catalogItemPlanLimit->getUsageSummary($company),
+                ], 403);
+            }
+
             // Create catalog
             $catalogData = [
-                'company_id' => auth()->user()->company_id,
+                'company_id' => $this->activeCompanyId(),
                 'name' => $catalogName,
                 'version' => 1,
                 'items' => $transformedItems,
@@ -116,19 +144,34 @@ class ListCatalogController extends Controller
 
             $catalog = ListCatalog::create($catalogData);
 
+            $this->catalogItemPlanLimit->recordUsage($company->id, $itemCount);
+
+            $templateProvision = $this->orderInvoiceTemplateService->ensureForCompany($company);
+
             // Clean up original file
             unlink($fullPath);
 
+            $responseMessage = "Catalog '{$catalogName}' created with ".count($transformedItems).' items.';
+            if (! $templateProvision['ready']) {
+                $responseMessage .= ' '.$templateProvision['message'];
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => "Catalog '{$catalogName}' created with " . count($transformedItems) . ' items.',
+                'message' => $responseMessage,
                 'catalogId' => $catalog->id,
                 'items' => $transformedItems,
                 'itemCount' => count($transformedItems),
+                'order_template' => [
+                    'ready' => $templateProvision['ready'],
+                    'status' => $templateProvision['status'],
+                    'message' => $templateProvision['message'],
+                ],
             ]);
 
         } catch (\Exception $e) {
             Log::error('Excel import failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -137,11 +180,27 @@ class ListCatalogController extends Controller
     }
 
     /**
+     * Download standardized catalog import template (.xlsx)
+     */
+    public function downloadImportTemplate(): StreamedResponse
+    {
+        if (! auth()->check()) {
+            abort(401);
+        }
+
+        return response()->streamDownload(function () {
+            $this->excelService->writeTemplateToPath('php://output');
+        }, 'catalog-import-template.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
      * Test API endpoint and get preview
      */
     public function testAPI(Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -162,7 +221,7 @@ class ListCatalogController extends Controller
             // Make API call
             $response = \Illuminate\Support\Facades\Http::timeout(10)->get($url, $params);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 return response()->json([
                     'success' => false,
                     'message' => "API returned status {$response->status()}",
@@ -175,7 +234,7 @@ class ListCatalogController extends Controller
             // Extract data from response path
             $items = $this->getValueByPath($data, $responseDataPath);
 
-            if (!is_array($items)) {
+            if (! is_array($items)) {
                 return response()->json([
                     'success' => false,
                     'message' => "Data at path '{$responseDataPath}' is not an array",
@@ -200,6 +259,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('API test failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -212,7 +272,7 @@ class ListCatalogController extends Controller
      */
     public function listCatalogs()
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -220,7 +280,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
 
             $catalogs = ListCatalog::where('company_id', $companyId)
                 ->where('parent_id', null) // Only root catalogs
@@ -239,13 +299,19 @@ class ListCatalogController extends Controller
                     ];
                 });
 
+            $company = $this->getCompany();
+
             return response()->json([
                 'success' => true,
                 'catalogs' => $catalogs,
+                'catalog_item_usage' => $company
+                    ? $this->catalogItemPlanLimit->getUsageSummary($company)
+                    : null,
             ]);
 
         } catch (\Exception $e) {
             Log::error('List catalogs failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -258,7 +324,7 @@ class ListCatalogController extends Controller
      */
     public function getCatalog($id)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -266,7 +332,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -295,6 +361,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Get catalog failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Catalog not found',
@@ -307,7 +374,7 @@ class ListCatalogController extends Controller
      */
     public function updateCatalog(Request $request, $id)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -315,7 +382,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -342,6 +409,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Update catalog failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -354,7 +422,7 @@ class ListCatalogController extends Controller
      */
     public function deleteCatalog($id)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -362,7 +430,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -375,6 +443,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Delete catalog failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -383,11 +452,30 @@ class ListCatalogController extends Controller
     }
 
     /**
-     * Get catalog items for management
+     * Display catalog items management page
      */
-    public function getItems($id)
+    public function itemsPage($id)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
+            return redirect()->route('login');
+        }
+
+        $companyId = $this->activeCompanyId();
+        $catalog = ListCatalog::where('id', $id)
+            ->where('company_id', $companyId)
+            ->firstOrFail();
+
+        return view('settings.catalog-items', [
+            'catalog' => $catalog,
+        ]);
+    }
+
+    /**
+     * Get catalog items for management (paginated)
+     */
+    public function getItems(ManageCatalogItemsRequest $request, $id)
+    {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -395,21 +483,82 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
 
+            $browse = $this->catalogItemFilter->browse(
+                $catalog->items ?? [],
+                $request->filters(),
+                route('catalogs.items', ['id' => $catalog->id])
+            );
+
+            $paginator = $browse['items'];
+
             return response()->json([
                 'success' => true,
-                'items' => $catalog->items ?? [],
+                'items' => $paginator->items(),
+                'pagination' => [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page' => $paginator->lastPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                    'from' => $paginator->firstItem(),
+                    'to' => $paginator->lastItem(),
+                ],
+                'total_in_catalog' => $browse['totalInCatalog'],
+                'filtered_total' => $browse['filteredTotal'],
             ]);
 
         } catch (\Exception $e) {
             Log::error('Get catalog items failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Catalog not found',
+            ], 404);
+        }
+    }
+
+    /**
+     * Get a single catalog item for editing
+     */
+    public function getItem($id, $itemId)
+    {
+        if (! auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        try {
+            $companyId = $this->activeCompanyId();
+            $catalog = ListCatalog::where('id', $id)
+                ->where('company_id', $companyId)
+                ->firstOrFail();
+
+            $item = $this->findProductInCatalog($catalog->items ?? [], $itemId);
+
+            if ($item === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Item not found',
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'item' => $item,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get catalog item failed', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Item not found',
             ], 404);
         }
     }
@@ -419,7 +568,7 @@ class ListCatalogController extends Controller
      */
     public function addItem(Request $request, $id)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -427,7 +576,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -455,6 +604,16 @@ class ListCatalogController extends Controller
                 ], 400);
             }
 
+            $company = Company::findOrFail($companyId);
+
+            if (! $this->catalogItemPlanLimit->canAdd($company, 1)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $this->catalogItemPlanLimit->limitExceededMessage($company, 1),
+                    'usage' => $this->catalogItemPlanLimit->getUsageSummary($company),
+                ], 403);
+            }
+
             // Add new item
             $newItem = [
                 'id' => $validated['id'],
@@ -472,15 +631,19 @@ class ListCatalogController extends Controller
             $catalog->items = $items;
             $catalog->save();
 
+            $this->catalogItemPlanLimit->recordUsage($company->id, 1);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Item added successfully',
                 'item' => $newItem,
                 'items' => $items,
+                'usage' => $this->catalogItemPlanLimit->getUsageSummary($company),
             ]);
 
         } catch (\Exception $e) {
             Log::error('Add item failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -493,7 +656,7 @@ class ListCatalogController extends Controller
      */
     public function updateItem(Request $request, $id, $itemId)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -501,7 +664,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -557,6 +720,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Update item failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -569,7 +733,7 @@ class ListCatalogController extends Controller
      */
     public function deleteItem($id, $itemId)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -577,7 +741,7 @@ class ListCatalogController extends Controller
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -585,7 +749,7 @@ class ListCatalogController extends Controller
             $items = $catalog->items ?? [];
 
             // Find and remove item
-            $items = array_filter($items, function($item) use ($itemId) {
+            $items = array_filter($items, function ($item) use ($itemId) {
                 return $item['id'] !== $itemId;
             });
 
@@ -603,6 +767,7 @@ class ListCatalogController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Delete item failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -627,5 +792,16 @@ class ListCatalogController extends Controller
         }
 
         return $value;
+    }
+
+    private function findProductInCatalog(array $items, string $productId): ?array
+    {
+        foreach ($items as $item) {
+            if (($item['id'] ?? null) === $productId) {
+                return $item;
+            }
+        }
+
+        return null;
     }
 }

@@ -11,16 +11,13 @@
 |s
 */
 
-
 Route::group([
-    'middleware' =>[ 'web'],
-    'namespace' => 'Modules\Embedwhatsapp\Http\Controllers'
+    'middleware' => ['web'],
+    'namespace' => 'Modules\Embedwhatsapp\Http\Controllers',
 ], function () {
     Route::get('/popup/whatsapp', 'Main@index')->name('embedwhatsapp.chat');
-        Route::group(['middleware' => ['auth','XssSanitizer']], function () {
-            Route::get('/whatsapp/widget/edit', 'Main@edit')->name('embedwhatsapp.edit');
-            Route::post('/whatsapp/widget/save', 'Main@store')->name('embedwhatsapp.store');
-        });
+    Route::group(['middleware' => ['auth', 'XssSanitizer', 'plan.plugin:embedwhatsapp']], function () {
+        Route::get('/whatsapp/widget/edit', 'Main@edit')->name('embedwhatsapp.edit');
+        Route::post('/whatsapp/widget/save', 'Main@store')->name('embedwhatsapp.store');
     });
-    
-    
+});

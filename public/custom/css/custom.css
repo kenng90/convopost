@@ -3079,7 +3079,7 @@ lottie-player {
 }
 
 .empty-chats {
-    background-image: url(/public/default/empty-chat.svg);
+    background-image: url(/default/empty-chat.svg);
     background-size: contain;
     opacity: 0.2;
 }

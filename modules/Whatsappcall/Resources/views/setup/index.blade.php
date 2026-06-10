@@ -117,6 +117,8 @@
             </div>
         </div>
 
+        @include('whatsappcall::setup.partials.ai_voice_settings')
+
         <div class="text-right mt-3">
             <button type="submit" class="btn btn-primary">{{ __('Save') }}</button>
         </div>

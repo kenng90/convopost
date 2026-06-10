@@ -13,10 +13,10 @@
 
 Route::group([
     'middleware' => ['web', 'impersonate'],
-    'namespace' => 'Modules\Shopifylist\Http\Controllers'
+    'namespace' => 'Modules\Shopifylist\Http\Controllers',
 ], function () {
     Route::group([
-        'middleware' => ['verified', 'web', 'auth', 'impersonate', 'XssSanitizer', 'isOwnerOnPro'],
+        'middleware' => ['verified', 'web', 'auth', 'impersonate', 'XssSanitizer', 'isOwnerOnPro', 'plan.plugin:shopifylist'],
     ], function () {
 
         //Force reload

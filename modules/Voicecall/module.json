@@ -1,0 +1,21 @@
+{
+    "alias": "voicecall",
+    "name": "Voice Call (Twilio AI)",
+    "description": "Twilio phone numbers with AI voice agent, Flowmaker flows, and catalog context",
+    "keywords": ["twilio", "voice", "ai", "phone"],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Voicecall\\Providers\\Main"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "ownermenus": [
+        {
+            "name": "Voice Call",
+            "icon": "ni ni-headphones",
+            "route": "voicecall.settings"
+        }
+    ]
+}

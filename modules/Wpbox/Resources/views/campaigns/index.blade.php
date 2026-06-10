@@ -2,12 +2,15 @@
 
 @section('cardbody')
     @foreach ($setup['items'] as $item)
-    @if ($item->template)
-        <a href="{{ route('campaigns.show',$item->id)}}"><h3 class="mb-0">{{__('Campaign')}}: {{ $item->name }}</h3><br />
-            @include('wpbox::campaigns.infoboxes',$item)
-        <hr /> </a>  
-    @endif
-       
+        <a href="{{ route('campaigns.show', $item->id) }}">
+            <h3 class="mb-0">{{ __('Campaign') }}: {{ $item->name }}</h3>
+            @if (! $item->template)
+                <p class="text-warning small mb-2">{{ __('Template unavailable') }}</p>
+            @endif
+            <br />
+            @include('wpbox::campaigns.infoboxes', ['item' => $item])
+            <hr />
+        </a>
     @endforeach
     @if (count($setup['items'])==0)
         <div style="display: flex; justify-content: center; width:100%;">

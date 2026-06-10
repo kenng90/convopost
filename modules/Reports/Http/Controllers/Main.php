@@ -19,17 +19,24 @@ class Main extends Controller
 
         // Scan all modules for reports
         $availableReports = [];
+        $company = $this->getCompany();
 
         foreach (Module::all() as $module) {
             if ($module->get('hasReports') && $module->get('reports')) {
+                $moduleAlias = $module->get('alias');
+
+                if (! $company->hasPlanPlugin($moduleAlias)) {
+                    continue;
+                }
+
                 $reports = $module->get('reports');
                 foreach ($reports as $report) {
                     $availableReports[] = [
                         'name' => $report['name'],
                         'view' => $report['view'],
                         'script' => $report['script'],
-                        'module' => $module->get('alias'),
-                        'module_name' => $module->get('name') ?? ucfirst($module->get('alias')),
+                        'module' => $moduleAlias,
+                        'module_name' => $module->get('name') ?? ucfirst($moduleAlias),
                     ];
                 }
             }

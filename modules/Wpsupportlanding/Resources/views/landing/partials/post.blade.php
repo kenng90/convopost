@@ -1,54 +1,39 @@
-<article class="max-w-7xl mx-auto px-4 py-8">
-    {{-- Back to Blog Link --}}
-    <div class="mb-8">
-        <a href="/blog" class="inline-flex items-center text-blue-600 hover:text-blue-800">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-            </svg>
-            {{ __('Back to Blog') }}
-        </a>
-    </div>
+@php
+    /** @var \Modules\Blog\Models\Blog $post */
+@endphp
+<article class="max-w-3xl mx-auto">
+    <a href="{{ url('/blog') }}" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-wa-green transition-colors mb-8">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        {{ __('Back to Blog') }}
+    </a>
 
-    {{-- Header Section --}}
     <header class="mb-8">
-        <h1 class="text-4xl font-bold text-gray-900 mb-4">{{ $data['data']['title'] }}</h1>
-        <div class="flex items-center text-gray-600 text-sm">
-            <time datetime="{{ $data['data']['created_at'] }}">
-                {{ \Carbon\Carbon::parse($data['data']['created_at'])->format('F j, Y') }}
-            </time>
-            <span class="mx-2">•</span>
-            <span>{{ $data['data']['read_time'] }} min read</span>
+        <div class="badge inline-flex mb-4">{{ __('Article') }}</div>
+        <h1 class="font-display text-3xl sm:text-4xl lg:text-5xl font-800 text-white leading-tight mb-4">{{ $post->title }}</h1>
+        <div class="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+            <time datetime="{{ $post->created_at }}">{{ $post->created_at->format('F j, Y') }}</time>
+            <span>•</span>
+            <span>{{ $post->read_time }} {{ __('min read') }}</span>
         </div>
     </header>
 
-    {{-- Featured Image --}}
-    @if($data['data']['featured_image'])
-        <div class="mb-8">
-            <img src="{{ $data['data']['featured_image'] }}" 
-                 alt="{{ $data['data']['title'] }}" 
-                 class="w-full h-auto rounded-lg shadow-lg">
+    @if($post->featured_image)
+        <div class="mb-10 rounded-2xl overflow-hidden border border-white/10">
+            <img src="{{ $post->featured_image }}" alt="{{ $post->title }}" class="w-full h-auto max-h-[420px] object-cover">
         </div>
     @endif
 
-    {{-- Excerpt --}}
-    @if($data['data']['excerpt'])
-        <div class="text-xl text-gray-600 mb-8 font-light bg-gray-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
-            {{ $data['data']['excerpt'] }}
-        </div>
+    @if($post->excerpt)
+        <p class="text-lg text-gray-300 mb-8 leading-relaxed border-l-2 border-wa-green pl-5">{{ $post->excerpt }}</p>
     @endif
 
-    {{-- Main Content --}}
-    <div class="prose prose-lg max-w-none">
-        {!! $data['data']['content'] !!}
+    <div class="blog-prose text-base">
+        {!! $post->content !!}
     </div>
 
-    {{-- Meta Information --}}
-    @if($data['data']['meta_keywords'])
-        <div class="mt-8 pt-8 border-t border-gray-200">
-            <div class="text-sm text-gray-600">
-                <span class="font-semibold">Keywords:</span> 
-                {{ $data['data']['meta_keywords'] }}
-            </div>
+    @if($post->meta_keywords)
+        <div class="mt-12 pt-8 border-t border-white/10">
+            <p class="text-sm text-gray-500"><span class="text-gray-400 font-medium">{{ __('Keywords') }}:</span> {{ $post->meta_keywords }}</p>
         </div>
     @endif
 </article>

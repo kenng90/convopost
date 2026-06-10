@@ -3,46 +3,44 @@
 namespace App\Http\Controllers;
 
 use App\Models\WhatsappFlow;
-use App\Models\WhatsappMetaCredentials;
 use App\Services\WhatsappMetaFlowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\View\View;
 
 class FlowsController extends Controller
 {
     /**
      * Show flows management or builder page
      */
-   /**
- * Show WhatsApp Flows list or builder page
- */
-/**
- * Show WhatsApp Flows list or builder page
- */
-/**
- * Show WhatsApp Flows list or builder page
- */
-public function index(?int $id = null)
-{
-    if ($id) {
-        $companyId = auth()->user()->company_id;
+    /**
+     * Show WhatsApp Flows list or builder page
+     */
+    /**
+     * Show WhatsApp Flows list or builder page
+     */
+    /**
+     * Show WhatsApp Flows list or builder page
+     */
+    public function index(?int $id = null)
+    {
+        if ($id) {
+            $companyId = $this->activeCompanyId();
 
-        $flow = WhatsappFlow::where('id', $id)
-            ->where('company_id', $companyId)
-            ->first();
+            $flow = WhatsappFlow::where('id', $id)
+                ->where('company_id', $companyId)
+                ->first();
 
-        if ($flow) {
-            return view('livewire.flows-builder', ['flowId' => $flow->id]);
+            if ($flow) {
+                return view('livewire.flows-builder', ['flowId' => $flow->id]);
+            }
         }
-    }
 
-    if (request()->path() === 'whatsapp-flows/create') {
-        return view('livewire.flows-builder', ['flowId' => null]);
-    }
+        if (request()->path() === 'whatsapp-flows/create') {
+            return view('livewire.flows-builder', ['flowId' => null]);
+        }
 
-    return view('flows.index');
-}
+        return view('flows.index');
+    }
 
     /**
      * Get all flows for the Flowmaker flow builder (to select in WhatsApp Flow node)
@@ -58,7 +56,7 @@ public function index(?int $id = null)
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
 
             $flows = WhatsappFlow::where('company_id', $companyId)
                 ->where('status', '!=', 'archived')
@@ -81,6 +79,7 @@ public function index(?int $id = null)
 
         } catch (\Exception $e) {
             Log::error('List flows for builder failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -93,7 +92,7 @@ public function index(?int $id = null)
      */
     public function list(Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -133,6 +132,7 @@ public function index(?int $id = null)
 
         } catch (\Exception $e) {
             Log::error('List flows failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -145,7 +145,7 @@ public function index(?int $id = null)
      */
     public function getFlow($id, Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -175,6 +175,7 @@ public function index(?int $id = null)
 
         } catch (\Exception $e) {
             Log::error('Get flow failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Flow not found',
@@ -187,7 +188,7 @@ public function index(?int $id = null)
      */
     public function create(Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -201,7 +202,7 @@ public function index(?int $id = null)
                 'flow_json' => 'required|array',
             ]);
 
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
 
             // Check for duplicate name in same company
             $exists = WhatsappFlow::where('company_id', $companyId)
@@ -238,6 +239,7 @@ public function index(?int $id = null)
 
         } catch (\Exception $e) {
             Log::error('Create flow failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -250,7 +252,7 @@ public function index(?int $id = null)
      */
     public function update(Request $request, $id)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -258,7 +260,7 @@ public function index(?int $id = null)
         }
 
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = $this->activeCompanyId();
             $flow = WhatsappFlow::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
@@ -306,6 +308,7 @@ public function index(?int $id = null)
 
         } catch (\Exception $e) {
             Log::error('Update flow failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -318,7 +321,7 @@ public function index(?int $id = null)
      */
     public function delete($id, Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -341,6 +344,7 @@ public function index(?int $id = null)
 
         } catch (\Exception $e) {
             Log::error('Delete flow failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -353,7 +357,7 @@ public function index(?int $id = null)
      */
     public function publish($id, Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -388,6 +392,7 @@ public function index(?int $id = null)
 
         } catch (\Exception $e) {
             Log::error('Publish flow failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -400,7 +405,7 @@ public function index(?int $id = null)
      */
     public function archive($id, Request $request)
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
@@ -426,6 +431,7 @@ public function index(?int $id = null)
 
         } catch (\Exception $e) {
             Log::error('Archive flow failed', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -467,12 +473,12 @@ public function index(?int $id = null)
             Log::debug('Credentials check', [
                 'flow_id' => $id,
                 'company_id' => $companyId,
-                'has_access_token' => !empty($accessToken),
-                'has_business_account_id' => !empty($businessAccountId),
+                'has_access_token' => ! empty($accessToken),
+                'has_business_account_id' => ! empty($businessAccountId),
                 'business_account_id' => $businessAccountId,
             ]);
 
-            if (!$accessToken || !$businessAccountId) {
+            if (! $accessToken || ! $businessAccountId) {
                 Log::warning('Missing Meta credentials', [
                     'flow_id' => $id,
                     'company_id' => $companyId,
@@ -554,7 +560,7 @@ public function index(?int $id = null)
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to publish flow: ' . $e->getMessage(),
+                'message' => 'Failed to publish flow: '.$e->getMessage(),
             ], 400);
         }
     }
@@ -572,14 +578,13 @@ public function index(?int $id = null)
             $accessibleCompanies = $user->accessibleCompanies();
             $hasAccess = $accessibleCompanies->contains('id', $selectedCompanyId);
 
-            if (!$hasAccess) {
+            if (! $hasAccess) {
                 throw new \Exception('Unauthorized to access this company');
             }
 
             return $selectedCompanyId;
         }
 
-        // Fall back to user's current company
-        return $user->company_id;
+        return $user->activeCompanyId();
     }
 }

@@ -16,6 +16,7 @@ class Main extends Provider
     public function register()
     {
         $this->loadConfig();
+        $this->loadWorkerConfig();
         $this->loadRoutes();
     }
 
@@ -33,9 +34,16 @@ class Main extends Provider
         $this->loadMigrations();
 
         if ($this->app->runningInConsole()) {
-            $this->commands([
+            $commands = [
                 \Modules\Whatsappcall\Console\SeedWeekCalls::class,
-            ]);
+                \Modules\Whatsappcall\Console\SimulateAiCallComplete::class,
+            ];
+
+            if (class_exists(\Modules\WhatsappcallWorker\Console\StartWorkerCommand::class)) {
+                $commands[] = \Modules\WhatsappcallWorker\Console\StartWorkerCommand::class;
+            }
+
+            $this->commands($commands);
         }
     }
 
@@ -47,8 +55,17 @@ class Main extends Provider
     protected function loadConfig()
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/../Config/config.php', 'whatsappcall'
+            __DIR__.'/../Config/config.php', 'whatsappcall'
         );
+    }
+
+    protected function loadWorkerConfig(): void
+    {
+        $workerConfig = base_path('modules/WhatsappcallWorker/Config/config.php');
+
+        if (is_file($workerConfig)) {
+            $this->mergeConfigFrom($workerConfig, 'whatsappcallworker');
+        }
     }
 
     /**
@@ -59,7 +76,7 @@ class Main extends Provider
     protected function publishConfig()
     {
         $this->publishes([
-            __DIR__ . '/../Config/config.php' => config_path('whatsappcall.php'),
+            __DIR__.'/../Config/config.php' => config_path('whatsappcall.php'),
         ], 'config');
     }
 
@@ -72,14 +89,14 @@ class Main extends Provider
     {
         $viewPath = resource_path('views/modules/whatsappcall');
 
-        $sourcePath = __DIR__ . '/../Resources/views';
+        $sourcePath = __DIR__.'/../Resources/views';
 
         $this->publishes([
-            $sourcePath => $viewPath
-        ],'views');
+            $sourcePath => $viewPath,
+        ], 'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
-            return $path . '/modules/whatsappcall';
+            return $path.'/modules/whatsappcall';
         }, Config::get('view.paths')), [$sourcePath]), 'whatsappcall');
     }
 
@@ -105,7 +122,7 @@ class Main extends Provider
         if (is_dir($langPath)) {
             $this->loadTranslationsFrom($langPath, 'whatsappcall');
         } else {
-            $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang/en', 'whatsappcall');
+            $this->loadTranslationsFrom(__DIR__.'/../Resources/lang/en', 'whatsappcall');
         }
     }
 
@@ -116,7 +133,7 @@ class Main extends Provider
      */
     public function loadMigrations()
     {
-        $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
     }
 
     /**
@@ -136,7 +153,7 @@ class Main extends Provider
         ];
 
         foreach ($routes as $route) {
-            $this->loadRoutesFrom(__DIR__ . '/../Routes/' . $route);
+            $this->loadRoutesFrom(__DIR__.'/../Routes/'.$route);
         }
     }
 

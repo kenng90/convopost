@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="{{ config('settings.site_description', 'The all-in-one WhatsApp CRM & automation platform. Manage chats, run campaigns, automate workflows, and grow your business on WhatsApp.') }}">
-    <title>{{ config('settings.site_name', config('app.name')) }} — WhatsApp CRM & Automation Platform</title>
+    <meta name="description" content="{{ config('settings.site_description', 'WhatsApp revenue & operations platform. Team inbox, campaigns, workflow automation, payments, and integrations — built on the official Meta Business API.') }}">
+    <title>{{ config('settings.site_name', config('app.name')) }} — WhatsApp Operations & Revenue Platform</title>
     <link rel="icon" href="{{ config('settings.favicon', '/favicon.ico') }}">
 
     <!-- Tailwind CSS -->
@@ -101,12 +101,12 @@
                 </div>
 
                 <h1 class="text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
-                    The Smarter Way to<br>
-                    <span class="text-wa">Grow on WhatsApp</span>
+                    Run Your Whole<br>
+                    <span class="text-wa">WhatsApp Business</span>
                 </h1>
 
                 <p class="text-xl text-white/75 leading-relaxed mb-10 max-w-xl">
-                    Unify your WhatsApp inbox, automate conversations, run campaigns, collect responses with interactive forms, and convert chats into customers — all in one platform.
+                    Team inbox, outbound campaigns, visual workflows, in-chat payments, and integrations — one platform for sales, support, and operations on WhatsApp. AI handles tier-1 inside your flows; your team owns the rest.
                 </p>
 
                 <div class="flex flex-col sm:flex-row gap-4 mb-12">
@@ -210,7 +210,7 @@
             @foreach([
                 ['2B+', 'WhatsApp Users Globally', '🌍'],
                 ['100%', 'Official Business API', '✅'],
-                ['24/7', 'Automated Responses', '🤖'],
+                ['Multi', 'Agent Team Inbox', '👥'],
                 ['99.9%', 'Uptime SLA', '⚡'],
             ] as $stat)
             <div class="p-6">
@@ -230,7 +230,7 @@
         <div class="text-center mb-16">
             <span class="text-wa font-semibold text-sm uppercase tracking-widest">Everything You Need</span>
             <h2 class="text-4xl lg:text-5xl font-black mt-3 mb-4">One Platform, Infinite Possibilities</h2>
-            <p class="text-xl text-gray-500 max-w-2xl mx-auto">From chat inbox to AI automation — everything your business needs to succeed on WhatsApp.</p>
+            <p class="text-xl text-gray-500 max-w-2xl mx-auto">Team inbox, campaigns, workflows, and payments — everything your business needs to sell and support on WhatsApp.</p>
         </div>
 
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -257,7 +257,7 @@
                     'icon' => '⚡',
                     'title' => 'Flow Automation',
                     'desc' => 'Build powerful no-code automation flows. Trigger messages based on keywords, schedule follow-ups, and automate your entire sales funnel.',
-                    'items' => ['Visual flow builder', 'Keyword triggers', 'AI-powered responses', 'Conditional routing'],
+                    'items' => ['Visual flow builder', 'Keyword triggers', 'Conditional routing', 'AI nodes for tier-1 deflection'],
                 ],
                 [
                     'icon' => '📋',
@@ -274,8 +274,8 @@
                 [
                     'icon' => '📚',
                     'title' => 'Knowledge Base',
-                    'desc' => 'Build a self-service help center for your customers. Reduce support volume with articles, categories, and a search-enabled widget.',
-                    'items' => ['Article management', 'Category organization', 'Embeddable widget', 'Search functionality'],
+                    'desc' => 'Build a self-service help center for your customers. Reduce support volume with articles, categories, and an embeddable website widget.',
+                    'items' => ['Article management', 'Category organization', 'Embeddable widget', 'Powers AI flow nodes'],
                 ],
                 [
                     'icon' => '💰',
@@ -393,19 +393,19 @@
 <section id="automation" class="py-24 bg-white">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
-            <span class="text-wa font-semibold text-sm uppercase tracking-widest">AI-Powered Automation</span>
-            <h2 class="text-4xl lg:text-5xl font-black mt-3 mb-4">Your Business on Autopilot</h2>
-            <p class="text-xl text-gray-500 max-w-2xl mx-auto">Build complex conversation flows visually. No code required. Automate sales, support, and onboarding workflows.</p>
+            <span class="text-wa font-semibold text-sm uppercase tracking-widest">Workflow Automation</span>
+            <h2 class="text-4xl lg:text-5xl font-black mt-3 mb-4">Orchestrate Every Customer Journey</h2>
+            <p class="text-xl text-gray-500 max-w-2xl mx-auto">Build complex conversation flows visually — from cart recovery to onboarding to agent handoff. No code required.</p>
         </div>
 
         <div class="grid lg:grid-cols-3 gap-8 mb-16">
             @foreach([
                 ['🎯', 'Keyword Triggers', 'Respond instantly when a customer sends a specific word or phrase. Set up unlimited keyword-action pairs.'],
-                ['🤖', 'AI Chatbot Nodes', 'Train a custom AI assistant on your documents, website, and FAQs. Let it handle common queries 24/7.'],
                 ['📊', 'Catalog & Product Nodes', 'Automatically show product catalogs, generate quotes, and process orders through WhatsApp conversations.'],
                 ['🔀', 'Conditional Logic', 'Branch your flows based on customer input, custom field values, or response data from forms.'],
                 ['📱', 'WhatsApp Flow Nodes', 'Send interactive Meta forms mid-conversation, collect answers, and route based on responses.'],
                 ['💳', 'Payment Collection', 'Integrate M-Pesa and Stripe payment nodes to collect payments without leaving WhatsApp.'],
+                ['🤖', 'AI Flow Nodes', 'Deflect tier-1 FAQs inside your workflow — then hand off to a human in the same inbox with full context.'],
             ] as [$icon, $title, $desc])
             <div class="flex gap-4">
                 <div class="w-12 h-12 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">{{ $icon }}</div>
@@ -657,9 +657,9 @@
         </div>
         <div class="grid md:grid-cols-3 gap-8">
             @foreach([
-                ['We scaled our customer support from 2 to 20 agents without hiring anyone new. The automation handles 70% of inquiries.', 'Sarah M.', 'E-commerce Founder'],
-                ['The WhatsApp Flows feature is a game-changer. We collect order details, feedback, and payments all inside WhatsApp.', 'James K.', 'Restaurant Owner'],
-                ['Our campaign open rates went from 20% email to 95% WhatsApp. The ROI is incredible.', 'Aisha T.', 'Marketing Director'],
+                ['Our abandoned cart recovery rate jumped 40% in the first month. WhatsApp campaigns plus M-Pesa in the same flow — that\'s the difference.', 'Amina M.', 'E-commerce, Kenya'],
+                ['We manage 18 client WhatsApp numbers from one dashboard. Campaigns, inboxes, and flows per brand — Meta\'s tools can\'t do that.', 'David O.', 'Agency Owner'],
+                ['We replaced three tools with one platform. Shared inbox, broadcast campaigns, and the API all work exactly as advertised.', 'Taiwo N.', 'Head of CX'],
             ] as [$q, $n, $r])
             <div class="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 card-hover">
                 <div class="flex gap-0.5 mb-4">@for($i=0;$i<5;$i++)<svg class="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>@endfor</div>
@@ -691,7 +691,8 @@
                 ['What payment gateways are supported?', 'We support M-Pesa STK push for mobile money payments (Kenya), Stripe for card and subscription payments. Additional gateways can be integrated via the API.'],
                 ['Is there a free trial?', 'Yes — you can create an account and explore the platform for free. Paid plans unlock higher message volumes and advanced features.'],
                 ['Can I integrate with Shopify or WooCommerce?', 'Yes. Our Shopify and WooCommerce integrations let you automatically sync product catalogs, show products inside WhatsApp conversations, and fetch customer order history.'],
-                ['How does the AI chatbot work?', 'You can train a custom AI assistant by uploading documents, FAQs, or pointing to your website. The AI uses this knowledge to answer customer questions automatically, 24/7.'],
+                ['How is this different from Meta\'s Business Agent?', 'Meta\'s Business Agent is built for simple FAQ support inside WhatsApp Business. We\'re the operations layer: team inbox, outbound campaigns, custom workflows, payments, multi-number management, and integrations — with AI as one step in your flows, not the whole product.'],
+                ['How does AI work in ConvoConnect?', 'AI runs as a node inside your automation flows — trained on your docs and knowledge base. It deflects common questions, then routes to a human agent in the shared inbox with full conversation context when needed.'],
             ] as $i => [$q, $a])
             <div class="border border-gray-100 rounded-2xl overflow-hidden" x-data="{ open: false }">
                 <button @click="open = !open" class="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors">
@@ -713,8 +714,8 @@
     </div>
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
         <div class="text-6xl mb-8">🚀</div>
-        <h2 class="text-4xl lg:text-5xl font-black text-white mb-6">Ready to Transform Your<br>WhatsApp Business?</h2>
-        <p class="text-xl text-white/75 mb-10 max-w-2xl mx-auto">Join thousands of businesses using our platform to automate support, run campaigns, and close deals on WhatsApp.</p>
+        <h2 class="text-4xl lg:text-5xl font-black text-white mb-6">Ready to Run WhatsApp<br>Like a Revenue Channel?</h2>
+        <p class="text-xl text-white/75 mb-10 max-w-2xl mx-auto">Join thousands of businesses using our platform for team inbox, campaigns, workflows, and in-chat payments on WhatsApp.</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="{{ route('register') }}" class="bg-wa hover:bg-wa-dark text-white font-black px-10 py-5 rounded-full text-lg transition-all shadow-2xl hover:scale-105 hover:shadow-wa/30">
                 Start Free Today →
@@ -736,7 +737,7 @@
                     <img src="{{ config('settings.logo') }}" alt="{{ config('app.name') }}" class="h-8 w-auto">
                     <span class="font-bold text-xl text-white">{{ config('settings.site_name', config('app.name')) }}</span>
                 </div>
-                <p class="text-gray-400 text-sm leading-relaxed max-w-xs">The all-in-one WhatsApp CRM and automation platform. Built on the official Meta Business Cloud API.</p>
+                <p class="text-gray-400 text-sm leading-relaxed max-w-xs">WhatsApp revenue & operations platform — team inbox, campaigns, workflows, and payments. Built on the official Meta Business Cloud API.</p>
                 <div class="flex gap-4 mt-6">
                     @if(config('settings.twitter_url'))
                     <a href="{{ config('settings.twitter_url') }}" class="text-gray-500 hover:text-white transition-colors">

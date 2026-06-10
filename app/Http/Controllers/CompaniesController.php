@@ -7,6 +7,8 @@ use App\Events\WebNotification;
 use App\Exports\VendorsExport;
 use App\Models\Company;
 use App\Models\Plans;
+use App\Services\PlanResourceLimit;
+use App\Services\PlanSeatBillingService;
 use App\Traits\Fields;
 use App\Traits\Modules;
 use Illuminate\Http\JsonResponse;
@@ -64,10 +66,10 @@ class CompaniesController extends Controller
     {
         if (auth()->user()->hasRole('admin')) {
             $companies = Company::with('user');
-            $categories=[];
-            if(Module::has('admincategories')){
-                try{
-                    $categories = \Modules\Admincategories\Models\SystemCategory::where('type','company')->pluck('name', 'id')->toArray();
+            $categories = [];
+            if (Module::has('admincategories')) {
+                try {
+                    $categories = \Modules\Admincategories\Models\SystemCategory::where('type', 'company')->pluck('name', 'id')->toArray();
                 } catch (\Exception $e) {
                     //Do nothing
                 }
@@ -125,8 +127,8 @@ class CompaniesController extends Controller
             $filterFields = $this->getFilterFields();
 
             //Add the field to look for the categories
-            if(Module::has('admincategories')){     
-               
+            if (Module::has('admincategories')) {
+
                 $filterFields[] = ['required' => false, 'class' => 'col-md-3', 'ftype' => 'select', 'name' => 'Category', 'id' => 'category', 'placeholder' => 'Select category', 'data' => $categories];
             }
 
@@ -241,8 +243,13 @@ class CompaniesController extends Controller
 
     public function updateApps(Request $request, Company $company): RedirectResponse
     {
-        //Update custom fields
         if ($request->has('custom')) {
+            $integrationError = app(PlanResourceLimit::class)->validateIntegrationConfigUpdate($company, $request->custom);
+
+            if ($integrationError !== null) {
+                return redirect()->route('admin.companies.edit', $company->id)->withStatus($integrationError);
+            }
+
             $company->setMultipleConfig($request->custom);
         }
 
@@ -277,7 +284,7 @@ class CompaniesController extends Controller
             $company->is_featured = $request->is_featured != null ? 1 : 0;
         }
 
-        if(auth()->user()->hasRole('admin') && isset($request->category_id)){
+        if (auth()->user()->hasRole('admin') && isset($request->category_id)) {
             $company->category_id = intval($request->category_id);
         }
 
@@ -315,6 +322,12 @@ class CompaniesController extends Controller
 
         //Update custom fields
         if ($request->has('custom')) {
+            $integrationError = app(PlanResourceLimit::class)->validateIntegrationConfigUpdate($company, $request->custom);
+
+            if ($integrationError !== null) {
+                return redirect()->route('admin.companies.edit', $company->id)->withStatus($integrationError);
+            }
+
             $company->setMultipleConfig($request->custom);
         }
 
@@ -408,10 +421,13 @@ class CompaniesController extends Controller
     {
         $company = Company::findOrFail($companyid);
         if ($this->verifyAccess($company)) {
-            //Set the company
             session(['company_id' => $company->id]);
             session(['company_currency' => $company->currency]);
             session(['company_convertion' => $company->do_covertion]);
+
+            if (auth()->user()->hasRole('owner')) {
+                auth()->user()->forceFill(['company_id' => $company->id])->save();
+            }
 
             return redirect()->route('home');
         } else {
@@ -426,6 +442,13 @@ class CompaniesController extends Controller
 
     public function createOrganization(Request $request): RedirectResponse
     {
+        $owner = auth()->user();
+        $resourceLimit = app(PlanResourceLimit::class);
+
+        if (! $resourceLimit->canAddCompany($owner)) {
+            return redirect()->route('admin.organizations.manage')->withStatus($resourceLimit->companyLimitExceededMessage($owner));
+        }
+
         $company = Company::create([
             'name' => $request->name,
             'user_id' => auth()->user()->id,
@@ -434,6 +457,8 @@ class CompaniesController extends Controller
             'updated_at' => now(),
             'logo' => asset('uploads').'/default/no_image.jpg',
         ]);
+
+        app(PlanSeatBillingService::class)->syncForOwner($owner);
 
         return redirect()->route('admin.organizations.manage')->withStatus(__('Organization successfully created.'));
     }
@@ -464,9 +489,10 @@ class CompaniesController extends Controller
 
     public function share(): View
     {
-        $url = auth()->user()->company->getLinkAttribute();
+        $company = auth()->user()->currentCompany();
+        $url = $company?->getLinkAttribute() ?? '';
 
-        return view('companies.share', ['url' => $url, 'name' => auth()->user()->company->name]);
+        return view('companies.share', ['url' => $url, 'name' => $company?->name ?? '']);
     }
 
     public function logoutAndRedirectToRegister(): RedirectResponse

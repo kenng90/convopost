@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Whatsappcall\Http\Controllers\CallController;
 use Modules\Whatsappcall\Http\Controllers\SetupController;
 
-Route::middleware(['web', 'auth', 'verified'])->group(function () {
+Route::middleware(['web', 'auth', 'verified', 'plan.plugin:whatsappcall'])->group(function () {
     // Calls dashboard
     Route::get('/whatsappcall/calls', [CallController::class, 'index'])->name('whatsappcall.calls.index');
     // Settings / setup UI (embedded in Wpbox setup page via include or direct route)

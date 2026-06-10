@@ -1,120 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name','WhatsBox') }} {{ __('Blog') }}</title>
-   
-    <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @yield('head')
-    
-    <!-- RTL and Commmon ( Phone ) -->
-    @include('layouts.rtl')
-
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-
-    <!-- Custom CSS defined by admin -->
-    <link type="text/css" href="{{ asset('byadmin') }}/front.css" rel="stylesheet">
+    <title>{{ __('Blog') }} — {{ config('app.name') }}</title>
+    <meta name="description" content="{{ __('Insights on WhatsApp CRM, automation, and growing revenue with ConvoConnect.') }}">
+    @include('wpsupportlanding::landing.partials.marketing_styles')
 </head>
-<body class="landing-page">
-    <section id="top" class="w-full px-6 pt-3 overflow-hidden bg-white xl:px-8 " data-tails-scripts="//unpkg.com/alpinejs">
+<body class="bg-[#040f0c] text-white min-h-screen" x-data="{ mobileOpen: false }">
+    @include('wpsupportlanding::landing.partials.marketing_nav')
 
-        @include('wpsupportlanding::landing.partials.topbar')
-        @include('wpsupportlanding::landing.partials.nav')
+    <section class="relative pt-28 pb-16 noise hero-glow grid-pattern overflow-hidden">
+        <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 text-center">
+            <div class="badge inline-flex mb-5">{{ __('Resources') }}</div>
+            <h1 class="font-display text-4xl sm:text-5xl lg:text-6xl font-800 mb-4">
+                {{ __('ConvoConnect') }} <span class="grad-text">{{ __('Blog') }}</span>
+            </h1>
+            <p class="text-lg text-gray-400 max-w-2xl mx-auto">
+                {{ __('Practical guides on WhatsApp sales, automation, and customer engagement.') }}
+            </p>
+        </div>
     </section>
-    
-    <div class="px-8 py-10 mx-auto lg:max-w-screen-xl sm:max-w-xl md:max-w-full sm:px-12 md:px-16 lg:py-20 sm:py-16"
-         x-data="{ 
-            posts: [],
-            pagination: {},
-            currentPage: 1,
-            async fetchPosts(page = 1) {
-                try {
-                    const response = await fetch(`/api/blog?page=${page}&limit=9`);
-                    const data = await response.json();
-                    if (data.status) {
-                        this.posts = data.data;
-                        this.pagination = data.pagination;
-                        this.currentPage = parseInt(data.pagination.current_page);
-                    }
-                } catch (error) {
-                    console.error('Error fetching posts:', error);
-                }
-            }
-         }"
-         x-init="fetchPosts()">
-        
-        <div class="grid gap-x-8 gap-y-12 sm:gap-y-16 md:grid-cols-2 lg:grid-cols-3">
-            <template x-for="post in posts" :key="post.id">
-                <div class="relative">
-                    <a :href="'/blog/' + post.slug" class="block overflow-hidden group rounded-xl">
-                        <img :src="post.featured_image" class="object-cover w-full h-56 transition-all duration-300 ease-out sm:h-64 group-hover:scale-110" :alt="post.title">
-                    </a>
-                    <div class="relative mt-5">
-                        <div class="flex justify-between items-center mb-2.5">
-                            <p class="uppercase font-semibold text-xs text-purple-600" x-text="new Date(post.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })"></p>
-                            <p class="uppercase font-semibold text-xs text-gray-500" x-text="`${post.read_time} {{ __('min read') }}`"></p>
-                        </div>
-                        <a :href="'/blog/' + post.slug" class="block mb-3 hover:underline">
-                            <h2 class="text-2xl font-bold leading-7 text-black transition-colors duration-200 hover:text-deep-purple-accent-700" 
-                                x-text="post.title">
-                            </h2>
+
+    <section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-20">
+        @if($posts->count() === 0)
+            <div class="text-center py-20 rounded-2xl border border-white/10 bg-white/[0.02]">
+                <p class="text-gray-400 text-lg">{{ __('No published posts yet. Check back soon.') }}</p>
+                <a href="{{ url('/') }}" class="inline-block mt-6 text-sm font-semibold text-wa-green hover:underline">{{ __('Back to home') }}</a>
+            </div>
+        @else
+            <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach($posts as $post)
+                    <article class="blog-card card-lift flex flex-col h-full">
+                        <a href="{{ url('/blog/'.$post->slug) }}" class="block aspect-[16/10] overflow-hidden bg-white/5">
+                            @if($post->featured_image)
+                                <img src="{{ $post->featured_image }}" alt="{{ $post->title }}" class="w-full h-full object-cover transition-transform duration-500 hover:scale-105" loading="lazy">
+                            @else
+                                <div class="w-full h-full flex items-center justify-center" style="background:linear-gradient(135deg,rgba(37,211,102,0.15),rgba(7,94,84,0.3));">
+                                    <span class="font-display text-2xl text-wa-green/60">CC</span>
+                                </div>
+                            @endif
                         </a>
-                        <p class="mb-4 text-gray-700" x-text="post.excerpt"></p>
-                        <a :href="'/blog/' + post.slug" class="font-medium underline">{{ __('Read More') }}</a>
-                    </div>
+                        <div class="p-6 flex flex-col flex-1">
+                            <div class="flex items-center justify-between text-xs uppercase tracking-wider mb-3">
+                                <span class="text-wa-green font-semibold">{{ $post->created_at->format('M j, Y') }}</span>
+                                <span class="text-gray-500">{{ $post->read_time }} {{ __('min read') }}</span>
+                            </div>
+                            <h2 class="font-display text-xl font-700 text-white mb-3 leading-snug">
+                                <a href="{{ url('/blog/'.$post->slug) }}" class="hover:text-wa-green transition-colors">{{ $post->title }}</a>
+                            </h2>
+                            @if($post->excerpt)
+                                <p class="text-gray-400 text-sm leading-relaxed mb-4 flex-1">{{ \Illuminate\Support\Str::limit($post->excerpt, 140) }}</p>
+                            @endif
+                            <a href="{{ url('/blog/'.$post->slug) }}" class="inline-flex items-center gap-1 text-sm font-semibold text-wa-green hover:gap-2 transition-all mt-auto">
+                                {{ __('Read article') }}
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                            </a>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+
+            @if($posts->hasPages())
+                <div class="flex justify-center mt-14 gap-2 flex-wrap">
+                    @if($posts->onFirstPage())
+                        <span class="px-4 py-2 rounded-lg text-sm text-gray-600 border border-white/5 cursor-not-allowed">{{ __('Previous') }}</span>
+                    @else
+                        <a href="{{ $posts->previousPageUrl() }}" class="px-4 py-2 rounded-lg text-sm text-gray-300 border border-white/10 hover:border-wa-green/30 hover:text-white transition-colors">{{ __('Previous') }}</a>
+                    @endif
+
+                    @foreach($posts->getUrlRange(1, $posts->lastPage()) as $page => $url)
+                        <a href="{{ $url }}" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {{ $posts->currentPage() === $page ? 'bg-wa-green text-black' : 'text-gray-400 border border-white/10 hover:text-white' }}">{{ $page }}</a>
+                    @endforeach
+
+                    @if($posts->hasMorePages())
+                        <a href="{{ $posts->nextPageUrl() }}" class="px-4 py-2 rounded-lg text-sm text-gray-300 border border-white/10 hover:border-wa-green/30 hover:text-white transition-colors">{{ __('Next') }}</a>
+                    @else
+                        <span class="px-4 py-2 rounded-lg text-sm text-gray-600 border border-white/5 cursor-not-allowed">{{ __('Next') }}</span>
+                    @endif
                 </div>
-            </template>
+            @endif
+        @endif
+    </section>
+
+    <footer class="border-t border-white/[0.05] py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+            <p>© {{ date('Y') }} {{ config('app.name') }}. {{ __('All rights reserved.') }}</p>
+            <a href="{{ url('/') }}" class="text-wa-green hover:underline">{{ __('Back to homepage') }}</a>
         </div>
-
-        <!-- Add this pagination component after the grid div -->
-        <div class="flex justify-center mt-12">
-            <nav class="flex items-center space-x-2" aria-label="Pagination">
-                <!-- Previous button -->
-                <button 
-                    @click="fetchPosts(currentPage - 1)"
-                    :disabled="currentPage === 1"
-                    :class="{'opacity-50 cursor-not-allowed': currentPage === 1}"
-                    class="px-3 py-2 rounded-md bg-white border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    {{ __('Previous') }}
-                </button>
-                
-                <!-- Page numbers -->
-                <template x-for="page in parseInt(pagination.last_page)" :key="page">
-                    <button 
-                        @click="fetchPosts(page)"
-                        :class="{'bg-purple-600 text-white': currentPage === page, 'bg-white text-gray-700': currentPage !== page}"
-                        class="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium hover:bg-gray-50"
-                        x-text="page">
-                    </button>
-                </template>
-
-                <!-- Next button -->
-                <button 
-                    @click="fetchPosts(currentPage + 1)"
-                    :disabled="currentPage === parseInt(pagination.last_page)"
-                    :class="{'opacity-50 cursor-not-allowed': currentPage === parseInt(pagination.last_page)}"
-                    class="px-3 py-2 rounded-md bg-white border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    {{ __('Next') }}
-                </button>
-            </nav>
-        </div>
-    </div>
-
-    <!-- AlpineJS Library -->
-    <script src="{{ asset('vendor') }}/alpine/alpine.js"></script>
-    
-    <!--   Core JS Files   -->
-    <script src="{{ asset('vendor') }}/jquery/jquery.min.js" type="text/javascript"></script>
-
-    <!-- All in one -->
-    <script src="{{ asset('custom') }}/js/js.js?id={{ config('version.version')}}s"></script>
-
-    <!-- Custom JS defined by admin -->
-    <?php echo file_get_contents(base_path('public/byadmin/front.js')) ?>
+    </footer>
 </body>
 </html>

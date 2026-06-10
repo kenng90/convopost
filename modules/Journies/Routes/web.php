@@ -11,11 +11,11 @@
 |
 */
 Route::group([
-    'middleware' =>[ 'web','impersonate'],
-    'namespace' => 'Modules\Journies\Http\Controllers'
+    'middleware' => ['web', 'impersonate'],
+    'namespace' => 'Modules\Journies\Http\Controllers',
 ], function () {
     Route::group([
-        'middleware' =>[ 'web','auth','impersonate']
+        'middleware' => ['web', 'auth', 'impersonate', 'plan.plugin:journies'],
     ], function () {
         //Journies
         Route::get('journiesindex', 'Main@index')->name('journies.index');
@@ -30,17 +30,17 @@ Route::group([
         Route::get('api/journies/{contact}', 'Main@getJournies')->name('api.journies.get');
         Route::post('journey.add-contact/{journey}', 'Main@addContact')->name('journey.add-contact');
 
-       //Stages
-       Route::get('stages', 'StagesController@index')->name('stages.index');
-       Route::get('stages/create/{journey}', 'StagesController@create')->name('stages.create');
-       Route::post('stages/{journey}', 'StagesController@store')->name('stages.store');
-       Route::get('stages/{stage}/edit', 'StagesController@edit')->name('stages.edit');
-       Route::put('stages/{stage}', 'StagesController@update')->name('stages.update');
-       Route::get('stages/del/{stage}', 'StagesController@destroy')->name('stages.delete');
+        //Stages
+        Route::get('stages', 'StagesController@index')->name('stages.index');
+        Route::get('stages/create/{journey}', 'StagesController@create')->name('stages.create');
+        Route::post('stages/{journey}', 'StagesController@store')->name('stages.store');
+        Route::get('stages/{stage}/edit', 'StagesController@edit')->name('stages.edit');
+        Route::put('stages/{stage}', 'StagesController@update')->name('stages.update');
+        Route::get('stages/del/{stage}', 'StagesController@destroy')->name('stages.delete');
 
-       Route::get('stages/{stage}/move-contact/{contact}', 'StagesController@moveContact')->name('stages.move-contact');
+        Route::get('stages/{stage}/move-contact/{contact}', 'StagesController@moveContact')->name('stages.move-contact');
 
-       //Api
-       Route::post('api/journies/move-contact', 'StagesController@moveContactFromSideapp')->name('api.journies.move-contact');
+        //Api
+        Route::post('api/journies/move-contact', 'StagesController@moveContactFromSideapp')->name('api.journies.move-contact');
     });
 });

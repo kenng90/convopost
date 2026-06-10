@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Akaunting\Module\Facade as Module;
 use App\Traits\HasConfig;
+use App\Traits\HasCredit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -22,6 +23,7 @@ class User extends Authenticatable
     use Billable;
     use HasApiTokens;
     use HasConfig;
+    use HasCredit;
     use HasFactory;
     use HasProfilePhoto;
     use HasRoles;
@@ -67,38 +69,63 @@ class User extends Authenticatable
 
     public function currentCompany()
     {
-        if (!$this->hasRole('owner') && !$this->hasRole('staff')) {
+        if (! $this->hasRole('owner') && ! $this->hasRole('staff')) {
             return null;
         }
 
-        //If the owner hasn't set company_id set it now
         if ($this->hasRole('owner')) {
-            //Check sessions, if there is company ID, then it is set
             if (session()->has('company_id')) {
-                $company = Company::find(session('company_id'));
-                if ($company != null) {
+                $company = Company::query()
+                    ->where('id', session('company_id'))
+                    ->where('user_id', $this->id)
+                    ->first();
+
+                if ($company !== null) {
                     return $company;
                 }
             }
 
-            if ($this->company_id == null) {
-                $this->company_id = Company::where('user_id', $this->id)->first()->id;
-                $this->update();
+            if ($this->company_id !== null) {
+                $company = Company::query()
+                    ->where('id', $this->company_id)
+                    ->where('user_id', $this->id)
+                    ->first();
+
+                if ($company !== null) {
+                    return $company;
+                }
             }
 
-            //Get company for current user
-            $company = Company::where('user_id', $this->id)->first();
-            if ($company == null) {
-                //There is error, company is not found, or removed
+            $company = Company::query()->where('user_id', $this->id)->oldest('id')->first();
+
+            if ($company === null) {
                 auth()->logout();
                 abort(403);
             }
 
-            return Company::where('user_id', $this->id)->first();
-        } else {
-            //Staff
-            return Company::findOrFail($this->company_id);
+            return $company;
         }
+
+        return Company::findOrFail($this->company_id);
+    }
+
+    public function activeCompanyId(): ?int
+    {
+        return $this->currentCompany()?->id;
+    }
+
+    public function ownsCompany(Company|int $company): bool
+    {
+        $companyId = $company instanceof Company ? $company->id : $company;
+
+        if ($this->hasRole('owner')) {
+            return Company::query()
+                ->where('id', $companyId)
+                ->where('user_id', $this->id)
+                ->exists();
+        }
+
+        return (int) $this->company_id === (int) $companyId;
     }
 
     public function getCurrentCompany()
@@ -192,37 +219,83 @@ class User extends Authenticatable
                 }
             }
         } elseif ($this->hasRole('owner')) {
-            $allowedPluginsPerPlan = auth()->user()->company ? auth()->user()->company->getPlanAttribute()['allowedPluginsPerPlan'] : null;
-            foreach (Module::all() as $key => $module) {
-                if (is_array($module->get('ownermenus')) && ($module->get('alwayson') || $allowedPluginsPerPlan == null || in_array($module->get('alias'), $allowedPluginsPerPlan))) {
-                    foreach ($module->get('ownermenus') as $key => $menu) {
-
-                        if (isset($menu['onlyin'])) {
-                            if(str_contains( $menu['onlyin'],config('settings.app_code_name'))) {
-                                array_push($menus, $menu);
-                            }
-                        } else {
-                            array_push($menus, $menu);
-                        }
-                    }
-                }
-            }
+            $menus = $this->collectOwnerModuleMenus();
         } elseif ($this->hasRole('staff')) {
             foreach (Module::all() as $key => $module) {
-                if (is_array($module->get('staffmenus'))) {
-                    foreach ($module->get('staffmenus') as $key => $menu) {
-                        array_push($menus, $menu);
+                if (($module->get('alias') ?? '') === 'reports') {
+                    continue;
+                }
+
+                if (! is_array($module->get('staffmenus'))) {
+                    continue;
+                }
+
+                foreach ($module->get('staffmenus') as $menu) {
+                    if (isset($menu['onlyin']) && ! str_contains((string) $menu['onlyin'], config('settings.app_code_name'))) {
+                        continue;
                     }
+
+                    $routeName = $menu['route'] ?? '';
+                    if ($routeName === '' || ! \Illuminate\Support\Facades\Route::has($routeName)) {
+                        continue;
+                    }
+
+                    $menus[] = $menu;
                 }
             }
         }
 
         //Sort the menus by priority
         usort($menus, function ($a, $b) {
-            return (isset($a['priority'])?$a['priority']:100) <=> (isset($b['priority'])?$b['priority']:100);
+            return (isset($a['priority']) ? $a['priority'] : 100) <=> (isset($b['priority']) ? $b['priority'] : 100);
         });
 
         return $menus;
+    }
+
+    /**
+     * Raw owner menus from enabled modules (before job-based grouping).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function collectOwnerModuleMenus(): array
+    {
+        $menus = [];
+        $allowedPluginsPerPlan = $this->company
+            ? $this->company->getPlanAttribute()['allowedPluginsPerPlan']
+            : null;
+
+        foreach (Module::all() as $module) {
+            if (! is_array($module->get('ownermenus'))) {
+                continue;
+            }
+
+            if (! ($module->get('alwayson') || $allowedPluginsPerPlan === null || in_array($module->get('alias'), $allowedPluginsPerPlan, true))) {
+                continue;
+            }
+
+            foreach ($module->get('ownermenus') as $menu) {
+                if (isset($menu['onlyin']) && ! str_contains($menu['onlyin'], config('settings.app_code_name'))) {
+                    continue;
+                }
+
+                $menus[] = $menu;
+            }
+        }
+
+        usort($menus, fn ($a, $b) => ($a['priority'] ?? 100) <=> ($b['priority'] ?? 100));
+
+        return $menus;
+    }
+
+    /**
+     * Owner sidebar navigation grouped by job (inbox, automations, etc.).
+     *
+     * @return array<int, array{label: string, menus: array<int, array<string, mixed>>}>
+     */
+    public function getOwnerNavigationSections(): array
+    {
+        return app(\App\Services\OwnerNavigationBuilder::class)->build($this);
     }
 
     public function setImpersonating($id)
@@ -273,10 +346,9 @@ class User extends Authenticatable
     {
         parent::booted();
 
-
         static::updated(function ($user) {
 
-            Log::info('User updated: ' . $user->email);
+            Log::info('User updated: '.$user->email);
             if ($user->hasRole('admin')) {
                 // Update the translation table with the latest admin user info
                 // Assuming the translation table is 'ltu_contributors' as per seeder

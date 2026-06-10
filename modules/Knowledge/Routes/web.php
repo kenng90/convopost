@@ -16,7 +16,7 @@ Route::group([
     'namespace' => 'Modules\Knowledge\Http\Controllers',
 ], function () {
     Route::group([
-        'middleware' => ['verified', 'web', 'auth', 'impersonate', 'isOwnerOnPro'],
+        'middleware' => ['verified', 'web', 'auth', 'impersonate', 'isOwnerOnPro', 'plan.plugin:knowledge'],
     ], function () {
         // Knowledge Categories Management
         Route::resource('knowledge/categories', 'CategoryController')->parameters(['categories' => 'category'])->names([

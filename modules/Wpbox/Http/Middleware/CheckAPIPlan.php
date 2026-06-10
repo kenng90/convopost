@@ -2,91 +2,55 @@
 
 namespace Modules\Wpbox\Http\Middleware;
 
-use App\Models\Plans;
 use App\Models\User;
+use App\Services\PlanEntitlementResolver;
+use App\Services\PlanUsageLimit;
 use Closure;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class CheckAPIPlan
 {
+    public function __construct(
+        private readonly PlanUsageLimit $planUsageLimit,
+        private readonly PlanEntitlementResolver $entitlementResolver,
+    ) {
+    }
+
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @return mixed
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next)
     {
-        //get the token
-        $token = $request->token;
         $token = PersonalAccessToken::findToken($request->token);
-        $plan=null;
-        if(!$token){
-            return response()->json(['status'=>'error','message'=>'Invalid token']);
-        }else{
-            $user=User::findOrFail($token->tokenable_id);
-            $plan = Plans::find($user->mplanid());
-        }
-    
-        if(!$plan){
-            return response()->json(['status'=>'error','message'=>'Invalid plan']);
+
+        if (! $token) {
+            return response()->json(['status' => 'error', 'message' => 'Invalid token']);
         }
 
-        $daysToCheck = 30;
+        $user = User::findOrFail($token->tokenable_id);
+        $plan = $this->planUsageLimit->resolvePlanForUser($user);
 
-        $allowedCampaigns = intval($plan->limit_items);
-        $allowedMessages = intval($plan->limit_views);
-        $allowedContacts = intval($plan->limit_orders);
-
-        //If it is yearly plan, check for the last 365 days
-        if($plan->period==2){
-            $daysToCheck = 365;
-            $allowedCampaigns = intval($plan->limit_items)*12;
-            $allowedMessages = intval($plan->limit_views)*12;
-            $allowedContacts = intval($plan->limit_orders)*12;
+        if (! $plan) {
+            return response()->json(['status' => 'error', 'message' => 'Invalid plan']);
         }
 
-        //Get the current company of the aunthenticated user
+        if (! $this->entitlementResolver->hasCapability($plan, 'api_access')) {
+            return response()->json(['status' => 'error', 'message' => 'API access is not included in your plan']);
+        }
+
         $company = $user->currentCompany();
+        $exceeded = $this->planUsageLimit->firstExceededLimit($company, $plan);
 
-        //Get the number of messages in the last 30 days
-        $messagesCount = DB::table('messages')
-        ->where('created_at', '>=', Carbon::now()->subDays($daysToCheck))
-        ->where('company_id', $company->id)
-        ->whereNotNull('fb_message_id')
-        ->count();
-
-        //Get the number of campaigns in the last 30 days
-        $campaignsCount = DB::table('wa_campaings')
-        ->where('created_at', '>=', Carbon::now()->subDays($daysToCheck))
-        ->where('company_id', $company->id)
-        ->count();
-
-        //Get the number of contacts
-        $contactsCount = DB::table('contacts')
-        ->where('company_id', $company->id)
-        ->count();
-
-        //Check if the user has exceeded the limits
-        if($allowedMessages > 0 && $messagesCount > $allowedMessages){
-            //return redirect(route('plans.current'))->withError(__('You have exceeded the limit of messages allowed in your plan'));
-            return response()->json(['status'=>'error','message'=>'You have exceeded the limit of messages allowed in your plan']);
+        if ($exceeded !== null) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $this->planUsageLimit->exceededMessage($exceeded),
+            ]);
         }
 
-        if($allowedCampaigns > 0 && $campaignsCount > $allowedCampaigns){
-            //return redirect(route('plans.current'))->withError(__('You have exceeded the limit of campaigns allowed in your plan'));
-            return response()->json(['status'=>'error','message'=>'You have exceeded the limit of campaigns allowed in your plan']);
-        }
-
-        if($allowedContacts > 0 && $contactsCount > $allowedContacts){
-            //return redirect(route('plans.current'))->withError(__('You have exceeded the limit of contacts allowed in your plan'));
-            return response()->json(['status'=>'error','message'=>'You have exceeded the limit of contacts allowed in your plan']);
-        }
         return $next($request);
     }
 }

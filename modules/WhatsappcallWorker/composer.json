@@ -1,0 +1,10 @@
+{
+    "name": "convocon/whatsappcallworker",
+    "description": "Node media worker launcher for WhatsApp AI voice calls",
+    "type": "library",
+    "autoload": {
+        "psr-4": {
+            "Modules\\WhatsappcallWorker\\": ""
+        }
+    }
+}
