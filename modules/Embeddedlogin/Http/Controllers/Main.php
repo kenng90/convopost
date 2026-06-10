@@ -2,6 +2,7 @@
 
 namespace Modules\Embeddedlogin\Http\Controllers;
 
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,7 @@ class Main extends Controller
 {
     public $graph_url = 'https://graph.facebook.com/v22.0';
 
-    public function start($code)
+    public function start(Request $request, $code)
     {
         Log::info('Start');
         Log::info('Step 1: getFacebookAccessToken v22.0');
@@ -24,35 +25,54 @@ class Main extends Controller
             return response()->json(['error' => 'Invalid code - Error in the Facebook App.', 'info' => $accessTokenResult], 200);
         }
 
-        //Step 2 - Debug the token, get the shared WABID
-        $wabidResult = $this->getWabid($accessToken);
-        try {
-            Log::info($wabidResult);
-            $userid = $wabidResult['data']['user_id'];
-            $wabid = $this->resolveWabidFromDebugToken($wabidResult);
+        $wabid = $request->query('waba_id');
+        $phoneID = $request->query('phone_number_id');
+        $userid = null;
 
-            //If no WABID found, return error
-            if ($wabid === null) {
-                Log::warning('Embedded signup: no WABA ID in debug_token granular_scopes', [
-                    'scopes' => collect($wabidResult['data']['granular_scopes'] ?? [])->pluck('scope')->all(),
-                    'app_id' => config('services.facebook.app_id'),
-                    'config_id' => config('embeddedlogin.config_id'),
-                ]);
+        if ($wabid && $phoneID) {
+            Log::info('Using WABA IDs from WA_EMBEDDED_SIGNUP postMessage', [
+                'waba_id' => $wabid,
+                'phone_number_id' => $phoneID,
+            ]);
+        } else {
+            //Step 2 - Debug the token, get the shared WABID (legacy fallback)
+            $wabidResult = $this->getWabid($accessToken);
+            try {
+                Log::info($wabidResult);
+                $userid = $wabidResult['data']['user_id'] ?? null;
+                $wabid = $this->resolveWabidFromDebugToken($wabidResult);
 
-                return response()->json([
-                    'error' => 'No WABID found. Please check the app permissions',
-                    'hint' => 'Ensure the Meta app Embedded Signup configuration grants whatsapp_business_management and whatsapp_business_messaging, and that convoconnect.tech is in Allowed domains.',
-                ], 200);
+                if ($wabid === null) {
+                    Log::warning('Embedded signup: no WABA ID in debug_token granular_scopes', [
+                        'scopes' => collect($wabidResult['data']['granular_scopes'] ?? [])->pluck('scope')->all(),
+                        'app_id' => config('services.facebook.app_id'),
+                        'config_id' => config('embeddedlogin.config_id'),
+                    ]);
+
+                    return response()->json([
+                        'error' => 'No WABID found. Please check the app permissions',
+                        'hint' => 'Request Advanced Access for whatsapp_business_management and whatsapp_business_messaging in Meta App Review. Until approved, only Meta app admins/developers/testers can complete signup. Also ensure convoconnect.tech is in Facebook Login allowed domains.',
+                    ], 200);
+                }
+            } catch (\Exception $e) {
+                return response()->json(['error' => 'Error getting share WABAID'], 200);
             }
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error getting share WABAID'], 200);
         }
 
-        //Step 3 - Get the phone number
+        //Step 3 - Resolve phone number ID and display number
+        $phone = '';
         $phoneResult = $this->getPhoneNumber($accessToken, $wabid);
+
         try {
-            $phone = $phoneResult['data'][0]['display_phone_number'];
-            $phoneID = $phoneResult['data'][0]['id'];
+            if (! empty($phoneResult['data'][0]['display_phone_number'])) {
+                $phone = $phoneResult['data'][0]['display_phone_number'];
+            }
+            if (empty($phoneID) && ! empty($phoneResult['data'][0]['id'])) {
+                $phoneID = $phoneResult['data'][0]['id'];
+            }
+            if (empty($phoneID)) {
+                return response()->json(['error' => 'Error getting phone number'], 200);
+            }
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error getting phone number'], 200);
         }
