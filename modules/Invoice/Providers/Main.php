@@ -34,7 +34,10 @@ class Main extends Provider
      */
     protected function loadRoutes()
     {
-        $this->loadRoutesFrom(__DIR__ . '/../Routes/api.php');
+        if (app()->routesAreCached()) {
+            return;
+        }
+
         $this->loadRoutesFrom(__DIR__ . '/../Routes/web.php');
     }
 
