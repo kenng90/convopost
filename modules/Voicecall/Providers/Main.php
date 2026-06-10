@@ -34,12 +34,17 @@ class Main extends ServiceProvider
 
     protected function loadViews(): void
     {
-        $viewPath = resource_path('views/modules/voicecall');
         $sourcePath = __DIR__.'/../Resources/views';
+        $paths = [$sourcePath];
 
-        $this->loadViewsFrom(array_merge(
-            array_map(fn ($path) => $path.'/modules/voicecall', config('view.paths')),
-            [$sourcePath]
-        ), 'voicecall');
+        $publishedPath = resource_path('views/modules/voicecall');
+        if (is_dir($publishedPath)) {
+            $paths = array_merge(
+                array_map(fn ($path) => $path.'/modules/voicecall', config('view.paths')),
+                $paths
+            );
+        }
+
+        $this->loadViewsFrom($paths, 'voicecall');
     }
 }
