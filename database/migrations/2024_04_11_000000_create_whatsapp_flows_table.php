@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('whatsapp_flows')) {
+            return;
+        }
+
         Schema::create('whatsapp_flows', function (Blueprint $table) {
             $table->id();
 

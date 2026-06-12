@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('whatsapp_flows') || Schema::hasColumn('whatsapp_flows', 'category')) {
+            return;
+        }
+
         Schema::table('whatsapp_flows', function (Blueprint $table) {
             $table->string('category')->default('OTHER')->after('name');
         });

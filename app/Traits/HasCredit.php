@@ -2,9 +2,9 @@
 
 namespace App\Traits;
 
-use App\Models\Cost;
 use App\Models\Credit;
 use App\Models\CreditMovement;
+use App\Services\Billing\CreditCostService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -43,14 +43,16 @@ trait HasCredit
         ]);
     }
 
-    public function hasEnoughCreditsByAction(string $action): bool
+    public function hasEnoughCreditsByAction(string $action, int|float $usageAmount = 1): bool
     {
         if (config('settings.enable_credits', false) == false) {
             return true;
         }
-        $amount = (float) (Cost::where('action', $action)->first()->cost ?? 0);
-        if ((float) $amount === -1.0) {
-            $amount = 1;
+
+        $amount = app(CreditCostService::class)->getActionCost($action, $usageAmount);
+
+        if ($amount <= 0) {
+            return true;
         }
 
         return $this->hasEnoughCredits($amount);
@@ -70,10 +72,11 @@ trait HasCredit
         if (config('settings.enable_credits', false) == false) {
             return true;
         }
-        $cost = Cost::where('action', $action)->first() ?? null;
-        $amount = $cost ? (float) $cost->cost : 0.0;
-        if ((float) $amount === -1.0) {
-            $amount = (float) $amountBasedOnUsage;
+
+        $amount = app(CreditCostService::class)->getActionCost($action, $amountBasedOnUsage);
+
+        if ($amount <= 0) {
+            return true;
         }
 
         return $this->useCredits($amount, $action, $companyId);

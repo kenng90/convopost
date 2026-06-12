@@ -34,7 +34,7 @@ class SharedCreditsTest extends TestCase
         $this->assertSame(1000, $companyA->fresh()->getTotalRemainingCredits());
         $this->assertSame(1000, $companyB->fresh()->getTotalRemainingCredits());
 
-        $companyB->useCredits(250, 'send_regular_message');
+        $companyB->useCredits(250, 'send_outside_window_reply');
 
         $this->assertSame(750, $owner->fresh()->getTotalRemainingCredits());
         $this->assertSame(750, $companyA->fresh()->getTotalRemainingCredits());

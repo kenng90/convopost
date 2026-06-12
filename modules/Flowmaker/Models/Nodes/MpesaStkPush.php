@@ -3,6 +3,7 @@
 namespace Modules\Flowmaker\Models\Nodes;
 
 use App\Models\Company;
+use App\Services\Billing\CreditCharger;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
@@ -20,8 +21,9 @@ class MpesaStkPush extends Node
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
 
-        if (!$contact) {
+        if (! $contact) {
             Log::error('MPesa STK Push: contact not found', ['contactId' => $contactId]);
+
             return;
         }
 
@@ -59,14 +61,16 @@ class MpesaStkPush extends Node
         if ($this->isStartNode) {
             // We are resuming after the Safaricom callback
             $this->listenForReply($message, $data);
+
             return ['success' => true];
         }
 
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
 
-        if (!$contact) {
+        if (! $contact) {
             Log::error('MPesa STK Push: contact not found', ['contactId' => $contactId]);
+
             return ['success' => false];
         }
 
@@ -81,6 +85,26 @@ class MpesaStkPush extends Node
 
         // Get MPesa credentials from company config
         $company = Company::find($contact->company_id);
+
+        if ($company === null) {
+            Log::error('MPesa STK Push: company not found', ['companyId' => $contact->company_id]);
+
+            return ['success' => false];
+        }
+
+        $charger = app(CreditCharger::class);
+        $creditAction = 'mpesa_stk_push';
+
+        if (! $charger->canCharge($company, $creditAction)) {
+            Log::warning('MPesa STK Push blocked: insufficient credits', [
+                'contact_id' => $contact->id,
+                'company_id' => $company->id,
+            ]);
+            $contact->setContactState($this->flow_id, $responseVar.'_status', 'insufficient_credits');
+
+            return ['success' => false, 'error' => 'insufficient_credits'];
+        }
+
         $consumerKey = $company->getConfig('mpesa_consumer_key', '');
         $consumerSecret = $company->getConfig('mpesa_consumer_secret', '');
         $passkey = $company->getConfig('mpesa_passkey', '');
@@ -104,10 +128,11 @@ class MpesaStkPush extends Node
                 ->withBasicAuth($consumerKey, $consumerSecret)
                 ->get("{$baseUrl}/oauth/v1/generate", ['grant_type' => 'client_credentials']);
 
-            if (!$tokenResponse->successful()) {
+            if (! $tokenResponse->successful()) {
                 Log::error('MPesa STK Push: failed to get access token', ['response' => $tokenResponse->body()]);
-                $contact->setContactState($this->flow_id, $responseVar . '_error', 'Failed to authenticate with MPesa');
+                $contact->setContactState($this->flow_id, $responseVar.'_error', 'Failed to authenticate with MPesa');
                 $this->routeToFailed($message, $data, $contact);
+
                 return ['success' => false];
             }
 
@@ -115,8 +140,8 @@ class MpesaStkPush extends Node
 
             // Step 2: Build STK Push payload
             $timestamp = now()->format('YmdHis');
-            $password = base64_encode($shortCode . $passkey . $timestamp);
-            $callbackUrl = config('app.url') . '/flowmaker/mpesa/callback';
+            $password = base64_encode($shortCode.$passkey.$timestamp);
+            $callbackUrl = config('app.url').'/flowmaker/mpesa/callback';
 
             $stkPayload = [
                 'BusinessShortCode' => $shortCode,
@@ -142,26 +167,30 @@ class MpesaStkPush extends Node
             $stkData = $stkResponse->json();
             Log::info('MPesa STK Push: STK response', ['response' => $stkData]);
 
-            if (!$stkResponse->successful() || isset($stkData['errorCode'])) {
+            if (! $stkResponse->successful() || isset($stkData['errorCode'])) {
                 $error = $stkData['errorMessage'] ?? $stkData['ResultDesc'] ?? 'STK push failed';
                 Log::error('MPesa STK Push: STK request failed', ['error' => $error, 'response' => $stkData]);
-                $contact->setContactState($this->flow_id, $responseVar . '_error', $error);
+                $contact->setContactState($this->flow_id, $responseVar.'_error', $error);
                 $this->routeToFailed($message, $data, $contact);
+
                 return ['success' => false];
             }
 
             $checkoutRequestId = $stkData['CheckoutRequestID'] ?? null;
 
-            if (!$checkoutRequestId) {
+            if (! $checkoutRequestId) {
                 Log::error('MPesa STK Push: no CheckoutRequestID in response', ['response' => $stkData]);
                 $this->routeToFailed($message, $data, $contact);
+
                 return ['success' => false];
             }
+
+            $charger->charge($company, $creditAction, $company->id);
 
             // Step 4: Store state to wait for callback
             $contact->setContactState($this->flow_id, 'mpesa_checkout_request_id', $checkoutRequestId);
             $contact->setContactState($this->flow_id, 'mpesa_merchant_request_id', $stkData['MerchantRequestID'] ?? '');
-            $contact->setContactState($this->flow_id, $responseVar . '_status', 'pending');
+            $contact->setContactState($this->flow_id, $responseVar.'_status', 'pending');
             $contact->setContactState($this->flow_id, 'current_node', $this->id);
 
             Log::info('MPesa STK Push: waiting for callback', [
@@ -173,7 +202,7 @@ class MpesaStkPush extends Node
 
         } catch (\Exception $e) {
             Log::error('MPesa STK Push: exception', ['error' => $e->getMessage()]);
-            $contact->setContactState($this->flow_id, $responseVar . '_error', $e->getMessage());
+            $contact->setContactState($this->flow_id, $responseVar.'_error', $e->getMessage());
             $this->routeToFailed($message, $data, $contact);
         }
 
@@ -190,12 +219,12 @@ class MpesaStkPush extends Node
 
         // If starts with 0, replace with 254
         if (str_starts_with($phone, '0')) {
-            $phone = '254' . substr($phone, 1);
+            $phone = '254'.substr($phone, 1);
         }
 
         // If starts with 7 or 1 (local format without country code)
         if (strlen($phone) === 9 && (str_starts_with($phone, '7') || str_starts_with($phone, '1'))) {
-            $phone = '254' . $phone;
+            $phone = '254'.$phone;
         }
 
         return $phone;
@@ -220,6 +249,7 @@ class MpesaStkPush extends Node
                 return $edge->getTarget();
             }
         }
+
         return null;
     }
 }

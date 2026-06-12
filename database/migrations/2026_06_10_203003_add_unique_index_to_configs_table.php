@@ -24,9 +24,13 @@ return new class extends Migration
                 ->delete();
         }
 
-        Schema::table('configs', function (Blueprint $table) {
-            $table->unique(['key', 'model_type', 'model_id'], 'configs_key_model_unique');
-        });
+        try {
+            Schema::table('configs', function (Blueprint $table) {
+                $table->unique(['key', 'model_type', 'model_id'], 'configs_key_model_unique');
+            });
+        } catch (\Throwable) {
+            // Unique index already exists on partially migrated databases.
+        }
     }
 
     public function down(): void

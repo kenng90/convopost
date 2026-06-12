@@ -3,6 +3,8 @@
 namespace Modules\Wpbox\Models;
 
 use App\Models\Company;
+use App\Services\Billing\CreditBillingResolver;
+use App\Services\Billing\CreditCharger;
 use Illuminate\Support\Facades\Log;
 use Modules\Contacts\Models\Contact as ModelsContact;
 use Modules\Whatsappcall\Models\Call as WhatsappCallModel;
@@ -160,6 +162,19 @@ class Contact extends ModelsContact
      */
     public function sendReply(Reply $reply)
     {
+        $company = Company::findOrFail($this->company_id);
+        $charger = app(CreditCharger::class);
+        $creditAction = 'send_bot_auto_reply';
+
+        if (! $charger->canCharge($company, $creditAction)) {
+            Log::warning('sendReply blocked: insufficient credits', [
+                'contact_id' => $this->id,
+                'action' => $creditAction,
+            ]);
+
+            return null;
+        }
+
         //Create the message
         $buttons = [];
 
@@ -214,8 +229,9 @@ class Contact extends ModelsContact
         $this->last_support_reply_at = now();
         $this->is_last_message_by_contact = false;
         $this->sendMessageToWhatsApp($messageToBeSend, $this);
+        $charger->charge($company, $creditAction, $this->company_id);
         //Find the user of the company
-        $companyUser = Company::findOrFail($this->company_id)->user;
+        $companyUser = $company->user;
         event(new AgentReplies($companyUser, $messageToBeSend, $this));
 
         $this->last_message = $this->trimString($reply->text, 40);
@@ -265,7 +281,7 @@ class Contact extends ModelsContact
      * $messageType [TEXT | IMAGE | VIDEO | DOCUMENT ]
      * $fb_message_id String - The Facebook message ID
      */
-    public function sendMessage($content, $is_message_by_contact = true, $is_campaign_messages = false, $messageType = 'TEXT', $fb_message_id = null, $extra = null)
+    public function sendMessage($content, $is_message_by_contact = true, $is_campaign_messages = false, $messageType = 'TEXT', $fb_message_id = null, $extra = null, ?string $creditAction = null, bool $isBotAutoReply = false)
     {
         //Check that all is set ok
 
@@ -306,23 +322,30 @@ class Contact extends ModelsContact
 
         Log::info('messageToBeSend', [$messageToBeSend]);
 
+        $resolvedCreditAction = null;
+        $charger = app(CreditCharger::class);
+        $billingResolver = app(CreditBillingResolver::class);
+
         //Check who send the message
-        if (! $is_message_by_contact) {
+        if (! $is_message_by_contact && ! $is_campaign_messages) {
             //Get current user
             if (auth()->check()) {
                 $messageToBeSend->sender_name = auth()->user()->name;
             }
 
-            //Check if the company has enough credits
-            if (! $this->getCompany()->hasEnoughCreditsByAction('send_regular_message')) {
-                //Set the message to be sent as error
+            $resolvedCreditAction = $billingResolver->resolveInboxOutboundAction(
+                $this,
+                $isBotAutoReply,
+                $creditAction,
+            );
+
+            if (! $charger->canCharge($this->getCompany(), $resolvedCreditAction)) {
                 $messageToBeSend->status = 2;
-                $messageToBeSend->error = __('No credits left');
+                $messageToBeSend->error = $charger->insufficientCreditsMessage($resolvedCreditAction);
                 $messageToBeSend->save();
 
                 return $messageToBeSend;
             }
-
         }
 
         $messageToBeSend->save();
@@ -380,11 +403,8 @@ class Contact extends ModelsContact
                 $this->sendMessageToWhatsApp($messageToBeSend, $this);
                 event(new AgentReplies(auth()->user(), $messageToBeSend, $this));
 
-                //Use credits
-                try {
-                    $this->getCompany()->useCreditsByAction('send_regular_message', 1);
-                } catch (\Exception $e) {
-                    //Ignore
+                if ($resolvedCreditAction !== null) {
+                    $charger->charge($this->getCompany(), $resolvedCreditAction, $this->company_id);
                 }
             }
         }

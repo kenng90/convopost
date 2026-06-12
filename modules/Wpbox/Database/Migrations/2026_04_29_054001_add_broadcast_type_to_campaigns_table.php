@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up()
     {
+        if (! Schema::hasTable('wa_campaings') || Schema::hasColumn('wa_campaings', 'broadcast_type')) {
+            return;
+        }
+
         Schema::table('wa_campaings', function (Blueprint $table) {
             $table->string('broadcast_type')->nullable()->after('group_id'); // file, group, quick
         });

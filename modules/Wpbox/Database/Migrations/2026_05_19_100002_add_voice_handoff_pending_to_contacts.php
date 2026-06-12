@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('contacts') || Schema::hasColumn('contacts', 'voice_handoff_pending')) {
+            return;
+        }
+
         Schema::table('contacts', function (Blueprint $table) {
             $table->boolean('voice_handoff_pending')->default(false)->after('enabled_ai_bot');
         });
