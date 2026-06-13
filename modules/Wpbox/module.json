@@ -56,10 +56,44 @@
     "requires": [],
     "cost_per_action":[
         {
-            "name":"Send regular message",
-            "action":"send_regular_message",
-            "cost":1,
-            "default_cost":1
+            "name":"Inbox reply (24h service window)",
+            "action":"send_service_window_reply",
+            "category":"messaging",
+            "default_cost":0,
+            "help":"Session replies while the customer service window is open.",
+            "sort_order":10
+        },
+        {
+            "name":"Inbox reply (outside service window)",
+            "action":"send_outside_window_reply",
+            "category":"messaging",
+            "default_cost":1,
+            "help":"Non-template outbound messages outside the 24-hour window.",
+            "sort_order":20
+        },
+        {
+            "name":"Campaign / marketing template",
+            "action":"send_campaign_marketing",
+            "category":"campaigns",
+            "default_cost":3,
+            "help":"Marketing template broadcasts and campaigns.",
+            "sort_order":30
+        },
+        {
+            "name":"Utility template (booking, receipt)",
+            "action":"send_template_utility",
+            "category":"campaigns",
+            "default_cost":1,
+            "help":"Utility or authentication template messages.",
+            "sort_order":40
+        },
+        {
+            "name":"Flow / bot auto-reply",
+            "action":"send_bot_auto_reply",
+            "category":"automation",
+            "default_cost":1,
+            "help":"Automated trigger, flow, or bot outbound messages.",
+            "sort_order":50
         }
     ],
     "global_fields":[

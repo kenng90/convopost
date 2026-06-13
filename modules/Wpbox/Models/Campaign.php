@@ -99,7 +99,16 @@ class Campaign extends Model
             $this->update();
 
             $message = $this->makeMessages(null, $contact);
-            $contact->sendMessage($contact->getCompany()->getConfig('delay_response', __('Give me a moment, I will have the answer shortly')), false);
+            $contact->sendMessage(
+                $contact->getCompany()->getConfig('delay_response', __('Give me a moment, I will have the answer shortly')),
+                false,
+                false,
+                'TEXT',
+                null,
+                null,
+                null,
+                true,
+            );
             $this->sendCampaignMessageToWhatsApp($message);
 
             return true;

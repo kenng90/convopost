@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('messages') || Schema::hasColumn('messages', 'is_call_brief')) {
+            return;
+        }
+
         Schema::table('messages', function (Blueprint $table) {
             $table->boolean('is_call_brief')->default(false)->after('is_note');
             $table->json('call_brief_payload')->nullable()->after('is_call_brief');

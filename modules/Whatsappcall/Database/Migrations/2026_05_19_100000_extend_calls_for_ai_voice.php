@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('calls') || Schema::hasColumn('calls', 'handled_by_type')) {
+            return;
+        }
+
         Schema::table('calls', function (Blueprint $table) {
             $table->string('handled_by_type')->default('human')->after('status');
             $table->unsignedInteger('duration_seconds')->nullable()->after('handled_by_type');

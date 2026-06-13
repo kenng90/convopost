@@ -12,6 +12,16 @@
     "aliases": {},
     "files": [],
     "requires": [],
+    "cost_per_action":[
+        {
+            "name":"M-Pesa STK push",
+            "action":"mpesa_stk_push",
+            "category":"payments",
+            "default_cost":5,
+            "help":"Daraja STK push initiated from a flow payment node.",
+            "sort_order":60
+        }
+    ],
     "ownermenus":[
         {
             "name":"Flow builder",
