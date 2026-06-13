@@ -89,7 +89,7 @@ class Message extends Model
 
         static::creating(function ($model) {
             $company_id = session('company_id', null);
-            if ($company_id) {
+            if ($company_id && ! $model->company_id) {
                 $model->company_id = $company_id;
             }
         });

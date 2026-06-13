@@ -92,7 +92,7 @@ import {
     useEffect(() => {
       const pusherKey = config.pusher_key;;
       const cluster = config.pusher_cluster;
-      const channelName = 'chat.'+item.id;
+      const channelName = 'chat.'+(item.company_id || 1)+'.'+item.id;
       const eventName = 'general';
 
       console.log('Connecting to WebSocket...');

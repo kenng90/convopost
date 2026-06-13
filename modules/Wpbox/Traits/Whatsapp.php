@@ -22,6 +22,8 @@ use Modules\Wpbox\Models\Template;
 
 trait Whatsapp
 {
+    use Contacts;
+
     public static $facebookAPI = 'https://graph.facebook.com/v19.0/';
 
     private function getToken(?Company $company = null)
@@ -223,6 +225,8 @@ trait Whatsapp
                 $company = $this->getCompany();
             }
 
+            $this->setWebhookCompanyContext($company);
+
             //Resend the Request to webhook
             try {
                 $whatsapp_data_send_webhook = $company->getConfig('whatsapp_data_send_webhook', '');
@@ -243,7 +247,10 @@ trait Whatsapp
                     //Status change -- Message update
                     $newStatus = $value['statuses'][0]['status'];
                     $messageFBID = $value['statuses'][0]['id'];
-                    $message = Message::where('fb_message_id', $messageFBID)->first();
+                    $message = Message::withoutGlobalScopes()
+                        ->where('fb_message_id', $messageFBID)
+                        ->where('company_id', $company->id)
+                        ->first();
                     if ($message) {
                         $message_previous_status = $message->status;
                         if ($newStatus == 'sent' && $message->status != 3) {
@@ -290,8 +297,8 @@ trait Whatsapp
                     $name = $value['contacts'][0]['profile']['name'];
                     $messageID = $value['messages'][0]['id'];
 
-                    //Find the contact
-                    $contact = Contact::where('phone', $phone)->orWhere('phone', '+'.$phone)->where('company_id', $company->id)->first();
+                    //Find the contact scoped to the webhook organisation
+                    $contact = $this->findContactByPhone($company, $phone);
 
                     if (! $contact) {
                         //Create new contact

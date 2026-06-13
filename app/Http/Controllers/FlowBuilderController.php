@@ -160,6 +160,26 @@ class FlowBuilderController extends Controller
     // POST /api/flow-builder/{flow}/publish
     // ─────────────────────────────────────────────────────────────────────────
 
+    public function validateFlow(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'screens' => 'required|array',
+        ]);
+
+        $flow = new WhatsappFlow([
+            'name' => $request->input('name', 'Validation'),
+            'flow_json' => ['screens' => $data['screens']],
+        ]);
+
+        $result = $this->metaService->getPublishValidation($flow);
+
+        return response()->json([
+            'success' => $result['errors'] === [],
+            'errors' => $result['errors'],
+            'warnings' => $result['warnings'],
+        ]);
+    }
+
     public function publish(Request $request, WhatsappFlow $flow): JsonResponse
     {
         $this->authorizeFlow($flow);

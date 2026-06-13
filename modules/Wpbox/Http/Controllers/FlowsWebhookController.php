@@ -5,15 +5,28 @@ namespace Modules\Wpbox\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\User;
+use App\Models\WhatsappFlow;
+use App\Models\WhatsappFlowResponse;
+use App\Services\WhatsappFlowEndpointHandlers\BookingSlotsHandler;
 use App\Traits\EnsuresOpenSsl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\PersonalAccessToken;
+use Modules\Wpbox\Models\Contact;
+use Modules\Wpbox\Traits\Contacts;
 
 class FlowsWebhookController extends Controller
 {
+    use Contacts;
     use EnsuresOpenSsl;
+
+    protected BookingSlotsHandler $bookingSlotsHandler;
+
+    public function __construct(?BookingSlotsHandler $bookingSlotsHandler = null)
+    {
+        $this->bookingSlotsHandler = $bookingSlotsHandler ?? new BookingSlotsHandler;
+    }
 
     /**
      * Handle GET — Meta webhook verification (hub challenge).
@@ -30,11 +43,13 @@ class FlowsWebhookController extends Controller
 
         if (! $personalToken) {
             Log::warning('WhatsApp Flow webhook verification failed: invalid token');
+
             return response()->json(['error' => 'Invalid token'], 403);
         }
 
         if ($mode === 'subscribe') {
             Log::info('WhatsApp Flow webhook verified successfully');
+
             return response($challenge, 200);
         }
 
@@ -52,7 +67,7 @@ class FlowsWebhookController extends Controller
     public function receive(Request $request, string $token): Response
     {
         Log::info('WhatsApp Flow webhook received', [
-            'token' => substr($token, 0, 8) . '...',
+            'token' => substr($token, 0, 8).'...',
             'is_encrypted' => $request->has('encrypted_flow_data'),
         ]);
 
@@ -61,6 +76,7 @@ class FlowsWebhookController extends Controller
         $personalToken = PersonalAccessToken::findToken($token);
         if (! $personalToken) {
             Log::warning('WhatsApp Flow webhook: invalid token');
+
             return response('Unauthorized', 401);
         }
 
@@ -68,21 +84,26 @@ class FlowsWebhookController extends Controller
         $user = User::find($personalToken->tokenable_id);
         if (! $user) {
             Log::warning('WhatsApp Flow webhook: user not found');
+
             return response('User not found', 401);
         }
 
         Log::debug('WhatsApp Flow: looking up company', ['user_id' => $user->id]);
-        $company = Company::where('user_id', $user->id)->first();
+        $company = $this->resolveCompanyForFlowWebhook($user, $request);
         if (! $company) {
             Log::warning('WhatsApp Flow webhook: company not found for user', ['user_id' => $user->id]);
+
             return response('Company not found', 401);
         }
+
+        $this->setWebhookCompanyContext($company);
 
         Log::debug('WhatsApp Flow: company found', ['company_id' => $company->id]);
 
         // Validate request signature (x-hub-signature-256) if APP_SECRET is configured
         if (! $this->isRequestSignatureValid($request, $company)) {
             Log::warning('WhatsApp Flow webhook: invalid request signature');
+
             return response('Invalid signature', 432);
         }
 
@@ -113,6 +134,7 @@ class FlowsWebhookController extends Controller
             Log::error('WhatsApp Flow webhook: no RSA private key configured', [
                 'company_id' => $company->id,
             ]);
+
             return response('Encryption keys not configured. Click Setup Keys in the flow builder.', 500);
         }
 
@@ -169,41 +191,61 @@ class FlowsWebhookController extends Controller
         // Health check ping — must respond with active status
         if ($action === 'ping') {
             Log::info('WhatsApp Flow health check ping — responding active');
+
             return ['data' => ['status' => 'active']];
         }
 
         // Client-side error notification
         if (isset($data['error'])) {
             Log::warning('WhatsApp Flow client error received', ['data' => $data]);
+
             return ['data' => ['acknowledged' => true]];
         }
 
         // INIT — flow opened, return first screen.
         // Resolve the first screen ID from the flow JSON via flow_token so we
         // return the correct screen even when flow_action_payload is omitted.
+        $whatsappFlow = $this->resolveWhatsappFlow($flowToken);
+
         if ($action === 'INIT') {
             // Use the screen from the payload if set; otherwise resolve from the flow JSON.
             // An empty string in the payload means it was not supplied — treat as missing.
             $firstScreenId = (! empty($screen)) ? $screen : $this->resolveFirstScreenId($flowToken);
             Log::info('WhatsApp Flow INIT', ['first_screen' => $firstScreenId, 'flow_token' => $flowToken]);
-            // 'data' must be a JSON object ({}), never an array.
+
             return [
                 'screen' => $firstScreenId,
-                'data'   => (object) [],
+                'data' => (object) $this->initDataForScreen($whatsappFlow, $firstScreenId),
+            ];
+        }
+
+        if ($action === 'BACK') {
+            Log::info('WhatsApp Flow BACK', ['screen' => $screen]);
+
+            return [
+                'screen' => $screen,
+                'data' => (object) [],
             ];
         }
 
         // data_exchange — form submitted or EmbeddedLink tapped
         if ($action === 'data_exchange') {
             Log::info('WhatsApp Flow data_exchange', [
-                'screen'     => $screen,
-                'data'       => $data,
+                'screen' => $screen,
+                'data' => $data,
                 'flow_token' => $flowToken,
-                'data_keys'  => array_keys($data),
+                'data_keys' => array_keys($data),
             ]);
 
             if (isset($data['url'])) {
                 Log::info('EmbeddedLink tapped', ['url' => $data['url']]);
+            }
+
+            $templateResponse = $this->resolveTemplateDataExchange($whatsappFlow, $screen, $data);
+            if ($templateResponse !== null) {
+                Log::info('WhatsApp Flow template data_exchange response', ['template' => $templateResponse]);
+
+                return $templateResponse;
             }
 
             // Pass all form field values through extension_message_response.params.
@@ -218,7 +260,7 @@ class FlowsWebhookController extends Controller
 
             return [
                 'screen' => 'SUCCESS',
-                'data'   => [
+                'data' => [
                     'extension_message_response' => [
                         'params' => $responseParams,
                     ],
@@ -226,7 +268,7 @@ class FlowsWebhookController extends Controller
             ];
         }
 
-        throw new \Exception('Unhandled action: ' . $action);
+        throw new \Exception('Unhandled action: '.$action);
     }
 
     /**
@@ -236,10 +278,10 @@ class FlowsWebhookController extends Controller
      * We look up the WhatsappFlowResponse to find the WhatsappFlow, then read
      * the first screen ID from the stored flow JSON.
      */
-    protected function resolveFirstScreenId(?string $flowToken): string
+    protected function resolveWhatsappFlow(?string $flowToken): ?WhatsappFlow
     {
         if (! $flowToken || ! str_starts_with($flowToken, 'flow_')) {
-            return 'WELCOME';
+            return null;
         }
 
         try {
@@ -247,33 +289,67 @@ class FlowsWebhookController extends Controller
             $responseId = $parts[1] ?? null;
 
             if (! $responseId) {
-                return 'WELCOME';
+                return null;
             }
 
-            $flowResponse = \App\Models\WhatsappFlowResponse::find($responseId);
+            $flowResponse = WhatsappFlowResponse::find($responseId);
             if (! $flowResponse) {
-                return 'WELCOME';
+                return null;
             }
 
-            $whatsappFlow = \App\Models\WhatsappFlow::find($flowResponse->whatsapp_flow_id);
-            if (! $whatsappFlow) {
-                return 'WELCOME';
-            }
-
-            $flowJson = is_array($whatsappFlow->flow_json) ? $whatsappFlow->flow_json : [];
-            $firstScreen = $flowJson['screens'][0] ?? null;
-
-            // Mirror convertToMetaFormat() ID logic:
-            // if the stored id is empty/null, the Meta JSON uses 'SCREEN_A' (chr(65+0))
-            $rawId = $firstScreen['id'] ?? '';
-            return (! empty($rawId)) ? (string) $rawId : 'SCREEN_A';
+            return WhatsappFlow::find($flowResponse->whatsapp_flow_id);
         } catch (\Throwable $e) {
-            Log::warning('WhatsApp Flow: could not resolve first screen ID', [
+            Log::warning('WhatsApp Flow: could not resolve flow from token', [
                 'flow_token' => $flowToken,
                 'error' => $e->getMessage(),
             ]);
+
+            return null;
+        }
+    }
+
+    protected function resolveFirstScreenId(?string $flowToken): string
+    {
+        $whatsappFlow = $this->resolveWhatsappFlow($flowToken);
+
+        if (! $whatsappFlow) {
             return 'WELCOME';
         }
+
+        $flowJson = is_array($whatsappFlow->flow_json) ? $whatsappFlow->flow_json : [];
+        $firstScreen = $flowJson['screens'][0] ?? null;
+        $rawId = $firstScreen['id'] ?? '';
+
+        return (! empty($rawId)) ? (string) $rawId : 'SCREEN_A';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function initDataForScreen(?WhatsappFlow $flow, string $screenId): array
+    {
+        if ($this->bookingSlotsHandler->supportsScreen($flow, $screenId)) {
+            return $this->bookingSlotsHandler->initData();
+        }
+
+        return [];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>|null
+     */
+    protected function resolveTemplateDataExchange(?WhatsappFlow $flow, ?string $screen, array $data): ?array
+    {
+        if (! $screen || ! $flow) {
+            return null;
+        }
+
+        if ($this->bookingSlotsHandler->supportsScreen($flow, $screen)) {
+            return $this->bookingSlotsHandler->handleDataExchange($screen, $data);
+        }
+
+        return null;
     }
 
     /**
@@ -313,12 +389,14 @@ class FlowsWebhookController extends Controller
 
         if (empty($appSecret)) {
             Log::warning('WhatsApp Flow: APP_SECRET not configured — skipping signature validation');
+
             return true; // Skip validation if not configured (matches Meta's sample behaviour)
         }
 
         $signatureHeader = $request->header('x-hub-signature-256', '');
         if (empty($signatureHeader)) {
             Log::warning('WhatsApp Flow: missing x-hub-signature-256 header');
+
             return false;
         }
 
@@ -343,9 +421,9 @@ class FlowsWebhookController extends Controller
      */
     protected function decryptPayload(Request $request, string $privateKeyPem): array
     {
-        $encryptedAesKey   = base64_decode($request->input('encrypted_aes_key'));
+        $encryptedAesKey = base64_decode($request->input('encrypted_aes_key'));
         $encryptedFlowData = base64_decode($request->input('encrypted_flow_data'));
-        $iv                = base64_decode($request->input('initial_vector'));
+        $iv = base64_decode($request->input('initial_vector'));
 
         // Step 1: RSA-OAEP-SHA256 decrypt the AES key.
         // Meta's client uses oaepHash:"sha256". PHP's OPENSSL_PKCS1_OAEP_PADDING
@@ -356,18 +434,18 @@ class FlowsWebhookController extends Controller
         } catch (\Throwable $e) {
             // Return 421 so Meta knows to refresh the public key on the client
             throw new \RuntimeException(
-                'Failed to decrypt AES key — verify your private key matches the uploaded public key: ' . $e->getMessage()
+                'Failed to decrypt AES key — verify your private key matches the uploaded public key: '.$e->getMessage()
             );
         }
 
         // Step 2: AES-128-GCM decrypt — last 16 bytes are the auth tag
-        $tag        = substr($encryptedFlowData, -16);
+        $tag = substr($encryptedFlowData, -16);
         $ciphertext = substr($encryptedFlowData, 0, -16);
 
         $decrypted = openssl_decrypt($ciphertext, 'aes-128-gcm', $aesKey, OPENSSL_RAW_DATA, $iv, $tag);
 
         if ($decrypted === false) {
-            throw new \Exception('Failed to decrypt flow data: ' . openssl_error_string());
+            throw new \Exception('Failed to decrypt flow data: '.openssl_error_string());
         }
 
         $payload = json_decode($decrypted, true);
@@ -407,11 +485,11 @@ class FlowsWebhookController extends Controller
         );
 
         if ($encrypted === false) {
-            throw new \Exception('Failed to encrypt response: ' . openssl_error_string());
+            throw new \Exception('Failed to encrypt response: '.openssl_error_string());
         }
 
         // Ciphertext + auth tag, base64-encoded — matches JS: Buffer.concat([...cipher.getAuthTag()])
-        return base64_encode($encrypted . $tag);
+        return base64_encode($encrypted.$tag);
     }
 
     /**
@@ -423,7 +501,7 @@ class FlowsWebhookController extends Controller
      */
     protected function triggerFlowmakerIntegration(array $payload, Company $company): void
     {
-        $action    = $payload['action'] ?? null;
+        $action = $payload['action'] ?? null;
         $flowToken = $payload['flow_token'] ?? null;
 
         // Only process form submissions, not health checks or init
@@ -433,7 +511,7 @@ class FlowsWebhookController extends Controller
 
         // $payload['data'] contains the form field values Meta sent to the endpoint.
         // Strip internal keys so we store only user-submitted data.
-        $rawData  = $payload['data'] ?? [];
+        $rawData = $payload['data'] ?? [];
         $formData = array_filter(
             $rawData,
             fn ($k) => ! in_array($k, ['url', 'error'], true),
@@ -443,14 +521,15 @@ class FlowsWebhookController extends Controller
         Log::info('WhatsApp Flow: processing form submission', [
             'flow_token' => $flowToken,
             'company_id' => $company->id,
-            'form_data'  => $formData,
-            'data_keys'  => array_keys($rawData),
+            'form_data' => $formData,
+            'data_keys' => array_keys($rawData),
         ]);
 
         try {
             // The flow_token was stored as "flow_{responseId}_{timestamp}" in sendFlow()
             if (empty($flowToken) || ! str_starts_with($flowToken, 'flow_')) {
                 Log::warning('WhatsApp Flow: unrecognised flow_token format', ['flow_token' => $flowToken]);
+
                 return;
             }
 
@@ -460,12 +539,14 @@ class FlowsWebhookController extends Controller
 
             if (! $responseId) {
                 Log::warning('WhatsApp Flow: could not extract response ID from flow_token', ['flow_token' => $flowToken]);
+
                 return;
             }
 
             $flowResponse = \App\Models\WhatsappFlowResponse::find($responseId);
             if (! $flowResponse) {
                 Log::warning('WhatsApp Flow: flow response record not found', ['responseId' => $responseId]);
+
                 return;
             }
 
@@ -475,6 +556,7 @@ class FlowsWebhookController extends Controller
             $contact = \Modules\Wpbox\Models\Contact::find($contactId);
             if (! $contact) {
                 Log::warning('WhatsApp Flow: contact not found', ['contactId' => $contactId]);
+
                 return;
             }
 
@@ -491,14 +573,14 @@ class FlowsWebhookController extends Controller
             // resume the Flowmaker flow at the saved current_node (the WhatsApp Flow node),
             // call listenForReply(), route to the next node, and clear the saved state.
             $message = \Modules\Wpbox\Models\Message::create([
-                'contact_id'          => $contactId,
-                'company_id'          => $company->id,
-                'value'               => '__whatsapp_flow_completed__',
+                'contact_id' => $contactId,
+                'company_id' => $company->id,
+                'value' => '__whatsapp_flow_completed__',
                 'is_message_by_contact' => true,
                 'is_campign_messages' => false,
-                'status'              => 1,
-                'fb_message_id'       => null,
-                'extra'               => json_encode($formData),
+                'status' => 1,
+                'fb_message_id' => null,
+                'extra' => json_encode($formData),
             ]);
 
             $companyUser = \App\Models\User::find($company->user_id);
@@ -513,9 +595,43 @@ class FlowsWebhookController extends Controller
 
         } catch (\Throwable $e) {
             Log::error('WhatsApp Flow: Flowmaker integration error', [
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
                 'company_id' => $company->id,
             ]);
         }
+    }
+
+    protected function resolveCompanyForFlowWebhook(User $user, Request $request): ?Company
+    {
+        $companies = Company::where('user_id', $user->id)->orderBy('id')->get();
+
+        if ($companies->isEmpty()) {
+            return null;
+        }
+
+        if ($companies->count() === 1) {
+            return $companies->first();
+        }
+
+        if ($request->has('encrypted_flow_data')) {
+            foreach ($companies as $company) {
+                $rawKey = $company->getConfig('whatsapp_flow_private_key', '');
+
+                if (empty(trim($rawKey))) {
+                    continue;
+                }
+
+                try {
+                    $privateKeyPem = $this->normalizePem($rawKey);
+                    $this->decryptPayload($request, $privateKeyPem);
+
+                    return $company;
+                } catch (\Throwable $e) {
+                    continue;
+                }
+            }
+        }
+
+        return $user->currentCompany();
     }
 }

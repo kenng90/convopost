@@ -177,6 +177,7 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
         Route::get('/api/whatsapp-flows', [FlowsController::class, 'listForBuilder'])->name('whatsapp-flows.list-builder');
 
         Route::prefix('api/flow-builder')->name('flow-builder.')->group(function () {
+            Route::post('/validate', [FlowBuilderController::class, 'validateFlow'])->name('validate');
             Route::get('/{flow}', [FlowBuilderController::class, 'load'])->name('load');
             Route::post('/', [FlowBuilderController::class, 'store'])->name('store');
             Route::put('/{flow}', [FlowBuilderController::class, 'update'])->name('update');
