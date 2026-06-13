@@ -24,11 +24,13 @@
         x-transition:leave="transition ease-in duration-150"
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
+        @click="notification.visible = false"
         :class="notification.type === 'error' ? 'bg-red-500' : 'bg-green-500'"
-        class="fixed top-4 right-4 px-6 py-3 rounded-lg text-white shadow-lg z-50 min-w-72"
+        class="fixed top-4 right-4 px-6 py-4 rounded-lg text-white shadow-lg z-50 min-w-72 max-w-lg cursor-pointer"
         style="display:none"
+        title="Click to dismiss"
     >
-        <p x-text="notification.message"></p>
+        <p class="text-sm leading-relaxed whitespace-pre-wrap" x-text="notification.message"></p>
     </div>
 
     {{-- ── Top Navigation Bar ──────────────────────────────────────────────── --}}
@@ -53,7 +55,7 @@
             </span>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-4">
             {{-- Import --}}
             <button
                 @click="showImportModal = true"
@@ -90,6 +92,18 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
                 <span x-text="saving ? 'Publishing...' : '🚀 Publish to Meta'"></span>
+            </button>
+
+            {{-- Validate --}}
+            <button
+                @click="runValidation()"
+                :disabled="checking"
+                class="px-3 py-1.5 bg-red-400 dark:bg-amber-900/30 hover:bg-amber-200 disabled:opacity-60 disabled:cursor-not-allowed text-amber-800 dark:text-amber-200 rounded-lg transition text-sm font-medium flex items-center gap-1.5"
+            >
+                <svg x-show="checking" class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span x-text="checking ? 'Checking...' : '✓ Check'"></span>
             </button>
 
             {{-- Save --}}
@@ -150,7 +164,7 @@
                     <textarea x-model="flowDescription" @input="isDirty = true" rows="2"
                         class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="What is this flow for?"></textarea>
                 </div>
-                <div>
+                <!-- <div>
                     <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Category</label>
                     <select x-model="flowCategory" @change="isDirty = true"
                         class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -163,7 +177,7 @@
                         <option value="CUSTOMER_SUPPORT">Customer Support</option>
                         <option value="SURVEY">Survey</option>
                     </select>
-                </div>
+                </div> -->
             </div>
             {{-- Screen list header --}}
             <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
@@ -175,7 +189,7 @@
             </div>
 
             {{-- Screen list --}}
-            <div class="flex-1 overflow-y-auto py-1.5 px-2 space-y-1">
+            <div class="flex-1 min-h-[200px] overflow-y-auto py-1.5 px-2 space-y-1">
                 <template x-for="(screen, si) in screens" :key="screen.id">
                     <div
                         @click="selectScreen(screen.id)"
@@ -191,6 +205,7 @@
                                 x-text="si + 1"
                             ></span>
                             <span class="text-sm font-medium text-gray-900 dark:text-white truncate" x-text="screen.title"></span>
+                            <span x-show="screen.terminal" class="text-[10px] px-1 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 font-medium flex-shrink-0">Submit</span>
                         </div>
                         <div class="flex items-center gap-1 flex-shrink-0">
                             <span class="text-xs text-gray-400 dark:text-gray-500" x-text="(screen.fields || []).length"></span>
@@ -214,6 +229,24 @@
             <div x-show="screens.length > 1" class="px-3 py-2 border-t border-gray-200 dark:border-gray-700">
                 <p class="text-xs text-gray-400 dark:text-gray-500 truncate" x-text="screens.map(s => s.id).join(' → ')"></p>
             </div>
+
+            {{-- Screen templates --}}
+            <!-- <div class="px-3 py-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
+                <p class="text-xs font-semibold text-gray-400 uppercase">Templates</p>
+                <button @click="addSummaryScreen()" class="w-full text-left text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">+ Summary screen</button>
+                <button @click="addStepScreen()" class="w-full text-left text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">+ Step screen</button>
+                <button @click="addBookingScreen()" class="w-full text-left text-xs px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium">+ Booking flow (dynamic slots)</button>
+            </div> -->
+        
+            {{-- Validation results --}}
+            <div x-show="validationResults.errors.length || validationResults.warnings.length" class="px-3 py-2 flex-1 border-t border-gray-200 dark:border-gray-700 text-xs space-y-1 max-h-32 overflow-y-auto">
+                <template x-for="(err, i) in validationResults.errors" :key="'e'+i">
+                    <p class="text-red-600 dark:text-red-400" x-text="'⚠ ' + err"></p>
+                </template>
+                <template x-for="(warn, i) in validationResults.warnings" :key="'w'+i">
+                    <p class="text-amber-600 dark:text-amber-400" x-text="'💡 ' + warn"></p>
+                </template>
+            </div>
         </div>
 
         {{-- ── Center: Component list + Add palette ────────────────────────── --}}
@@ -230,8 +263,49 @@
                             @blur="updateScreenTitle(selectedScreen.id, $event.target.value)"
                             class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
-                        <p class="text-xs text-gray-400 mt-1" x-text="`${(selectedScreen.fields||[]).length} component(s)`"></p>
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            <label class="flex items-center gap-1 text-xs text-gray-500" title="Only one screen can be terminal (submit screen)">
+                                <input type="checkbox" :checked="!!selectedScreen.terminal" @change="setScreenProp(selectedScreen.id, 'terminal', $event.target.checked)" class="rounded"/>
+                                Terminal (submit screen)
+                            </label>
+                            <label class="flex items-center gap-1 text-xs text-gray-500">
+                                <input type="checkbox" :checked="!!selectedScreen.refresh_on_back" @change="setScreenProp(selectedScreen.id, 'refresh_on_back', $event.target.checked)" class="rounded"/>
+                                Refresh on back
+                            </label>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1" x-text="`${countScreenComponents(selectedScreen)} / 50 components`"></p>
+                        <p x-show="selectedScreen.endpoint_template" class="text-xs text-blue-600 dark:text-blue-400 mt-1 font-mono" x-text="`Endpoint template: ${selectedScreen.endpoint_template}`"></p>
                     </div>
+
+                    <!-- {{-- Dynamic data (endpoint) --}}
+                    <div class="border-b border-gray-200 dark:border-gray-700 px-3 py-2 bg-blue-50/50 dark:bg-blue-900/10">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Dynamic data</span>
+                            <button @click="addDynamicDataEntry(selectedScreen.id)" class="text-xs text-blue-600 hover:underline">+ Add key</button>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mb-2">Bind in components as <code class="font-mono">${data.key}</code>. Filled by your endpoint on INIT / data_exchange.</p>
+                        <template x-if="!(selectedScreen.dynamic_data || []).length">
+                            <p class="text-xs text-gray-400 italic">No dynamic keys — add keys or use the booking template.</p>
+                        </template>
+                        <div class="space-y-2 max-h-36 overflow-y-auto">
+                            <template x-for="(entry, idx) in (selectedScreen.dynamic_data || [])" :key="idx">
+                                <div class="p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600 space-y-1">
+                                    <div class="flex gap-1">
+                                        <input type="text" :value="entry.key" @blur="updateDynamicDataEntry(selectedScreen.id, idx, 'key', $event.target.value)"
+                                            placeholder="key e.g. available_slots" class="flex-1 px-1.5 py-1 text-xs border rounded font-mono"/>
+                                        <select :value="entry.type" @change="updateDynamicDataEntry(selectedScreen.id, idx, 'type', $event.target.value)" class="px-1 py-1 text-xs border rounded">
+                                            <option value="string">string</option>
+                                            <option value="boolean">boolean</option>
+                                            <option value="number">number</option>
+                                            <option value="option_list">option list</option>
+                                        </select>
+                                        <button @click="removeDynamicDataEntry(selectedScreen.id, idx)" class="text-red-500 text-xs px-1">✕</button>
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 font-mono" x-text="`\${data.${entry.key || 'key'}}`"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div> -->
 
                     {{-- Component list (top half, scrollable) --}}
                     <div class="flex flex-col border-b border-gray-200 dark:border-gray-700" style="height:45%;min-height:120px">
@@ -253,6 +327,9 @@
                                     <span class="text-gray-300 dark:text-gray-600 text-xs cursor-grab flex-shrink-0">⠿</span>
                                     <span class="flex-shrink-0 w-5 h-5 rounded bg-gray-100 dark:bg-gray-600 flex items-center justify-center text-xs text-gray-500" x-text="typeIcon(field.type)"></span>
                                     <span class="flex-1 text-xs font-medium text-gray-800 dark:text-gray-200 truncate" x-text="field.label || field.type"></span>
+                                    <span x-show="['radio','checkbox','select','chips'].includes(field.type) && (field.options||[]).length"
+                                        class="text-[10px] text-blue-600 dark:text-blue-400 flex-shrink-0"
+                                        x-text="`${(field.options||[]).length} opts`"></span>
                                     <span class="text-xs text-gray-300 dark:text-gray-600 font-mono flex-shrink-0" x-text="field.type"></span>
                                     <span x-show="fieldHasError(field)" class="text-red-500 text-xs flex-shrink-0">⚠</span>
                                     <button
@@ -312,11 +389,11 @@
                             <div>
                                 <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">⌨️ Input</p>
                                 <div class="grid grid-cols-2 gap-1">
-                                    <template x-for="[type, label, full] in [['text','Text',false],['textarea','TextArea',false],['radio','Radio',false],['checkbox','Checkbox',false],['select','Dropdown',false],['date','Date',false],['chips','Chips',true],['optin','OptIn',true]]">
+                                    <template x-for="[type, label, full] in [['text','Text',false],['textarea','TextArea',false],['radio','Radio',false],['checkbox','Checkbox',false],['select','Dropdown',false],['date','Date',false],['calendar','Calendar',false],['chips','Chips',false],['optin','OptIn',false]]">
                                         <button
-                                            @click="!hasRichText() && addField(type)"
-                                            :disabled="hasRichText()"
-                                            :class="[hasRichText() ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-100 dark:hover:bg-green-900/40', full ? 'col-span-2' : '']"
+                                            @click="canAddField(type) && addField(type)"
+                                            :disabled="!canAddField(type)"
+                                            :class="[!canAddField(type) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-100 dark:hover:bg-green-900/40', full ? 'col-span-2' : '']"
                                             class="px-2 py-1.5 rounded-lg text-xs font-medium transition border bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 text-left"
                                             x-text="label"
                                         ></button>
@@ -328,12 +405,28 @@
                             <div>
                                 <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">🖼 Media</p>
                                 <div class="grid grid-cols-2 gap-1">
-                                    <template x-for="[type, label, full] in [['image','Image',false],['media_upload','Upload',false],['image_carousel','Carousel',true]]">
+                                    <template x-for="[type, label, full] in [['image','Image',false],['photo_picker','Photo',false],['document_picker','Document',false],['image_carousel','Carousel',true]]">
                                         <button
-                                            @click="!hasRichText() && addField(type)"
-                                            :disabled="hasRichText()"
-                                            :class="[hasRichText() ? 'opacity-40 cursor-not-allowed' : 'hover:bg-purple-100 dark:hover:bg-purple-900/40', full ? 'col-span-2' : '']"
+                                            @click="canAddField(type) && addField(type)"
+                                            :disabled="!canAddField(type)"
+                                            :class="[!canAddField(type) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-purple-100 dark:hover:bg-purple-900/40', full ? 'col-span-2' : '']"
                                             class="px-2 py-1.5 rounded-lg text-xs font-medium transition border bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-left"
+                                            x-text="label"
+                                        ></button>
+                                    </template>
+                                </div>
+                            </div>
+
+                            {{-- Logic & Nav --}}
+                            <div>
+                                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">⚡ Logic & Nav</p>
+                                <div class="grid grid-cols-2 gap-1">
+                                    <template x-for="[type, label] in [['navigation_list','Nav List'],['if_condition','If'],['switch','Switch']]">
+                                        <button
+                                            @click="canAddField(type) && addField(type)"
+                                            :disabled="!canAddField(type)"
+                                            :class="!canAddField(type) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-orange-100 dark:hover:bg-orange-900/40'"
+                                            class="px-2 py-1.5 rounded-lg text-xs font-medium transition border bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 text-left"
                                             x-text="label"
                                         ></button>
                                     </template>
@@ -458,7 +551,7 @@
                                     <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
                                         <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2" x-text="field.label"></p>
                                         <div :class="field.type === 'chips' ? 'flex flex-wrap gap-1.5' : 'space-y-1.5'">
-                                            <template x-for="opt in (field.options || [])">
+                                            <template x-for="opt in (field.options || [])" :key="opt.id">
                                                 <template x-if="field.type === 'chips'">
                                                     <span class="px-2.5 py-1 text-xs bg-blue-50 border border-blue-200 rounded-full text-blue-700" x-text="opt.label"></span>
                                                 </template>
@@ -478,7 +571,7 @@
                                     <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
                                         <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2" x-text="field.label"></p>
                                         <div class="space-y-1.5">
-                                            <template x-for="opt in (field.options || [])">
+                                            <template x-for="opt in (field.options || [])" :key="opt.id">
                                                 <div class="flex items-center gap-2">
                                                     <div class="w-4 h-4 rounded border-2 border-gray-300 flex-shrink-0"></div>
                                                     <span class="text-xs text-gray-700 dark:text-gray-300" x-text="opt.label"></span>
@@ -488,12 +581,39 @@
                                     </div>
                                 </template>
 
-                                {{-- Select / Date --}}
-                                <template x-if="['select','date'].includes(field.type)">
+                                {{-- Select --}}
+                                <template x-if="field.type === 'select'">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
+                                        <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5" x-text="field.label"></p>
+                                        <template x-if="(field.options || []).length">
+                                            <div class="space-y-1">
+                                                <div class="flex items-center gap-2 px-2 py-1 text-xs border border-gray-300 rounded bg-gray-50 text-gray-500">
+                                                    <span x-text="(field.options[0] || {}).label || 'Select...'"></span>
+                                                    <span class="ml-auto text-gray-400">▾</span>
+                                                </div>
+                                                <template x-if="field.options.length > 1">
+                                                    <div class="pl-2 space-y-0.5">
+                                                        <template x-for="opt in field.options.slice(1)" :key="opt.id">
+                                                            <p class="text-[10px] text-gray-400 truncate" x-text="opt.label"></p>
+                                                        </template>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <template x-if="!(field.options || []).length">
+                                            <div class="flex items-center gap-2 px-2 py-1 text-xs border border-dashed border-gray-300 rounded bg-gray-50 text-gray-400">
+                                                <span x-text="field.dynamic_data_source ? 'Dynamic options (endpoint)' : 'No options yet'"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+
+                                {{-- Date --}}
+                                <template x-if="field.type === 'date'">
                                     <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
                                         <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5" x-text="field.label"></p>
                                         <div class="flex items-center gap-2 px-2 py-1 text-xs border border-gray-300 rounded bg-gray-50 text-gray-400">
-                                            <span x-text="field.type === 'date' ? '📅 Select date' : 'Select...'"></span>
+                                            <span>📅 Select date</span>
                                         </div>
                                     </div>
                                 </template>
@@ -607,8 +727,123 @@
                             </div>
                         </template>
 
+                        {{-- TextInput type & helper --}}
+                        <template x-if="selectedField.type === 'text'">
+                            <div class="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Input type</label>
+                                    <select :value="selectedField.input_type || 'text'" @change="updateField(selectedField.id, 'input_type', $event.target.value)"
+                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm">
+                                        <option value="text">Text</option>
+                                        <option value="email">Email</option>
+                                        <option value="phone">Phone</option>
+                                        <option value="number">Number</option>
+                                        <option value="password">Password</option>
+                                        <option value="passcode">Passcode</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Helper text</label>
+                                    <input type="text" :value="selectedField.helper_text || ''" @blur="updateField(selectedField.id, 'helper_text', $event.target.value)"
+                                        class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm"/>
+                                </div>
+                                <label class="flex items-center gap-2 text-sm" x-show="['password','passcode'].includes(selectedField.input_type)">
+                                    <input type="checkbox" :checked="!!selectedField.sensitive" @change="updateField(selectedField.id, 'sensitive', $event.target.checked)" class="rounded"/>
+                                    Sensitive (hide from response summary)
+                                </label>
+                            </div>
+                        </template>
+
+                        {{-- Markdown toggle --}}
+                        <template x-if="['body','caption'].includes(selectedField.type)">
+                            <label class="flex items-center gap-2 text-sm border-t border-gray-200 dark:border-gray-700 pt-3">
+                                <input type="checkbox" :checked="!!selectedField.markdown" @change="updateField(selectedField.id, 'markdown', $event.target.checked)" class="rounded"/>
+                                Enable markdown
+                            </label>
+                        </template>
+
+                        {{-- OptIn read more --}}
+                        <template x-if="selectedField.type === 'optin'">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-3">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Read more URL (Terms)</label>
+                                <input type="text" :value="selectedField.read_more_url || ''" @blur="updateField(selectedField.id, 'read_more_url', $event.target.value)"
+                                    placeholder="https://example.com/terms" class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm"/>
+                            </div>
+                        </template>
+
+                        {{-- Calendar --}}
+                        <template x-if="selectedField.type === 'calendar'">
+                            <div class="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Mode</label>
+                                    <select :value="selectedField.calendar_mode || 'single'" @change="updateField(selectedField.id, 'calendar_mode', $event.target.value)" class="w-full px-2 py-1.5 border rounded-lg bg-white dark:bg-gray-700 text-sm">
+                                        <option value="single">Single date</option>
+                                        <option value="range">Date range</option>
+                                    </select>
+                                </div>
+                                <template x-if="(selectedField.calendar_mode || 'single') === 'range'">
+                                    <div class="space-y-2">
+                                        <input type="text" placeholder="Start date label" :value="selectedField.label_start || selectedField.label || ''" @blur="updateField(selectedField.id, 'label_start', $event.target.value)" class="w-full px-2 py-1.5 border rounded-lg text-sm"/>
+                                        <input type="text" placeholder="End date label" :value="selectedField.label_end || 'End date'" @blur="updateField(selectedField.id, 'label_end', $event.target.value)" class="w-full px-2 py-1.5 border rounded-lg text-sm"/>
+                                    </div>
+                                </template>
+                                <input x-show="(selectedField.calendar_mode || 'single') !== 'range'" type="text" placeholder="Helper text" :value="selectedField.helper_text || ''" @blur="updateField(selectedField.id, 'helper_text', $event.target.value)" class="w-full px-2 py-1.5 border rounded-lg text-sm"/>
+                            </div>
+                        </template>
+
+                        {{-- If / Switch --}}
+                        <template x-if="selectedField.type === 'if_condition'">
+                            <div class="space-y-2 border-t border-gray-200 dark:border-gray-700 pt-3">
+                                <label class="block text-xs font-medium">Condition</label>
+                                <input type="text" :value="selectedField.condition || ''" @blur="updateField(selectedField.id, 'condition', $event.target.value)"
+                                    placeholder="${form.optin_1} == true" class="w-full px-2 py-1.5 border rounded-lg text-sm font-mono"/>
+                                <p class="text-xs text-gray-400">Then/else branches: add child components via import or JSON for now.</p>
+                            </div>
+                        </template>
+                        <template x-if="selectedField.type === 'switch'">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-3">
+                                <label class="block text-xs font-medium mb-1">Switch value</label>
+                                <input type="text" :value="selectedField.switch_value || ''" @blur="updateField(selectedField.id, 'switch_value', $event.target.value)"
+                                    placeholder="${data.category}" class="w-full px-2 py-1.5 border rounded-lg text-sm font-mono"/>
+                            </div>
+                        </template>
+
+                        {{-- Navigation list items --}}
+                        <template x-if="selectedField.type === 'navigation_list'">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <h4 class="text-xs font-bold">List items</h4>
+                                    <button @click="addNavListItem(selectedField.id)" class="text-xs text-blue-600">+ Add</button>
+                                </div>
+                                <template x-for="(item, idx) in (selectedField.list_items || [])" :key="idx">
+                                    <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded space-y-1">
+                                        <input type="text" :value="item.title" @blur="updateNavListItem(selectedField.id, idx, 'title', $event.target.value)" placeholder="Title" class="w-full px-2 py-1 text-xs border rounded"/>
+                                        <input type="text" :value="item.next_screen_id || ''" @blur="updateNavListItem(selectedField.id, idx, 'next_screen_id', $event.target.value)" placeholder="Target screen ID" class="w-full px-2 py-1 text-xs border rounded font-mono"/>
+                                        <button @click="removeNavListItem(selectedField.id, idx)" class="text-xs text-red-500">Remove</button>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        {{-- Dynamic data source --}}
+                        <template x-if="['radio','checkbox','select','chips'].includes(selectedField.type)">
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
+                                <label class="flex items-center gap-2 text-xs">
+                                    <input type="checkbox" :checked="!!selectedField.dynamic_data_source" @change="updateField(selectedField.id, 'dynamic_data_source', $event.target.checked)" class="rounded"/>
+                                    Use dynamic data-source from endpoint
+                                </label>
+                                <input x-show="selectedField.dynamic_data_source" type="text" :value="selectedField.data_source_key || ''" @blur="updateField(selectedField.id, 'data_source_key', $event.target.value)"
+                                    placeholder="data key e.g. available_slots" class="w-full px-2 py-1.5 border rounded-lg text-xs font-mono"/>
+                                <select x-show="selectedField.dynamic_data_source" :value="selectedField.on_select_action || ''" @change="updateField(selectedField.id, 'on_select_action', $event.target.value || null)" class="w-full px-2 py-1.5 border rounded-lg text-xs">
+                                    <option value="">No on-select action</option>
+                                    <option value="data_exchange">data_exchange</option>
+                                    <option value="update_data">update_data</option>
+                                </select>
+                            </div>
+                        </template>
+
                         {{-- Required toggle --}}
-                        <template x-if="!['heading','subheading','body','caption','richtext','footer','button','navigate','image','image_carousel'].includes(selectedField.type)">
+                        <template x-if="!['heading','subheading','body','caption','richtext','footer','button','navigate','image','image_carousel','navigation_list','if_condition','switch','photo_picker','document_picker'].includes(selectedField.type)">
                             <div class="flex items-center gap-2">
                                 <input type="checkbox"
                                     :checked="selectedField.required"
@@ -620,9 +855,9 @@
                         </template>
 
                         {{-- Dynamic source warning (imported fields) --}}
-                        <template x-if="selectedField.imported_dynamic_source">
+                        <template x-if="selectedField.imported_dynamic_source && !(selectedField.options || []).length">
                             <div class="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg text-amber-700 dark:text-amber-300 text-xs">
-                                ⚠️ This field used dynamic data in the original flow. Update the options before publishing.
+                                ⚠️ Dynamic data-source with no example options in the imported JSON. Add preview options or configure your endpoint.
                             </div>
                         </template>
 
@@ -630,24 +865,36 @@
                         <template x-if="['select','radio','checkbox','chips'].includes(selectedField.type)">
                             <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
                                 <div class="flex items-center justify-between mb-2">
-                                    <h4 class="text-xs font-bold text-gray-900 dark:text-white">Options</h4>
+                                    <h4 class="text-xs font-bold text-gray-900 dark:text-white">
+                                        <span x-text="selectedField.dynamic_data_source ? 'Preview options' : 'Options'"></span>
+                                    </h4>
                                     <button @click="addOption(selectedField.id)"
                                         class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">+ Add</button>
                                 </div>
 
-                                <template x-if="(selectedField.options || []).length === 0">
+                                <!-- <p x-show="selectedField.dynamic_data_source" class="text-[10px] text-gray-500 mb-2">
+                                    Imported from screen <code class="font-mono">data.__example__</code>. Publish still uses <code class="font-mono" x-text="`\${data.${selectedField.data_source_key || 'key'}}`"></code> at runtime.
+                                </p> -->
+
+                                <template x-if="!selectedField.dynamic_data_source && (selectedField.options || []).length === 0">
                                     <p class="text-xs text-red-500 mb-2">⚠️ Add at least one option — Meta requires minimum 1</p>
                                 </template>
 
                                 <div class="space-y-2">
                                     <template x-for="option in (selectedField.options || [])" :key="option.id">
-                                        <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                                        <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg space-y-1">
                                             <input type="text"
                                                 :value="option.label"
                                                 @blur="updateOption(selectedField.id, option.id, 'label', $event.target.value)"
                                                 placeholder="Option label"
-                                                class="w-full px-2 py-1 mb-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             />
+                                            <!-- <input type="text"
+                                                :value="option.value"
+                                                @blur="updateOption(selectedField.id, option.id, 'value', $event.target.value)"
+                                                placeholder="Option value (Meta id)"
+                                                class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            /> -->
                                             <button @click="removeOption(selectedField.id, option.id)"
                                                 class="text-xs text-red-500 hover:text-red-700">Remove</button>
                                         </div>
@@ -769,12 +1016,15 @@ function flowBuilder(initialFlowId) {
         selectedFieldId: null,
         isDirty: false,
         saving: false,
+        checking: false,
         loading: true,
         endpointUrl: '',
         showImportModal: false,
         importJsonText: '',
         importError: '',
         notification: { visible: false, message: '', type: 'success' },
+        notificationTimeout: null,
+        validationResults: { errors: [], warnings: [] },
 
         // ── Meta type map ─────────────────────────────────────────────────────
         metaTypeMap: {
@@ -782,10 +1032,13 @@ function flowBuilder(initialFlowId) {
             textarea: ['string', 'example text'],
             radio: ['string', 'option1'],
             select: ['string', 'option1'],
-            chips: ['string', 'option1'],
+            chips: ['array', ['option1']],
             date: ['string', '2026-01-01'],
+            calendar: ['string', '2026-01-01'],
             checkbox: ['array', ['option1']],
             optin: ['boolean', true],
+            photo_picker: ['array', []],
+            document_picker: ['array', []],
         },
 
         defaultLabels: {
@@ -804,7 +1057,12 @@ function flowBuilder(initialFlowId) {
             richtext: 'Rich text',
             image: 'Image',
             image_carousel: 'Image Carousel',
-            media_upload: 'Upload File',
+            calendar: 'Select dates',
+            photo_picker: 'Upload photo',
+            document_picker: 'Upload document',
+            navigation_list: 'Choose option',
+            if_condition: 'Conditional block',
+            switch: 'Switch',
             embedded_link: 'Open Link',
             footer: 'Continue',
             button: 'Submit',
@@ -826,7 +1084,12 @@ function flowBuilder(initialFlowId) {
             optin: '✓',
             image: '🖼',
             image_carousel: '🖼',
-            media_upload: '📎',
+            calendar: '📅',
+            photo_picker: '📷',
+            document_picker: '📎',
+            navigation_list: '☰',
+            if_condition: '?',
+            switch: '⇄',
             embedded_link: '🔗',
             footer: '▬',
             button: '▬',
@@ -860,8 +1123,11 @@ function flowBuilder(initialFlowId) {
                     this.flowCategory = f.category || 'OTHER';
                     this.metaFlowId = f.meta_flow_id || null;
                     this.screens = Array.isArray(f.screens) ? f.screens : [];
+                    this.hydrateImportedFieldMetadata();
+                    this.endpointUrl = data.endpoint_url || '';
 
                     if (this.screens.length > 0) {
+                        this.ensureTerminalScreen();
                         this.selectedScreenId = this.screens[0].id;
                     }
 
@@ -889,6 +1155,7 @@ function flowBuilder(initialFlowId) {
                 this.flowCategory = f.category || 'OTHER';
                 this.metaFlowId = f.meta_flow_id || null;
                 this.screens = Array.isArray(f.screens) ? f.screens : [];
+                this.hydrateImportedFieldMetadata();
 
                 if (this.screens.length > 0) {
                     this.selectedScreenId = this.screens[0].id;
@@ -922,10 +1189,6 @@ function flowBuilder(initialFlowId) {
             return data;
         },
 
-        notify(message, type = 'success') {
-            console.log(`Notification: ${message}`);
-        },
-
         // ── Screens ───────────────────────────────────────────────────────────
         addScreen() {
             const count = this.screens.length + 1;
@@ -937,6 +1200,7 @@ function flowBuilder(initialFlowId) {
                 fields: [],
             });
 
+            this.setTerminalScreen(id);
             this.selectedScreenId = id;
             this.selectedFieldId = null;
             this.isDirty = true;
@@ -950,6 +1214,7 @@ function flowBuilder(initialFlowId) {
                 this.selectedFieldId = null;
             }
 
+            this.ensureTerminalScreen();
             this.isDirty = true;
         },
 
@@ -966,6 +1231,319 @@ function flowBuilder(initialFlowId) {
                 screen.title = title;
                 this.isDirty = true;
             }
+        },
+
+        setScreenProp(id, prop, value) {
+            if (prop === 'terminal') {
+                if (value) {
+                    this.setTerminalScreen(id);
+                } else {
+                    const screen = this.screens.find(s => s.id === id);
+                    if (screen) {
+                        screen.terminal = false;
+                    }
+                    this.ensureTerminalScreen();
+                }
+            } else {
+                const screen = this.screens.find(s => s.id === id);
+                if (screen) {
+                    screen[prop] = value;
+                }
+            }
+            this.isDirty = true;
+        },
+
+        /** Exactly one screen must be terminal — the screen where the user submits. */
+        setTerminalScreen(id) {
+            this.screens.forEach(s => { s.terminal = (s.id === id); });
+        },
+
+        ensureTerminalScreen() {
+            if (!this.screens.length) {
+                return;
+            }
+
+            const terminals = this.screens.filter(s => s.terminal);
+            if (terminals.length === 1) {
+                return;
+            }
+
+            const preferred = terminals.length > 1
+                ? terminals[terminals.length - 1]
+                : this.screens[this.screens.length - 1];
+
+            this.setTerminalScreen(preferred.id);
+        },
+
+        addSummaryScreen() {
+            const count = this.screens.length + 1;
+            const id = 'SCREEN_SUMMARY_' + count;
+            this.screens.push({
+                id,
+                title: 'Review & confirm',
+                fields: [
+                    { id: this.nextFieldId(), type: 'heading', label: 'Review your details', placeholder: '', required: false },
+                    { id: this.nextFieldId(), type: 'body', label: '', placeholder: 'Please review your information before submitting.', required: false },
+                    { id: this.nextFieldId(), type: 'footer', label: 'Confirm submission', placeholder: '', required: false },
+                ],
+            });
+            this.setTerminalScreen(id);
+            this.selectedScreenId = id;
+            this.isDirty = true;
+        },
+
+        addStepScreen() {
+            const count = this.screens.length + 1;
+            const id = 'SCREEN_' + String.fromCharCode(64 + count);
+            this.screens.push({
+                id,
+                title: 'Step ' + count + ' of ' + (count + 1),
+                fields: [
+                    { id: this.nextFieldId(), type: 'heading', label: 'Step ' + count, placeholder: '', required: false },
+                    { id: this.nextFieldId(), type: 'footer', label: 'Continue to next step', placeholder: '', required: false },
+                ],
+            });
+            this.selectedScreenId = id;
+            this.isDirty = true;
+        },
+
+        addBookingScreen() {
+            if (this.screens.some(s => s.id === 'BOOKING')) {
+                this.notify('A BOOKING screen already exists. Select it from the screen list.', 'error');
+                this.selectedScreenId = 'BOOKING';
+                return;
+            }
+
+            const dateId = this.nextFieldId();
+            const slotId = this.nextFieldId();
+            const footerId = this.nextFieldId();
+
+            this.screens.push({
+                id: 'BOOKING',
+                title: 'Book appointment',
+                endpoint_template: 'booking_slots',
+                dynamic_data: [
+                    { key: 'is_dropdown_visible', type: 'boolean', example: false },
+                    { key: 'available_slots', type: 'option_list', example_items: [] },
+                ],
+                fields: [
+                    {
+                        id: dateId, type: 'date', label: 'Select date', required: true,
+                        meta_type: 'string', meta_example: '2026-01-01',
+                        on_select_action: 'data_exchange',
+                        on_select_payload: { component_action: 'update_date' },
+                    },
+                    {
+                        id: slotId, type: 'select', label: 'Pick a time slot', required: false,
+                        meta_type: 'string', meta_example: 'slot_1',
+                        dynamic_data_source: true,
+                        data_source_key: 'available_slots',
+                        visible_binding: '${data.is_dropdown_visible}',
+                        required_binding: '${data.is_dropdown_visible}',
+                        options: [],
+                    },
+                    {
+                        id: footerId, type: 'footer', label: 'Confirm booking', required: false,
+                    },
+                ],
+            });
+
+            this.setTerminalScreen('BOOKING');
+            this.selectedScreenId = 'BOOKING';
+            this.isDirty = true;
+            this.notify('Booking screen added. Publish to Meta — endpoint will return demo slots when a date is picked.', 'success');
+        },
+
+        addDynamicDataEntry(screenId) {
+            const screen = this.screens.find(s => s.id === screenId);
+            if (!screen) return;
+            if (!screen.dynamic_data) screen.dynamic_data = [];
+            screen.dynamic_data.push({ key: 'my_key', type: 'string', example: '' });
+            this.isDirty = true;
+        },
+
+        removeDynamicDataEntry(screenId, idx) {
+            const screen = this.screens.find(s => s.id === screenId);
+            if (!screen?.dynamic_data) return;
+            screen.dynamic_data.splice(idx, 1);
+            this.isDirty = true;
+        },
+
+        updateDynamicDataEntry(screenId, idx, prop, value) {
+            const screen = this.screens.find(s => s.id === screenId);
+            if (!screen?.dynamic_data?.[idx]) return;
+            screen.dynamic_data[idx][prop] = value;
+            if (prop === 'type' && value === 'option_list' && !screen.dynamic_data[idx].example_items) {
+                screen.dynamic_data[idx].example_items = [];
+            }
+            this.isDirty = true;
+        },
+
+        metaDataToEntries(metaData) {
+            if (!metaData || typeof metaData !== 'object' || Array.isArray(metaData)) return [];
+            const entries = [];
+            for (const [key, def] of Object.entries(metaData)) {
+                if (!def || typeof def !== 'object') continue;
+                if (key.match(/^(text_|textarea_|radio_|checkbox_|select_|date_|calendar_|chips_|optin_|photo_|document_)/)) continue;
+                if (def.type === 'boolean') {
+                    entries.push({ key, type: 'boolean', example: !!def.__example__ });
+                } else if (def.type === 'array' && this.isMetaOptionListSchema(def)) {
+                    entries.push({
+                        key,
+                        type: 'option_list',
+                        example_items: this.normalizeMetaExampleItems(def.__example__ || []),
+                    });
+                } else if (def.type === 'array') {
+                    entries.push({
+                        key,
+                        type: 'object_array',
+                        example: Array.isArray(def.__example__) ? def.__example__ : [],
+                        item_properties: def.items?.properties || null,
+                    });
+                } else if (def.type === 'number') {
+                    entries.push({ key, type: 'number', example: def.__example__ ?? 0 });
+                } else {
+                    const example = def.__example__;
+                    entries.push({
+                        key,
+                        type: Array.isArray(example) ? 'object_array' : 'string',
+                        example: Array.isArray(example) ? example : (example || ''),
+                    });
+                }
+            }
+            return entries;
+        },
+
+        isMetaOptionListSchema(def) {
+            const props = def?.items?.properties;
+            if (!props || typeof props !== 'object') return false;
+            const keys = Object.keys(props).sort();
+            return keys.length === 2 && keys[0] === 'id' && keys[1] === 'title';
+        },
+
+        normalizeMetaExampleItems(items) {
+            if (!Array.isArray(items)) return [];
+            return items.map((item, i) => ({
+                id: String(item?.id ?? item?.value ?? `option_${i + 1}`),
+                title: String(item?.title ?? item?.label ?? item?.description ?? item?.id ?? `Option ${i + 1}`),
+            }));
+        },
+
+        metaOptionItemsToBuilderOptions(items) {
+            if (!Array.isArray(items) || !items.length) return [];
+            return items.map((item, i) => {
+                const value = String(item?.id ?? item?.value ?? `option_${i + 1}`);
+                return {
+                    id: this.uuid(),
+                    label: String(item?.title ?? item?.label ?? item?.description ?? value),
+                    value,
+                };
+            });
+        },
+
+        extractDynamicDataKey(dataSource) {
+            if (typeof dataSource !== 'string') return null;
+            const match = dataSource.match(/^\$\{data\.([^}]+)\}$/);
+            return match ? match[1] : null;
+        },
+
+        exampleOptionsFromScreenData(screenData, key) {
+            if (!screenData || !key) return [];
+            const def = screenData[key];
+            if (!def || typeof def !== 'object') return [];
+            return this.metaOptionItemsToBuilderOptions(this.normalizeMetaExampleItems(def.__example__ || []));
+        },
+
+        applyImportedDataSource(field, dataSource, screenData) {
+            const dynamicKey = this.extractDynamicDataKey(dataSource);
+            if (dynamicKey) {
+                field.dynamic_data_source = true;
+                field.data_source_key = dynamicKey;
+                field.options = this.exampleOptionsFromScreenData(screenData, dynamicKey);
+                field.imported_dynamic_source = !(field.options || []).length;
+                return;
+            }
+
+            if (Array.isArray(dataSource)) {
+                field.dynamic_data_source = false;
+                field.options = this.metaOptionItemsToBuilderOptions(dataSource);
+                field.imported_dynamic_source = !(field.options || []).length;
+                return;
+            }
+
+            field.dynamic_data_source = false;
+            field.options = [];
+            field.imported_dynamic_source = true;
+        },
+
+        findScreenForField(fieldId) {
+            return this.screens.find(s => (s.fields || []).some(f => f.id === fieldId)) || null;
+        },
+
+        syncDynamicDataExampleFromField(field, screen = null) {
+            if (!field?.dynamic_data_source || !field.data_source_key) return;
+            screen = screen || this.findScreenForField(field.id);
+            if (!screen) return;
+            if (!screen.dynamic_data) screen.dynamic_data = [];
+            let entry = screen.dynamic_data.find(e => e.key === field.data_source_key);
+            if (!entry) {
+                entry = { key: field.data_source_key, type: 'option_list', example_items: [] };
+                screen.dynamic_data.push(entry);
+            }
+            entry.type = 'option_list';
+            entry.example_items = (field.options || []).map(o => ({
+                id: o.value || o.id,
+                title: o.label || o.value,
+            }));
+        },
+
+        hydrateImportedFieldMetadata() {
+            for (const screen of this.screens) {
+                for (const field of screen.fields || []) {
+                    if (!field.meta_name && field.data_source_key) {
+                        field.meta_name = field.data_source_key;
+                    }
+                    if (field.on_select_payload && typeof field.on_select_payload === 'object') {
+                        for (const value of Object.values(field.on_select_payload)) {
+                            const match = String(value).match(/^\$\{form\.([^}]+)\}$/);
+                            if (match && !field.meta_name) {
+                                field.meta_name = match[1];
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        hydrateImportedScreenFields(screen) {
+            const screenData = screen._imported_meta_data || {};
+            const walk = (fields) => {
+                (fields || []).forEach(field => {
+                    if (['radio', 'checkbox', 'select', 'chips'].includes(field.type)) {
+                        if (field.dynamic_data_source && field.data_source_key && !(field.options || []).length) {
+                            const entry = (screen.dynamic_data || []).find(e => e.key === field.data_source_key);
+                            if (entry?.example_items?.length) {
+                                field.options = this.metaOptionItemsToBuilderOptions(entry.example_items);
+                            } else {
+                                field.options = this.exampleOptionsFromScreenData(screenData, field.data_source_key);
+                            }
+                        }
+                        if (field.dynamic_data_source && (field.options || []).length) {
+                            this.syncDynamicDataExampleFromField(field, screen);
+                            field.imported_dynamic_source = false;
+                        }
+                    }
+                    if (field.type === 'if_condition') {
+                        walk(field.then_children);
+                        walk(field.else_children);
+                    }
+                    if (field.type === 'switch') {
+                        (field.cases || []).forEach(c => walk(c.children));
+                    }
+                });
+            };
+            walk(screen.fields);
+            delete screen._imported_meta_data;
         },
 
         // ── Fields ────────────────────────────────────────────────────────────
@@ -991,9 +1569,18 @@ function flowBuilder(initialFlowId) {
                 meta_example: metaExample,
             };
 
+            if (type === 'text')           { field.input_type = 'text'; field.helper_text = ''; field.sensitive = false; }
+            if (type === 'textarea')       { field.max_length = 600; field.helper_text = ''; }
             if (type === 'image')          { field.image_url = ''; field.height = 300; field.scale_type = 'contain'; }
             if (type === 'image_carousel') { field.images = []; }
             if (type === 'embedded_link')  { field.url = ''; field.button_label = 'Open Link'; }
+            if (type === 'optin')          { field.read_more_url = ''; }
+            if (type === 'calendar')       { field.calendar_mode = 'single'; field.helper_text = ''; }
+            if (type === 'photo_picker')   { field.min_uploaded = 0; field.max_uploaded = 1; field.photo_source = 'camera_gallery'; }
+            if (type === 'document_picker'){ field.min_uploaded = 0; field.max_uploaded = 1; }
+            if (type === 'navigation_list'){ field.list_items = [{ id: 'item_1', title: 'Option 1', next_screen_id: '' }]; }
+            if (type === 'if_condition')   { field.condition = '${true}'; field.then_children = []; field.else_children = []; }
+            if (type === 'switch')         { field.switch_value = '${data.value}'; field.cases = [{ key: 'default', children: [] }]; }
             if (['radio','checkbox','select','chips'].includes(type)) {
                 field.options = [
                     { id: this.uuid(), label: 'Option 1', value: 'option_1' },
@@ -1034,6 +1621,8 @@ function flowBuilder(initialFlowId) {
             const n = (field.options || []).length + 1;
             if (!field.options) field.options = [];
             field.options.push({ id: this.uuid(), label: 'Option ' + n, value: 'option_' + n });
+            this.syncDynamicDataExampleFromField(field);
+            if ((field.options || []).length) field.imported_dynamic_source = false;
             this.isDirty = true;
         },
 
@@ -1041,6 +1630,7 @@ function flowBuilder(initialFlowId) {
             const field = this.findField(fieldId);
             if (!field) return;
             field.options = field.options.filter(o => o.id !== optId);
+            this.syncDynamicDataExampleFromField(field);
             this.isDirty = true;
         },
 
@@ -1050,7 +1640,11 @@ function flowBuilder(initialFlowId) {
             const opt = (field.options || []).find(o => o.id === optId);
             if (opt) {
                 opt[prop] = value;
-                if (prop === 'label') opt.value = value.toLowerCase().replace(/\s+/g, '_') || optId;
+                if (prop === 'label' && !field.dynamic_data_source) {
+                    opt.value = value.toLowerCase().replace(/\s+/g, '_') || optId;
+                }
+                this.syncDynamicDataExampleFromField(field);
+                if ((field.options || []).length) field.imported_dynamic_source = false;
                 this.isDirty = true;
             }
         },
@@ -1078,21 +1672,86 @@ function flowBuilder(initialFlowId) {
             this.isDirty = true;
         },
 
+        addNavListItem(fieldId) {
+            const field = this.findField(fieldId);
+            if (!field) return;
+            if (!field.list_items) field.list_items = [];
+            const n = field.list_items.length + 1;
+            field.list_items.push({ id: 'item_' + n, title: 'Option ' + n, next_screen_id: '' });
+            this.isDirty = true;
+        },
+        removeNavListItem(fieldId, idx) {
+            const field = this.findField(fieldId);
+            if (!field?.list_items) return;
+            field.list_items.splice(idx, 1);
+            this.isDirty = true;
+        },
+        updateNavListItem(fieldId, idx, prop, value) {
+            const field = this.findField(fieldId);
+            if (!field?.list_items?.[idx]) return;
+            field.list_items[idx][prop] = value;
+            if (prop === 'title') field.list_items[idx].id = value.toLowerCase().replace(/\s+/g, '_') || ('item_' + (idx + 1));
+            this.isDirty = true;
+        },
+
           // ── Palette helpers ───────────────────────────────────────────────────
           currentFieldTypes() {
             return (this.selectedScreen?.fields || []).map(f => f.type);
         },
         hasRichText()   { return this.currentFieldTypes().includes('richtext'); },
         hasFooter()     { return this.currentFieldTypes().some(t => ['footer','button','navigate'].includes(t)); },
+        hasNavigationList() { return this.currentFieldTypes().includes('navigation_list'); },
         canAddRichText(){ return !this.hasRichText() && !this.currentFieldTypes().some(t => !['richtext','footer','button','navigate'].includes(t)); },
+        canAddField(type) {
+            if (this.hasRichText() && !['footer','button','navigate'].includes(type)) return false;
+            if (type === 'richtext') return this.canAddRichText();
+            if (['footer','button','navigate'].includes(type)) return !this.hasFooter();
+            if (type === 'navigation_list') return !this.hasNavigationList() && (this.selectedScreen?.fields || []).length === 0;
+            if (this.hasNavigationList()) return false;
+            if (type === 'photo_picker' && this.currentFieldTypes().includes('document_picker')) return false;
+            if (type === 'document_picker' && this.currentFieldTypes().includes('photo_picker')) return false;
+            if (type === 'photo_picker' && this.currentFieldTypes().filter(t => t === 'photo_picker').length >= 1) return false;
+            if (type === 'document_picker' && this.currentFieldTypes().filter(t => t === 'document_picker').length >= 1) return false;
+            if (this.countScreenComponents(this.selectedScreen) >= 50) return false;
+            return true;
+        },
+        countScreenComponents(screen) {
+            if (!screen) return 0;
+            let n = (screen.fields || []).length;
+            (screen.fields || []).forEach(f => {
+                if (f.type === 'if_condition') n += (f.then_children || []).length + (f.else_children || []).length;
+                if (f.type === 'switch') (f.cases || []).forEach(c => { n += (c.children || []).length; });
+            });
+            return n;
+        },
 
         // ── Validation helpers ────────────────────────────────────────────────
         fieldHasError(field) {
             if (field.type === 'image')          return !field.image_url;
             if (field.type === 'embedded_link')  return !field.url;
             if (field.type === 'image_carousel') return !(field.images||[]).length || (field.images||[]).some(i => !i.src);
-            if (['radio','checkbox','select','chips'].includes(field.type)) return !(field.options||[]).length;
+            if (['radio','checkbox','select','chips'].includes(field.type) && !field.dynamic_data_source) return !(field.options||[]).length;
+            if (field.type === 'navigation_list') return !(field.list_items||[]).length;
+            if (field.type === 'chips' && (field.options||[]).length > 0 && (field.options||[]).length < 2) return true;
             return false;
+        },
+
+        async runValidation() {
+            this.checking = true;
+            try {
+                const r = await this.api('POST', '/api/flow-builder/validate', {
+                    name: this.flowName,
+                    screens: this.screens,
+                });
+                this.validationResults = { errors: r.errors || [], warnings: r.warnings || [] };
+                if (r.errors?.length) this.notify('Validation found ' + r.errors.length + ' error(s).', 'error');
+                else if (r.warnings?.length) this.notify('Valid with ' + r.warnings.length + ' suggestion(s).', 'success');
+                else this.notify('Flow passes all checks.', 'success');
+            } catch (e) {
+                this.notify(e.message || 'Validation failed.', 'error');
+            } finally {
+                this.checking = false;
+            }
         },
         typeIcon(type) { return this.typeIcons[type] || '·'; },
 
@@ -1128,6 +1787,11 @@ function flowBuilder(initialFlowId) {
 
         async publish() {
             if (!this.flowName.trim()) { this.notify('Flow name is required.', 'error'); return; }
+            await this.runValidation();
+            if (this.validationResults.errors.length) {
+                this.notify('Fix validation errors before publishing.', 'error');
+                return;
+            }
             this.saving = true;
             try {
                 const r = await this.api('POST', `/api/flow-builder/${this.flowId || ''}/publish`, {
@@ -1172,46 +1836,109 @@ function flowBuilder(initialFlowId) {
             const typeMap = {
                 TextInput: 'text', TextArea: 'textarea', RadioButtonsGroup: 'radio',
                 CheckboxGroup: 'checkbox', Dropdown: 'select', DatePicker: 'date',
+                CalendarPicker: 'calendar', ChipsSelector: 'chips',
+                PhotoPicker: 'photo_picker', DocumentPicker: 'document_picker',
+                NavigationList: 'navigation_list', If: 'if_condition', Switch: 'switch',
                 OptIn: 'optin', TextHeading: 'heading', TextSubheading: 'subheading',
                 TextBody: 'body', TextCaption: 'caption', RichText: 'richtext',
                 Image: 'image', ImageCarousel: 'image_carousel',
                 EmbeddedLink: 'embedded_link', Footer: 'footer',
             };
 
-            const parseComponent = (c) => {
+            const parseComponent = (c, screenData = {}) => {
                 const builderType = typeMap[c.type];
                 if (!builderType) return null;
                 const [mt, me] = this.metaTypeMap[builderType] || ['string', 'example'];
                 const field = {
                     id: nextId++, type: builderType,
                     label: c.label || c.text || this.defaultLabels[builderType] || builderType,
-                    placeholder: '', required: !!c.required,
+                    placeholder: Array.isArray(c.text) ? c.text.join('\n') : (c.text || ''),
+                    required: typeof c.required === 'boolean' ? c.required : false,
                     meta_type: mt, meta_example: me,
                 };
-                if (['radio','checkbox','select'].includes(builderType)) {
-                    const ds = Array.isArray(c['data-source']) ? c['data-source'] : [];
-                    field.options = ds.length
-                        ? ds.map(s => ({ id: s.id || this.uuid(), label: s.title || s.id || 'Option', value: s.id || 'option' }))
-                        : [{ id: this.uuid(), label: 'Option 1', value: 'option_1' }];
-                    if (!ds.length) field.imported_dynamic_source = true;
+                if (c.name) field.meta_name = c.name;
+                if (typeof c.required === 'string') field.required_binding = c.required;
+                if (c.visible) field.visible_binding = c.visible;
+                if (c['on-select-action']) {
+                    field.on_select_action = c['on-select-action'].name || null;
+                    field.on_select_payload = c['on-select-action'].payload || {};
                 }
-                if (builderType === 'image')          { field.image_url = c.src || ''; field.height = c.height || 300; field.scale_type = c['scale-type'] || 'contain'; }
+                if (['radio','checkbox','select','chips'].includes(builderType)) {
+                    this.applyImportedDataSource(field, c['data-source'], screenData);
+                }
+                if (builderType === 'text') {
+                    field.input_type = c['input-type'] || 'text';
+                    field.helper_text = c['helper-text'] || '';
+                    field.sensitive = !!c.sensitive;
+                }
+                if (builderType === 'textarea') { field.max_length = c['max-length'] || 600; field.helper_text = c['helper-text'] || ''; }
+                if (builderType === 'body' || builderType === 'caption') { field.markdown = !!c.markdown; field.placeholder = c.text || ''; }
+                if (builderType === 'image') { field.image_url = c.src || ''; field.height = c.height || 300; field.scale_type = c['scale-type'] || 'contain'; }
                 if (builderType === 'image_carousel') { field.images = (c.images||[]).map(i => ({ src: i.src || '', alt_text: i['alt-text'] || '' })); }
-                if (builderType === 'embedded_link')  { field.url = c['on-click-action']?.payload?.url || ''; field.button_label = c.text || 'Open Link'; }
-                if (builderType === 'footer')         { field.label = c.label || 'Continue'; }
+                if (builderType === 'embedded_link') {
+                    const action = c['on-click-action'] || {};
+                    field.url = action.url || action.payload?.url || '';
+                    field.button_label = c.text || 'Open Link';
+                }
+                if (builderType === 'optin' && c['on-click-action']?.name === 'open_url') {
+                    field.read_more_url = c['on-click-action'].url || '';
+                }
+                if (builderType === 'calendar') { field.calendar_mode = c.mode || 'single'; field.helper_text = c['helper-text'] || ''; }
+                if (builderType === 'navigation_list') {
+                    field.list_items = (c['list-items'] || []).map(i => ({
+                        id: i.id, title: i['main-content']?.title || i.id,
+                        description: i['main-content']?.description || '',
+                        next_screen_id: i['on-click-action']?.next?.name || '',
+                        on_click_action: i['on-click-action']?.name || 'navigate',
+                        on_click_payload: i['on-click-action']?.payload || {},
+                    }));
+                }
+                if (builderType === 'if_condition') {
+                    field.condition = c.condition || '${true}';
+                    field.then_children = (c.then || []).map(child => parseComponent(child, screenData)).filter(Boolean);
+                    field.else_children = (c.else || []).map(child => parseComponent(child, screenData)).filter(Boolean);
+                }
+                if (builderType === 'switch') {
+                    field.switch_value = c.value || '${data.value}';
+                    field.cases = Object.entries(c.cases || {}).map(([key, children]) => ({
+                        key, children: (children || []).map(child => parseComponent(child, screenData)).filter(Boolean),
+                    }));
+                }
+                if (builderType === 'footer') {
+                    const action = c['on-click-action'] || {};
+                    field.type = 'footer';
+                    field.label = c.label || 'Continue';
+                    field.on_click_action = action.name || null;
+                    field.on_click_payload = action.payload || {};
+                    field.navigate_next = action.next?.name || '';
+                }
                 return field;
             };
 
-            this.screens = decoded.screens.map(ms => ({
-                id:     ms.id || 'SCREEN_' + Math.random().toString(36).slice(2,6).toUpperCase(),
-                title:  ms.title || 'Imported Screen',
-                fields: (ms.layout?.children || []).flatMap(c =>
-                    c.type === 'Form'
-                        ? (c.children || []).map(parseComponent).filter(Boolean)
-                        : [parseComponent(c)].filter(Boolean)
-                ),
-            }));
+            const flattenLayout = (children, screenData) => (children || []).flatMap(c => {
+                if (c.type === 'Form') return (c.children || []).map(child => parseComponent(child, screenData)).filter(Boolean);
+                if (c.type === 'If') return [parseComponent(c, screenData)].filter(Boolean);
+                return [parseComponent(c, screenData)].filter(Boolean);
+            });
 
+            this.screens = decoded.screens.map(ms => {
+                const screenData = ms.data && typeof ms.data === 'object' ? ms.data : {};
+                const screen = {
+                    id: ms.id || 'SCREEN_' + Math.random().toString(36).slice(2, 6).toUpperCase(),
+                    title: ms.title || 'Imported Screen',
+                    terminal: !!(ms.terminal ?? ms.is_terminal),
+                    refresh_on_back: ms.refresh_on_back,
+                    endpoint_template: ms.endpoint_template,
+                    dynamic_data: ms.dynamic_data || this.metaDataToEntries(screenData),
+                    fields: flattenLayout(ms.layout?.children || [], screenData),
+                    _imported_meta_data: screenData,
+                };
+                this.hydrateImportedScreenFields(screen);
+                return screen;
+            });
+
+            this.hydrateImportedFieldMetadata();
+            this.ensureTerminalScreen();
             this.selectedScreenId = this.screens[0]?.id || null;
             this.selectedFieldId  = null;
             this.showImportModal  = false;
@@ -1237,8 +1964,17 @@ function flowBuilder(initialFlowId) {
         },
 
         notify(message, type = 'success') {
+            if (this.notificationTimeout) {
+                clearTimeout(this.notificationTimeout);
+            }
+
             this.notification = { visible: true, message, type };
-            setTimeout(() => { this.notification.visible = false; }, 3500);
+
+            const duration = type === 'error' ? 15000 : 7000;
+            this.notificationTimeout = setTimeout(() => {
+                this.notification.visible = false;
+                this.notificationTimeout = null;
+            }, duration);
         },
 
 

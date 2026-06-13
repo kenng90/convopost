@@ -13,7 +13,20 @@ class WhatsappMetaFlowService
     use EnsuresOpenSsl;
 
     protected const META_API_VERSION = 'v18.0';
+
     protected const META_API_BASE_URL = 'https://graph.facebook.com';
+
+    protected WhatsappFlowComponentMapper $componentMapper;
+
+    protected WhatsappFlowDynamicDataBuilder $dynamicDataBuilder;
+
+    public function __construct(
+        ?WhatsappFlowComponentMapper $componentMapper = null,
+        ?WhatsappFlowDynamicDataBuilder $dynamicDataBuilder = null
+    ) {
+        $this->componentMapper = $componentMapper ?? new WhatsappFlowComponentMapper;
+        $this->dynamicDataBuilder = $dynamicDataBuilder ?? new WhatsappFlowDynamicDataBuilder;
+    }
 
     // -------------------------------------------------------------------------
     // PUBLISH (first-time)
@@ -36,8 +49,8 @@ class WhatsappMetaFlowService
     {
         try {
             Log::info('Starting flow publish to Meta', [
-                'flow_id'    => $flow->id,
-                'flow_name'  => $flow->name,
+                'flow_id' => $flow->id,
+                'flow_name' => $flow->name,
                 'company_id' => $flow->company_id,
             ]);
 
@@ -51,11 +64,11 @@ class WhatsappMetaFlowService
                 throw new \Exception('Meta API credentials not found. Please configure WhatsApp settings first.');
             }
 
-            $metaFlowJson    = $this->convertToMetaFormat($flow);
-            $flowJsonString  = json_encode($metaFlowJson, JSON_UNESCAPED_SLASHES);
+            $metaFlowJson = $this->convertToMetaFormat($flow);
+            $flowJsonString = json_encode($metaFlowJson, JSON_UNESCAPED_SLASHES);
             $hasDataExchange = $this->flowHasDataExchange($metaFlowJson);
 
-            $accessToken       = is_array($credentials) ? $credentials['access_token'] : decrypt($credentials->access_token);
+            $accessToken = is_array($credentials) ? $credentials['access_token'] : decrypt($credentials->access_token);
             $businessAccountId = is_array($credentials) ? $credentials['business_account_id'] : $credentials->business_account_id;
 
             // ── Step 1: create or update the flow asset on Meta ──────────────
@@ -89,13 +102,13 @@ class WhatsappMetaFlowService
                 if (! $healthResult['success']) {
                     return [
                         'success' => false,
-                        'message' => 'Endpoint health check failed: ' . $healthResult['message']
-                            . ' — make sure your webhook is publicly reachable and returns {"data":{"status":"active"}} for a ping action.',
+                        'message' => 'Endpoint health check failed: '.$healthResult['message']
+                            .' — make sure your webhook is publicly reachable and returns {"data":{"status":"active"}} for a ping action.',
                     ];
                 }
 
                 Log::info('Health check passed', [
-                    'flow_id'       => $flow->id,
+                    'flow_id' => $flow->id,
                     'health_status' => $healthResult['health_status'] ?? 'unknown',
                 ]);
             }
@@ -137,8 +150,8 @@ class WhatsappMetaFlowService
                 return ['success' => false, 'message' => 'Meta API credentials not found.'];
             }
 
-            $accessToken     = is_array($credentials) ? $credentials['access_token'] : decrypt($credentials->access_token);
-            $metaFlowJson    = $this->convertToMetaFormat($flow);
+            $accessToken = is_array($credentials) ? $credentials['access_token'] : decrypt($credentials->access_token);
+            $metaFlowJson = $this->convertToMetaFormat($flow);
             $hasDataExchange = $this->flowHasDataExchange($metaFlowJson);
 
             // Patch endpoint_uri on Meta before publishing
@@ -146,7 +159,7 @@ class WhatsappMetaFlowService
             if (! $patchResult['success']) {
                 Log::warning('Re-publish: PATCH endpoint_uri failed (continuing anyway)', [
                     'flow_id' => $flow->id,
-                    'error'   => $patchResult['message'] ?? 'unknown',
+                    'error' => $patchResult['message'] ?? 'unknown',
                 ]);
             }
 
@@ -156,7 +169,7 @@ class WhatsappMetaFlowService
                 if (! $healthResult['success']) {
                     return [
                         'success' => false,
-                        'message' => 'Endpoint health check failed: ' . $healthResult['message'],
+                        'message' => 'Endpoint health check failed: '.$healthResult['message'],
                     ];
                 }
             }
@@ -165,6 +178,7 @@ class WhatsappMetaFlowService
 
         } catch (\Exception $e) {
             Log::error('Exception re-publishing flow on Meta', ['flow_id' => $flow->id, 'error' => $e->getMessage()]);
+
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -185,11 +199,11 @@ class WhatsappMetaFlowService
         string $accessToken,
         string $businessAccountId
     ): array {
-        $url  = "{$this->getApiBaseUrl()}/{$businessAccountId}/flows";
+        $url = "{$this->getApiBaseUrl()}/{$businessAccountId}/flows";
         $body = [
-            'name'       => $flow->name,
+            'name' => $flow->name,
             'categories' => [$flow->category ?? 'OTHER'],
-            'flow_json'  => $flowJsonString,
+            'flow_json' => $flowJsonString,
             // DO NOT pass publish:true — create in draft, publish separately
         ];
 
@@ -198,7 +212,7 @@ class WhatsappMetaFlowService
             $body['endpoint_uri'] = $endpointUri;
 
             Log::info('Create: data_exchange flow — including endpoint_uri', [
-                'flow_id'      => $flow->id,
+                'flow_id' => $flow->id,
                 'endpoint_uri' => $endpointUri,
             ]);
         } else {
@@ -217,7 +231,7 @@ class WhatsappMetaFlowService
                 $flow->update(['meta_flow_id' => $metaFlowId, 'meta_error' => null]);
 
                 Log::info('Flow asset created on Meta (draft)', [
-                    'flow_id'      => $flow->id,
+                    'flow_id' => $flow->id,
                     'meta_flow_id' => $metaFlowId,
                 ]);
 
@@ -239,7 +253,7 @@ class WhatsappMetaFlowService
             ->timeout(60)
             ->attach('file', $flowJsonString, 'flow.json')
             ->post($url, [
-                'name'       => 'flow.json',
+                'name' => 'flow.json',
                 'asset_type' => 'FLOW_JSON',
             ]);
 
@@ -249,25 +263,27 @@ class WhatsappMetaFlowService
             // Surface Meta validation errors even on HTTP 200
             if (! empty($data['validation_errors'])) {
                 $validationMsg = collect($data['validation_errors'])
-                    ->map(fn($e) => ($e['error_type'] ?? '') . ': ' . ($e['message'] ?? ''))
+                    ->map(fn ($e) => ($e['error_type'] ?? '').': '.($e['message'] ?? ''))
                     ->join(' | ');
 
                 Log::warning('Meta returned validation errors during JSON push', [
                     'meta_flow_id' => $metaFlowId,
-                    'errors'       => $data['validation_errors'],
+                    'errors' => $data['validation_errors'],
                 ]);
 
-                return ['success' => false, 'message' => 'Validation errors: ' . $validationMsg];
+                return ['success' => false, 'message' => 'Validation errors: '.$validationMsg];
             }
 
             Log::info('Flow JSON pushed to Meta successfully', ['meta_flow_id' => $metaFlowId]);
+
             return ['success' => true];
         }
 
         $error = $response->json();
-        $msg   = $error['error']['message'] ?? 'Unknown error pushing flow JSON';
+        $msg = $error['error']['message'] ?? 'Unknown error pushing flow JSON';
 
         Log::error('Failed to push flow JSON to Meta', ['meta_flow_id' => $metaFlowId, 'error' => $error]);
+
         return ['success' => false, 'message' => $msg];
     }
 
@@ -292,7 +308,7 @@ class WhatsappMetaFlowService
             $patchBody['endpoint_uri'] = $endpointUri;
 
             Log::info('PATCH: setting endpoint_uri (data_exchange flow)', [
-                'flow_id'      => $flow->id,
+                'flow_id' => $flow->id,
                 'meta_flow_id' => $metaFlowId,
                 'endpoint_uri' => $endpointUri,
             ]);
@@ -301,7 +317,7 @@ class WhatsappMetaFlowService
             $patchBody['endpoint_uri'] = '';
 
             Log::info('PATCH: clearing endpoint_uri (navigate-only flow)', [
-                'flow_id'      => $flow->id,
+                'flow_id' => $flow->id,
                 'meta_flow_id' => $metaFlowId,
             ]);
         }
@@ -316,6 +332,7 @@ class WhatsappMetaFlowService
 
         $msg = $response->json()['error']['message'] ?? 'Unknown PATCH error';
         Log::warning('PATCH flow metadata failed', ['meta_flow_id' => $metaFlowId, 'error' => $msg]);
+
         return ['success' => false, 'message' => $msg];
     }
 
@@ -329,32 +346,33 @@ class WhatsappMetaFlowService
      */
     private function checkFlowEndpointHealth(string $metaFlowId, string $accessToken): array
     {
-        $url      = "{$this->getApiBaseUrl()}/{$metaFlowId}?fields=health_status";
+        $url = "{$this->getApiBaseUrl()}/{$metaFlowId}?fields=health_status";
         $response = Http::withToken($accessToken)->timeout(30)->get($url);
 
         if (! $response->successful()) {
             // Cannot determine status — proceed optimistically
             Log::warning('Could not retrieve health_status from Meta — proceeding anyway', [
                 'meta_flow_id' => $metaFlowId,
-                'status_code'  => $response->status(),
+                'status_code' => $response->status(),
             ]);
+
             return ['success' => true, 'health_status' => 'unknown'];
         }
 
         $healthStatus = $response->json()['health_status'] ?? null;
 
         Log::info('Flow health_status from Meta', [
-            'meta_flow_id'  => $metaFlowId,
+            'meta_flow_id' => $metaFlowId,
             'health_status' => $healthStatus,
         ]);
 
         if ($healthStatus === 'BLOCKED') {
             return [
-                'success'       => false,
+                'success' => false,
                 'health_status' => 'BLOCKED',
-                'message'       => 'Meta reports your webhook endpoint is BLOCKED. '
-                    . 'Ensure it is publicly reachable, returns HTTP 200, '
-                    . 'and responds with {"data":{"status":"active"}} for a ping action.',
+                'message' => 'Meta reports your webhook endpoint is BLOCKED. '
+                    .'Ensure it is publicly reachable, returns HTTP 200, '
+                    .'and responds with {"data":{"status":"active"}} for a ping action.',
             ];
         }
 
@@ -367,12 +385,12 @@ class WhatsappMetaFlowService
      */
     private function sendPublishRequest(WhatsappFlow $flow, string $metaFlowId, string $accessToken): array
     {
-        $url      = "{$this->getApiBaseUrl()}/{$metaFlowId}/publish";
+        $url = "{$this->getApiBaseUrl()}/{$metaFlowId}/publish";
         $response = Http::withToken($accessToken)->timeout(60)->asJson()->post($url);
 
         Log::info('Publish request sent', [
-            'flow_id'     => $flow->id,
-            'meta_flow_id'=> $metaFlowId,
+            'flow_id' => $flow->id,
+            'meta_flow_id' => $metaFlowId,
             'status_code' => $response->status(),
         ]);
 
@@ -380,17 +398,17 @@ class WhatsappMetaFlowService
             $flow->update([
                 'meta_flow_id' => $metaFlowId,
                 'published_at' => now(),
-                'meta_error'   => null,
+                'meta_error' => null,
             ]);
 
             Log::info('Flow published to Meta successfully', [
-                'flow_id'      => $flow->id,
+                'flow_id' => $flow->id,
                 'meta_flow_id' => $metaFlowId,
             ]);
 
             return [
-                'success'      => true,
-                'message'      => 'Flow published to Meta successfully',
+                'success' => true,
+                'message' => 'Flow published to Meta successfully',
                 'meta_flow_id' => $metaFlowId,
             ];
         }
@@ -413,25 +431,25 @@ class WhatsappMetaFlowService
      */
     private function buildErrorResponse(WhatsappFlow $flow, $response): array
     {
-        $error        = $response->json();
-        $statusCode   = $response->status();
+        $error = $response->json();
+        $statusCode = $response->status();
         $errorMessage = $error['error']['error_user_msg']
             ?? $error['error']['message']
             ?? 'Unknown error occurred';
 
         Log::error('Meta API error response', [
-            'flow_id'       => $flow->id,
-            'status_code'   => $statusCode,
+            'flow_id' => $flow->id,
+            'status_code' => $statusCode,
             'error_message' => $errorMessage,
-            'full_error'    => $error,
+            'full_error' => $error,
         ]);
 
         $flow->update([
             'meta_error' => [
                 'status_code' => $statusCode,
-                'code'        => $error['error']['code'] ?? null,
-                'message'     => $errorMessage,
-                'response'    => $error,
+                'code' => $error['error']['code'] ?? null,
+                'message' => $errorMessage,
+                'response' => $error,
                 'occurred_at' => now()->toIso8601String(),
             ],
         ]);
@@ -445,8 +463,8 @@ class WhatsappMetaFlowService
     private function handlePublishException(WhatsappFlow $flow, \Exception $e): array
     {
         $errorData = [
-            'message'         => $e->getMessage(),
-            'occurred_at'     => now()->toIso8601String(),
+            'message' => $e->getMessage(),
+            'occurred_at' => now()->toIso8601String(),
             'exception_class' => get_class($e),
         ];
 
@@ -456,15 +474,15 @@ class WhatsappMetaFlowService
         }
 
         Log::error('Exception while publishing flow to Meta', [
-            'flow_id'   => $flow->id,
-            'message'   => $e->getMessage(),
-            'trace'     => $e->getTraceAsString(),
+            'flow_id' => $flow->id,
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
         ]);
 
         return [
             'success' => false,
-            'message' => 'An error occurred while publishing: ' . $e->getMessage(),
-            'error'   => $errorData,
+            'message' => 'An error occurred while publishing: '.$e->getMessage(),
+            'error' => $errorData,
         ];
     }
 
@@ -533,484 +551,227 @@ class WhatsappMetaFlowService
     // FLOW FORMAT CONVERSION
     // -------------------------------------------------------------------------
 
-    private function getMetaDataType(string $fieldType): string
-{
-    return match ($fieldType) {
-        'date'                       => 'string', // dates come as "YYYY-MM-DD" strings
-        'checkbox'                   => 'array',
-        'radio', 'chips', 'select'   => 'string',
-        default                      => 'string',
-    };
-}
-
-private function getMetaDataExample(string $fieldType): string
-{
-    return match ($fieldType) {
-        'date'     => '2026-01-01',
-        'checkbox' => 'option1',
-        default    => 'example',
-    };
-}
     /**
-     * Convert local flow format to Meta Flow JSON format.
+     * @return array{errors: array<int, string>, warnings: array<int, string>}
      */
-  
-    // -------------------------------------------------------------------------
-    // COMPONENT CONVERSION
-    // -------------------------------------------------------------------------
+    public function getPublishValidation(WhatsappFlow $flow): array
+    {
+        $screens = $flow->flow_json['screens'] ?? [];
 
-    /**
-     * Convert local fields to Meta Flow components.
-     */
+        return [
+            'errors' => array_merge(
+                $this->componentMapper->collectPublishErrors($screens),
+                $this->validateResolvableImages($screens),
+            ),
+            'warnings' => $this->componentMapper->collectPublishWarnings($screens),
+        ];
+    }
 
-    /**
- * Convert local fields to Meta Flow components.
- *
- * Meta requires ALL input fields to be wrapped in a single Form component.
- * The Form's Footer/submit button must be INSIDE the Form's children too.
- * Without Form wrapping, nfm_reply only returns {flow_token} — no field data.
- */
+    public function convertToMetaFormat(WhatsappFlow $flow): array
+    {
+        $screens = $flow->flow_json['screens'] ?? [];
+        $screenCount = count($screens);
 
-/**
- * Get the component name for a field (matches what convertFieldToComponent produces)
- */
+        $usesEndpointFlow = $this->builderUsesDataExchange($screens);
 
+        $allPreviousFields = [];
+        $screenDataSchemas = [];
 
-
-    // -------------------------------------------------------------------------
-    // IMAGE HANDLING
-    // -------------------------------------------------------------------------
-// -------------------------------------------------------------------------
-// FLOW FORMAT CONVERSION
-// -------------------------------------------------------------------------
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Drop-in replacement methods for WhatsappMetaFlowService
-// Replace the existing convertToMetaFormat, convertFieldsToComponents,
-// convertFieldToComponent, getComponentName, getMetaDataType, getMetaDataExample
-// with these versions.
-// ─────────────────────────────────────────────────────────────────────────────
-
-public function convertToMetaFormat(WhatsappFlow $flow): array
-{
-    $screens     = $flow->flow_json['screens'] ?? [];
-    $screenCount = count($screens);
-
-    $allPreviousFields = [];
-    $convertedScreens  = [];
-
-    foreach ($screens as $index => $screen) {
-        $isTerminal   = ($index === $screenCount - 1) || ($screen['terminal'] ?? false);
-        $nextScreenId = null;
-
-        if (! $isTerminal && isset($screens[$index + 1])) {
-            $nextScreenId = (string) ($screens[$index + 1]['id'] ?? 'SCREEN_' . chr(65 + $index + 1));
+        foreach ($screens as $index => $screen) {
+            $screenDataSchemas[$index] = $this->buildScreenDataSchema($screen, $allPreviousFields);
+            $allPreviousFields = array_merge(
+                $allPreviousFields,
+                $this->inputFieldsFromScreen($screen)
+            );
         }
 
-        // ── Build screen data model ───────────────────────────────────────────
-        // Start with any explicit data declarations already on the screen.
-        $screenData = (! empty($screen['data']) && is_array($screen['data']))
-            ? $screen['data']
-            : [];
+        $allPreviousFields = [];
+        $convertedScreens = [];
 
-        // Declare every field that was collected on a previous screen.
-        // Meta requires this so it will accept those values in the navigate payload.
-        // Because each field now carries meta_type/meta_example we no longer need
-        // a brittle match() to guess the type.
-        foreach ($allPreviousFields as $prevField) {
-            $componentName = $this->getComponentName($prevField);
-            if (! $componentName) {
-                continue;
+        foreach ($screens as $index => $screen) {
+            if (array_key_exists('terminal', $screen)) {
+                $isTerminal = (bool) $screen['terminal'];
+            } else {
+                $isTerminal = ($index === $screenCount - 1);
             }
 
-            $metaType    = $prevField['meta_type']    ?? 'string';
-            $metaExample = $prevField['meta_example'] ?? 'example';
+            $nextScreenId = null;
 
-            $screenData[$componentName] = $metaType === 'array'
-                ? ['type' => 'array',  'items' => ['type' => 'string'], '__example__' => (array) $metaExample]
-                : ['type' => $metaType, '__example__' => $metaExample];
+            if (! $isTerminal && isset($screens[$index + 1])) {
+                $nextScreenId = (string) ($screens[$index + 1]['id'] ?? 'SCREEN_'.chr(65 + $index + 1));
+            }
+
+            $screenData = $screenDataSchemas[$index];
+            $currentDataKeys = array_keys($screenData);
+            $nextScreen = $screens[$index + 1] ?? null;
+            $currentDynamicKeys = $this->dynamicDataKeysFromScreen($screen);
+            $nextDynamicKeys = $nextScreen ? $this->dynamicDataKeysFromScreen($nextScreen) : [];
+            $nextInputFields = $nextScreen ? $this->inputFieldsFromScreen($nextScreen) : [];
+
+            Log::debug('convertToMetaFormat: building screen', [
+                'screen_id' => $screen['id'] ?? 'unknown',
+                'is_terminal' => $isTerminal,
+                'next_screen' => $nextScreenId,
+                'previous_field_count' => count($allPreviousFields),
+                'screen_data_keys' => $currentDataKeys,
+            ]);
+
+            $layoutChildren = $this->componentMapper->convertFieldsToComponents(
+                $screen['fields'] ?? [],
+                $nextScreenId,
+                $isTerminal,
+                $allPreviousFields,
+                fn (string $src) => $this->resolveImageSrc($src),
+                $currentDataKeys,
+                $currentDynamicKeys,
+                $nextDynamicKeys,
+                $nextInputFields,
+                $usesEndpointFlow
+            );
+
+            $screenData = $this->componentMapper->enrichScreenDataFromBindings($screenData, $layoutChildren);
+
+            $convertedScreen = [
+                'id' => (string) ($screen['id'] ?? 'SCREEN_'.chr(65 + $index)),
+                'title' => $screen['title'] ?? 'Screen',
+                'terminal' => $isTerminal,
+                'data' => empty($screenData) ? new \stdClass() : $screenData,
+                'layout' => [
+                    'type' => 'SingleColumnLayout',
+                    'children' => $layoutChildren,
+                ],
+            ];
+
+            if ($isTerminal) {
+                $convertedScreen['success'] = true;
+            }
+
+            if (! empty($screen['refresh_on_back'])) {
+                $convertedScreen['refresh_on_back'] = true;
+            }
+
+            $convertedScreens[] = $convertedScreen;
+
+            $allPreviousFields = array_merge(
+                $allPreviousFields,
+                $this->inputFieldsFromScreen($screen)
+            );
         }
 
-        Log::debug('convertToMetaFormat: building screen', [
-            'screen_id'            => $screen['id'] ?? 'unknown',
-            'is_terminal'          => $isTerminal,
-            'next_screen'          => $nextScreenId,
-            'previous_field_count' => count($allPreviousFields),
-            'screen_data_keys'     => array_keys($screenData),
-        ]);
+        // Build routing model (always needed for screen navigation)
+        $routingModel = [];
+        foreach ($convertedScreens as $i => $screen) {
+            $routingModel[$screen['id']] = ($i + 1 < count($convertedScreens))
+                ? [$convertedScreens[$i + 1]['id']]
+                : [];
+        }
 
-        // ── Single, authoritative screen array ────────────────────────────────
-        $convertedScreen = [
-            'id'       => (string) ($screen['id'] ?? 'SCREEN_' . chr(65 + $index)),
-            'title'    => $screen['title'] ?? 'Screen',
-            'terminal' => $isTerminal,
-            'data'     => empty($screenData) ? new \stdClass() : $screenData,
-            'layout'   => [
-                'type'     => 'SingleColumnLayout',
-                'children' => $this->convertFieldsToComponents(
-                    $screen['fields'] ?? [],
-                    $nextScreenId,
-                    $isTerminal,
-                    $allPreviousFields
-                ),
-            ],
+        $metaFlow = [
+            'version' => '7.3',
+            'routing_model' => $routingModel,
+            'screens' => $convertedScreens,
         ];
 
-        if ($isTerminal) {
-            $convertedScreen['success'] = true;
+        // data_api_version is ONLY required for endpoint-powered flows
+        if ($this->flowHasDataExchange(['screens' => $convertedScreens])) {
+            $metaFlow['data_api_version'] = '3.0';
         }
 
-        if (! empty($screen['refresh_on_back'])) {
-            $convertedScreen['refresh_on_back'] = true;
+        Log::debug('convertToMetaFormat: completed', [
+            'flow_id' => $flow->id,
+            'has_data_exchange' => isset($metaFlow['data_api_version']),
+            'screen_count' => count($metaFlow['screens']),
+        ]);
+
+        return $metaFlow;
+    }
+
+    /**
+     * @param  array<string, mixed>  $screen
+     * @param  array<int, array<string, mixed>>  $previousScreenFields
+     * @return array<string, array<string, mixed>>
+     */
+    private function buildScreenDataSchema(array $screen, array $previousScreenFields): array
+    {
+        $screenData = $this->dynamicDataBuilder->entriesToMetaSchema($screen['dynamic_data'] ?? []);
+
+        if (! empty($screen['data']) && is_array($screen['data'])) {
+            $screenData = array_merge($screenData, $screen['data']);
         }
 
-        $convertedScreens[] = $convertedScreen;
+        if (($screen['dynamic_data'] ?? []) === [] && ($screen['data'] ?? []) === []) {
+            foreach ($previousScreenFields as $prevField) {
+                $componentName = $this->componentMapper->getComponentName($prevField);
+                if (! $componentName) {
+                    continue;
+                }
 
-        // ── Accumulate AFTER building so the NEXT screen can reference these ──
-        $inputOnlyTypes    = ['text', 'textarea', 'radio', 'checkbox', 'select', 'date', 'chips', 'optin'];
-        $allPreviousFields = array_merge(
-            $allPreviousFields,
-            array_values(array_filter(
-                $screen['fields'] ?? [],
-                fn($f) => in_array($f['type'] ?? '', $inputOnlyTypes, true)
-            ))
-        );
-    }
+                $metaType = $prevField['meta_type'] ?? $this->componentMapper->getMetaDataType($prevField['type'] ?? 'text');
+                $metaExample = $prevField['meta_example'] ?? $this->componentMapper->getMetaDataExample($prevField['type'] ?? 'text');
 
-    // Build routing model (always needed for screen navigation)
-    $routingModel = [];
-    foreach ($convertedScreens as $i => $screen) {
-        $routingModel[$screen['id']] = ($i + 1 < count($convertedScreens))
-            ? [$convertedScreens[$i + 1]['id']]
-            : [];
-    }
-
-    $metaFlow = [
-        'version'       => '7.3',
-        'routing_model' => $routingModel,
-        'screens'       => $convertedScreens,
-    ];
-
-    // data_api_version is ONLY required for endpoint-powered flows
-    if ($this->flowHasDataExchange(['screens' => $convertedScreens])) {
-        $metaFlow['data_api_version'] = '3.0';
-    }
-
-    Log::debug('convertToMetaFormat: completed', [
-        'flow_id'           => $flow->id,
-        'has_data_exchange' => isset($metaFlow['data_api_version']),
-        'screen_count'      => count($metaFlow['screens']),
-    ]);
-
-    return $metaFlow;
-}
-
-/**
- * Convert local fields to Meta Flow components.
- *
- * Layout rules:
- * - Display-only components (heading, image …) sit OUTSIDE the Form
- * - Input fields + the footer go INSIDE a single Form component
- * - Footer navigate/complete payload references ALL form fields:
- *     current screen → ${form.x}
- *     previous screens → ${data.x}
- */
-protected function convertFieldsToComponents(
-    array $fields,
-    ?string $nextScreenId = null,
-    bool $isTerminal = false,
-    array $previousScreenFields = []
-): array {
-    $displayOnlyTypes = [
-        'heading', 'subheading', 'body', 'caption',
-        'richtext', 'image', 'image_carousel',
-    ];
-    $footerTypes = ['navigate', 'button', 'footer'];
-
-    $outsideChildren = [];
-    $inputFields     = [];
-    $footerFields    = [];
-
-    foreach ($fields as $field) {
-        $type = $field['type'] ?? 'text';
-        if (in_array($type, $displayOnlyTypes, true)) {
-            $outsideChildren[] = $this->convertFieldToComponent($field, $nextScreenId, $isTerminal);
-        } elseif (in_array($type, $footerTypes, true)) {
-            $footerFields[] = $field;
-        } else {
-            $inputFields[] = $field;
+                $screenData[$componentName] = $metaType === 'array'
+                    ? ['type' => 'array', 'items' => ['type' => 'string'], '__example__' => (array) $metaExample]
+                    : ['type' => $metaType, '__example__' => $metaExample];
+            }
         }
+
+        return $screenData;
     }
 
-    if (empty($inputFields) && empty($footerFields)) {
-        return $outsideChildren;
-    }
+    /**
+     * @param  array<string, mixed>  $screen
+     * @return array<int, string>
+     */
+    private function dynamicDataKeysFromScreen(array $screen): array
+    {
+        $keys = [];
 
-    // ── Build the action payload ──────────────────────────────────────────────
-    // Must be fully built BEFORE the footer closure captures it by value.
-    //
-    // Current screen fields  → ${form.x}
-    // Previous screen fields → ${data.x}
-    $actionPayload = [];
-
-    foreach ($inputFields as $field) {
-        $componentName = $this->getComponentName($field);
-        if ($componentName) {
-            $actionPayload[$componentName] = '${form.' . $componentName . '}';
+        foreach ($screen['dynamic_data'] ?? [] as $entry) {
+            $key = trim((string) ($entry['key'] ?? ''));
+            if ($key !== '') {
+                $keys[] = $key;
+            }
         }
+
+        return $keys;
     }
 
-    foreach ($previousScreenFields as $field) {
-        $componentName = $this->getComponentName($field);
-        if ($componentName) {
-            $actionPayload[$componentName] = '${data.' . $componentName . '}';
-        }
+    /**
+     * @param  array<string, mixed>  $screen
+     * @return array<int, array<string, mixed>>
+     */
+    private function inputFieldsFromScreen(array $screen): array
+    {
+        return array_values(array_filter(
+            $screen['fields'] ?? [],
+            fn ($field) => in_array($field['type'] ?? '', WhatsappFlowComponentMapper::INPUT_FIELD_TYPES, true)
+        ));
     }
 
-    Log::debug('convertFieldsToComponents: payload built', [
-        'is_terminal'          => $isTerminal,
-        'input_field_count'    => count($inputFields),
-        'previous_field_count' => count($previousScreenFields),
-        'action_payload_keys'  => array_keys($actionPayload),
-    ]);
-
-    // ── Convert input fields ──────────────────────────────────────────────────
-    $convertedInputs = array_map(
-        fn($f) => $this->convertFieldToComponent($f, $nextScreenId, $isTerminal),
-        $inputFields
-    );
-
-    // ── Convert footer fields, injecting the payload ──────────────────────────
-    $convertedFooters = array_map(
-        function ($field) use ($nextScreenId, $isTerminal, $actionPayload) {
-            $component  = $this->convertFieldToComponent($field, $nextScreenId, $isTerminal);
-            $actionName = $component['on-click-action']['name'] ?? '';
-
-            $payloadToInject = empty($actionPayload) ? new \stdClass() : $actionPayload;
-
-            if ($isTerminal && $actionName === 'complete') {
-                $component['on-click-action']['payload'] = $payloadToInject;
-            } elseif (! $isTerminal && $actionName === 'navigate') {
-                $component['on-click-action']['payload'] = $payloadToInject;
+    /**
+     * @param  array<int, array<string, mixed>>  $screens
+     */
+    private function builderUsesDataExchange(array $screens): bool
+    {
+        foreach ($screens as $screen) {
+            if (! empty($screen['refresh_on_back'])) {
+                return true;
             }
 
-            return $component;
-        },
-        $footerFields
-    );
+            foreach ($screen['fields'] ?? [] as $field) {
+                if (($field['on_select_action'] ?? '') === 'data_exchange') {
+                    return true;
+                }
 
-    $formComponent = [
-        'type'     => 'Form',
-        'name'     => 'main_form',
-        'children' => array_merge($convertedInputs, $convertedFooters),
-    ];
+                if (($field['on_click_action'] ?? '') === 'data_exchange') {
+                    return true;
+                }
+            }
+        }
 
-    return array_merge($outsideChildren, [$formComponent]);
-}
-
-/**
- * Get the Meta component name for a field.
- * Must exactly match the name produced by convertFieldToComponent.
- */
-private function getComponentName(array $field): ?string
-{
-    $type    = $field['type'] ?? '';
-    $fieldId = $field['id']   ?? '';
-
-    if ($fieldId === '' || $fieldId === null) {
-        return null;
+        return false;
     }
 
-    return match ($type) {
-        'text'     => 'text_'     . $fieldId,
-        'textarea' => 'textarea_' . $fieldId,
-        'radio'    => 'radio_'    . $fieldId,
-        'checkbox' => 'checkbox_' . $fieldId,
-        'select'   => 'select_'   . $fieldId,
-        'date'     => 'date_'     . $fieldId,
-        'chips'    => 'chips_'    . $fieldId,
-        'optin'    => 'optin_'    . $fieldId,
-        default    => null,
-    };
-}
-
-/**
- * Convert a single builder field to a Meta Flow component array.
- *
- * NOTE: Footer payload starts empty here.
- * convertFieldsToComponents() replaces it with the correct field references
- * after this method returns — do not set payload values here.
- */
-protected function convertFieldToComponent(
-    array $field,
-    ?string $nextScreenId = null,
-    bool $isTerminal = false
-): array {
-    $type    = $field['type'] ?? 'text';
-    $fieldId = $field['id']   ?? 'field';
-
-    return match ($type) {
-
-        // ── Text display ──────────────────────────────────────────────────────
-        'heading' => [
-            'type' => 'TextHeading',
-            'text' => $field['label'] ?? '',
-        ],
-        'subheading' => [
-            'type' => 'TextSubheading',
-            'text' => $field['label'] ?? '',
-        ],
-        'body' => [
-            'type'     => 'TextBody',
-            'text'     => $field['placeholder'] ?: ($field['label'] ?? ''),
-            'markdown' => $field['markdown'] ?? false,
-        ],
-        'caption' => [
-            'type' => 'TextCaption',
-            'text' => $field['placeholder'] ?: ($field['label'] ?? ''),
-        ],
-        'richtext' => [
-            'type' => 'RichText',
-            'text' => $field['placeholder'] ?: ($field['label'] ?? ''),
-        ],
-
-        // ── Input components ──────────────────────────────────────────────────
-        'text' => [
-            'type'       => 'TextInput',
-            'name'       => 'text_' . $fieldId,
-            'label'      => $field['label'] ?? '',
-            'required'   => $field['required'] ?? false,
-            'input-type' => 'text',
-        ],
-        'textarea' => [
-            'type'       => 'TextArea',
-            'name'       => 'textarea_' . $fieldId,
-            'label'      => $field['label'] ?? '',
-            'required'   => $field['required'] ?? false,
-            'max-length' => 4096,
-        ],
-        'radio' => [
-            'type'        => 'RadioButtonsGroup',
-            'name'        => 'radio_' . $fieldId,
-            'label'       => $field['label'] ?? '',
-            'required'    => $field['required'] ?? false,
-            'data-source' => $this->convertOptionsToDataSource($field['options'] ?? []),
-        ],
-        'checkbox' => [
-            'type'        => 'CheckboxGroup',
-            'name'        => 'checkbox_' . $fieldId,
-            'label'       => $field['label'] ?? '',
-            'required'    => $field['required'] ?? false,
-            'data-source' => $this->convertOptionsToDataSource($field['options'] ?? []),
-        ],
-        'select' => [
-            'type'        => 'Dropdown',
-            'name'        => 'select_' . $fieldId,
-            'label'       => $field['label'] ?? '',
-            'required'    => $field['required'] ?? false,
-            'data-source' => $this->convertOptionsToDataSource($field['options'] ?? []),
-        ],
-        'date' => [
-            'type'     => 'DatePicker',
-            'name'     => 'date_' . $fieldId,
-            'label'    => $field['label'] ?? '',
-            'required' => $field['required'] ?? false,
-        ],
-        'chips' => [
-            'type'        => 'RadioButtonsGroup',
-            'name'        => 'chips_' . $fieldId,
-            'label'       => $field['label'] ?? '',
-            'data-source' => $this->convertOptionsToDataSource($field['options'] ?? []),
-        ],
-        'optin' => [
-            'type'     => 'OptIn',
-            'name'     => 'optin_' . $fieldId,
-            'label'    => $field['label'] ?? '',
-            'required' => $field['required'] ?? false,
-        ],
-
-        // ── Media ─────────────────────────────────────────────────────────────
-        'image' => [
-            'type'       => 'Image',
-            'src'        => $this->resolveImageSrc($field['image_url'] ?? ''),
-            'height'     => $field['height'] ?? 300,
-            'scale-type' => $field['scale_type'] ?? 'contain',
-        ],
-        'media_upload' => [
-            // Meta has no native media-upload — fall back to TextInput
-            'type'       => 'TextInput',
-            'name'       => 'media_' . $fieldId,
-            'label'      => $field['label'] ?? 'Upload File',
-            'required'   => $field['required'] ?? false,
-            'input-type' => 'text',
-        ],
-        'image_carousel' => [
-            'type'   => 'ImageCarousel',
-            'images' => ! empty($field['images'])
-                ? array_map(fn($img) => [
-                    'src'      => $this->resolveImageSrc($img['src'] ?? $img['image_url'] ?? ''),
-                    'alt-text' => $img['alt_text'] ?? $img['label'] ?? 'Image',
-                ], $field['images'])
-                : [['src' => '', 'alt-text' => 'Image']],
-        ],
-
-        // ── Rich content ──────────────────────────────────────────────────────
-        'embedded_link' => [
-            'type' => 'EmbeddedLink',
-            'text' => $field['button_label'] ?? $field['label'] ?? 'Open Link',
-            'on-click-action' => [
-                'name'    => 'data_exchange',
-                'payload' => ['url' => $field['url'] ?? ''],
-            ],
-        ],
-
-        // ── Navigation / submit ───────────────────────────────────────────────
-        // Payload starts as empty stdClass — convertFieldsToComponents() replaces
-        // it with the correct ${form.x} / ${data.x} references.
-        'navigate', 'footer' => [
-            'type'  => 'Footer',
-            'label' => $field['label'] ?? 'Continue',
-            'on-click-action' => $isTerminal
-                ? ['name' => 'complete',  'payload' => new \stdClass()]
-                : [
-                    'name'    => 'navigate',
-                    'next'    => ['type' => 'screen', 'name' => $nextScreenId ?? 'NEXT_SCREEN'],
-                    'payload' => new \stdClass(),
-                  ],
-        ],
-        'button' => [
-            'type'  => 'Footer',
-            'label' => $field['label'] ?? 'Submit',
-            'on-click-action' => $isTerminal
-                ? ['name' => 'complete',  'payload' => new \stdClass()]
-                : [
-                    'name'    => 'navigate',
-                    'next'    => ['type' => 'screen', 'name' => $nextScreenId ?? 'NEXT_SCREEN'],
-                    'payload' => new \stdClass(),
-                  ],
-        ],
-
-        // ── Logic ─────────────────────────────────────────────────────────────
-        'if_condition' => [
-            'type'        => 'If',
-            'condition'   => $field['condition'] ?? '${true}',
-            'then-action' => ['name' => $field['then_action'] ?? 'navigate', 'next-screen' => 'NEXT_SCREEN'],
-            'else-action' => ['name' => $field['else_action'] ?? 'navigate', 'next-screen' => 'CURRENT_SCREEN'],
-        ],
-        'switch' => [
-            'type'  => 'Switch',
-            'cases' => array_map(fn($case) => [
-                'condition' => $case['condition'] ?? '',
-                'action'    => ['name' => 'navigate', 'next-screen' => $case['next_screen'] ?? 'NEXT_SCREEN'],
-            ], $field['cases'] ?? []),
-        ],
-
-        default => [
-            'type' => 'TextBody',
-            'text' => $field['label'] ?? 'Unknown Field Type: ' . $type,
-        ],
-    };
-}
     /**
      * Resolve an image source to a base64 string as required by Meta's Flow JSON.
      *
@@ -1033,6 +794,7 @@ protected function convertFieldToComponent(
                 return $parts[1];
             }
             Log::warning('data URI missing ;base64, marker', ['src' => substr($src, 0, 100)]);
+
             return '';
         }
 
@@ -1043,7 +805,8 @@ protected function convertFieldToComponent(
 
             if (! $response->successful()) {
                 Log::warning('Image fetch failed', ['url' => $src, 'status' => $response->status()]);
-                return $src;
+
+                return '';
             }
 
             $contentType = strtolower(trim(explode(';', $response->header('Content-Type') ?? 'image/jpeg')[0]));
@@ -1053,7 +816,8 @@ protected function convertFieldToComponent(
 
             if (! str_starts_with($contentType, 'image/')) {
                 Log::warning('URL did not return an image', ['url' => $src, 'content_type' => $contentType]);
-                return $src;
+
+                return '';
             }
 
             $imageBody = $response->body();
@@ -1063,7 +827,8 @@ protected function convertFieldToComponent(
                 $imageBody = gzdecode($imageBody);
                 if ($imageBody === false) {
                     Log::warning('Failed to gzip-decode image', ['url' => $src]);
-                    return $src;
+
+                    return '';
                 }
             }
 
@@ -1072,14 +837,14 @@ protected function convertFieldToComponent(
             $estimatedBytes = strlen($base64) * 3 / 4;
             if ($estimatedBytes > 300 * 1024) {
                 Log::warning('Image may exceed Meta Flows 300 KB limit', [
-                    'url'             => $src,
+                    'url' => $src,
                     'estimated_bytes' => $estimatedBytes,
                 ]);
             }
 
             Log::info('Image converted to base64', [
-                'url'           => $src,
-                'content_type'  => $contentType,
+                'url' => $src,
+                'content_type' => $contentType,
                 'base64_length' => strlen($base64),
             ]);
 
@@ -1087,11 +852,69 @@ protected function convertFieldToComponent(
 
         } catch (\Exception $e) {
             Log::warning('Exception while converting image to base64', [
-                'url'   => $src,
+                'url' => $src,
                 'error' => $e->getMessage(),
             ]);
-            return $src;
+
+            return '';
         }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function validateResolvableImages(array $screens): array
+    {
+        $errors = [];
+
+        foreach ($screens as $screenIndex => $screen) {
+            $screenTitle = $screen['title'] ?? ('Screen '.($screenIndex + 1));
+
+            foreach ($screen['fields'] ?? [] as $field) {
+                $type = $field['type'] ?? '';
+
+                if ($type === 'image') {
+                    $source = trim($field['image_url'] ?? '');
+                    if ($source === '') {
+                        continue;
+                    }
+
+                    $resolved = $this->resolveImageSrc($source);
+                    if ($resolved === '' || ! $this->isValidBase64Image($resolved)) {
+                        $errors[] = "\"{$screenTitle}\": Image could not be converted to base64. "
+                            .'Use a publicly accessible image URL or paste a base64 data URI.';
+                    }
+                }
+
+                if ($type === 'image_carousel') {
+                    foreach ($field['images'] ?? [] as $i => $img) {
+                        $source = trim($img['src'] ?? $img['image_url'] ?? '');
+                        if ($source === '') {
+                            continue;
+                        }
+
+                        $resolved = $this->resolveImageSrc($source);
+                        if ($resolved === '' || ! $this->isValidBase64Image($resolved)) {
+                            $errors[] = "\"{$screenTitle}\": Carousel image #".($i + 1)
+                                .' could not be converted to base64. Use a public URL or data URI.';
+                        }
+                    }
+                }
+            }
+        }
+
+        return $errors;
+    }
+
+    protected function isValidBase64Image(string $value): bool
+    {
+        if ($value === '' || str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return false;
+        }
+
+        $decoded = base64_decode($value, true);
+
+        return $decoded !== false && $decoded !== '';
     }
 
     // -------------------------------------------------------------------------
@@ -1109,7 +932,7 @@ protected function convertFieldToComponent(
         $opensslConfPath = $this->findOpenSslConf();
 
         $config = [
-            'digest_alg'       => 'sha256',
+            'digest_alg' => 'sha256',
             'private_key_bits' => 2048,
             'private_key_type' => OPENSSL_KEYTYPE_RSA,
         ];
@@ -1121,18 +944,18 @@ protected function convertFieldToComponent(
         $keyPair = openssl_pkey_new($config);
         if (! $keyPair) {
             throw new \Exception(
-                'Failed to generate RSA key pair: ' . openssl_error_string()
-                . '. On Windows, set OPENSSL_CONF in your .env pointing to openssl.cnf.'
+                'Failed to generate RSA key pair: '.openssl_error_string()
+                .'. On Windows, set OPENSSL_CONF in your .env pointing to openssl.cnf.'
             );
         }
 
         openssl_pkey_export($keyPair, $privateKeyPem, null, $opensslConfPath ? ['config' => $opensslConfPath] : []);
 
-        $keyDetails   = openssl_pkey_get_details($keyPair);
+        $keyDetails = openssl_pkey_get_details($keyPair);
         $publicKeyPem = $keyDetails['key'];
 
         $privateKeyPem = $this->normalizePem($privateKeyPem);
-        $publicKeyPem  = $this->normalizePem($publicKeyPem);
+        $publicKeyPem = $this->normalizePem($publicKeyPem);
 
         if (str_contains($privateKeyPem, 'BEGIN RSA PRIVATE KEY')) {
             Log::info('PKCS#1 key detected — converting to PKCS#8', ['company_id' => $company->id]);
@@ -1159,7 +982,7 @@ protected function convertFieldToComponent(
             throw new \Exception('Meta API credentials not found.');
         }
 
-        $accessToken   = is_array($credentials) ? $credentials['access_token'] : decrypt($credentials->access_token);
+        $accessToken = is_array($credentials) ? $credentials['access_token'] : decrypt($credentials->access_token);
         $phoneNumberId = is_array($credentials) ? ($credentials['phone_number_id'] ?? null) : ($credentials->phone_number_id ?? null);
 
         if (empty($phoneNumberId)) {
@@ -1169,8 +992,8 @@ protected function convertFieldToComponent(
         $url = "{$this->getApiBaseUrl()}/{$phoneNumberId}/whatsapp_business_encryption";
 
         $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $accessToken,
-            'Content-Type'  => 'application/json',
+            'Authorization' => 'Bearer '.$accessToken,
+            'Content-Type' => 'application/json',
         ])->post($url, ['business_public_key' => $publicKeyPem]);
 
         if ($response->successful()) {
@@ -1178,7 +1001,8 @@ protected function convertFieldToComponent(
         }
 
         $error = $response->json()['error']['message'] ?? 'Unknown error';
-        return ['success' => false, 'message' => 'Failed to upload public key: ' . $error, 'error' => $response->json()];
+
+        return ['success' => false, 'message' => 'Failed to upload public key: '.$error, 'error' => $response->json()];
     }
 
     // -------------------------------------------------------------------------
@@ -1215,15 +1039,16 @@ protected function convertFieldToComponent(
 
             if (! $response->successful()) {
                 $error = $response->json()['error']['message'] ?? 'Unknown error';
+
                 return ['success' => false, 'message' => "Meta API error: {$error}"];
             }
 
-            $data        = $response->json();
-            $metaStatus  = strtolower($data['status'] ?? 'draft');
+            $data = $response->json();
+            $metaStatus = strtolower($data['status'] ?? 'draft');
             $localStatus = match ($metaStatus) {
-                'published'  => 'published',
+                'published' => 'published',
                 'deprecated' => 'archived',
-                default      => 'draft',
+                default => 'draft',
             };
 
             $updates = ['status' => $localStatus];
@@ -1239,20 +1064,21 @@ protected function convertFieldToComponent(
             $flow->update($updates);
 
             Log::info('syncStatusFromMeta: status synced', [
-                'flow_id'      => $flow->id,
-                'meta_status'  => $metaStatus,
+                'flow_id' => $flow->id,
+                'meta_status' => $metaStatus,
                 'local_status' => $localStatus,
             ]);
 
             return [
-                'success'      => true,
-                'meta_status'  => strtoupper($metaStatus),
+                'success' => true,
+                'meta_status' => strtoupper($metaStatus),
                 'local_status' => $localStatus,
-                'message'      => 'Status synced: Meta reports this flow is ' . strtoupper($metaStatus) . '.',
+                'message' => 'Status synced: Meta reports this flow is '.strtoupper($metaStatus).'.',
             ];
 
         } catch (\Exception $e) {
             Log::error('syncStatusFromMeta exception', ['flow_id' => $flow->id, 'error' => $e->getMessage()]);
+
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -1311,8 +1137,8 @@ protected function convertFieldToComponent(
                 return ['success' => false, 'message' => 'Meta API credentials not found.'];
             }
 
-            $accessToken    = is_array($credentials) ? $credentials['access_token'] : decrypt($credentials->access_token);
-            $metaFlowJson   = $this->convertToMetaFormat($flow);
+            $accessToken = is_array($credentials) ? $credentials['access_token'] : decrypt($credentials->access_token);
+            $metaFlowJson = $this->convertToMetaFormat($flow);
             $flowJsonString = json_encode($metaFlowJson, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
             Log::debug('FULL FLOW JSON BEING SENT TO META', [
                 'json' => json_encode($metaFlowJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
@@ -1327,6 +1153,7 @@ protected function convertFieldToComponent(
 
         } catch (\Exception $e) {
             Log::error('Exception updating flow on Meta', ['flow_id' => $flow->id, 'error' => $e->getMessage()]);
+
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -1378,15 +1205,15 @@ protected function convertFieldToComponent(
             }
 
             $accessToken = is_array($credentials) ? $credentials['access_token'] : decrypt($credentials->access_token);
-            $deleteUrl   = "{$this->getApiBaseUrl()}/{$metaFlowId}";
-            $response    = Http::withToken($accessToken)->timeout(30)->delete($deleteUrl);
+            $deleteUrl = "{$this->getApiBaseUrl()}/{$metaFlowId}";
+            $response = Http::withToken($accessToken)->timeout(30)->delete($deleteUrl);
 
             if ($response->successful()) {
                 return ['success' => true, 'message' => 'Flow deleted from Meta.'];
             }
 
-            $error        = $response->json();
-            $errorCode    = $error['error']['code'] ?? null;
+            $error = $response->json();
+            $errorCode = $error['error']['code'] ?? null;
             $errorSubcode = $error['error']['error_subcode'] ?? null;
             $errorMessage = $error['error']['message'] ?? '';
 
@@ -1401,6 +1228,7 @@ protected function convertFieldToComponent(
 
                 if (! $deprecateResp->successful()) {
                     $depError = $deprecateResp->json()['error']['message'] ?? 'Unknown error';
+
                     return ['success' => false, 'message' => "Could not deprecate on Meta: {$depError}"];
                 }
 
@@ -1411,6 +1239,7 @@ protected function convertFieldToComponent(
                 }
 
                 $retryError = $retryResp->json()['error']['message'] ?? 'Unknown error';
+
                 return ['success' => false, 'message' => "Deprecated but could not delete: {$retryError}"];
             }
 
@@ -1418,6 +1247,7 @@ protected function convertFieldToComponent(
 
         } catch (\Exception $e) {
             Log::error('Exception deleting flow from Meta', ['meta_flow_id' => $metaFlowId, 'error' => $e->getMessage()]);
+
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -1428,7 +1258,7 @@ protected function convertFieldToComponent(
 
     protected function getApiBaseUrl(): string
     {
-        return self::META_API_BASE_URL . '/' . self::META_API_VERSION;
+        return self::META_API_BASE_URL.'/'.self::META_API_VERSION;
     }
 
     protected function buildFlowWebhookUrl(\App\Models\Company $company): string
@@ -1437,39 +1267,32 @@ protected function convertFieldToComponent(
 
         if (empty($token)) {
             Log::warning('buildFlowWebhookUrl: no plain_token found', ['company_id' => $company->id]);
-            return config('app.url') . '/webhook/wpbox/flows/unknown';
+
+            return config('app.url').'/webhook/wpbox/flows/unknown';
         }
 
-        return config('app.url') . '/webhook/wpbox/flows/' . $token;
+        return config('app.url').'/webhook/wpbox/flows/'.$token;
     }
 
-    protected function convertOptionsToDataSource(array $options): array
-    {
-        return array_map(fn($option) => [
-            'id'    => (string) ($option['value'] ?? $option['id'] ?? ''),
-            'title' => $option['label'] ?? '',
-        ], $options);
-    }
-
-  public function getCredentialsFromCompany($company): ?array
+    public function getCredentialsFromCompany($company): ?array
     {
         if (! $company) {
             return null;
         }
 
-        $accessToken       = $company->getConfig('whatsapp_permanent_access_token');
+        $accessToken = $company->getConfig('whatsapp_permanent_access_token');
         $businessAccountId = $company->getConfig('whatsapp_business_account_id');
-        $phoneNumberId     = $company->getConfig('whatsapp_phone_number_id');
+        $phoneNumberId = $company->getConfig('whatsapp_phone_number_id');
 
         if (! $accessToken || ! $businessAccountId) {
             return null;
         }
 
         return [
-            'access_token'       => $accessToken,
-            'business_account_id'=> $businessAccountId,
-            'waba_id'            => $businessAccountId,
-            'phone_number_id'    => $phoneNumberId,
+            'access_token' => $accessToken,
+            'business_account_id' => $businessAccountId,
+            'waba_id' => $businessAccountId,
+            'phone_number_id' => $phoneNumberId,
         ];
     }
 
@@ -1487,102 +1310,10 @@ protected function convertFieldToComponent(
             throw new \Exception('Flow must have at least one screen');
         }
 
-        foreach ($flow->flow_json['screens'] as $index => $screen) {
-            if (empty($screen['title'])) {
-                throw new \Exception("Screen at index {$index} must have a title");
-            }
+        $validation = $this->getPublishValidation($flow);
 
-            if (! empty($screen['id']) && ! preg_match('/^[A-Za-z_]+$/', $screen['id'])) {
-                throw new \Exception("Screen ID must contain only letters and underscores. Got: {$screen['id']}");
-            }
-
-            $this->validateRichTextRules($screen, $index, $flow->id);
-        }
-
-        // Validate required media / URL fields
-        foreach ($flow->flow_json['screens'] as $screenIndex => $screen) {
-            $screenTitle = $screen['title'] ?? ('Screen ' . ($screenIndex + 1));
-
-            foreach ($screen['fields'] ?? [] as $field) {
-                $fieldType = $field['type'] ?? '';
-
-                if ($fieldType === 'image' && empty(trim($field['image_url'] ?? ''))) {
-                    throw new \Exception(
-                        "\"{$screenTitle}\": Image component has no source. Enter a public image URL or base64 data URI."
-                    );
-                }
-
-                if ($fieldType === 'image_carousel') {
-                    $images = $field['images'] ?? [];
-                    if (empty($images)) {
-                        throw new \Exception("\"{$screenTitle}\": Image Carousel has no images.");
-                    }
-                    foreach ($images as $i => $img) {
-                        if (empty(trim($img['src'] ?? $img['image_url'] ?? ''))) {
-                            throw new \Exception(
-                                "\"{$screenTitle}\": Image Carousel — image #" . ($i + 1) . " has no source."
-                            );
-                        }
-                    }
-                }
-
-                if ($fieldType === 'embedded_link' && empty(trim($field['url'] ?? ''))) {
-                    throw new \Exception(
-                        "\"{$screenTitle}\": Embedded Link has an empty URL."
-                    );
-                }
-            }
-        }
-
-        // Validate options for select/radio/checkbox/chips fields
-foreach ($flow->flow_json['screens'] as $screenIndex => $screen) {
-    $screenTitle = $screen['title'] ?? ('Screen ' . ($screenIndex + 1));
-    foreach ($screen['fields'] ?? [] as $field) {
-        $type = $field['type'] ?? '';
-        if (in_array($type, ['radio', 'checkbox', 'select', 'chips'], true)) {
-            if (empty($field['options'] ?? [])) {
-                throw new \Exception(
-                    "\"{$screenTitle}\": The \"{$field['label']}\" field has no options. "
-                    . "Add at least one option before publishing."
-                );
-            }
-        }
-    }
-}
-    }
-
-    protected function validateRichTextRules(array $screen, int $screenIndex, int $flowId): void
-    {
-        $fields = $screen['fields'] ?? [];
-        if (empty($fields)) {
-            return;
-        }
-
-        $richTextCount      = 0;
-        $footerCount        = 0;
-        $otherComponentCount = 0;
-        $otherTypes         = [];
-
-        foreach ($fields as $field) {
-            $t = $field['type'] ?? 'unknown';
-            if ($t === 'richtext')       { $richTextCount++; }
-            elseif ($t === 'navigate')   { $footerCount++; }
-            else                          { $otherComponentCount++; $otherTypes[] = $t; }
-        }
-
-        if ($richTextCount === 0) {
-            return;
-        }
-
-        if ($richTextCount > 1) {
-            throw new \Exception("Screen {$screenIndex}: RichText can only appear once per screen");
-        }
-
-        if ($otherComponentCount > 0) {
-            throw new \Exception(
-                "Screen {$screenIndex}: RichText can only be paired with Footer. "
-                . 'Incompatible components: ' . implode(', ', $otherTypes)
-            );
+        if ($validation['errors'] !== []) {
+            throw new \Exception(implode(' ', $validation['errors']));
         }
     }
 }
