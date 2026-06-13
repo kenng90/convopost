@@ -1,23 +1,22 @@
 <?php
+
 namespace Modules\Wpbox\Events;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-
-
+use Modules\Wpbox\Support\ChatBroadcastChannel;
 
 class AgentReplies implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
-    
 
     public $user;
+
     public $message;
+
     public $contact;
 
     /**
@@ -25,7 +24,7 @@ class AgentReplies implements ShouldBroadcast
      *
      * @return void
      */
-    public function __construct($user,$message,$contact)
+    public function __construct($user, $message, $contact)
     {
         $this->user = $user;
         $this->message = $message;
@@ -39,7 +38,10 @@ class AgentReplies implements ShouldBroadcast
      */
     public function broadcastOn()
     {
-        return new Channel("chat.".$this->contact->id);
+        return new Channel(ChatBroadcastChannel::name(
+            (int) $this->contact->company_id,
+            (int) $this->contact->id,
+        ));
     }
 
     public function broadcastAs()

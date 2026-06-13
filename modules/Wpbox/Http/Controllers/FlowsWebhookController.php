@@ -13,9 +13,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\PersonalAccessToken;
+use Modules\Wpbox\Models\Contact;
+use Modules\Wpbox\Traits\Contacts;
 
 class FlowsWebhookController extends Controller
 {
+    use Contacts;
     use EnsuresOpenSsl;
 
     protected BookingSlotsHandler $bookingSlotsHandler;
@@ -86,12 +89,14 @@ class FlowsWebhookController extends Controller
         }
 
         Log::debug('WhatsApp Flow: looking up company', ['user_id' => $user->id]);
-        $company = Company::where('user_id', $user->id)->first();
+        $company = $this->resolveCompanyForFlowWebhook($user, $request);
         if (! $company) {
             Log::warning('WhatsApp Flow webhook: company not found for user', ['user_id' => $user->id]);
 
             return response('Company not found', 401);
         }
+
+        $this->setWebhookCompanyContext($company);
 
         Log::debug('WhatsApp Flow: company found', ['company_id' => $company->id]);
 
@@ -594,5 +599,39 @@ class FlowsWebhookController extends Controller
                 'company_id' => $company->id,
             ]);
         }
+    }
+
+    protected function resolveCompanyForFlowWebhook(User $user, Request $request): ?Company
+    {
+        $companies = Company::where('user_id', $user->id)->orderBy('id')->get();
+
+        if ($companies->isEmpty()) {
+            return null;
+        }
+
+        if ($companies->count() === 1) {
+            return $companies->first();
+        }
+
+        if ($request->has('encrypted_flow_data')) {
+            foreach ($companies as $company) {
+                $rawKey = $company->getConfig('whatsapp_flow_private_key', '');
+
+                if (empty(trim($rawKey))) {
+                    continue;
+                }
+
+                try {
+                    $privateKeyPem = $this->normalizePem($rawKey);
+                    $this->decryptPayload($request, $privateKeyPem);
+
+                    return $company;
+                } catch (\Throwable $e) {
+                    continue;
+                }
+            }
+        }
+
+        return $user->currentCompany();
     }
 }

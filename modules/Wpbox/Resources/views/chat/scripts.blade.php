@@ -74,8 +74,8 @@
             //Set active chat
             pusherActiveChat=chatID;
 
-            //Bind to new chat
-            channel = pusherConn.subscribe('chat.'+chatID);
+            //Bind to new chat (scoped by organisation)
+            channel = pusherConn.subscribe('chat.'+companyID+'.'+chatID);
             channel.bind('general', receivedMessageInPusher);
 
             
@@ -86,8 +86,19 @@
     }
 
     var receivedMessageInPusher=function(data){
-        
+        if (!chatList.activeChat || data.contact.id !== chatList.activeChat.id) {
+            return;
+        }
+
         const index = chatList.contacts.findIndex(item => item.id === data.contact.id);
+        if (index === -1) {
+            return;
+        }
+
+        if (!chatMessages[data.contact.id]) {
+            chatMessages[data.contact.id] = [];
+        }
+
         chatMessages[data.contact.id].push(data.message);
       
         //Update the last message
