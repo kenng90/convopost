@@ -1,5 +1,6 @@
 @extends('general.index', $setup)
 @section('contenttop')
+@include('contacts::contacts.partials.import-active-banner', ['activeImports' => $setup['activeImports'] ?? collect()])
 <div class="card-body">
     <div class="row">
         <div class="col-12">
@@ -155,4 +156,5 @@
 @endsection
 @section('js')
     @include('contacts::contacts.scripts')
+    @stack('js')
 @endsection
