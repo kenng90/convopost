@@ -11,16 +11,15 @@
 |
 */
 
-Route::prefix('contacts')->group(function() {
+Route::prefix('contacts')->group(function () {
     Route::get('/', 'ContactsController@index');
 });
 
-
 Route::group([
-    'middleware' =>[ 'web','impersonate','XssSanitizer','auth'],
-    'namespace' => 'Modules\Contacts\Http\Controllers'
+    'middleware' => ['web', 'impersonate', 'XssSanitizer', 'auth'],
+    'namespace' => 'Modules\Contacts\Http\Controllers',
 ], function () {
-    Route::prefix('contacts')->group(function() {
+    Route::prefix('contacts')->group(function () {
 
         //Contacts
         Route::get('contacts', 'Main@index')->name('contacts.index');
@@ -51,9 +50,12 @@ Route::group([
         Route::put('fields/{field}', 'FieldsController@update')->name('contacts.fields.update');
         Route::get('fields/del/{field}', 'FieldsController@destroy')->name('contacts.fields.delete');
 
-
         //Import
         Route::get('import', 'Main@importindex')->name('contacts.import.index');
         Route::post('import', 'Main@import')->name('contacts.import.store');
+        Route::get('import/history', 'Main@importHistory')->name('contacts.import.history');
+        Route::get('import/active', 'Main@importActive')->name('contacts.import.active');
+        Route::get('import/{contactImport}', 'Main@importShow')->name('contacts.import.show');
+        Route::get('import/{contactImport}/status', 'Main@importStatus')->name('contacts.import.status');
     });
 });
