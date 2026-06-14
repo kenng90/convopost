@@ -4,9 +4,11 @@ namespace Modules\Flowmaker\Models\Nodes;
 
 use App\Models\Company;
 use App\Services\Billing\CreditCharger;
-use Illuminate\Support\Facades\Http;
+use App\Services\MpesaService;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
+use Modules\Invoice\Models\Invoice;
+use Modules\Invoice\Models\InvoicePayment;
 
 class MpesaStkPush extends Node
 {
@@ -27,18 +29,14 @@ class MpesaStkPush extends Node
             return;
         }
 
-        // Read the result code stored by the callback controller
         $resultCode = $contact->getContactStateValue($this->flow_id, 'mpesa_result_code');
-        $settings = $this->getDataAsArray()['settings'] ?? [];
-        $responseVar = $settings['responseVar'] ?? 'mpesa_result';
 
         Log::info('MPesa STK Push: callback result', ['resultCode' => $resultCode, 'nodeId' => $this->id]);
 
-        // Clear the waiting state
         $contact->clearContactState($this->flow_id, 'current_node');
         $contact->clearContactState($this->flow_id, 'mpesa_checkout_request_id');
+        $contact->clearContactState($this->flow_id, 'mpesa_payment_id');
 
-        // Route based on result code (0 = success)
         if ($resultCode == '0' || $resultCode === 0) {
             Log::info('MPesa STK Push: payment successful, routing to success handle');
             $nextNode = $this->getNextNodeId('success');
@@ -59,7 +57,6 @@ class MpesaStkPush extends Node
         Log::info('MPesa STK Push node: process called', ['isStartNode' => $this->isStartNode, 'nodeId' => $this->id]);
 
         if ($this->isStartNode) {
-            // We are resuming after the Safaricom callback
             $this->listenForReply($message, $data);
 
             return ['success' => true];
@@ -77,13 +74,11 @@ class MpesaStkPush extends Node
         $settings = $this->getDataAsArray()['settings'] ?? [];
         $mpesaSettings = $settings['mpesa'] ?? [];
 
-        $amount = $contact->changeVariables($mpesaSettings['amount'] ?? '1', $this->flow_id);
+        $amount = (float) $contact->changeVariables($mpesaSettings['amount'] ?? '1', $this->flow_id);
         $accountReference = $contact->changeVariables($mpesaSettings['accountReference'] ?? 'Payment', $this->flow_id);
         $transactionDesc = $contact->changeVariables($mpesaSettings['transactionDesc'] ?? 'Payment', $this->flow_id);
         $responseVar = $mpesaSettings['responseVar'] ?? 'mpesa_result';
-        $phone = $this->formatMpesaPhone($contact->phone);
 
-        // Get MPesa credentials from company config
         $company = Company::find($contact->company_id);
 
         if ($company === null) {
@@ -105,101 +100,81 @@ class MpesaStkPush extends Node
             return ['success' => false, 'error' => 'insufficient_credits'];
         }
 
-        $consumerKey = $company->getConfig('mpesa_consumer_key', '');
-        $consumerSecret = $company->getConfig('mpesa_consumer_secret', '');
-        $passkey = $company->getConfig('mpesa_passkey', '');
-        $shortCode = $company->getConfig('mpesa_short_code', '');
-        $environment = $company->getConfig('mpesa_environment', 'sandbox');
+        $mpesaService = new MpesaService($company);
 
-        $baseUrl = $environment === 'production'
-            ? 'https://api.safaricom.co.ke'
-            : 'https://sandbox.safaricom.co.ke';
+        if (! $mpesaService->isConfigured()) {
+            Log::error('MPesa STK Push: M-Pesa not configured', [
+                'companyId' => $company->id,
+                'errors' => $mpesaService->getConfigErrors(),
+            ]);
+            $contact->setContactState($this->flow_id, $responseVar.'_error', 'M-Pesa is not configured');
+            $this->routeToFailed($message, $data, $contact);
+
+            return ['success' => false];
+        }
 
         Log::info('MPesa STK Push: initiating', [
-            'phone' => $phone,
+            'phone' => $contact->phone,
             'amount' => $amount,
             'accountReference' => $accountReference,
-            'environment' => $environment,
         ]);
 
         try {
-            // Step 1: Generate OAuth access token
-            $tokenResponse = Http::timeout(30)
-                ->withBasicAuth($consumerKey, $consumerSecret)
-                ->get("{$baseUrl}/oauth/v1/generate", ['grant_type' => 'client_credentials']);
+            $records = Invoice::createForFlowStkPush(
+                company: $company,
+                customerName: $contact->name ?? 'Flow Contact',
+                customerPhone: $contact->phone,
+                flowId: (int) $this->flow_id,
+                nodeId: (string) $this->id,
+                contactId: (int) $contact->id,
+                amount: $amount,
+                transactionDesc: $transactionDesc,
+                accountReference: $accountReference,
+            );
 
-            if (! $tokenResponse->successful()) {
-                Log::error('MPesa STK Push: failed to get access token', ['response' => $tokenResponse->body()]);
-                $contact->setContactState($this->flow_id, $responseVar.'_error', 'Failed to authenticate with MPesa');
-                $this->routeToFailed($message, $data, $contact);
+            /** @var InvoicePayment $payment */
+            $payment = $records['payment'];
 
-                return ['success' => false];
-            }
+            $result = $mpesaService->initiateStk(
+                phone: $contact->phone,
+                amount: $amount,
+                accountReference: $accountReference,
+                transactionDesc: $transactionDesc,
+                callbackUrl: config('app.url').'/flowmaker/mpesa/callback',
+            );
 
-            $accessToken = $tokenResponse->json('access_token');
-
-            // Step 2: Build STK Push payload
-            $timestamp = now()->format('YmdHis');
-            $password = base64_encode($shortCode.$passkey.$timestamp);
-            $callbackUrl = config('app.url').'/flowmaker/mpesa/callback';
-
-            $stkPayload = [
-                'BusinessShortCode' => $shortCode,
-                'Password' => $password,
-                'Timestamp' => $timestamp,
-                'TransactionType' => 'CustomerPayBillOnline',
-                'Amount' => (int) $amount,
-                'PartyA' => $phone,
-                'PartyB' => $shortCode,
-                'PhoneNumber' => $phone,
-                'CallBackURL' => $callbackUrl,
-                'AccountReference' => substr($accountReference, 0, 12),
-                'TransactionDesc' => substr($transactionDesc, 0, 13),
-            ];
-
-            Log::info('MPesa STK Push: sending STK push', ['payload' => $stkPayload]);
-
-            // Step 3: Send STK Push
-            $stkResponse = Http::timeout(30)
-                ->withToken($accessToken)
-                ->post("{$baseUrl}/mpesa/stkpush/v1/processrequest", $stkPayload);
-
-            $stkData = $stkResponse->json();
-            Log::info('MPesa STK Push: STK response', ['response' => $stkData]);
-
-            if (! $stkResponse->successful() || isset($stkData['errorCode'])) {
-                $error = $stkData['errorMessage'] ?? $stkData['ResultDesc'] ?? 'STK push failed';
-                Log::error('MPesa STK Push: STK request failed', ['error' => $error, 'response' => $stkData]);
-                $contact->setContactState($this->flow_id, $responseVar.'_error', $error);
-                $this->routeToFailed($message, $data, $contact);
+            if (! $result['success']) {
+                Log::error('MPesa STK Push: STK request failed', ['error' => $result['error'] ?? 'Unknown error']);
+                $payment->markAsFailed($result['error'] ?? 'STK push failed');
+                $contact->setContactState($this->flow_id, $responseVar.'_error', $result['error'] ?? 'STK push failed');
+                $this->routeToFailed($message, $data, $contact, $payment);
 
                 return ['success' => false];
             }
 
-            $checkoutRequestId = $stkData['CheckoutRequestID'] ?? null;
+            $checkoutRequestId = $result['checkout_request_id'];
 
-            if (! $checkoutRequestId) {
-                Log::error('MPesa STK Push: no CheckoutRequestID in response', ['response' => $stkData]);
-                $this->routeToFailed($message, $data, $contact);
-
-                return ['success' => false];
-            }
+            $payment->update([
+                'mpesa_checkout_request_id' => $checkoutRequestId,
+                'mpesa_merchant_request_id' => $result['merchant_request_id'] ?? '',
+                'initiated_at' => now(),
+            ]);
 
             $charger->charge($company, $creditAction, $company->id);
 
-            // Step 4: Store state to wait for callback
             $contact->setContactState($this->flow_id, 'mpesa_checkout_request_id', $checkoutRequestId);
-            $contact->setContactState($this->flow_id, 'mpesa_merchant_request_id', $stkData['MerchantRequestID'] ?? '');
+            $contact->setContactState($this->flow_id, 'mpesa_merchant_request_id', $result['merchant_request_id'] ?? '');
+            $contact->setContactState($this->flow_id, 'mpesa_payment_id', (string) $payment->id);
             $contact->setContactState($this->flow_id, $responseVar.'_status', 'pending');
             $contact->setContactState($this->flow_id, 'current_node', $this->id);
 
             Log::info('MPesa STK Push: waiting for callback', [
                 'checkoutRequestId' => $checkoutRequestId,
+                'paymentId' => $payment->id,
                 'nodeId' => $this->id,
                 'contactId' => $contact->id,
                 'flowId' => $this->flow_id,
             ]);
-
         } catch (\Exception $e) {
             Log::error('MPesa STK Push: exception', ['error' => $e->getMessage()]);
             $contact->setContactState($this->flow_id, $responseVar.'_error', $e->getMessage());
@@ -209,33 +184,22 @@ class MpesaStkPush extends Node
         return ['success' => true];
     }
 
-    /**
-     * Format the phone number to Safaricom's required format (254XXXXXXXXX)
-     */
-    private function formatMpesaPhone(string $phone): string
+    private function routeToFailed($message, $data, Contact $contact, ?InvoicePayment $payment = null): void
     {
-        // Remove any + prefix
-        $phone = ltrim($phone, '+');
-
-        // If starts with 0, replace with 254
-        if (str_starts_with($phone, '0')) {
-            $phone = '254'.substr($phone, 1);
+        if ($payment === null) {
+            $paymentId = $contact->getContactStateValue($this->flow_id, 'mpesa_payment_id');
+            if ($paymentId) {
+                $payment = InvoicePayment::find($paymentId);
+            }
         }
 
-        // If starts with 7 or 1 (local format without country code)
-        if (strlen($phone) === 9 && (str_starts_with($phone, '7') || str_starts_with($phone, '1'))) {
-            $phone = '254'.$phone;
+        if ($payment && $payment->isPending()) {
+            $payment->markAsFailed('STK push failed before callback');
         }
 
-        return $phone;
-    }
-
-    /**
-     * Route to the failed handle without waiting for callback
-     */
-    private function routeToFailed($message, $data, $contact)
-    {
         $contact->clearContactState($this->flow_id, 'current_node');
+        $contact->clearContactState($this->flow_id, 'mpesa_payment_id');
+
         $failedNode = $this->getNextNodeId('failed');
         if ($failedNode) {
             $failedNode->process($message, $data);
