@@ -14,7 +14,7 @@
     "hasSidebar":true,
     "sidebarData":[
         {
-            "name":"Reservations",
+            "name":"Bookings",
             "app":"reminders",
             "icon":"https://mobidonia-demo.imgix.net/icons/calendar2.svg",
             "brandColor":"#8966FE",
@@ -24,8 +24,8 @@
     ],
     "vendor_fields":[
         {
-            "separator":"Reminders",
-            "title":"Enable Reminders",
+            "separator":"Bookings",
+            "title":"Enable Bookings",
             "key":"ENABLE_REMINDERS", 
             "ftype":"bool",
             "icon":"📆",
@@ -34,7 +34,7 @@
     ],
     "ownermenus":[
         {       
-            "name":"Reminders",
+            "name":"Bookings",
             "priority":5,
             "id":"remindersMenu",
             "icon":"ni ni-calendar-grid-58 text-green",
@@ -43,19 +43,34 @@
             "menus":[ 
                 
                 {
-                    "name": "Reservations",
+                    "name": "All bookings",
                     "icon": "ni ni-calendar-grid-58 text-primary",
                     "route": "reminders.reservations.index"
                 },
                 {
-                    "name": "Reminders",
+                    "name": "Notification rules",
                     "icon": "ni ni-bell-55 text-primary",
                     "route": "reminders.reminders.index"
                 },
                 {
-                    "name": "Sources",
+                    "name": "Services",
                     "icon": "ni ni-collection text-primary",
                     "route": "reminders.sources.index"
+                },
+                {
+                    "name": "Departments",
+                    "icon": "ni ni-building text-primary",
+                    "route": "reminders.departments.index"
+                },
+                {
+                    "name": "Appointment team",
+                    "icon": "ni ni-single-02 text-primary",
+                    "route": "reminders.appointment-staff.index"
+                },
+                {
+                    "name": "Booking settings",
+                    "icon": "ni ni-calendar-grid-58 text-info",
+                    "route": "reminders.booking-settings.index"
                 }
             ]
         }

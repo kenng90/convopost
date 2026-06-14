@@ -35,15 +35,16 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT'),
+        'calendar_redirect' => env('GOOGLE_CALENDAR_REDIRECT'),
     ],
 
     'facebook' => [
         'client_id' => env('FACEBOOK_CLIENT_ID'),
         'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
         'redirect' => env('FACEBOOK_REDIRECT'),
-        'app_id' => env('FACEBOOK_APP_ID',''),
-        'app_secret' => env('FACEBOOK_APP_SECRET',''),
-        'config_id' => env('FACEBOOK_CONFIG_ID',''),
+        'app_id' => env('FACEBOOK_APP_ID', ''),
+        'app_secret' => env('FACEBOOK_APP_SECRET', ''),
+        'config_id' => env('FACEBOOK_CONFIG_ID', ''),
 
     ],
 

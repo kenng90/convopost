@@ -2,9 +2,9 @@
 
 namespace Modules\Reminders\Http\Controllers;
 
-use Modules\Reminders\Models\Remineder;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Modules\Reminders\Models\Remineder;
 
 class RemindersController extends Controller
 {
@@ -38,21 +38,22 @@ class RemindersController extends Controller
      */
     private $titlePlural = 'reminders';
 
-    private function getFields($class='col-md-4')
+    private function getFields($class = 'col-md-4')
     {
-        $fields=[];
-        
+        $fields = [];
+
         //Add name field
-        $fields[0]=['class'=>$class, 'ftype'=>'input', 'name'=>'Name', 'id'=>'name', 'placeholder'=>'Enter name', 'required'=>true];
+        $fields[0] = ['class' => $class, 'ftype' => 'input', 'name' => 'Name', 'id' => 'name', 'placeholder' => 'Enter name', 'required' => true];
 
         //Return fields
         return $fields;
     }
 
+    private function getFilterFields()
+    {
+        $fields = $this->getFields('col-md-3');
+        $fields[0]['required'] = true;
 
-    private function getFilterFields(){
-        $fields=$this->getFields('col-md-3');
-        $fields[0]['required']=true;
         return $fields;
     }
 
@@ -73,27 +74,34 @@ class RemindersController extends Controller
     {
         $this->authChecker();
 
-        $items=$this->provider::orderBy('id', 'desc');
-        if(isset($_GET['name'])&&strlen($_GET['name'])>1){
-            $items=$items->where('name',  'like', '%'.$_GET['name'].'%');
+        $items = $this->provider::query()
+            ->with('source')
+            ->orderBy('id', 'desc');
+
+        if (isset($_GET['name']) && strlen($_GET['name']) > 1) {
+            $items = $items->where('name', 'like', '%'.$_GET['name'].'%');
         }
-        $items=$items->paginate(config('settings.paginate'));
+
+        $items = $items->paginate(config('settings.paginate'));
 
         return view($this->view_path.'index', ['setup' => [
-            'usefilter'=>true,
-            'title'=>__('crud.item_managment', ['item'=>__($this->titlePlural)]),
-            'action_link'=>route('campaigns.create').'?type=reminder',
-            'action_name'=>__('crud.add_new_item', ['item'=>__($this->title)]),
-            'items'=>$items,
-            'item_names'=>$this->titlePlural,
-            'webroute_path'=>$this->webroute_path,
-            'fields'=>$this->getFields(),
-            'filterFields'=>$this->getFilterFields(),
-            'custom_table'=>true,
-            'parameter_name'=>$this->parameter_name,
-            'parameters'=>count($_GET) != 0,
+            'usefilter' => true,
+            'title' => __('Client notification rules'),
+            'subtitle' => __('Most rules are configured on each service under Client notifications. This list shows what will run when appointments are booked.'),
+            'action_link' => route('reminders.sources.index'),
+            'action_name' => __('Configure on services'),
+            'action_link2' => route('campaigns.create', ['type' => 'group']).'?type=reminder',
+            'action_name2' => __('Advanced manual rule'),
+            'items' => $items,
+            'item_names' => __('notification rules'),
+            'webroute_path' => $this->webroute_path,
+            'fields' => $this->getFields(),
+            'filterFields' => $this->getFilterFields(),
+            'custom_table' => true,
+            'parameter_name' => $this->parameter_name,
+            'parameters' => count($_GET) != 0,
             'breadcrumbs' => [
-                [__('crud.item_managment', ['item'=>__($this->titlePlural)]), '#'],
+                [__('Client notification rules'), '#'],
             ],
         ]]);
     }
@@ -107,40 +115,28 @@ class RemindersController extends Controller
     {
         $this->authChecker();
 
-
-        return view('general.form', ['setup' => [
-            'title'=>__('crud.new_item', ['item'=>__($this->title)]),
-            'action_link'=>route($this->webroute_path.'index'),
-            'action_name'=>__('crud.back'),
-            'iscontent'=>true,
-            'action'=>route($this->webroute_path.'store'),
-            'breadcrumbs' => [
-                [__('Reminders'), route('reminders.reminders.index')]
-            ],
-        ],
-        'fields'=>$this->getFields() ]);
+        return redirect()
+            ->route('reminders.sources.index')
+            ->withStatus(__('Configure client notifications on each service. Use “Advanced manual rule” from the notification rules list only for custom rules not tied to a service.'));
     }
 
     /**
      * Store a newly created rereminder in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
     {
         $this->authChecker();
-        
+
         //Create new contact
         $contact = $this->provider::create([
             'name' => $request->name,
         ]);
         $contact->save();
 
-        return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_added', ['item'=>__($this->title)]));
+        return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_added', ['item' => __($this->title)]));
     }
-
-    
 
     /**
      * Show the form for editing the specified rereminder.
@@ -152,6 +148,12 @@ class RemindersController extends Controller
     {
         $this->authChecker();
 
+        if ($reminder->isServiceManaged() && $reminder->source_id) {
+            return redirect()
+                ->route('reminders.sources.edit', ['source' => $reminder->source_id])
+                ->withStatus(__('This rule is managed by the service. Update it under Client notifications on the service form.'));
+        }
+
         $fields = $this->getFields();
         $fields[0]['value'] = $reminder->name;
 
@@ -159,20 +161,19 @@ class RemindersController extends Controller
         $parameter[$this->parameter_name] = $reminder->id;
 
         return view($this->view_path.'edit', ['setup' => [
-            'title'=>__('crud.edit_item_name', ['item'=>__($this->title), 'name'=>$reminder->name]),
-            'action_link'=>route($this->webroute_path.'index'),
-            'action_name'=>__('crud.back'),
-            'iscontent'=>true,
-            'isupdate'=>true,
-            'action'=>route($this->webroute_path.'update', $parameter),
+            'title' => __('crud.edit_item_name', ['item' => __($this->title), 'name' => $reminder->name]),
+            'action_link' => route($this->webroute_path.'index'),
+            'action_name' => __('crud.back'),
+            'iscontent' => true,
+            'isupdate' => true,
+            'action' => route($this->webroute_path.'update', $parameter),
         ],
-        'fields'=>$fields, ]);
+            'fields' => $fields, ]);
     }
 
     /**
      * Update the specified rereminder in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  \App\Contact  $reminders
      * @return \Illuminate\Http\Response
      */
@@ -183,7 +184,7 @@ class RemindersController extends Controller
         $item->name = $request->name;
         $item->update();
 
-        return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_updated', ['item'=>__($this->title)]));
+        return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_updated', ['item' => __($this->title)]));
     }
 
     /**
@@ -196,8 +197,15 @@ class RemindersController extends Controller
     {
         $this->authChecker();
         $item = $this->provider::findOrFail($id);
+
+        if ($item->isServiceManaged() && $item->source_id) {
+            return redirect()
+                ->route('reminders.sources.edit', ['source' => $item->source_id])
+                ->withStatus(__('This rule is managed by the service. Clear the notification fields on the service form to remove it.'));
+        }
+
         $item->delete();
-        return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_removed', ['item'=>__($this->title)]));
+
+        return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_removed', ['item' => __($this->title)]));
     }
-    
 }

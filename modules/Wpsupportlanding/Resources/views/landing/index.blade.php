@@ -256,6 +256,7 @@ tailwind.config = {
       <a href="#api" class="text-sm text-gray-400 hover:text-white transition-colors">API</a>
       <a href="#pricing" class="text-sm text-gray-400 hover:text-white transition-colors">Pricing</a>
       <a href="#faq" class="text-sm text-gray-400 hover:text-white transition-colors">FAQ</a>
+      <a href="#book" class="text-sm text-gray-400 hover:text-white transition-colors">Book Demo</a>
       @if(isset($hasBlog) && $hasBlog)
       <a href="/blog" class="text-sm text-gray-400 hover:text-white transition-colors">Blog</a>
       @endif
@@ -283,6 +284,7 @@ tailwind.config = {
     <a href="#api" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">API</a>
     <a href="#pricing" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Pricing</a>
     <a href="#faq" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">FAQ</a>
+    
     @if(isset($hasBlog) && $hasBlog)
     <a href="/blog" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Blog</a>
     @endif
@@ -1349,6 +1351,87 @@ tailwind.config = {
     <p class="text-sm text-gray-600">No credit card required · Cancel anytime · Setup in under 10 minutes</p>
   </div>
 </section>
+<!-- ===== BOOKING SECTION ===== -->
+<!-- ===== BOOKING SECTION ===== -->
+<section id="book" class="py-24 border-t border-white/5">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <div class="text-center mb-12">
+        <div class="badge inline-flex mb-4">Book a Demo</div>
+        <h2 class="font-display text-4xl sm:text-5xl font-800 mb-3">Schedule a consultation</h2>
+        <p class="text-gray-400">Pick a time — we'll walk you through ConvoConnect live.</p>
+      </div>
+
+      <div class="rounded-2xl overflow-hidden" style="border:1px solid rgba(37,211,102,0.15);">
+
+        {{-- Header --}}
+        <div class="flex items-center justify-between px-5 py-3.5" style="background:rgba(7,94,84,0.15);border-bottom:1px solid rgba(37,211,102,0.12);">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2 h-2 rounded-full pulse-ring relative" style="background:#25D366;"></span>
+            <span class="text-sm font-semibold text-gray-200">ConvoConnect — Live Consultation</span>
+          </div>
+          <span class="badge">Free · 30 min</span>
+        </div>
+
+        {{-- iframe + loader --}}
+        <div class="relative" style="height:660px;">
+
+          {{-- Loader overlay --}}
+          <div id="bookingLoader" class="absolute inset-0 flex flex-col items-center justify-center gap-5 z-10" style="background:#040f0c; transition:opacity 0.5s ease;">
+            <div class="w-14 h-14 rounded-2xl flex items-center justify-center" style="background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.2);">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="#25D366">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.105.547 4.085 1.505 5.805L0 24l6.388-1.493A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.815 9.815 0 01-5.003-1.368l-.359-.214-3.72.869.936-3.624-.236-.373A9.818 9.818 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/>
+              </svg>
+            </div>
+            <div class="text-center">
+              <p class="font-semibold text-white text-base mb-1">Loading your booking page</p>
+              <p class="text-sm text-gray-500">Setting up your consultation calendar</p>
+            </div>
+            <div class="w-48 rounded-full overflow-hidden" style="height:2px;background:rgba(37,211,102,0.1);">
+              <div id="loaderBar" style="height:100%;width:0%;background:linear-gradient(90deg,#25D366,#128C7E);transition:width 0.4s ease;border-radius:999px;"></div>
+            </div>
+            <div class="space-y-2.5 w-52">
+              <div id="lStep1" class="flex items-center gap-2.5" style="opacity:0;transform:translateY(4px);transition:all 0.3s ease;">
+                <div class="step-circle w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0" style="border-color:rgba(37,211,102,0.3);">
+                  <svg class="check-icon w-2.5 h-2.5" style="display:none;" fill="none" stroke="#25D366" stroke-width="2.5" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+                </div>
+                <span class="step-text text-xs text-gray-500">Connecting to calendar</span>
+              </div>
+              <div id="lStep2" class="flex items-center gap-2.5" style="opacity:0;transform:translateY(4px);transition:all 0.3s ease;">
+                <div class="step-circle w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0" style="border-color:rgba(37,211,102,0.3);">
+                  <svg class="check-icon w-2.5 h-2.5" style="display:none;" fill="none" stroke="#25D366" stroke-width="2.5" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+                </div>
+                <span class="step-text text-xs text-gray-500">Fetching available slots</span>
+              </div>
+              <div id="lStep3" class="flex items-center gap-2.5" style="opacity:0;transform:translateY(4px);transition:all 0.3s ease;">
+                <div class="step-circle w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0" style="border-color:rgba(37,211,102,0.3);">
+                  <svg class="check-icon w-2.5 h-2.5" style="display:none;" fill="none" stroke="#25D366" stroke-width="2.5" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+                </div>
+                <span class="step-text text-xs text-gray-500">Ready to book</span>
+              </div>
+            </div>
+          </div>
+
+          {{-- Iframe --}}
+          <iframe
+            id="bookingIframe"
+            src="https://glady-volcanologic-resourcefully.ngrok-free.dev/book/254759608209/Consultation?token==MFlujqPkkzOFoxUrUWK7DhpaLVTNHmJZWx6UvrArea0c6b48"
+            width="100%"
+            height="100%"
+            frameborder="0"
+            title="Book a ConvoConnect consultation"
+            style="display:block;background:#040f0c;"
+          ></iframe>
+        </div>
+
+        {{-- Footer --}}
+        <div class="flex items-center justify-between px-5 py-2.5" style="background:rgba(7,94,84,0.08);border-top:1px solid rgba(37,211,102,0.08);">
+          <span class="text-xs text-gray-600">Powered by ConvoConnect</span>
+          <span class="text-xs text-gray-600">🔒 Secure &amp; encrypted</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
 
 <!-- ===== FOOTER ===== -->
 <footer class="border-t border-white/[0.05] py-16" style="background:#020907;">
@@ -1408,6 +1491,50 @@ tailwind.config = {
     </div>
   </div>
 </footer>
-<script src="https://glady-volcanologic-resourcefully.ngrok-free.dev/popup/whatsapp?id=0OPfclU79P"></script><div id="embed-whatsapp-chat"></div>                                
+<script src="https://glady-volcanologic-resourcefully.ngrok-free.dev/popup/whatsapp?id=0OPfclU79P"></script>
+<div id="embed-whatsapp-chat"></div>
+
+{{-- Booking loader script --}}
+<script>
+(function () {
+  const steps = [
+    { id: 'lStep1', barW: '40%', delay: 300 },
+    { id: 'lStep2', barW: '75%', delay: 900 },
+    { id: 'lStep3', barW: '95%', delay: 1600 },
+  ];
+
+  steps.forEach(({ id, barW, delay }) => {
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+      setTimeout(() => {
+        el.querySelector('.step-circle').style.background = 'rgba(37,211,102,0.15)';
+        el.querySelector('.step-circle').style.borderColor = '#25D366';
+        el.querySelector('.check-icon').style.display = 'block';
+        el.querySelector('.step-text').style.color = '#a7f3d0';
+        document.getElementById('loaderBar').style.width = barW;
+      }, 400);
+    }, delay);
+  });
+
+  const iframe = document.getElementById('bookingIframe');
+  const loader = document.getElementById('bookingLoader');
+
+  iframe.addEventListener('load', () => {
+    document.getElementById('loaderBar').style.width = '100%';
+    setTimeout(() => {
+      loader.style.opacity = '0';
+      loader.style.pointerEvents = 'none';
+    }, 600);
+  });
+
+  setTimeout(() => {
+    loader.style.opacity = '0';
+    loader.style.pointerEvents = 'none';
+  }, 8000);
+})();
+</script>
 </body>
 </html>

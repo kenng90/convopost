@@ -125,6 +125,44 @@ class WhatsappMetaFlowServiceTest extends TestCase
         $this->assertNotNull($navigationListError);
     }
 
+    public function test_booking_flow_dynamic_slot_select_passes_validation_without_static_options(): void
+    {
+        $flow = $this->makeFlow([
+            [
+                'id' => 'BOOKING',
+                'title' => 'Book appointment',
+                'endpoint_template' => 'booking_slots',
+                'terminal' => true,
+                'dynamic_data' => [
+                    ['key' => 'available_slots', 'type' => 'option_list', 'example_items' => []],
+                    ['key' => 'is_dropdown_visible', 'type' => 'boolean', 'example' => false],
+                ],
+                'fields' => [
+                    [
+                        'id' => 1,
+                        'type' => 'date',
+                        'label' => 'Select date',
+                        'on_select_action' => 'data_exchange',
+                        'on_select_payload' => ['component_action' => 'update_date'],
+                    ],
+                    [
+                        'id' => 2,
+                        'type' => 'select',
+                        'label' => 'Pick a time slot',
+                        'dynamic_data_source' => true,
+                        'data_source_key' => 'available_slots',
+                        'options' => [],
+                    ],
+                    ['id' => 3, 'type' => 'footer', 'label' => 'Confirm booking'],
+                ],
+            ],
+        ]);
+
+        $result = $this->service->getPublishValidation($flow);
+
+        $this->assertSame([], $result['errors']);
+    }
+
     public function test_dynamic_data_entries_are_merged_into_screen_data(): void
     {
         $flow = $this->makeFlow([
