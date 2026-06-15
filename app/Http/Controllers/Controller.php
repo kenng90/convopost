@@ -99,9 +99,13 @@ class Controller extends BaseController
 
     public function ownerAndStaffOnly()
     {
-        if (! auth()->user()->hasRole(['owner', 'staff'])) {
-            abort(403, 'Unauthorized action.');
+        $user = auth()->user();
+
+        if ($user->hasRole('owner') || $user->hasRole('staff') || $user->isOrganizationManager()) {
+            return;
         }
+
+        abort(403, 'Unauthorized action.');
     }
 
     public function adminOnly()

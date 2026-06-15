@@ -11,24 +11,17 @@
 |
 */
 
-
 Route::group([
-    'middleware' =>[ 'web','impersonate'],
-    'namespace' => 'Modules\Agents\Http\Controllers'
+    'middleware' => ['web', 'auth', 'impersonate', 'org.route'],
+    'namespace' => 'Modules\Agents\Http\Controllers',
 ], function () {
-    Route::prefix('agent')->group(function() {
-
-   
-            Route::get('/list', 'Main@index')->name('agent.index');
-            Route::get('/{agent}/edit', 'Main@edit')->name('agent.edit');
-            Route::get('/create', 'Main@create')->name('agent.create');
-            Route::post('/', 'Main@store')->name('agent.store');
-            Route::put('/{agent}', 'Main@update')->name('agent.update');
-            Route::get('/del/{agent}', 'Main@destroy')->name('agent.delete');
-            Route::get('/loginas/{agent}', 'Main@loginas')->name('agent.loginas');
-            
-        
-
-
+    Route::prefix('agent')->group(function () {
+        Route::get('/list', 'Main@index')->name('agent.index');
+        Route::get('/create', 'Main@create')->name('agent.create');
+        Route::post('/', 'Main@store')->name('agent.store');
+        Route::get('/loginas/{agent}', 'Main@loginas')->name('agent.loginas');
+        Route::get('/del/{agent}', 'Main@destroy')->name('agent.delete');
+        Route::get('/{agent}/edit', 'Main@edit')->name('agent.edit');
+        Route::put('/{agent}', 'Main@update')->name('agent.update');
     });
 });

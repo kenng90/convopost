@@ -198,7 +198,9 @@ class CompaniesController extends Controller
 
     private function verifyAccess($company)
     {
-        return auth()->user()->id == $company->user_id || auth()->user()->hasRole('admin');
+        return auth()->user()->id == $company->user_id
+            || auth()->user()->hasRole('admin')
+            || app(\App\Services\OrgAuthorization::class)->canAccessCompany(auth()->user(), $company);
     }
 
     /**
@@ -385,12 +387,7 @@ class CompaniesController extends Controller
 
     public function stopImpersonate(): RedirectResponse
     {
-
-        Auth::user()->stopImpersonating();
-
-        Session::forget('company_id');
-        Session::forget('company_currency');
-        Session::forget('company_convertion');
+        app(\App\Services\ImpersonationService::class)->stop();
 
         return redirect()->route('home');
     }
@@ -402,13 +399,7 @@ class CompaniesController extends Controller
             return redirect()->back()->withStatus('Not allowed in demo');
         }
         if ($this->verifyAccess($company)) {
-            //Login as owner
-            Session::put('impersonate', $company->user->id);
-
-            //Set the company
-            session(['company_id' => $company->id]);
-            session(['company_currency' => $company->currency]);
-            session(['company_convertion' => $company->do_covertion]);
+            app(\App\Services\ImpersonationService::class)->start($company->user);
 
             return redirect()->route('home');
         } else {

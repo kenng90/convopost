@@ -256,7 +256,7 @@ tailwind.config = {
       <a href="#api" class="text-sm text-gray-400 hover:text-white transition-colors">API</a>
       <a href="#pricing" class="text-sm text-gray-400 hover:text-white transition-colors">Pricing</a>
       <a href="#faq" class="text-sm text-gray-400 hover:text-white transition-colors">FAQ</a>
-      <a href="#book" class="text-sm text-gray-400 hover:text-white transition-colors">Book Demo</a>
+      <!-- <a href="#book" class="text-sm text-gray-400 hover:text-white transition-colors">Book Demo</a> -->
       @if(isset($hasBlog) && $hasBlog)
       <a href="/blog" class="text-sm text-gray-400 hover:text-white transition-colors">Blog</a>
       @endif
@@ -1353,7 +1353,7 @@ tailwind.config = {
 </section>
 <!-- ===== BOOKING SECTION ===== -->
 <!-- ===== BOOKING SECTION ===== -->
-<section id="book" class="py-24 border-t border-white/5">
+<!-- <section id="book" class="py-24 border-t border-white/5">
     <div class="max-w-4xl mx-auto px-4 sm:px-6">
       <div class="text-center mb-12">
         <div class="badge inline-flex mb-4">Book a Demo</div>
@@ -1432,7 +1432,7 @@ tailwind.config = {
     </div>
   </section>
 
-
+ -->
 <!-- ===== FOOTER ===== -->
 <footer class="border-t border-white/[0.05] py-16" style="background:#020907;">
   <div class="max-w-7xl mx-auto px-4 sm:px-6">

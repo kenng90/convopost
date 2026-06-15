@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Akaunting\Module\Facade as Module;
+use App\Services\OrgAuthorization;
 use App\Traits\HasConfig;
 use App\Traits\HasCredit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -61,15 +62,44 @@ class User extends Authenticatable
     {
         if ($this->hasRole('owner')) {
             return $this->hasOne(Company::class);
-        } else {
-            //staff
-            return $this->hasOne(Company::class, 'id', 'company_id');
         }
+
+        return $this->hasOne(Company::class, 'id', 'company_id');
+    }
+
+    public function memberships()
+    {
+        return $this->hasMany(CompanyMembership::class);
+    }
+
+    public function activeMemberships()
+    {
+        return $this->memberships()->where('status', CompanyMembership::STATUS_ACTIVE);
+    }
+
+    public function currentMembership(): ?CompanyMembership
+    {
+        return app(OrgAuthorization::class)->currentMembership($this);
+    }
+
+    public function isOrganizationManager(): bool
+    {
+        return app(OrgAuthorization::class)->isOrganizationManager($this);
+    }
+
+    public function isOrganizationAgent(): bool
+    {
+        return app(OrgAuthorization::class)->isOrganizationAgent($this);
+    }
+
+    public function isOrgMember(): bool
+    {
+        return $this->isOrganizationManager() || $this->isOrganizationAgent();
     }
 
     public function currentCompany()
     {
-        if (! $this->hasRole('owner') && ! $this->hasRole('staff')) {
+        if ($this->hasRole('admin') && ! session()->has('impersonate')) {
             return null;
         }
 
@@ -106,7 +136,35 @@ class User extends Authenticatable
             return $company;
         }
 
-        return Company::findOrFail($this->company_id);
+        if ($this->hasRole('org_manager') || $this->hasRole('staff')) {
+            $companyId = session('company_id', $this->company_id);
+
+            if ($companyId !== null) {
+                $membership = CompanyMembership::query()
+                    ->where('user_id', $this->id)
+                    ->where('company_id', $companyId)
+                    ->where('status', CompanyMembership::STATUS_ACTIVE)
+                    ->first();
+
+                if ($membership !== null) {
+                    return Company::findOrFail($companyId);
+                }
+            }
+
+            $membership = $this->activeMemberships()->with('company')->first();
+
+            if ($membership !== null) {
+                session(['company_id' => $membership->company_id]);
+
+                return $membership->company;
+            }
+        }
+
+        if ($this->company_id !== null) {
+            return Company::findOrFail($this->company_id);
+        }
+
+        return null;
     }
 
     public function activeCompanyId(): ?int
@@ -125,7 +183,7 @@ class User extends Authenticatable
                 ->exists();
         }
 
-        return (int) $this->company_id === (int) $companyId;
+        return app(OrgAuthorization::class)->canAccessCompany($this, $companyId);
     }
 
     public function getCurrentCompany()
@@ -220,7 +278,9 @@ class User extends Authenticatable
             }
         } elseif ($this->hasRole('owner')) {
             $menus = $this->collectOwnerModuleMenus();
-        } elseif ($this->hasRole('staff')) {
+        } elseif ($this->isOrganizationManager()) {
+            $menus = $this->collectManagerModuleMenus();
+        } elseif ($this->hasRole('staff') || $this->isOrganizationAgent()) {
             foreach (Module::all() as $key => $module) {
                 if (($module->get('alias') ?? '') === 'reports') {
                     continue;
@@ -261,8 +321,8 @@ class User extends Authenticatable
     public function collectOwnerModuleMenus(): array
     {
         $menus = [];
-        $allowedPluginsPerPlan = $this->company
-            ? $this->company->getPlanAttribute()['allowedPluginsPerPlan']
+        $allowedPluginsPerPlan = $this->currentCompany()
+            ? $this->currentCompany()->getPlanAttribute()['allowedPluginsPerPlan']
             : null;
 
         foreach (Module::all() as $module) {
@@ -298,19 +358,62 @@ class User extends Authenticatable
         return app(\App\Services\OwnerNavigationBuilder::class)->build($this);
     }
 
+    /**
+     * Manager sidebar navigation grouped by job.
+     *
+     * @return array<int, array{label: string, menus: array<int, array<string, mixed>>}>
+     */
+    public function getManagerNavigationSections(): array
+    {
+        return app(\App\Services\ManagerNavigationBuilder::class)->build($this);
+    }
+
+    /**
+     * Flat manager menus before grouping.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function collectManagerModuleMenus(): array
+    {
+        $orgAuth = app(OrgAuthorization::class);
+
+        return array_values(array_filter(
+            $this->collectOwnerModuleMenus(),
+            function (array $menu) use ($orgAuth) {
+                $routeName = $menu['route'] ?? null;
+
+                if ($routeName === null) {
+                    return ! empty($menu['menus']);
+                }
+
+                if ($orgAuth->isProtectedRoute($routeName)) {
+                    return false;
+                }
+
+                $moduleAlias = $orgAuth->resolveModuleForRoute($routeName);
+
+                return $moduleAlias !== null && $orgAuth->canAccessModule($this, $moduleAlias);
+            }
+        ));
+    }
+
     public function setImpersonating($id)
     {
         Session::put('impersonate', $id);
+
+        if (auth()->check()) {
+            Session::put('impersonator_id', auth()->id());
+        }
     }
 
     public function stopImpersonating()
     {
-        Session::forget('impersonate');
+        app(\App\Services\ImpersonationService::class)->stop();
     }
 
     public function isImpersonating()
     {
-        return Session::has('impersonate');
+        return app(\App\Services\ImpersonationService::class)->isActive();
     }
 
     public function companies()
@@ -324,17 +427,20 @@ class User extends Authenticatable
     public function accessibleCompanies()
     {
         if ($this->hasRole('owner')) {
-            // Owners can access their own companies
             return Company::where('user_id', $this->id)->get();
-        } elseif ($this->hasRole('staff')) {
-            // Staff can only access the company they're assigned to
-            return Company::where('id', $this->company_id)->get();
-        } elseif ($this->hasRole('admin')) {
-            // Admins can access all companies
+        }
+
+        if ($this->hasRole('admin')) {
             return Company::all();
         }
 
-        return collect();
+        $companyIds = $this->activeMemberships()->pluck('company_id');
+
+        if ($companyIds->isEmpty() && $this->company_id !== null) {
+            return Company::where('id', $this->company_id)->get();
+        }
+
+        return Company::query()->whereIn('id', $companyIds)->get();
     }
 
     public function routeNotificationForExpo()

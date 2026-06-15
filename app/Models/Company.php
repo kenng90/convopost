@@ -152,6 +152,12 @@ class Company extends MyModel
         return $this->getImage($this->cover, config('global.company_details_cover_image'), '_cover.jpg');
     }
 
+    public function managers()
+    {
+        return $this->hasMany(CompanyMembership::class, 'company_id', 'id')
+            ->where('role', CompanyMembership::ROLE_MANAGER);
+    }
+
     public function staff(): HasMany
     {
         return $this->hasMany(\App\Models\User::class, 'company_id', 'id')->role('staff');

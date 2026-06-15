@@ -20,7 +20,9 @@ class PlanUsageLimit
             return Plans::find($user->mplanid());
         }
 
-        $owner = $user->company?->user;
+        $company = $user->currentCompany() ?? $user->company;
+
+        $owner = $company?->user;
 
         return $owner ? Plans::find($owner->mplanid()) : null;
     }

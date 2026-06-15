@@ -31,9 +31,17 @@ class EnsurePlanPlugin
         $company = $user->currentCompany();
 
         if (! $company || ! $company->hasPlanPlugin($plugin)) {
+            if ($user->isOrganizationManager()) {
+                abort(403, __('This feature is not included in your plan or access level.'));
+            }
+
             return redirect()
                 ->route('plans.current')
                 ->withError(__('This feature is not included in your plan.'));
+        }
+
+        if ($user->isOrganizationManager() && ! app(\App\Services\OrgAuthorization::class)->canAccessModule($user, $plugin)) {
+            abort(403, __('You do not have access to this module.'));
         }
 
         return $next($request);

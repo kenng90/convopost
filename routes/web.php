@@ -73,7 +73,7 @@ Route::middleware('web')->group(function () {
 
 });
 
-Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(function () {
+Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject', 'org.route'])->group(function () {
     Route::get('/dashboard/{lang?}', [App\Http\Controllers\DashboardController::class, 'dashboard'])->name('dashboard');
     Route::get('/home/{lang?}', [App\Http\Controllers\DashboardController::class, 'dashboard'])->name('home');
 

@@ -2,7 +2,7 @@
 
 return [
 
-  /*
+    /*
     |--------------------------------------------------------------------------
     | Job-based owner sidebar navigation
     |--------------------------------------------------------------------------
@@ -61,6 +61,7 @@ return [
     'routes' => [
         'chat.index' => 'inbox',
         'whatsappcall.calls.index' => 'inbox',
+        'orgmanager.index' => 'setup',
 
         'campaigns.index' => 'outbound',
 

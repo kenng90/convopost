@@ -11,6 +11,7 @@
     "aliases": {},
     "files": [],
     "requires": [],
+    "ownermenus": [],
     "vendor_fields":[{
         "separator":"Agents",
         "icon":"👥",
