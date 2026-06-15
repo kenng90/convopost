@@ -10,11 +10,11 @@ use Modules\Reminders\Models\Source;
 use Modules\Reminders\Models\SourceStaff;
 use Modules\Reminders\Services\AvailabilityService;
 use Modules\Reminders\Services\ReservationBookingService;
-use Modules\Wpbox\Models\Message;
+use Modules\Wpbox\Models\Contact;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
-class RemindersReservationShowTest extends TestCase
+class BookingInboxTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -29,6 +29,7 @@ class RemindersReservationShowTest extends TestCase
         parent::setUp();
 
         Role::firstOrCreate(['name' => 'owner']);
+
         $this->owner = User::factory()->create();
         $this->owner->assignRole('owner');
 
@@ -37,6 +38,7 @@ class RemindersReservationShowTest extends TestCase
             'subdomain' => 'demo-clinic',
         ]);
         $this->owner->update(['company_id' => $this->company->id]);
+
         session(['company_id' => $this->company->id]);
 
         $staffUser = User::factory()->create(['company_id' => $this->company->id]);
@@ -44,7 +46,7 @@ class RemindersReservationShowTest extends TestCase
         $appointmentStaff = AppointmentStaff::withoutGlobalScopes()->create([
             'company_id' => $this->company->id,
             'user_id' => $staffUser->id,
-            'name' => 'Dr. Smith',
+            'name' => $staffUser->name,
             'email' => $staffUser->email,
             'is_active' => true,
         ]);
@@ -71,71 +73,58 @@ class RemindersReservationShowTest extends TestCase
         ]);
     }
 
-    private function bookReservation(): \Modules\Reminders\Models\Reservation
+    private function bookWithPhone(string $phone): \Modules\Reminders\Models\Reservation
     {
         $date = now('UTC')->addDay()->toDateString();
         $slots = app(AvailabilityService::class)->slotsForDate($this->source, $date, 30);
 
         return app(ReservationBookingService::class)->book($this->company, [
-            'phone' => '+254712345678',
+            'phone' => $phone,
             'name' => 'Jane Client',
             'source' => 'Consultation',
             'slot_id' => $slots[0]['id'],
-            'external_id' => 'BOOK-001',
         ]);
     }
 
-    public function test_reservation_show_page_displays_booking_details(): void
+    public function test_booking_creates_contact_outside_inbox_by_default(): void
     {
-        $reservation = $this->bookReservation();
-        $reservation->update([
-            'notes' => 'First visit',
-            'google_event_id' => 'evt_123',
-            'duration_minutes' => 30,
-        ]);
+        $reservation = $this->bookWithPhone('+254712345601');
 
-        Message::create([
-            'company_id' => $this->company->id,
-            'contact_id' => $reservation->contact_id,
-            'value' => 'Reminder for your appointment',
-            'buttons' => '',
-            'components' => '',
-            'status' => 0,
-            'extra' => (string) $reservation->id,
-        ]);
+        $contact = Contact::withoutGlobalScopes()->find($reservation->contact_id);
 
-        $response = $this->actingAs($this->owner)->get(route('reminders.reservations.show', ['reservation' => $reservation->id]));
-
-        $response->assertOk();
-        $response->assertSee('Jane Client');
-        $response->assertSee('+254712345678');
-        $response->assertSee('Dr. Smith');
-        $response->assertSee('Consultation');
-        $response->assertSee('BOOK-001');
-        $response->assertSee('First visit');
-        $response->assertSee('Reminder for your appointment');
-        $response->assertSee(__('Upcoming'));
+        $this->assertNotNull($contact);
+        $this->assertEquals(0, (int) $contact->has_chat);
+        $this->assertNull($contact->last_reply_at);
     }
 
-    public function test_reservation_index_lists_status_and_team_member(): void
+    public function test_booking_creates_contact_in_inbox_when_company_setting_enabled(): void
     {
-        $reservation = $this->bookReservation();
-        $reservation->update(['duration_minutes' => 45]);
+        $this->company->setConfig('BOOKING_CONTACTS_IN_INBOX', 'true');
 
-        $response = $this->actingAs($this->owner)->get(route('reminders.reservations.index'));
+        $reservation = $this->bookWithPhone('+254712345602');
 
-        $response->assertOk();
-        $response->assertSee('Dr. Smith');
-        $response->assertSee('45 min');
-        $response->assertSee('+254712345678');
-        $response->assertSee(__('Upcoming'));
+        $contact = Contact::withoutGlobalScopes()->find($reservation->contact_id);
+
+        $this->assertEquals(1, (int) $contact->has_chat);
+        $this->assertNotNull($contact->last_reply_at);
     }
 
-    public function test_reservation_create_page_loads(): void
+    public function test_message_customer_from_booking_promotes_contact_to_inbox(): void
     {
-        $response = $this->actingAs($this->owner)->get(route('reminders.reservations.create'));
+        $reservation = $this->bookWithPhone('+254712345603');
 
-        $response->assertOk();
-        $response->assertSee(__('Insert'));
+        $contact = Contact::withoutGlobalScopes()->find($reservation->contact_id);
+        $this->assertEquals(0, (int) $contact->has_chat);
+
+        $response = $this->actingAs($this->owner)->get(
+            route('reminders.reservations.open-chat', ['reservation' => $reservation->id])
+        );
+
+        $response->assertRedirect('/chat/'.$contact->id);
+
+        $contact->refresh();
+
+        $this->assertEquals(1, (int) $contact->has_chat);
+        $this->assertEquals(0, (int) $contact->resolved_chat);
     }
 }

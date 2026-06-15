@@ -82,8 +82,8 @@
 
                 <div class="mt-4">
                     @if ($reservation->contact_id)
-                        <a href="{{ url('/chat/'.$reservation->contact_id) }}" class="btn btn-sm btn-primary mr-2 mb-2">
-                            <i class="ni ni-chat-round"></i> {{ __('Open chat') }}
+                        <a href="{{ route('reminders.reservations.open-chat', ['reservation' => $reservation->id]) }}" class="btn btn-sm btn-primary mr-2 mb-2">
+                            <i class="ni ni-chat-round"></i> {{ __('Message customer') }}
                         </a>
                         <a href="{{ route('contacts.edit', ['contact' => $reservation->contact_id]) }}" class="btn btn-sm btn-outline-primary mr-2 mb-2">
                             {{ __('Contact profile') }}

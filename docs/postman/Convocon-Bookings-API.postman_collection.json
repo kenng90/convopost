@@ -1,0 +1,525 @@
+{
+	"info": {
+		"_postman_id": "a8f3c2e1-4b5d-6e7f-8a9b-0c1d2e3f4a5b",
+		"name": "Convocon — Bookings API",
+		"description": "API collection for the Convocon Bookings module (Reminders).\n\n## Authentication\nAll requests use a **Sanctum personal access token** belonging to the company owner account. Pass it as `token` in the query string (GET) or JSON body (POST).\n\nGenerate a token from the app or via `php artisan tinker`:\n```php\n$user = \\App\\Models\\User::find(1);\n$user->createToken('bookings-api')->plainTextToken;\n```\n\n## Recommended booking flow\n1. **List services** — discover bookable services for the company.\n2. **Availability (dates)** — which calendar days have open slots.\n3. **Availability (slots)** — time slots for a chosen date; copy a `slot_id`.\n4. **Create reservation** — book using `slot_id` (validates capacity, staff, and rules).\n5. **Cancel / reschedule** — manage the reservation lifecycle.\n\n## Notes\n- `source` is a **bookable service** name or numeric ID (`is_bookable = true` in Bookings admin).\n- `slot_id` format: `{appointment_staff_id}|{ISO8601_UTC_start}|{duration_minutes}` — returned by the availability endpoints.\n- Booking creates or reuses a contact automatically; **you do not need** `POST /api/wpbox/makeContact` before booking.\n- Contacts created via booking may have `has_chat = 0` until promoted to the inbox (configurable in Booking settings).\n\n## Error responses\n| HTTP | Meaning |\n|------|----------|\n| 400 | Validation failed (`errors` object) |\n| 401 | Invalid or missing token |\n| 404 | Service or reservation not found |\n| 409 | Slot no longer available |\n| 422 | Invalid booking payload (e.g. bad `slot_id`) |",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "api_endpoint",
+			"value": "https://your-domain.com/",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "source",
+			"value": "Consultation",
+			"type": "string"
+		},
+		{
+			"key": "duration_minutes",
+			"value": "30",
+			"type": "string"
+		},
+		{
+			"key": "date",
+			"value": "2026-06-20",
+			"type": "string"
+		},
+		{
+			"key": "slot_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "reservation_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "contact_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "phone",
+			"value": "+254712345678",
+			"type": "string"
+		},
+		{
+			"key": "name",
+			"value": "Jane Doe",
+			"type": "string"
+		},
+		{
+			"key": "external_id",
+			"value": "crm-appointment-12",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Bookings",
+			"description": "End-to-end appointment booking. Run requests in folder order for a full flow test.",
+			"item": [
+				{
+					"name": "1. List bookable services",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response is success', function () {",
+									"    const json = pm.response.json();",
+									"    pm.expect(json.status).to.eql('success');",
+									"    pm.expect(json.services).to.be.an('array');",
+									"});",
+									"",
+									"const json = pm.response.json();",
+									"if (json.services && json.services.length > 0) {",
+									"    pm.collectionVariables.set('source', json.services[0].name);",
+									"    if (json.services[0].default_duration_minutes) {",
+									"        pm.collectionVariables.set('duration_minutes', String(json.services[0].default_duration_minutes));",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_endpoint}}api/reminders/services?token={{token}}",
+							"host": [
+								"{{api_endpoint}}api"
+							],
+							"path": [
+								"reminders",
+								"services"
+							],
+							"query": [
+								{
+									"key": "token",
+									"value": "{{token}}"
+								}
+							]
+						},
+						"description": "Returns all bookable services (sources) for the authenticated company.\n\n**Response fields (per service):**\n- `id` — service ID\n- `name` — service name (use as `source` in later calls)\n- `duration_options` — allowed durations in minutes\n- `default_duration_minutes`\n- `timezone` — service timezone for availability"
+					},
+					"response": []
+				},
+				{
+					"name": "2. Availability — bookable dates",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const json = pm.response.json();",
+									"if (json.dates && json.dates.length > 0) {",
+									"    pm.collectionVariables.set('date', json.dates[0]);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_endpoint}}api/reminders/availability?token={{token}}&source={{source}}&duration_minutes={{duration_minutes}}",
+							"host": [
+								"{{api_endpoint}}api"
+							],
+							"path": [
+								"reminders",
+								"availability"
+							],
+							"query": [
+								{
+									"key": "token",
+									"value": "{{token}}"
+								},
+								{
+									"key": "source",
+									"value": "{{source}}",
+									"description": "Service name or numeric ID"
+								},
+								{
+									"key": "duration_minutes",
+									"value": "{{duration_minutes}}",
+									"description": "Optional; defaults to service default"
+								}
+							]
+						},
+						"description": "Returns ISO date strings (`Y-m-d`) that have at least one available slot within the service's `max_advance_days` window.\n\nOmit the `date` parameter to get this date list. Use **3. Availability — slots for date** next."
+					},
+					"response": []
+				},
+				{
+					"name": "3. Availability — slots for date",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const json = pm.response.json();",
+									"const slots = json.slots || json.available_slots || [];",
+									"if (slots.length > 0 && slots[0].id) {",
+									"    pm.collectionVariables.set('slot_id', slots[0].id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{api_endpoint}}api/reminders/availability?token={{token}}&source={{source}}&date={{date}}&duration_minutes={{duration_minutes}}",
+							"host": [
+								"{{api_endpoint}}api"
+							],
+							"path": [
+								"reminders",
+								"availability"
+							],
+							"query": [
+								{
+									"key": "token",
+									"value": "{{token}}"
+								},
+								{
+									"key": "source",
+									"value": "{{source}}"
+								},
+								{
+									"key": "date",
+									"value": "{{date}}",
+									"description": "Y-m-d"
+								},
+								{
+									"key": "duration_minutes",
+									"value": "{{duration_minutes}}"
+								}
+							]
+						},
+						"description": "Returns time slots for a specific date.\n\n**Slot object fields:**\n- `id` — pass as `slot_id` when booking\n- `title` — human-readable label (e.g. `10:00 AM — Dr. Smith`)\n- `start` / `end` — ISO datetimes\n- `appointment_staff_id` / `staff_name` / `duration_minutes`\n\n`available_slots` is a simplified list with only `id` and `title`."
+					},
+					"response": []
+				},
+				{
+					"name": "4. Create reservation (recommended — slot_id)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status is 201', function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"const json = pm.response.json();",
+									"if (json.reservation) {",
+									"    if (json.reservation.id) {",
+									"        pm.collectionVariables.set('reservation_id', String(json.reservation.id));",
+									"    }",
+									"    if (json.reservation.contact_id) {",
+									"        pm.collectionVariables.set('contact_id', String(json.reservation.contact_id));",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{token}}\",\n    \"phone\": \"{{phone}}\",\n    \"name\": \"{{name}}\",\n    \"source\": \"{{source}}\",\n    \"slot_id\": \"{{slot_id}}\",\n    \"external_id\": \"{{external_id}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{api_endpoint}}api/reminders/reservation/makeReservation",
+							"host": [
+								"{{api_endpoint}}api"
+							],
+							"path": [
+								"reminders",
+								"reservation",
+								"makeReservation"
+							]
+						},
+						"description": "Creates a reservation for the selected slot. This is the **recommended** integration path.\n\nThe API will:\n- Create or reuse a contact for `phone` / `name`\n- Validate the slot is still available\n- Assign staff from `slot_id`\n- Trigger client reminder messages (per service notification rules)\n- Notify assigned staff\n- Sync Google Calendar when configured\n\n**Required:** `token`, `phone`, `name`, `source`, `slot_id`\n\n**Optional:** `external_id` — your CRM / POS reference"
+					},
+					"response": []
+				},
+				{
+					"name": "5. Get reservations for contact",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{token}}\",\n    \"contact_id\": {{contact_id}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{api_endpoint}}api/reminders/get-contact-reservations",
+							"host": [
+								"{{api_endpoint}}api"
+							],
+							"path": [
+								"reminders",
+								"get-contact-reservations"
+							]
+						},
+						"description": "Lists all reservations for a Wpbox contact. Useful for support bots and CRM sidebars.\n\nRequires an authenticated session or token. Set `contact_id` from the create-reservation response or from the Contacts API."
+					},
+					"response": []
+				},
+				{
+					"name": "6. Reschedule reservation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{token}}\",\n    \"reservation_id\": {{reservation_id}},\n    \"slot_id\": \"{{slot_id}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{api_endpoint}}api/reminders/reservation/reschedule",
+							"host": [
+								"{{api_endpoint}}api"
+							],
+							"path": [
+								"reminders",
+								"reservation",
+								"reschedule"
+							]
+						},
+						"description": "Moves an active reservation to a new slot.\n\nRun **3. Availability — slots for date** first to obtain a new `slot_id`.\n\nCancelled reservations cannot be rescheduled (409)."
+					},
+					"response": []
+				},
+				{
+					"name": "7. Cancel reservation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{token}}\",\n    \"reservation_id\": {{reservation_id}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{api_endpoint}}api/reminders/reservation/cancel",
+							"host": [
+								"{{api_endpoint}}api"
+							],
+							"path": [
+								"reminders",
+								"reservation",
+								"cancel"
+							]
+						},
+						"description": "Cancels a reservation.\n\nSets `status` to `2`, stamps `cancelled_at`, removes pending reminder messages, deletes the Google Calendar event, and notifies staff."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Legacy",
+			"description": "Backward-compatible booking without `slot_id`. Prefer the slot-based flow in the **Bookings** folder for new integrations.\n\n> **Note:** Explicit-date booking requires `appointment_staff_id` in the booking engine. If you rely on this path, confirm your integration against a staging environment.",
+			"item": [
+				{
+					"name": "Create reservation (explicit dates)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{token}}\",\n    \"phone\": \"{{phone}}\",\n    \"name\": \"{{name}}\",\n    \"source\": \"{{source}}\",\n    \"start_date\": \"2026-06-20 10:00:00\",\n    \"end_date\": \"2026-06-20 10:30:00\",\n    \"duration_minutes\": 30,\n    \"staff_user_id\": 1,\n    \"external_id\": \"{{external_id}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{api_endpoint}}api/reminders/reservation/makeReservation",
+							"host": [
+								"{{api_endpoint}}api"
+							],
+							"path": [
+								"reminders",
+								"reservation",
+								"makeReservation"
+							]
+						},
+						"description": "Pre–multi-staff booking style: supply `start_date` and `end_date` instead of `slot_id`.\n\nReplaces the old `format` parameter (removed).\n\n`source` must still be a configured bookable service — not a free-form label like `\"web\"`.\n\nAvailability is still validated; you may receive **409** if the window conflicts with another booking."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Contacts (CRM — optional)",
+			"description": "Wpbox contact management. **Not required for booking** — `makeReservation` creates contacts automatically.\n\nUse this when you need groups, custom fields, or inbox-ready contacts before messaging.",
+			"item": [
+				{
+					"name": "Make contact",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const json = pm.response.json();",
+									"if (json.contact && json.contact.id) {",
+									"    pm.collectionVariables.set('contact_id', String(json.contact.id));",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{token}}\",\n    \"phone\": \"{{phone}}\",\n    \"name\": \"{{name}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{api_endpoint}}api/wpbox/makeContact",
+							"host": [
+								"{{api_endpoint}}api"
+							],
+							"path": [
+								"wpbox",
+								"makeContact"
+							]
+						},
+						"description": "Creates or updates a Wpbox contact.\n\n**Required:** `token`, `phone`\n\n**Optional:** `name`, `email`, `groups` (comma-separated names), `custom` (object of field name → value)\n\nThis endpoint is separate from Bookings. Do not call it as a prerequisite for `makeReservation`."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

@@ -41,6 +41,19 @@
             <p class="text-muted">{{ __('Share this link so customers can choose a service and book.') }}</p>
             <code class="d-block p-2 bg-light rounded user-select-all">{{ $catalogUrl }}?token=YOUR_API_TOKEN</code>
         @endif
+
+        <hr class="my-4">
+        <h3 class="mb-2">{{ __('Team inbox') }}</h3>
+        <p class="text-muted">{{ __('By default, customers who only book an appointment do not appear in the chat inbox. Agents can open a conversation from the booking detail page when needed.') }}</p>
+
+        <form method="POST" action="{{ route('reminders.booking-settings.inbox') }}">
+            @csrf
+            <div class="custom-control custom-checkbox mb-3">
+                <input type="checkbox" class="custom-control-input" id="booking_contacts_in_inbox" name="booking_contacts_in_inbox" value="1" @if($bookingContactsInInbox) checked @endif>
+                <label class="custom-control-label" for="booking_contacts_in_inbox">{{ __('Show new booking customers in inbox automatically') }}</label>
+            </div>
+            <button type="submit" class="btn btn-primary">{{ __('Save inbox settings') }}</button>
+        </form>
     </div>
 </div>
 @endsection

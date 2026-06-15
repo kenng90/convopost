@@ -37,7 +37,28 @@ class BookingSettingsController extends Controller
             'connectedAt' => $user->getConfig('google_calendar_connected_at'),
             'redirectUri' => route('reminders.google.callback', [], true),
             'catalogUrl' => $company ? route('reminders.booking.catalog', ['subdomain' => $company->subdomain]) : null,
+            'bookingContactsInInbox' => filter_var($company?->getConfig('BOOKING_CONTACTS_IN_INBOX', 'false'), FILTER_VALIDATE_BOOLEAN),
         ]);
+    }
+
+    public function updateInbox(Request $request)
+    {
+        $this->ownerAndStaffOnly();
+
+        $company = $this->getCompany();
+
+        if (! $company) {
+            abort(403);
+        }
+
+        $company->setConfig(
+            'BOOKING_CONTACTS_IN_INBOX',
+            $request->boolean('booking_contacts_in_inbox') ? 'true' : 'false'
+        );
+
+        return redirect()
+            ->route('reminders.booking-settings.index')
+            ->withStatus(__('Inbox settings updated.'));
     }
 
     public function updateCalendar(Request $request)

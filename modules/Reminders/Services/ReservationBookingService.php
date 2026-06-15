@@ -33,7 +33,7 @@ class ReservationBookingService
             session(['company_id' => $company->id]);
 
             $source = $this->resolveSource($company, $payload['source']);
-            $contact = $this->getOrMakeContact($payload['phone'], $company, $payload['name']);
+            $contact = $this->getOrMakeBookingContact($payload['phone'], $company, $payload['name']);
 
             [$start, $end, $appointmentStaffId, $staffUserId, $durationMinutes] = $this->resolveBookingWindow(
                 $source,

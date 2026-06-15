@@ -203,6 +203,9 @@ class RemindersBookingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Consultation');
+        $response->assertSee('Booking confirmed', false);
+        $response->assertSee('Loading dates', false);
+        $response->assertSee('Confirm booking');
     }
 
     public function test_booking_catalog_service_returns_services(): void

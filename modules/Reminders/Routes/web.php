@@ -43,6 +43,7 @@ Route::group([
 
         Route::get('booking-settings', 'BookingSettingsController@index')->name('reminders.booking-settings.index');
         Route::post('booking-settings/calendar', 'BookingSettingsController@updateCalendar')->name('reminders.booking-settings.calendar');
+        Route::post('booking-settings/inbox', 'BookingSettingsController@updateInbox')->name('reminders.booking-settings.inbox');
         Route::get('google/connect', 'GoogleCalendarController@connect')->name('reminders.google.connect');
         Route::get('google/callback', 'GoogleCalendarController@callback')->name('reminders.google.callback');
         Route::get('google/disconnect', 'GoogleCalendarController@disconnect')->name('reminders.google.disconnect');
@@ -76,12 +77,13 @@ Route::group([
         Route::get('appointment-staff/del/{appointmentStaff}', 'AppointmentStaffController@destroy')->name('reminders.appointment-staff.delete');
 
         Route::get('reservations', 'ReservationsController@index')->name('reminders.reservations.index');
-        Route::get('reservations/{reservation}', 'ReservationsController@show')->name('reminders.reservations.show');
-        Route::get('reservations/{reservation}/edit', 'ReservationsController@edit')->name('reminders.reservations.edit');
         Route::get('reservations/create', 'ReservationsController@create')->name('reminders.reservations.create');
+        Route::get('reservations/del/{reservation}', 'ReservationsController@destroy')->name('reminders.reservations.delete');
+        Route::get('reservations/{reservation}/open-chat', 'ReservationsController@openChat')->name('reminders.reservations.open-chat');
+        Route::get('reservations/{reservation}/edit', 'ReservationsController@edit')->name('reminders.reservations.edit');
+        Route::get('reservations/{reservation}', 'ReservationsController@show')->name('reminders.reservations.show');
         Route::post('reservations', 'ReservationsController@store')->name('reminders.reservations.store');
         Route::put('reservations/{reservation}', 'ReservationsController@update')->name('reminders.reservations.update');
-        Route::get('reservations/del/{reservation}', 'ReservationsController@destroy')->name('reminders.reservations.delete');
 
     });
 });

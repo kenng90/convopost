@@ -4,10 +4,11 @@ namespace Modules\Reminders\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Modules\Contacts\Models\Contact;
 use Modules\Reminders\Models\Reservation;
 use Modules\Reminders\Models\Source;
+use Modules\Wpbox\Events\Chatlistchange;
 use Modules\Wpbox\Http\Controllers\APIController;
+use Modules\Wpbox\Models\Contact as WpboxContact;
 use Modules\Wpbox\Models\Message;
 use Modules\Wpbox\Traits\Contacts;
 
@@ -60,7 +61,7 @@ class ReservationsController extends Controller
             'label' => __('Contact'),
             'type' => 'select',
             'additionalInfo' => "<a class='mt-2' href='".route('contacts.create')."'>".__('Add new contact').'</a>',
-            'data' => Contact::all()->map(function ($contact) {
+            'data' => WpboxContact::query()->get()->map(function ($contact) {
                 return [
                     'id' => $contact->id,
                     'text' => $contact->name.' '.$contact->phone,
@@ -230,6 +231,23 @@ class ReservationsController extends Controller
         ]);
     }
 
+    public function openChat(Reservation $reservation)
+    {
+        $this->authChecker();
+
+        $contact = WpboxContact::query()->find($reservation->contact_id);
+
+        if (! $contact) {
+            abort(404);
+        }
+
+        $this->promoteContactToInbox($contact);
+
+        event(new Chatlistchange($contact->id, $contact->company_id));
+
+        return redirect('/chat/'.$contact->id);
+    }
+
     /**
      * Show the form for creating a new resource.
      *
@@ -279,7 +297,7 @@ class ReservationsController extends Controller
             $company = $this->getCompany();
 
             //Get or create contact
-            $contact = $this->getOrMakeContact($request->phone, $company, $request->name);
+            $contact = $this->getOrMakeBookingContact($request->phone, $company, $request->name);
 
             //Get or create source
             //Find source by name
