@@ -2,211 +2,253 @@
 
 namespace Modules\Journies\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Modules\Journies\Events\ContactMovedToStage;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Modules\Journies\Models\Journey;
+use Modules\Journies\Models\JourneyGroupRule;
 use Modules\Journies\Models\JourneyStage;
+use Modules\Journies\Services\JourneyContactService;
 use Modules\Wpbox\Models\Campaign;
 use Modules\Wpbox\Models\Contact;
 
 class StagesController extends Controller
 {
-    /**
-     * Provide class.
-     */
     private $provider = JourneyStage::class;
 
-    /**
-     * Web RoutePath for the name of the routes.
-     */
     private $webroute_path = 'stages.';
 
-    /**
-     * View path.
-     */
-    private $view_path = 'journies::stages.';
-
-    /**
-     * Parameter name.
-     */
     private $parameter_name = 'stage';
 
-    /**
-     * Title of this crud.
-     */
     private $title = 'stage';
 
-    /**
-     * Title of this crud in plural.
-     */
-    private $titlePlural = 'stages';
-
-    private function getFields($class='col-md-4')
+    public function __construct(private JourneyContactService $journeyContacts)
     {
-        $fields=[];
-        
-        //Add name field
-        $fields[0]=['class'=>$class, 'ftype'=>'input', 'name'=>'Name', 'id'=>'name', 'placeholder'=>'Enter name', 'required'=>true];
-       
-        //Campaign
-        $fields[1]=['class'=>$class, 'ftype'=>'select', 'name'=>'Campaign', 'id'=>'campaign', 'placeholder'=>'Select campaign', 'required'=>true, 
-        'data'=>Campaign::where('is_api', true)->get()->pluck('name', 'id')->toArray()];
-
-
-        //Add info field
-        $fields[2]=['class'=>$class, 'ftype'=>'info', 'name'=>'Info', 'id'=>'info', 'text'=>'When a contact enters this stage, the selected API campaign will be triggered. Create new API campaigns using the button below.','button'=>['text'=>'Create API Campaign', 'link'=>route('wpbox.api.index', ['type' => 'api'])]];
-
-
-        //Return fields
-        return $fields;
     }
 
-    private function getFilterFields(){
-        $fields=$this->getFields('col-md-3');
-        return $fields;
+    private function getFields($class = 'col-md-4', ?Journey $journey = null)
+    {
+        $campaigns = Campaign::where('is_api', true)->get()->pluck('name', 'id')->toArray();
+        $campaigns = ['' => __('No automation')] + $campaigns;
+
+        return [
+            ['class' => $class, 'ftype' => 'input', 'name' => 'Name', 'id' => 'name', 'placeholder' => __('Enter name'), 'required' => true],
+            ['class' => $class, 'ftype' => 'select', 'name' => 'Campaign', 'id' => 'campaign', 'placeholder' => __('Select campaign (optional)'), 'required' => false, 'data' => $campaigns],
+            ['class' => $class, 'ftype' => 'input', 'name' => 'Campaign delay (minutes)', 'id' => 'campaign_delay_minutes', 'placeholder' => '0', 'required' => false],
+            ['class' => $class, 'ftype' => 'info', 'name' => 'Info', 'id' => 'info', 'text' => __('When a contact enters this stage, the selected API campaign can be triggered automatically. Leave campaign empty for manual-only stages.'), 'button' => ['text' => __('Create API Campaign'), 'link' => route('wpbox.api.index', ['type' => 'api'])]],
+        ];
     }
 
-    /**
-     * Auth checker function for the crud.
-     */
-    private function authChecker()
+    private function authChecker(): void
     {
         $this->ownerAndStaffOnly();
     }
 
-    /**
-     * Show the form for creating a new resource.
-     * @return Response
-     */
     public function create(Journey $journey)
     {
-       $this->authChecker();
-        
-        $fields = $this->getFields('col-md-6');
+        $this->authChecker();
 
-       
-        return view('general.form', ['setup' => [
-            'title'=>__('crud.new_item', ['item'=>__('Stage')]),
-            'action_link'=>route('journies.kanban', $journey),
-            'action_name'=>__('crud.back'),
-            'iscontent'=>true,
-            'action'=>route($this->webroute_path.'store', ['journey'=>$journey])
-        ],
-        'fields'=>$fields ]);
+        return view('general.form', [
+            'setup' => [
+                'title' => __('crud.new_item', ['item' => __('Stage')]),
+                'action_link' => route('journies.kanban', $journey),
+                'action_name' => __('crud.back'),
+                'iscontent' => true,
+                'action' => route($this->webroute_path.'store', ['journey' => $journey]),
+            ],
+            'fields' => $this->getFields('col-md-6', $journey),
+        ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     * @param Request $request
-     * @return Response
-     */
     public function store(Request $request, Journey $journey)
     {
         $this->authChecker();
 
-        //Make sure thtat campaign_id is present
-        if(!$request->campaign){
-            return redirect()->route($this->webroute_path.'create',['journey'=>$journey])->withStatus('Campaign is required');
-        }
-        
-        //Create new stage
-        $stage = $this->provider::create([
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'campaign' => 'nullable|integer',
+            'campaign_delay_minutes' => 'nullable|integer|min:0|max:10080',
+        ]);
+
+        $nextOrder = (int) $journey->stages()->max('order') + 1;
+
+        $this->provider::create([
             'name' => $request->name,
             'journey_id' => $journey->id,
-            'campaign_id' => $request->campaign,
+            'campaign_id' => $request->campaign ?: null,
+            'campaign_delay_minutes' => (int) ($request->campaign_delay_minutes ?? 0),
+            'order' => $nextOrder,
         ]);
-        $stage->save();
 
-        return redirect()->route('journies.kanban', $journey)->withStatus(__('crud.item_has_been_added', ['item'=>__($this->title)]));
+        return redirect()->route('journies.kanban', $journey)
+            ->withStatus(__('crud.item_has_been_added', ['item' => __($this->title)]));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     * @param int $id
-     * @return Response
-     */
     public function edit($id)
     {
         $this->authChecker();
         $stage = $this->provider::findOrFail($id);
 
-        $fields = $this->getFields('col-md-6');
+        $fields = $this->getFields('col-md-6', $stage->journey);
         $fields[0]['value'] = $stage->name;
-        $fields[1]['value'] = $stage->campaign_id;
+        $fields[1]['value'] = $stage->campaign_id ?? '';
+        $fields[2]['value'] = $stage->campaign_delay_minutes ?? 0;
 
-        $parameter = [];
-        $parameter[$this->parameter_name] = $stage->id;
-
-        return view('general.form', ['setup' => [
-            'title'=>__('crud.edit_item_name', ['item'=>__($this->title), 'name'=>$stage->name]),
-            'action_link'=>route('journies.kanban', $stage->journey),
-            'action_name'=>__('crud.back'),
-            'iscontent'=>true,
-            'isupdate'=>true,
-            'action'=>route($this->webroute_path.'update', $parameter),
-        ],
-        'fields'=>$fields ]);
+        return view('general.form', [
+            'setup' => [
+                'title' => __('crud.edit_item_name', ['item' => __($this->title), 'name' => $stage->name]),
+                'action_link' => route('journies.kanban', $stage->journey),
+                'action_name' => __('crud.back'),
+                'iscontent' => true,
+                'isupdate' => true,
+                'action' => route($this->webroute_path.'update', ['stage' => $stage->id]),
+            ],
+            'fields' => $fields,
+        ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     * @param Request $request
-     * @param int $id
-     * @return Response
-     */
     public function update(Request $request, $id)
     {
         $this->authChecker();
-        $item = $this->provider::findOrFail($id);
-        $item->name = $request->name;
-        $item->campaign_id = $request->campaign;
-        $item->update();
 
-        return redirect()->route('journies.kanban', $item->journey)->withStatus(__('crud.item_has_been_updated', ['item'=>__($this->title)]));
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'campaign' => 'nullable|integer',
+            'campaign_delay_minutes' => 'nullable|integer|min:0|max:10080',
+        ]);
+
+        $item = $this->provider::findOrFail($id);
+        $item->update([
+            'name' => $request->name,
+            'campaign_id' => $request->campaign ?: null,
+            'campaign_delay_minutes' => (int) ($request->campaign_delay_minutes ?? 0),
+        ]);
+
+        return redirect()->route('journies.kanban', $item->journey)
+            ->withStatus(__('crud.item_has_been_updated', ['item' => __($this->title)]));
     }
 
-    /**
-     * Remove the specified resource from storage.
-     * @param int $id
-     * @return Response
-     */
     public function destroy($id)
     {
         $this->authChecker();
         $item = $this->provider::findOrFail($id);
+        $journey = $item->journey;
         $item->delete();
-        return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_removed', ['item'=>__($this->title)]));
+
+        return redirect()->route('journies.kanban', $journey)
+            ->withStatus(__('crud.item_has_been_removed', ['item' => __($this->title)]));
     }
 
-    public function moveContact($stageId, $contactId)
+    public function reorder(Request $request, Journey $journey): JsonResponse
     {
-        $putInThisStage = $this->provider::findOrFail($stageId);
-        $contact = Contact::findOrFail($contactId);
+        $this->authChecker();
 
-        //Find the stage journey
-        $journey = $putInThisStage->journey;
+        $request->validate([
+            'stage_ids' => 'required|array',
+            'stage_ids.*' => 'integer',
+        ]);
 
-        //Loop through the stages and  remove the contact from the stage
-        foreach($journey->stages as $stage){
-            $stage->contacts()->detach($contact);
+        foreach ($request->stage_ids as $order => $stageId) {
+            JourneyStage::query()
+                ->where('journey_id', $journey->id)
+                ->where('id', $stageId)
+                ->update(['order' => $order]);
         }
-
-        //Add the contact to the new stage
-        $putInThisStage->contacts()->attach($contact);
-
-        //Fire the ContactMovedToStage event
-        event(new ContactMovedToStage($contact, $putInThisStage));
-
-        //
 
         return response()->json(['success' => true]);
     }
 
-    public function moveContactFromSideapp(Request $request)
+    public function moveContact($stageId, $contactId): JsonResponse
     {
+        $this->authChecker();
+
+        $stage = $this->provider::findOrFail($stageId);
+        $contact = Contact::findOrFail($contactId);
+
+        $result = $this->journeyContacts->moveContactToStage(
+            $contact,
+            $stage,
+            'manual_kanban',
+            auth()->id(),
+            true,
+        );
+
+        return response()->json($result, $result['success'] ? 200 : 422);
+    }
+
+    public function moveContactFromSideapp(Request $request): JsonResponse
+    {
+        $this->authChecker();
+
+        $company = auth()->user()?->currentCompany();
+        if (! $company || ! $company->hasPlanPlugin('journies')) {
+            return response()->json(['success' => false, 'message' => __('Journeys are not available on your plan.')], 403);
+        }
+
+        $request->validate([
+            'stage_id' => 'required|integer|exists:journey_stages,id',
+            'contact_id' => 'required|integer|exists:contacts,id',
+            'fire_campaign' => 'sometimes|boolean',
+        ]);
+
         $contact = Contact::findOrFail($request->contact_id);
         $stage = $this->provider::findOrFail($request->stage_id);
-        return $this->moveContact($stage->id, $contact->id);
+
+        $result = $this->journeyContacts->moveContactToStage(
+            $contact,
+            $stage,
+            'manual_sidebar',
+            auth()->id(),
+            $request->boolean('fire_campaign', true),
+        );
+
+        return response()->json($result, $result['success'] ? 200 : 422);
+    }
+
+    public function groupRules(Journey $journey)
+    {
+        $this->authChecker();
+
+        $journey->load(['stages', 'groupRules.group:id,name']);
+
+        $groups = \Modules\Contacts\Models\Group::query()->orderBy('name')->get(['id', 'name']);
+
+        return view('journies::group-rules', compact('journey', 'groups'));
+    }
+
+    public function storeGroupRule(Request $request, Journey $journey)
+    {
+        $this->authChecker();
+
+        $request->validate([
+            'group_id' => 'required|integer',
+            'stage_id' => 'required|integer|exists:journey_stages,id',
+        ]);
+
+        JourneyGroupRule::updateOrCreate(
+            [
+                'company_id' => $journey->company_id,
+                'group_id' => $request->group_id,
+                'journey_id' => $journey->id,
+            ],
+            ['stage_id' => $request->stage_id]
+        );
+
+        return redirect()->route('journies.group-rules', $journey)
+            ->withStatus(__('Group rule saved. Contacts added to this group will move to the selected stage.'));
+    }
+
+    public function destroyGroupRule(Journey $journey, JourneyGroupRule $rule)
+    {
+        $this->authChecker();
+
+        if ((int) $rule->journey_id !== (int) $journey->id) {
+            abort(404);
+        }
+
+        $rule->delete();
+
+        return redirect()->route('journies.group-rules', $journey)
+            ->withStatus(__('Group rule removed.'));
     }
 }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Nodes\AssignAgent;
 use Modules\Flowmaker\Models\Nodes\AssignGroup;
+use Modules\Flowmaker\Models\Nodes\AssignJourneyStage;
 use Modules\Flowmaker\Models\Nodes\BookingEventRegister;
 use Modules\Flowmaker\Models\Nodes\BookingEventsList;
 use Modules\Flowmaker\Models\Nodes\Branch;
@@ -222,6 +223,8 @@ class Flow extends Model
                 $theNewNode = new AssignAgent($nodeArray, []);
             } elseif ($nodeArray['type'] === 'assign_group') {
                 $theNewNode = new AssignGroup($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'assign_journey_stage') {
+                $theNewNode = new AssignJourneyStage($nodeArray, []);
             } elseif ($nodeArray['type'] === 'mpesa_stk_push') {
                 $theNewNode = new MpesaStkPush($nodeArray, []);
             } elseif ($nodeArray['type'] === 'whatsapp_catalog') {

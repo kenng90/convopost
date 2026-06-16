@@ -7,30 +7,45 @@
             padding: 20px 0;
         }
 
-        .success, .info, .warning, .error {
-            background: #4b5563; /* Tailwind gray-600 */
-            border-radius: 6px
+        .kanban-board.info {
+            background: #4b5563;
+            border-radius: 6px;
         }
 
-        .custom-button {
-            background-color: #4CAF50;
-            border: none;
-            color: white;
-            padding: 7px 15px;
-            margin: 10px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
+        .dark-mode .kanban-board.info,
+        body.dark-version .kanban-board.info {
+            background: #374151;
         }
 
         .kanban-title-board {
             color: white;
         }
 
-        
+        .kanban-item {
+            cursor: grab;
+        }
 
-        
+        .kanban-item a.contact-card-link {
+            color: inherit;
+            text-decoration: none;
+            display: block;
+            width: 100%;
+        }
+
+        .kanban-item a.contact-card-link:hover {
+            text-decoration: underline;
+        }
+
+        .stage-meta {
+            font-size: 11px;
+            opacity: 0.85;
+            margin-top: 4px;
+        }
+
+        .contact-search-results {
+            max-height: 240px;
+            overflow-y: auto;
+        }
     </style>
 @endsection
 
@@ -38,59 +53,53 @@
 <div class="header pb-8 pt-2 pt-md-7">
     <div class="container-fluid">
         <div class="header-body">
-            
             <div class="row">
-               
                 <div class="col">
-                    <h1 class="mb-3 mt--3">📋 {{$journey->name}}</h1>
+                    <h1 class="mb-1">📋 {{ $journey->name }}</h1>
+                    @if($journey->description)
+                        <p class="text-muted mb-3">{{ $journey->description }}</p>
+                    @endif
                 </div>
                 <div class="col-auto">
-                    <a href="{{ route('journies.index') }}" class="btn btn-sm btn-neutral">
-                         {{ __('Back to Journies') }}
-                    </a>
+                    <a href="{{ route('journies.index') }}" class="btn btn-sm btn-neutral">{{ __('Back to Journeys') }}</a>
+                    <a href="{{ route('journies.analytics', ['journey_id' => $journey->id]) }}" class="btn btn-sm btn-info">{{ __('Analytics') }}</a>
+                    <a href="{{ route('journies.group-rules', $journey) }}" class="btn btn-sm btn-warning">{{ __('Group rules') }}</a>
                     <a href="{{ route('stages.create', $journey) }}" class="btn btn-sm btn-primary">
-                        <i class="ni ni-fat-add"></i> {{ __('Add new stage') }}
+                        <i class="ni ni-fat-add"></i> {{ __('Add stage') }}
                     </a>
-                    <a href="#" class="btn btn-sm btn-success" data-toggle="modal" data-target="#addContactModal">
-                        <i class="ni ni-single-02"></i> {{ __('Add Contact') }}
-                    </a>
+                    <button type="button" class="btn btn-sm btn-success" data-toggle="modal" data-target="#addContactModal">
+                        <i class="ni ni-single-02"></i> {{ __('Add contact') }}
+                    </button>
                 </div>
             </div>
-            
+
             <div class="row align-items-center pt-2">
-           
                 <div class="col-12">
                     @include('partials.flash')
                 </div>
 
-                <!-- Modal, select contact -->
-                <div class="modal fade" id="addContactModal" tabindex="-1" role="dialog" aria-labelledby="addContactModalLabel" aria-hidden="true">
+                <div class="modal fade" id="addContactModal" tabindex="-1" role="dialog" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered" role="document">
                         <div class="modal-content">
-                            <form action="{{ route('journey.add-contact', $journey) }}" method="POST">
-                                @csrf
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="addContactModalLabel">{{ __('Add Contact to Journey') }}</h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
+                            <div class="modal-header">
+                                <h5 class="modal-title">{{ __('Add contact to journey') }}</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('Close') }}">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="contact_search">{{ __('Search contacts') }}</label>
+                                    <input type="text" id="contact_search" class="form-control" placeholder="{{ __('Search by name or phone...') }}">
                                 </div>
-                                <div class="modal-body">
-                                    <div class="form-group">
-                                        <label for="contact_id">{{ __('Select Contact') }}</label>
-                                        <select name="contact_id" id="contact_id" class="form-control" required>
-                                            <option value="">{{ __('Choose a contact') }}</option>
-                                            @foreach($contacts as $contact)
-                                                <option value="{{ $contact->id }}">{{ $contact->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Close') }}</button>
-                                    <button type="submit" class="btn btn-primary">{{ __('Add Contact') }}</button>
-                                </div>
-                            </form>
+                                <div id="contact_search_results" class="list-group contact-search-results"></div>
+                                <input type="hidden" id="selected_contact_id">
+                                <div id="selected_contact_label" class="mt-2 text-muted small"></div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Close') }}</button>
+                                <button type="button" id="add_contact_submit" class="btn btn-primary" disabled>{{ __('Add contact') }}</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -99,13 +108,9 @@
                     <div id="myKanban"></div>
                 </div>
             </div>
-
-            
         </div>
     </div>
 </div>
-
-
 
 @include('journies::scripts')
 @endsection

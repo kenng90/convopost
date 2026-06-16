@@ -3,28 +3,28 @@
 namespace Modules\Flowmaker\Models\Nodes;
 
 use Illuminate\Support\Facades\Log;
-use Modules\Flowmaker\Models\Contact;
 use Modules\Contacts\Models\Group;
+use Modules\Flowmaker\Models\Contact;
 
 class AssignGroup extends Node
 {
-    
     public function process($message, $data)
     {
         Log::info('Processing message in AssignGroup node', ['message' => $message, 'data' => $data]);
-        
+
         try {
             // Get group settings from node data
             $settings = $this->getDataAsArray()['settings'] ?? [];
-            
+
             Log::info('AssignGroup Settings', ['settings' => $settings]);
 
             // Find the contact
             $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
             $contact = Contact::find($contactId);
-            
-            if (!$contact) {
+
+            if (! $contact) {
                 Log::error('Contact not found', ['contactId' => $contactId]);
+
                 return ['success' => false];
             }
 
@@ -36,6 +36,7 @@ class AssignGroup extends Node
 
             if (empty($groupId) || $groupId === 'none') {
                 Log::info('No group selected');
+
                 return ['success' => true];
             }
 
@@ -43,48 +44,53 @@ class AssignGroup extends Node
             $group = Group::where('id', $groupId)
                 ->where('company_id', $contact->company_id)
                 ->first();
-            
-            if (!$group) {
+
+            if (! $group) {
                 Log::error('Group not found or does not belong to the same company', [
-                    'groupId' => $groupId, 
-                    'companyId' => $contact->company_id
+                    'groupId' => $groupId,
+                    'companyId' => $contact->company_id,
                 ]);
+
                 return ['success' => false];
             }
 
             if ($action === 'add') {
                 // Add contact to group (if not already added)
-                if (!$contact->groups()->where('group_id', $groupId)->exists()) {
+                if (! $contact->groups()->where('group_id', $groupId)->exists()) {
                     $contact->groups()->attach($groupId);
+                    if (class_exists(\Modules\Journies\Support\GroupRuleBridge::class)) {
+                        \Modules\Journies\Support\GroupRuleBridge::contactAddedToGroups($contact, [$groupId]);
+                    }
                     Log::info('Contact added to group', [
                         'contactId' => $contact->id,
                         'groupId' => $groupId,
-                        'groupName' => $group->name
+                        'groupName' => $group->name,
                     ]);
                 } else {
                     Log::info('Contact already in group', [
                         'contactId' => $contact->id,
-                        'groupId' => $groupId
+                        'groupId' => $groupId,
                     ]);
                 }
-            } else if ($action === 'remove') {
+            } elseif ($action === 'remove') {
                 // Remove contact from group
                 $contact->groups()->detach($groupId);
                 Log::info('Contact removed from group', [
                     'contactId' => $contact->id,
                     'groupId' => $groupId,
-                    'groupName' => $group->name
+                    'groupName' => $group->name,
                 ]);
             }
-            
+
             Log::info('Contact group assignment updated successfully', [
                 'contactId' => $contact->id,
                 'groupId' => $groupId,
-                'action' => $action
+                'action' => $action,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error processing AssignGroup node', ['error' => $e->getMessage()]);
+
             return ['success' => false];
         }
 
@@ -100,9 +106,10 @@ class AssignGroup extends Node
     protected function getNextNodeId($data = null)
     {
         // Get the first outgoing edge's target
-        if (!empty($this->outgoingEdges)) {
+        if (! empty($this->outgoingEdges)) {
             return $this->outgoingEdges[0]->getTarget();
         }
+
         return null;
     }
-} 
+}

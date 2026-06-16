@@ -4,8 +4,8 @@ namespace Modules\Journies\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\Contact;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\Wpbox\Models\Campaign;
 use Modules\Wpbox\Models\Contact as ModelsContact;
 
 class JourneyStage extends Model
@@ -15,21 +15,27 @@ class JourneyStage extends Model
         'name',
         'order',
         'campaign_id',
+        'campaign_delay_minutes',
     ];
 
-    /**
-     * Get the journey that owns the stage.
-     */
+    protected $casts = [
+        'order' => 'integer',
+        'campaign_delay_minutes' => 'integer',
+    ];
+
     public function journey(): BelongsTo
     {
         return $this->belongsTo(Journey::class);
     }
 
-    /**
-     * Get the contacts for the stage.
-     */
-    public function contacts()
+    public function campaign(): BelongsTo
     {
-        return $this->belongsToMany(ModelsContact::class, 'journey_stage_contacts', 'stage_id', 'contact_id');
+        return $this->belongsTo(Campaign::class, 'campaign_id');
+    }
+
+    public function contacts(): BelongsToMany
+    {
+        return $this->belongsToMany(ModelsContact::class, 'journey_stage_contacts', 'stage_id', 'contact_id')
+            ->withTimestamps();
     }
 }

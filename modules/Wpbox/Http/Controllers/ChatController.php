@@ -55,6 +55,12 @@ class ChatController extends Controller
             }
             if ($module->get('hasSidebar')) {
                 try {
+                    $moduleAlias = $module->get('alias');
+
+                    if (! $module->get('alwayson') && ! $this->getCompany()->hasPlanPlugin($moduleAlias)) {
+                        continue;
+                    }
+
                     foreach ($module->get('sidebarData') as $sidebarApp) {
                         $sidebarModules[] = [
                             'alias' => $sidebarApp['app'],

@@ -4,55 +4,68 @@ namespace Modules\Journies\Models;
 
 use App\Scopes\CompanyScope;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
+use Modules\Wpbox\Models\Contact as WpboxContact;
 
 class Journey extends Model
 {
     protected $fillable = [
         'company_id',
-        'name', 
-        'description'
+        'name',
+        'description',
     ];
 
-    /**
-     * Get the company that owns the journey
-     */
-    public function company()
+    public function company(): BelongsTo
     {
-        return $this->belongsTo('App\Models\Company');
+        return $this->belongsTo(\App\Models\Company::class);
     }
 
-    /**
-     * Get the stages for this journey
-     */
-    public function stages()
+    public function stages(): HasMany
     {
-        return $this->hasMany('Modules\Journies\Models\JourneyStage');
+        return $this->hasMany(JourneyStage::class)->orderBy('order')->orderBy('id');
     }
 
-    /**
-     * Get the contacts for the journey
-     */
-    public function contacts()
+    public function activities(): HasMany
     {
-       return $this->hasManyThrough(
-           'Modules\Wpbox\Models\Contact',
-           'Modules\Journies\Models\JourneyStage',
-           'journey_id',
-           'id',
-           'id',
-           'id'
-       )->distinct();
+        return $this->hasMany(JourneyActivity::class);
     }
 
-    //Add the global scope to only get the journey for the current company
-    protected static function booted()
+    public function groupRules(): HasMany
+    {
+        return $this->hasMany(JourneyGroupRule::class);
+    }
+
+    public function contacts(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            WpboxContact::class,
+            'journey_stage_contacts',
+            'stage_id',
+            'contact_id'
+        )->distinct();
+    }
+
+    public function contactsCount(): int
+    {
+        return (int) DB::table('journey_stage_contacts')
+            ->whereIn('stage_id', function ($query) {
+                $query->select('id')->from('journey_stages')->where('journey_id', $this->id);
+            })
+            ->distinct()
+            ->count('contact_id');
+    }
+
+    protected static function booted(): void
     {
         static::addGlobalScope(new CompanyScope);
 
-        static::creating(function ($model){
-            $company_id=session('company_id',null);
-            if($company_id){
-                $model->company_id=$company_id;
+        static::creating(function ($model) {
+            $company_id = session('company_id', null);
+            if ($company_id) {
+                $model->company_id = $company_id;
             }
         });
     }

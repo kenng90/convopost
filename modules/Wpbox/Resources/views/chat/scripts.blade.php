@@ -364,9 +364,8 @@
                         // Line breaks
                         .replace(/\n/g, '<br>');
             },
-            addProperty() {
-                // Dynamically add a property using $set
-                this.$set(this.dynamicProperties, 'newProperty', 'value');
+            addProperty(property, value) {
+                this.$set(this.dynamicProperties, property, value);
             },
             updateProperty(property, value) {
                 this.$set(this.dynamicProperties, property, value);

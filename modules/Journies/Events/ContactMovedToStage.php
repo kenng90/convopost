@@ -8,23 +8,11 @@ class ContactMovedToStage
 {
     use SerializesModels;
 
-    /**
-     * Create a new event instance.
-     *
-     * @return void
-     */
-    public function __construct(public $contact, public $stage)
-    {
-        //
-    }
-
-    /**
-     * Get the channels the event should be broadcast on.
-     *
-     * @return array
-     */
-    public function broadcastOn()
-    {
-        return [];
+    public function __construct(
+        public $contact,
+        public $stage,
+        public ?int $activityId = null,
+        public string $source = 'manual',
+    ) {
     }
 }

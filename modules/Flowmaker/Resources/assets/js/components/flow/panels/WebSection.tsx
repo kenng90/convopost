@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { useFlowActions } from "@/hooks/useFlowActions";
-import { Webhook, Globe, Users, UserPlus, Smartphone } from "lucide-react";
+import { Webhook, Globe, Users, UserPlus, Smartphone, Route } from "lucide-react";
 
 interface WebSectionProps {
   searchQuery: string;
 }
 
 export const WebSection = ({ searchQuery }: WebSectionProps) => {
-  const { createNodeWebhook, createNodeHTTP, createNodeAssignAgent, createNodeAssignGroup, createNodeMpesaStkPush } = useFlowActions();
+  const { createNodeWebhook, createNodeHTTP, createNodeAssignAgent, createNodeAssignGroup, createNodeAssignJourneyStage, createNodeMpesaStkPush } = useFlowActions();
 
   const webOptions = [
     /*{
@@ -44,6 +44,13 @@ export const WebSection = ({ searchQuery }: WebSectionProps) => {
       bgColor: "bg-green-100",
       textColor: "text-green-600",
       onClick: () => createNodeAssignGroup({ x: 0, y: 0 }),
+    },
+    {
+      icon: Route,
+      label: "Move to Journey Stage",
+      bgColor: "bg-purple-100",
+      textColor: "text-purple-700",
+      onClick: () => createNodeAssignJourneyStage({ x: 0, y: 0 }),
     },
   ];
 

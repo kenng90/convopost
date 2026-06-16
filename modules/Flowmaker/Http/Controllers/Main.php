@@ -54,6 +54,14 @@ class Main extends Controller
         //Get contact groups for this company
         $groups = \Modules\Contacts\Models\Group::where('company_id', $flow->company_id)->get(['id', 'name']);
 
+        $journeys = [];
+        if (class_exists(\Modules\Journies\Models\Journey::class)) {
+            $journeys = \Modules\Journies\Models\Journey::where('company_id', $flow->company_id)
+                ->with(['stages' => fn ($query) => $query->orderBy('order')->orderBy('id')->select('id', 'journey_id', 'name', 'order')])
+                ->orderBy('name')
+                ->get(['id', 'name']);
+        }
+
         // Get flowdocuments for this flow and format for frontend
         $flowdocuments = Flowdocument::where('flow_id', $flow->id)->get();
 
@@ -96,6 +104,7 @@ class Main extends Controller
             'trainedFiles' => $trainedFiles,
             'agents' => $agents,
             'groups' => $groups,
+            'journeys' => $journeys,
             'planPlugins' => [
                 'whatsappflows' => $company ? $company->hasPlanPlugin('whatsappflows') : false,
                 'whatsappcatalog' => $company ? $company->hasPlanPlugin('whatsappcatalog') : false,
