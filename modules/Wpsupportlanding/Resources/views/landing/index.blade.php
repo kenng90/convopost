@@ -250,8 +250,9 @@ tailwind.config = {
     <!-- Desktop Nav -->
     <div class="hidden lg:flex items-center gap-7">
       <a href="#features" class="text-sm text-gray-400 hover:text-white transition-colors">Features</a>
-      <a href="#automation" class="text-sm text-gray-400 hover:text-white transition-colors">Automation</a>
+      <a href="#bookings" class="text-sm text-gray-400 hover:text-white transition-colors">Bookings</a>
       <a href="#catalog" class="text-sm text-gray-400 hover:text-white transition-colors">Catalog</a>
+      <a href="#automation" class="text-sm text-gray-400 hover:text-white transition-colors">Automation</a>
       <a href="#integrations" class="text-sm text-gray-400 hover:text-white transition-colors">Integrations</a>
       <a href="#api" class="text-sm text-gray-400 hover:text-white transition-colors">API</a>
       <a href="#pricing" class="text-sm text-gray-400 hover:text-white transition-colors">Pricing</a>
@@ -278,8 +279,9 @@ tailwind.config = {
   <!-- Mobile Menu -->
   <div x-show="mobileOpen" x-cloak class="lg:hidden border-t border-white/5 px-4 py-4 space-y-1" style="background:rgba(4,15,12,0.98);">
     <a href="#features" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Features</a>
-    <a href="#automation" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Automation</a>
+    <a href="#bookings" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Bookings</a>
     <a href="#catalog" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Catalog</a>
+    <a href="#automation" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Automation</a>
     <a href="#integrations" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Integrations</a>
     <a href="#api" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">API</a>
     <a href="#pricing" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Pricing</a>
@@ -318,7 +320,7 @@ tailwind.config = {
       </h1>
 
       <p class="text-lg text-gray-400 leading-relaxed mb-8 max-w-xl">
-        Team inbox, outbound campaigns, visual workflows, in-chat payments, and store integrations — one platform for sales, support, and operations on WhatsApp. AI deflects tier-1 inside your flows; your team closes the rest.
+        Team inbox with catalog & booking sidebars, smart campaigns, appointment scheduling, product shops, visual workflows, and in-chat payments — one platform for sales, support, and operations on WhatsApp.
       </p>
 
       <div class="flex flex-wrap gap-3 mb-10">
@@ -366,10 +368,10 @@ tailwind.config = {
         <div class="bg-[#0f1f1a] border border-green-900/40 rounded-2xl px-4 py-3 shadow-2xl">
           <div class="flex items-center gap-2 mb-1">
             <div class="w-2 h-2 rounded-full" style="background:#25D366;"></div>
-            <p class="text-xs text-gray-400">Flow triggered</p>
+            <p class="text-xs text-gray-400">Campaign sent</p>
           </div>
-          <p class="text-sm font-semibold text-white">Order Confirmed 🎉</p>
-          <p class="text-xs text-gray-500 mt-0.5">M-Pesa payment received</p>
+          <p class="text-sm font-semibold text-white">12,400 delivered</p>
+          <p class="text-xs text-gray-500 mt-0.5">89% read rate · 3 regions</p>
         </div>
       </div>
 
@@ -396,39 +398,35 @@ tailwind.config = {
           </div>
           <div class="flex justify-end">
             <div class="bubble-out px-3 py-2 max-w-[80%]">
-              <p class="text-xs text-white">Can I reschedule my demo to next week?</p>
+              <p class="text-xs text-white">I'd like to book a haircut for Saturday</p>
               <p class="text-right text-xs text-gray-400 mt-1">09:42 ✓✓</p>
             </div>
           </div>
-          <!-- WhatsApp Form card -->
+          <!-- Booking widget card -->
           <div class="bg-[#1f2c34] rounded-xl overflow-hidden border border-white/5">
             <div class="px-3 pt-3 pb-2">
               <div class="flex items-center gap-2 mb-2">
                 <div class="w-4 h-4 rounded" style="background:#25D366;">
-                  <svg viewBox="0 0 24 24" fill="white" class="w-4 h-4 p-0.5"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  <svg viewBox="0 0 24 24" fill="white" class="w-4 h-4 p-0.5"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </div>
-                <p class="text-xs font-semibold text-white">Book Your Demo</p>
+                <p class="text-xs font-semibold text-white">Book Appointment</p>
               </div>
               <div class="space-y-1.5">
                 <div class="bg-[#2a3942] rounded-lg px-2 py-1.5">
-                  <p class="text-xs text-gray-500" style="font-size:9px;">Full Name</p>
-                  <p class="text-xs text-white">John Kamau</p>
+                  <p class="text-xs text-gray-500" style="font-size:9px;">Service</p>
+                  <p class="text-xs text-white">Premium Cut · 45 min</p>
                 </div>
                 <div class="bg-[#2a3942] rounded-lg px-2 py-1.5">
-                  <p class="text-xs text-gray-500" style="font-size:9px;">Preferred Date</p>
-                  <p class="text-xs text-white">Dec 18, 2024</p>
-                </div>
-                <div class="bg-[#2a3942] rounded-lg px-2 py-1.5">
-                  <p class="text-xs text-gray-500" style="font-size:9px;">Team Size</p>
-                  <p class="text-xs text-white">11–50 people ▾</p>
+                  <p class="text-xs text-gray-500" style="font-size:9px;">Sat, Jun 21 · 2:00 PM</p>
+                  <p class="text-xs text-white">with Sarah M. ▾</p>
                 </div>
               </div>
-              <button class="w-full mt-2 py-1.5 rounded-lg text-xs font-semibold text-black" style="background:#25D366;">Submit →</button>
+              <button class="w-full mt-2 py-1.5 rounded-lg text-xs font-semibold text-black" style="background:#25D366;">Confirm Booking →</button>
             </div>
           </div>
           <div class="flex justify-start">
             <div class="bubble-in px-3 py-2 max-w-[80%]">
-              <p class="text-xs text-white">✅ Booked! You'll receive a confirmation shortly.</p>
+              <p class="text-xs text-white">✅ Confirmed! Reminder sent for Saturday 1:45 PM.</p>
               <p class="text-right text-xs text-gray-500 mt-1">09:44</p>
             </div>
           </div>
@@ -474,7 +472,7 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Everything in one platform</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Every tool your WhatsApp<br/>business needs</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Team inbox, campaigns, workflows, and payments — run sales, support, and marketing on WhatsApp from one place.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">Shared inbox, smart campaigns, product catalogs, appointment booking, and payments — run your entire WhatsApp business from one place.</p>
     </div>
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -482,24 +480,24 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">👥</div>
         <h3 class="font-display font-700 text-lg mb-2">Shared Team Inbox</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Multi-agent WhatsApp inbox built for teams. Assign, collaborate, and close conversations at speed.</p>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Multi-agent WhatsApp inbox with modular sidebars for bookings, catalogs, and store integrations — all in one conversation view.</p>
         <ul class="space-y-2">
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Chat assignment & agent handover</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Quick replies & canned responses</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Private agent notes per conversation</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Full contact history & context</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Bookings & catalog sidebar apps</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Quick replies, notes & templates</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Real-time updates & voice calls</li>
         </ul>
       </div>
       <!-- Card 2 -->
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">📢</div>
         <h3 class="font-display font-700 text-lg mb-2">Campaigns & Broadcasts</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Reach thousands of customers at once with targeted, compliant WhatsApp broadcasts.</p>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Three broadcast modes — file upload, contact groups, or quick phone lists — with delivery analytics and timezone-aware scheduling.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Bulk message delivery at scale</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Approved Meta message templates</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Scheduled & drip delivery</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Real-time delivery & read receipts</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>File, group & quick broadcasts</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Pause, resume & CSV reports</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Geographic delivery analytics</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>API-triggered campaigns</li>
         </ul>
       </div>
       <!-- Card 3 -->
@@ -564,27 +562,29 @@ tailwind.config = {
         </ul>
       </div>
       <!-- Card 8 -->
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">📅</div>
-        <h3 class="font-display font-700 text-lg mb-2">Reminders & Reservations</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Automated appointment booking and reminders that reduce no-shows and keep customers informed.</p>
+      <div class="card-lift border rounded-2xl p-6 relative overflow-hidden" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
+        <div class="absolute top-3 right-3 badge text-xs">Updated</div>
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.15);">📅</div>
+        <h3 class="font-display font-700 text-lg mb-2">Appointments & Events</h3>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Full booking system with multi-staff scheduling, public widgets, events with seat limits, and automated WhatsApp reminders.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Appointment booking flows</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Automated WhatsApp reminders</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Calendar & source management</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Multi-staff scheduling support</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Multi-staff & department scheduling</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Embeddable booking widgets & events</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Google Calendar sync & REST API</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>WhatsApp reminder campaigns</li>
         </ul>
       </div>
       <!-- Card 9 -->
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">📖</div>
-        <h3 class="font-display font-700 text-lg mb-2">Knowledge Base</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Self-service help center for customers and agents. Publish articles, embed widgets, and feed your automation flows.</p>
+      <div class="card-lift border rounded-2xl p-6 relative overflow-hidden" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
+        <div class="absolute top-3 right-3 badge text-xs">Updated</div>
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.15);">🛍️</div>
+        <h3 class="font-display font-700 text-lg mb-2">Product Catalog & Shop</h3>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Build branded WhatsApp shops, sync from Shopify or WooCommerce, and sell directly from the chat sidebar.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Articles, categories & search</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Embeddable website chat widget</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Powers AI flow nodes</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>SEO-optimised public pages</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Branded shop links & in-chat selling</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Store sync & inventory tracking</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Checkout via WhatsApp or invoice</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Catalog analytics & A/B tests</li>
         </ul>
       </div>
     </div>
@@ -721,13 +721,135 @@ tailwind.config = {
   </div>
 </section>
 
+<!-- ===== BOOKINGS SPOTLIGHT ===== -->
+<section id="bookings" class="py-24 border-y border-white/5" style="background:rgba(37,211,102,0.02);">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="text-center mb-16">
+      <div class="badge inline-flex mb-4">Appointments & Events</div>
+      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Book appointments.<br/><span class="grad-text">Run events. Reduce no-shows.</span></h2>
+      <p class="text-gray-400 max-w-xl mx-auto">A complete booking platform inside ConvoConnect — multi-staff scheduling, public widgets, event registrations, Google Calendar sync, and WhatsApp reminders.</p>
+    </div>
+
+    <!-- 3-step flow -->
+    <div class="grid md:grid-cols-3 gap-4 mb-16">
+      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">⚙️</div>
+        <p class="font-display font-700 text-base mb-2">1. Set Up Services & Staff</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Define bookable services, departments, working hours, and team members. Choose round-robin, least-busy, or customer-picks-staff assignment.</p>
+      </div>
+      <div class="card-lift border rounded-2xl p-6 text-center" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.15);">🌐</div>
+        <p class="font-display font-700 text-base mb-2" style="color:#25D366;">2. Share Your Booking Page</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Embed a branded widget on your site or share a public booking link. Customers pick services, staff, and available slots — no app download needed.</p>
+      </div>
+      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">🔔</div>
+        <p class="font-display font-700 text-base mb-2">3. Automate Reminders</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Send WhatsApp utility-template reminders before and after appointments. Staff get notified on book, cancel, and reschedule — synced to Google Calendar.</p>
+      </div>
+    </div>
+
+    <!-- Two-column detail -->
+    <div class="grid lg:grid-cols-2 gap-12 items-center">
+      <div>
+        <h3 class="font-display text-2xl font-800 mb-6">Everything you need to manage bookings on WhatsApp</h3>
+        <div class="space-y-4">
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">👥</div>
+            <div>
+              <p class="text-sm font-semibold text-white mb-0.5">Multi-staff & department scheduling</p>
+              <p class="text-sm text-gray-500">Assign services to teams, set per-staff hours, and handle holiday closures. Smart assignment modes distribute bookings fairly.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🎟️</div>
+            <div>
+              <p class="text-sm font-semibold text-white mb-0.5">Events with seat capacity</p>
+              <p class="text-sm text-gray-500">Run workshops, classes, or webinars with multiple occurrences, party sizes, and registration management — all from one dashboard.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">💬</div>
+            <div>
+              <p class="text-sm font-semibold text-white mb-0.5">Bookings sidebar in chat</p>
+              <p class="text-sm text-gray-500">Agents see a contact's upcoming appointments and event registrations right in the inbox sidebar — open chat from any booking detail page.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🔌</div>
+            <div>
+              <p class="text-sm font-semibold text-white mb-0.5">REST API with scoped keys</p>
+              <p class="text-sm text-gray-500">Integrate with your CRM or website using slot-based booking API. Scoped public keys keep your main account secure.</p>
+            </div>
+          </div>
+        </div>
+        <a href="{{ route('register') }}" class="inline-flex items-center gap-2 mt-8 px-5 py-3 text-sm font-semibold text-black rounded-xl" style="background:#25D366;">Start Booking on WhatsApp →</a>
+      </div>
+
+      <!-- Booking widget mockup -->
+      <div class="relative">
+        <div class="bg-[#0d1a15] border border-white/[0.07] rounded-2xl overflow-hidden shadow-2xl">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style="background:#0a1410;">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-red-500 opacity-70"></div>
+              <div class="w-3 h-3 rounded-full bg-yellow-400 opacity-70"></div>
+              <div class="w-3 h-3 rounded-full opacity-70" style="background:#25D366;"></div>
+            </div>
+            <p class="text-xs text-gray-500 font-medium">Booking Widget — StyleHive Salon</p>
+            <div class="badge text-xs">Live</div>
+          </div>
+          <div class="px-5 py-5 space-y-4">
+            <div class="text-center mb-2">
+              <p class="text-sm font-semibold text-white">Book an Appointment</p>
+              <p class="text-xs text-gray-500">Select a service and available time</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="flow-node px-3 py-2.5 text-center" style="border-color:rgba(37,211,102,0.4);background:rgba(37,211,102,0.08);">
+                <p class="text-xs font-semibold" style="color:#25D366;">Premium Cut</p>
+                <p class="text-xs text-gray-500">45 min · KES 2,500</p>
+              </div>
+              <div class="flow-node px-3 py-2.5 text-center">
+                <p class="text-xs font-semibold text-white">Beard Trim</p>
+                <p class="text-xs text-gray-500">20 min · KES 800</p>
+              </div>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 mb-2 uppercase tracking-wider" style="font-size:9px;">Available — Sat, Jun 21</p>
+              <div class="grid grid-cols-3 gap-2">
+                <div class="flow-node px-2 py-1.5 text-center text-xs text-gray-500">10:00</div>
+                <div class="flow-node px-2 py-1.5 text-center text-xs font-semibold" style="color:#25D366;border-color:rgba(37,211,102,0.4);">14:00</div>
+                <div class="flow-node px-2 py-1.5 text-center text-xs text-gray-500">16:30</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 px-3 py-2 rounded-xl" style="background:rgba(37,211,102,0.06);border:1px solid rgba(37,211,102,0.15);">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style="background:linear-gradient(135deg,#25D366,#075E54);">SM</div>
+              <div>
+                <p class="text-xs font-semibold text-white">Sarah Mwangi</p>
+                <p class="text-xs text-gray-500">Senior Stylist</p>
+              </div>
+            </div>
+            <button class="w-full py-2.5 rounded-xl text-xs font-semibold text-black" style="background:#25D366;">Confirm Booking →</button>
+          </div>
+          <div class="px-4 py-2.5 border-t border-white/[0.06] flex items-center justify-between" style="background:#0a1410;">
+            <p class="text-xs text-gray-600">Powered by ConvoConnect</p>
+            <div class="flex gap-2">
+              <div class="badge text-xs">Calendar ✓</div>
+              <div class="badge text-xs">Reminders ✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ===== CATALOG SPOTLIGHT ===== -->
 <section id="catalog" class="py-24 border-y border-white/5" style="background:rgba(18,140,126,0.02);">
   <div class="max-w-7xl mx-auto px-4 sm:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Product Catalog & Commerce</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Import products. Sell inside<br/><span class="grad-text">WhatsApp.</span></h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Import from Excel, Shopify, or WooCommerce. Share a branded shop link in WhatsApp, automate checkout in flows, and collect payment via invoice.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">Import from Excel, Shopify, or WooCommerce with live inventory sync. Share branded shop links, sell from the chat sidebar, and collect payment via invoice or M-Pesa.</p>
     </div>
 
     <!-- 3-step flow -->
@@ -735,12 +857,12 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">🛒</div>
         <p class="font-display font-700 text-base mb-2">1. Import Your Catalog</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Import from Shopify or WooCommerce, upload Excel, or add products manually. Re-import anytime to update prices and stock.</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Import from Shopify, WooCommerce, Excel, or your own API. Ongoing store sync keeps prices and stock up to date automatically.</p>
       </div>
       <div class="card-lift border rounded-2xl p-6 text-center" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.15);">⚡</div>
-        <p class="font-display font-700 text-base mb-2" style="color:#25D366;">2. Send via Automation</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Add a Send Catalog Link node to any flow. Customers browse your branded shop; checkout resumes the automation automatically.</p>
+        <p class="font-display font-700 text-base mb-2" style="color:#25D366;">2. Sell from Chat or Flows</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Send shop links or individual products from the inbox sidebar. Add catalog nodes to flows — checkout resumes the automation automatically.</p>
       </div>
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">💳</div>
@@ -758,36 +880,36 @@ tailwind.config = {
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">📦</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Unlimited product catalog</p>
-              <p class="text-sm text-gray-500">Add products with images, descriptions, prices, SKUs, and variants. Import from Shopify, WooCommerce, or CSV upload.</p>
+              <p class="text-sm font-semibold text-white mb-0.5">Branded WhatsApp shops</p>
+              <p class="text-sm text-gray-500">Create catalogs with images, variants, and collections. Share at /shop/yourbrand — customers browse and add to cart without leaving WhatsApp.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🔀</div>
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">💬</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Catalog node in flow builder</p>
-              <p class="text-sm text-gray-500">Drop a Send Catalog Link node into Flowmaker. For small catalogs (≤10 items), use an in-chat product list — no browser required.</p>
-            </div>
-          </div>
-          <div class="flex items-start gap-4">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🧾</div>
-            <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Instant invoice generation</p>
-              <p class="text-sm text-gray-500">Auto-generate branded PDF invoices from order data. Send directly in WhatsApp or email — no switching tools needed.</p>
-            </div>
-          </div>
-          <div class="flex items-start gap-4">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">📱</div>
-            <div>
-              <p class="text-sm font-semibold text-white mb-0.5">M-Pesa & Stripe in-chat payment</p>
-              <p class="text-sm text-gray-500">Trigger an M-Pesa STK push or send a Stripe payment link. Receive payment confirmation and trigger next automation steps automatically.</p>
+              <p class="text-sm font-semibold text-white mb-0.5">Catalog sidebar in chat</p>
+              <p class="text-sm text-gray-500">Search and send individual products or shop links directly from the inbox. Agents close sales without switching tools.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🔄</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Order status updates</p>
-              <p class="text-sm text-gray-500">Automatically notify customers when orders are confirmed, shipped, or delivered — with tracking info sent directly to their WhatsApp.</p>
+              <p class="text-sm font-semibold text-white mb-0.5">Live store sync & inventory</p>
+              <p class="text-sm text-gray-500">Shopify and WooCommerce webhooks keep stock accurate. Inventory reservations prevent overselling during checkout.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🧾</div>
+            <div>
+              <p class="text-sm font-semibold text-white mb-0.5">Checkout & payments</p>
+              <p class="text-sm text-gray-500">Customers checkout via WhatsApp message or auto-generated invoice. M-Pesa STK and Stripe links confirm payment and trigger next flow steps.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">📊</div>
+            <div>
+              <p class="text-sm font-semibold text-white mb-0.5">Analytics & A/B experiments</p>
+              <p class="text-sm text-gray-500">Track views, cart adds, and checkouts. Run weighted catalog experiments to optimize which products convert best.</p>
             </div>
           </div>
         </div>
@@ -903,7 +1025,7 @@ tailwind.config = {
               <span class="text-lg">📋</span>
               <p class="text-sm font-semibold" style="color:#25D366;">WhatsApp Flow</p>
             </div>
-            <p class="text-xs text-gray-500">Open booking form in-chat</p>
+            <p class="text-xs text-gray-500">Open booking widget in-chat</p>
           </div>
           <div class="flow-line"></div>
           <div class="grid grid-cols-2 gap-4 w-full max-w-sm">
@@ -1041,7 +1163,7 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Developer API</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Build anything<br/><span class="grad-text">with our REST API</span></h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Every feature available in the UI is also accessible via API. Send messages, manage contacts, trigger flows, and collect payments programmatically.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">Every feature available in the UI is also accessible via API. Send messages, manage contacts, trigger campaigns, book appointments, and collect payments programmatically.</p>
     </div>
 
     <div class="grid lg:grid-cols-2 gap-12 items-start">
@@ -1078,6 +1200,16 @@ tailwind.config = {
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
             <code class="text-sm text-gray-300">/v1/flows/trigger</code>
             <span class="text-xs text-gray-600 ml-auto">Trigger automation flow</span>
+          </div>
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
+            <code class="text-sm text-gray-300">/api/bookings/appointments</code>
+            <span class="text-xs text-gray-600 ml-auto">Create booking</span>
+          </div>
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(59,130,246,0.15);color:#60a5fa;">GET</span>
+            <code class="text-sm text-gray-300">/api/bookings/availability</code>
+            <span class="text-xs text-gray-600 ml-auto">Get available slots</span>
           </div>
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
@@ -1229,7 +1361,7 @@ tailwind.config = {
     <div class="grid md:grid-cols-3 gap-4">
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="flex text-yellow-400 mb-4 text-sm">★★★★★</div>
-        <p class="text-gray-300 text-sm leading-relaxed mb-5">"ConvoConnect transformed how we handle customer orders. Our abandoned cart recovery rate jumped 40% in the first month using their WhatsApp automation flows. The M-Pesa integration is absolutely seamless."</p>
+        <p class="text-gray-300 text-sm leading-relaxed mb-5">"The new booking widgets cut our no-show rate in half. Customers book directly from WhatsApp, get automatic reminders, and our stylists see everything synced to Google Calendar. Game changer for salons."</p>
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm" style="background:linear-gradient(135deg,#25D366,#075E54);">AM</div>
           <div><p class="text-sm font-semibold text-white">Amina Mwangi</p><p class="text-xs text-gray-500">CEO, StyleHive Kenya</p></div>
@@ -1237,7 +1369,7 @@ tailwind.config = {
       </div>
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="flex text-yellow-400 mb-4 text-sm">★★★★★</div>
-        <p class="text-gray-300 text-sm leading-relaxed mb-5">"We manage 18 client WhatsApp numbers from one dashboard. Campaigns, inboxes, and flows per brand — that's why agencies choose ConvoConnect over native Meta tools."</p>
+        <p class="text-gray-300 text-sm leading-relaxed mb-5">"File broadcasts with per-row template variables saved us hours. We upload a CSV, map columns to contact fields, and reach 10,000 customers with personalized messages — pause and resume whenever we need."</p>
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm" style="background:linear-gradient(135deg,#4facfe,#00f2fe);">DO</div>
           <div><p class="text-sm font-semibold text-white">David Okonkwo</p><p class="text-xs text-gray-500">Founder, WhatsApp Agency (Lagos)</p></div>
@@ -1245,7 +1377,7 @@ tailwind.config = {
       </div>
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="flex text-yellow-400 mb-4 text-sm">★★★★★</div>
-        <p class="text-gray-300 text-sm leading-relaxed mb-5">"We replaced three separate tools with ConvoConnect. The shared inbox, campaign builder, and REST API all work exactly as advertised. Our support team handles 3x the volume with the same headcount."</p>
+        <p class="text-gray-300 text-sm leading-relaxed mb-5">"We sell products straight from the chat sidebar now — search catalog, send a product link, customer checks out on WhatsApp. Replaced our separate e-commerce chat tool entirely."</p>
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm" style="background:linear-gradient(135deg,#667eea,#764ba2);">TN</div>
           <div><p class="text-sm font-semibold text-white">Taiwo Nwosu</p><p class="text-xs text-gray-500">Head of CX, PayStack Partner</p></div>
@@ -1297,7 +1429,7 @@ tailwind.config = {
           <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 4 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div x-show="open === 4" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">We currently support: Shopify, WooCommerce, Stripe, M-Pesa (STK push and C2B), Twilio SMS, SMTP email, and our embeddable WhatsApp chat widget. Our REST API and webhooks also let you build custom integrations with any system.</p>
+          <p class="text-sm text-gray-400 leading-relaxed">We currently support: Shopify, WooCommerce, Stripe, M-Pesa (STK push and C2B), Google Calendar, Twilio SMS, SMTP email, and our embeddable WhatsApp chat widget. Product catalogs sync via webhooks, and bookings integrate with Google Calendar. Our REST API and webhooks also let you build custom integrations with any system.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
@@ -1324,7 +1456,34 @@ tailwind.config = {
           <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 7 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div x-show="open === 7" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Meta's Business Agent is great for simple FAQ support inside WhatsApp Business. ConvoConnect is the operations layer: shared team inbox, outbound campaigns, custom workflows, M-Pesa and Stripe payments, multi-number management, and deep integrations — with AI as one step in your flows, not a black-box replacement for your whole stack.</p>
+          <p class="text-sm text-gray-400 leading-relaxed">Meta's Business Agent is great for simple FAQ support inside WhatsApp Business. ConvoConnect is the operations layer: shared team inbox with catalog and booking sidebars, smart campaigns with file/group/quick broadcasts, appointment and event booking, product shops, M-Pesa and Stripe payments, multi-number management, and deep integrations — with AI as one step in your flows, not a black-box replacement for your whole stack.</p>
+        </div>
+      </div>
+      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 8 ? null : 8">
+          <span class="text-sm font-semibold text-white">How does the booking system work?</span>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 8 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+        <div x-show="open === 8" x-cloak class="px-6 pb-4">
+          <p class="text-sm text-gray-400 leading-relaxed">Set up bookable services, departments, and staff with working hours. Share a public booking page or embed a widget on your website. Customers pick services, staff, and available time slots. Bookings sync to Google Calendar, appear in the chat sidebar, and trigger automated WhatsApp reminder campaigns. You can also run events with seat capacity and registrations.</p>
+        </div>
+      </div>
+      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 9 ? null : 9">
+          <span class="text-sm font-semibold text-white">What campaign broadcast types are available?</span>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 9 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+        <div x-show="open === 9" x-cloak class="px-6 pb-4">
+          <p class="text-sm text-gray-400 leading-relaxed">Three modes: <strong class="text-gray-300">File broadcast</strong> — upload a CSV/Excel with per-row template variables mapped to contact fields. <strong class="text-gray-300">Group broadcast</strong> — send to an existing contact group or all subscribed contacts. <strong class="text-gray-300">Quick broadcast</strong> — paste a list of phone numbers for ad-hoc sends. All support scheduling, pause/resume, delivery analytics, and geographic breakdowns.</p>
+        </div>
+      </div>
+      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 10 ? null : 10">
+          <span class="text-sm font-semibold text-white">Can I sell products directly in WhatsApp chat?</span>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 10 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+        <div x-show="open === 10" x-cloak class="px-6 pb-4">
+          <p class="text-sm text-gray-400 leading-relaxed">Yes. Build product catalogs and branded shop pages, then sell from the inbox catalog sidebar — search products and send shop links without leaving the conversation. Catalogs sync from Shopify, WooCommerce, Excel, or your own API. Customers checkout via WhatsApp or receive an invoice with M-Pesa/Stripe payment links.</p>
         </div>
       </div>
     </div>
@@ -1340,7 +1499,7 @@ tailwind.config = {
     <h2 class="font-display text-5xl sm:text-6xl lg:text-7xl font-800 leading-tight mb-6" style="letter-spacing:-0.02em;">
       Start selling on<br/><span class="grad-text">WhatsApp today</span>
     </h2>
-    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Join 2,400+ businesses running team inbox, campaigns, workflows, and payments on WhatsApp with ConvoConnect.</p>
+    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Join 2,400+ businesses running inbox, campaigns, bookings, catalogs, and payments on WhatsApp with ConvoConnect.</p>
     <div class="flex flex-wrap justify-center gap-4 mb-6">
       <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
         Start Free Today
@@ -1445,7 +1604,7 @@ tailwind.config = {
           </div>
           <span class="font-display font-800 text-lg tracking-tight">Convo<span class="grad-text">Connect</span></span>
         </a>
-        <p class="text-sm text-gray-500 leading-relaxed max-w-xs mb-5">WhatsApp revenue & operations platform — team inbox, campaigns, workflows, and payments. Built on the official Meta WhatsApp Business API.</p>
+        <p class="text-sm text-gray-500 leading-relaxed max-w-xs mb-5">WhatsApp revenue & operations platform — team inbox, campaigns, bookings, product catalogs, workflows, and payments. Built on the official Meta WhatsApp Business API.</p>
         <div class="flex items-center gap-3">
           <a href="#" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all">
             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
@@ -1460,8 +1619,9 @@ tailwind.config = {
         <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">Product</p>
         <ul class="space-y-2.5">
           <li><a href="#features" class="text-sm text-gray-400 hover:text-white transition-colors">Features</a></li>
+          <li><a href="#bookings" class="text-sm text-gray-400 hover:text-white transition-colors">Bookings</a></li>
+          <li><a href="#catalog" class="text-sm text-gray-400 hover:text-white transition-colors">Product Catalog</a></li>
           <li><a href="#automation" class="text-sm text-gray-400 hover:text-white transition-colors">Automation</a></li>
-          <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">WhatsApp Flows</a></li>
           <li><a href="#integrations" class="text-sm text-gray-400 hover:text-white transition-colors">Integrations</a></li>
           <li><a href="#api" class="text-sm text-gray-400 hover:text-white transition-colors">API Docs</a></li>
           <li><a href="#pricing" class="text-sm text-gray-400 hover:text-white transition-colors">Pricing</a></li>
