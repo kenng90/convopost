@@ -48,4 +48,33 @@ class AgentReplies implements ShouldBroadcast
     {
         return 'general';
     }
+
+    public function broadcastWith(): array
+    {
+        return [
+            'message' => [
+                'id' => $this->message->id,
+                'value' => $this->message->value,
+                'original_message' => $this->message->original_message ?? '',
+                'header_text' => $this->message->header_text,
+                'header_image' => $this->message->header_image,
+                'header_document' => $this->message->header_document,
+                'header_video' => $this->message->header_video,
+                'header_audio' => $this->message->header_audio,
+                'header_location' => $this->message->header_location,
+                'footer_text' => $this->message->footer_text,
+                'buttons' => $this->message->buttons,
+                'is_message_by_contact' => (bool) $this->message->is_message_by_contact,
+                'is_campign_messages' => (bool) $this->message->is_campign_messages,
+                'is_note' => (bool) ($this->message->is_note ?? false),
+                'is_call_brief' => (bool) ($this->message->is_call_brief ?? false),
+                'sender_name' => $this->message->sender_name,
+                'error' => $this->message->error,
+                'created_at' => $this->message->created_at?->toIso8601String(),
+            ],
+            'contact' => [
+                'id' => $this->contact->id,
+            ],
+        ];
+    }
 }

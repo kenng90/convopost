@@ -3,17 +3,21 @@
 namespace Modules\Flowmaker\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
+use App\Services\MpesaCallbackValidator;
+use App\Services\MpesaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Modules\Flowmaker\Jobs\ResumeFlowFromMpesa;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Flowmaker\Models\ContactState;
 use Modules\Flowmaker\Models\Flow;
+use Modules\Invoice\Models\InvoicePayment;
 
 class MpesaController extends Controller
 {
     /**
-     * Handle the STK Push callback from Safaricom.
-     * Safaricom POSTs to this endpoint after the customer completes or rejects payment.
+     * Handle the STK Push callback from Safaricom for flow-initiated payments.
      */
     public function stkCallback(Request $request)
     {
@@ -22,8 +26,18 @@ class MpesaController extends Controller
         try {
             $body = $request->input('Body.stkCallback') ?? $request->input('Body');
 
-            if (!$body) {
+            if (! $body) {
                 Log::error('MPesa STK Callback: invalid payload structure', ['raw' => $request->all()]);
+
+                return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
+            }
+
+            MpesaCallbackValidator::logCallback($body, 'received');
+
+            $validation = MpesaCallbackValidator::validateStkPushCallback($body);
+            if (! $validation['valid']) {
+                Log::error('MPesa STK Callback: invalid structure', ['errors' => $validation['errors']]);
+
                 return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
             }
 
@@ -31,74 +45,82 @@ class MpesaController extends Controller
             $resultCode = $body['ResultCode'] ?? null;
             $resultDesc = $body['ResultDesc'] ?? '';
 
-            Log::info('MPesa STK Callback: parsed', [
-                'checkoutRequestId' => $checkoutRequestId,
-                'resultCode' => $resultCode,
-                'resultDesc' => $resultDesc,
-            ]);
-
-            if (!$checkoutRequestId) {
+            if (! $checkoutRequestId) {
                 Log::error('MPesa STK Callback: missing CheckoutRequestID');
+
                 return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
             }
 
-            // Find the contact and flow by the stored checkout request ID
+            if (! MpesaCallbackValidator::isNotDuplicate($checkoutRequestId)) {
+                Log::warning('MPesa STK Callback: duplicate callback ignored', [
+                    'checkoutRequestId' => $checkoutRequestId,
+                ]);
+
+                return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
+            }
+
+            $payment = InvoicePayment::findByCheckoutRequestId($checkoutRequestId);
             $checkoutState = ContactState::where('state', 'mpesa_checkout_request_id')
                 ->where('value', $checkoutRequestId)
                 ->first();
 
-            if (!$checkoutState) {
-                Log::warning('MPesa STK Callback: no matching checkout state found', ['checkoutRequestId' => $checkoutRequestId]);
+            if (! $payment && ! $checkoutState) {
+                Log::warning('MPesa STK Callback: no matching payment or contact state', [
+                    'checkoutRequestId' => $checkoutRequestId,
+                ]);
+
+                return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
+            }
+
+            if ($payment) {
+                $this->updatePaymentFromCallback($payment, $body);
+            }
+
+            if (! $checkoutState) {
+                MpesaCallbackValidator::logCallback($body, 'processed');
+
                 return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
             }
 
             $contactId = $checkoutState->contact_id;
             $flowId = $checkoutState->flow_id;
 
-            Log::info('MPesa STK Callback: found contact and flow', ['contactId' => $contactId, 'flowId' => $flowId]);
-
             $contact = Contact::find($contactId);
             $flow = Flow::withoutGlobalScopes()->find($flowId);
 
-            if (!$contact || !$flow) {
-                Log::error('MPesa STK Callback: contact or flow not found', ['contactId' => $contactId, 'flowId' => $flowId]);
+            if (! $contact || ! $flow) {
+                Log::error('MPesa STK Callback: contact or flow not found', [
+                    'contactId' => $contactId,
+                    'flowId' => $flowId,
+                ]);
+
                 return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
             }
 
-            // Extract payment details from successful callback metadata
-            $receiptNumber = null;
-            $mpesaAmount = null;
+            $mpesaService = new MpesaService(Company::find($contact->company_id));
+            $callbackData = $mpesaService->parseCallback($body);
 
-            if ($resultCode == 0 && isset($body['CallbackMetadata']['Item'])) {
-                foreach ($body['CallbackMetadata']['Item'] as $item) {
-                    match ($item['Name'] ?? '') {
-                        'MpesaReceiptNumber' => $receiptNumber = $item['Value'] ?? null,
-                        'Amount' => $mpesaAmount = $item['Value'] ?? null,
-                        default => null,
-                    };
-                }
-            }
-
-            // Store all results in contact state so the MPesa node can read them when resumed
             $contact->setContactState($flowId, 'mpesa_result_code', (string) $resultCode);
             $contact->setContactState($flowId, 'mpesa_result_desc', $resultDesc);
             $contact->setContactState($flowId, 'mpesa_status', $resultCode == 0 ? 'success' : 'failed');
 
-            if ($receiptNumber) {
-                $contact->setContactState($flowId, 'mpesa_receipt', $receiptNumber);
+            if ($callbackData['receipt_number']) {
+                $contact->setContactState($flowId, 'mpesa_receipt', $callbackData['receipt_number']);
             }
-            if ($mpesaAmount) {
-                $contact->setContactState($flowId, 'mpesa_amount_paid', (string) $mpesaAmount);
+
+            if ($callbackData['amount_paid']) {
+                $contact->setContactState($flowId, 'mpesa_amount_paid', (string) $callbackData['amount_paid']);
             }
 
             Log::info('MPesa STK Callback: state updated, resuming flow', [
                 'resultCode' => $resultCode,
-                'receiptNumber' => $receiptNumber,
+                'receiptNumber' => $callbackData['receipt_number'],
+                'paymentId' => $payment?->id,
             ]);
 
-            // Resume the flow from the MPesa node (current_node is still set to it)
-            $flow->resumeFromMpesaCallback($contact);
+            ResumeFlowFromMpesa::dispatch($flow->id, $contact->id)->onQueue('flows');
 
+            MpesaCallbackValidator::logCallback($body, 'processed');
         } catch (\Exception $e) {
             Log::error('MPesa STK Callback: exception', [
                 'error' => $e->getMessage(),
@@ -106,7 +128,40 @@ class MpesaController extends Controller
             ]);
         }
 
-        // Always return 200 to Safaricom
         return response()->json(['ResultCode' => 0, 'ResultDesc' => 'Accepted']);
+    }
+
+    private function updatePaymentFromCallback(InvoicePayment $payment, array $body): void
+    {
+        $payment->loadMissing('invoice');
+        $company = Company::find($payment->invoice->company_id);
+
+        if (! $company) {
+            Log::error('MPesa STK Callback: company not found for payment', ['paymentId' => $payment->id]);
+
+            return;
+        }
+
+        $mpesaService = new MpesaService($company);
+        $callbackData = $mpesaService->parseCallback($body);
+
+        $payment->storeResponseData($body);
+
+        if ($callbackData['success']) {
+            $payment->markAsSuccess($callbackData['receipt_number']);
+            Log::info('Flow MPesa payment successful', [
+                'payment_id' => $payment->id,
+                'invoice_id' => $payment->invoice_id,
+                'receipt' => $callbackData['receipt_number'],
+            ]);
+        } else {
+            $payment->markAsFailed($callbackData['result_description']);
+            Log::warning('Flow MPesa payment failed', [
+                'payment_id' => $payment->id,
+                'invoice_id' => $payment->invoice_id,
+                'result_code' => $callbackData['result_code'],
+                'result_description' => $callbackData['result_description'],
+            ]);
+        }
     }
 }

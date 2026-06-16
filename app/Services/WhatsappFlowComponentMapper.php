@@ -757,8 +757,11 @@ class WhatsappFlowComponentMapper
 
         if (in_array($type, ['radio', 'checkbox', 'select', 'chips'], true)) {
             $options = $field['options'] ?? [];
-            if ($options === []) {
+            if ($options === [] && ! $this->usesDynamicOptionSource($field)) {
                 $errors[] = "\"{$screenTitle}\": \"{$field['label']}\" has no options.";
+            }
+            if ($this->usesDynamicOptionSource($field) && trim((string) ($field['data_source_key'] ?? '')) === '') {
+                $errors[] = "\"{$screenTitle}\": \"{$field['label']}\" uses dynamic options but has no data key.";
             }
             if ($type === 'chips' && count($options) > 0 && count($options) < 2) {
                 $errors[] = "\"{$screenTitle}\": ChipsSelector requires at least 2 options.";
@@ -785,6 +788,18 @@ class WhatsappFlowComponentMapper
         }
 
         return $errors;
+    }
+
+    /**
+     * @param  array<string, mixed>  $field
+     */
+    private function usesDynamicOptionSource(array $field): bool
+    {
+        if (! empty($field['dynamic_data_source'])) {
+            return true;
+        }
+
+        return ! empty($field['imported_dynamic_source']);
     }
 
     /**

@@ -9,9 +9,13 @@
                 $param[$setup['parameter_name']]=$item->id;
             ?>
             <td>
-                <a href="{{ route( $setup['webroute_path']."edit",$param) }}" class="btn btn-primary btn-sm">{{ __('crud.edit') }}</a>
-                <a href="{{ route( $setup['webroute_path']."delete",$param) }}" class="btn btn-danger btn-sm">{{ __('crud.delete') }}</a>
-                <a href="{{ route( $setup['webroute_path']."loginas",["agent"=>$item->id]) }}" class="btn btn-success btn-sm">{{ __('Login as') }}</a>
+                @if($setup['canManageAgents'] ?? auth()->user()->hasRole('owner'))
+                    <a href="{{ route( $setup['webroute_path']."edit",$param) }}" class="btn btn-primary btn-sm">{{ __('crud.edit') }}</a>
+                    <a href="{{ route( $setup['webroute_path']."delete",$param) }}" class="btn btn-danger btn-sm">{{ __('crud.delete') }}</a>
+                    <a href="{{ route( $setup['webroute_path']."loginas",["agent"=>$item->id]) }}" class="btn btn-success btn-sm">{{ __('Login as') }}</a>
+                @else
+                    <span class="text-muted text-sm">{{ __('View only') }}</span>
+                @endif
             </td>
         </tr> 
     @endforeach

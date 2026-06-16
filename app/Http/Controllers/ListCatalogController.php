@@ -3,14 +3,28 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ManageCatalogItemsRequest;
+use App\Models\CatalogCollection;
+use App\Models\CatalogItem;
 use App\Models\Company;
 use App\Models\ListCatalog;
+use App\Services\Catalog\ApiCatalogImportService;
+use App\Services\Catalog\CatalogAnalyticsService;
+use App\Services\Catalog\CatalogCategoryNormalizer;
+use App\Services\Catalog\CatalogExperimentService;
+use App\Services\Catalog\CatalogFlowUsageService;
+use App\Services\Catalog\CatalogItemRepository;
+use App\Services\Catalog\CatalogReimportService;
+use App\Services\Catalog\CatalogStoreSyncService;
+use App\Services\Catalog\CatalogUrlService;
+use App\Services\Catalog\StoreCatalogImportService;
 use App\Services\CatalogItemFilterService;
 use App\Services\CatalogItemPlanLimit;
 use App\Services\ExcelImportService;
 use App\Services\WhatsApp\OrderInvoiceMessageTemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ListCatalogController extends Controller
@@ -20,6 +34,16 @@ class ListCatalogController extends Controller
         protected CatalogItemPlanLimit $catalogItemPlanLimit,
         protected OrderInvoiceMessageTemplateService $orderInvoiceTemplateService,
         protected CatalogItemFilterService $catalogItemFilter,
+        protected CatalogUrlService $catalogUrlService,
+        protected CatalogFlowUsageService $catalogFlowUsageService,
+        protected CatalogReimportService $catalogReimportService,
+        protected StoreCatalogImportService $storeCatalogImportService,
+        protected CatalogAnalyticsService $catalogAnalyticsService,
+        protected CatalogCategoryNormalizer $categoryNormalizer,
+        protected CatalogItemRepository $catalogItemRepository,
+        protected CatalogStoreSyncService $catalogStoreSyncService,
+        protected ApiCatalogImportService $apiCatalogImportService,
+        protected CatalogExperimentService $catalogExperimentService,
     ) {
     }
 
@@ -143,6 +167,7 @@ class ListCatalogController extends Controller
             ];
 
             $catalog = ListCatalog::create($catalogData);
+            $this->catalogItemRepository->replaceAllFromArray($catalog, $transformedItems);
 
             $this->catalogItemPlanLimit->recordUsage($company->id, $itemCount);
 
@@ -160,6 +185,7 @@ class ListCatalogController extends Controller
                 'success' => true,
                 'message' => $responseMessage,
                 'catalogId' => $catalog->id,
+                'catalog' => $this->formatCatalogSummary($catalog),
                 'items' => $transformedItems,
                 'itemCount' => count($transformedItems),
                 'order_template' => [
@@ -287,19 +313,12 @@ class ListCatalogController extends Controller
                 ->with('versions')
                 ->orderBy('created_at', 'desc')
                 ->get()
-                ->map(function ($catalog) {
-                    return [
-                        'id' => $catalog->id,
-                        'name' => $catalog->name,
-                        'version' => $catalog->version,
-                        'source' => $catalog->source,
-                        'item_count' => count($catalog->items ?? []),
-                        'created_at' => $catalog->created_at,
-                        'versions_count' => $catalog->versions->count() + 1,
-                    ];
-                });
+                ->map(fn ($catalog) => $this->formatCatalogSummary($catalog));
 
             $company = $this->getCompany();
+            $aiCatalogIds = $company
+                ? json_decode($company->getConfig('whatsapp_ai_catalog_ids', '[]'), true) ?: []
+                : [];
 
             return response()->json([
                 'success' => true,
@@ -307,6 +326,9 @@ class ListCatalogController extends Controller
                 'catalog_item_usage' => $company
                     ? $this->catalogItemPlanLimit->getUsageSummary($company)
                     : null,
+                'ai_catalog_ids' => $aiCatalogIds,
+                'has_shopify' => $company ? (bool) $company->getConfig('shopify_access_token') : false,
+                'has_woocommerce' => $company ? (bool) $company->getConfig('woocommerce_consumer_key') : false,
             ]);
 
         } catch (\Exception $e) {
@@ -434,6 +456,18 @@ class ListCatalogController extends Controller
             $catalog = ListCatalog::where('id', $id)
                 ->where('company_id', $companyId)
                 ->firstOrFail();
+
+            $flows = $this->catalogFlowUsageService->flowsUsingCatalog($catalog->id, $companyId);
+            if ($flows !== []) {
+                $names = collect($flows)->pluck('name')->implode(', ');
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This catalog is used in active flows: '.$names.'. Remove it from those flows before deleting.',
+                    'flows' => $flows,
+                ], 409);
+            }
+
             $catalog->delete();
 
             return response()->json([
@@ -589,11 +623,12 @@ class ListCatalogController extends Controller
                 'category' => 'nullable|string|max:255',
                 'imageUrl' => 'nullable|url|max:2048',
                 'stockStatus' => 'nullable|string|in:In Stock,Out of Stock,Low Stock',
+                'quantityAvailable' => 'nullable|integer|min:0',
                 'variants' => 'nullable|array',
                 'tags' => 'nullable|array',
             ]);
 
-            $items = $catalog->items ?? [];
+            $items = $this->catalogItemRepository->getItemsArray($catalog);
 
             // Check if item with same ID already exists
             $exists = array_search($validated['id'], array_column($items, 'id'));
@@ -614,7 +649,6 @@ class ListCatalogController extends Controller
                 ], 403);
             }
 
-            // Add new item
             $newItem = [
                 'id' => $validated['id'],
                 'title' => $validated['title'],
@@ -623,13 +657,13 @@ class ListCatalogController extends Controller
                 'category' => $validated['category'] ?? '',
                 'imageUrl' => $validated['imageUrl'] ?? '',
                 'stockStatus' => $validated['stockStatus'] ?? 'In Stock',
+                'quantityAvailable' => $validated['quantityAvailable'] ?? null,
                 'variants' => $validated['variants'] ?? [],
                 'tags' => $validated['tags'] ?? [],
             ];
 
-            $items[] = $newItem;
-            $catalog->items = $items;
-            $catalog->save();
+            $this->catalogItemRepository->upsertFromArray($catalog, $newItem);
+            $items = $this->catalogItemRepository->getItemsArray($catalog->fresh());
 
             $this->catalogItemPlanLimit->recordUsage($company->id, 1);
 
@@ -676,45 +710,50 @@ class ListCatalogController extends Controller
                 'category' => 'nullable|string|max:255',
                 'imageUrl' => 'nullable|url|max:2048',
                 'stockStatus' => 'nullable|string|in:In Stock,Out of Stock,Low Stock',
+                'quantityAvailable' => 'nullable|integer|min:0',
                 'variants' => 'nullable|array',
                 'tags' => 'nullable|array',
             ]);
 
-            $items = $catalog->items ?? [];
+            $items = $this->catalogItemRepository->getItemsArray($catalog);
+            $existing = null;
 
-            // Find item by ID
-            $itemIndex = null;
-            foreach ($items as $index => $item) {
-                if ($item['id'] === $itemId) {
-                    $itemIndex = $index;
+            foreach ($items as $item) {
+                if (($item['id'] ?? null) === $itemId) {
+                    $existing = $item;
                     break;
                 }
             }
 
-            if ($itemIndex === null) {
+            if ($existing === null) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Item not found',
                 ], 404);
             }
 
-            // Update item
-            $items[$itemIndex]['title'] = $validated['title'];
-            $items[$itemIndex]['description'] = $validated['description'] ?? '';
-            $items[$itemIndex]['price'] = $validated['price'] ?? 0;
-            $items[$itemIndex]['category'] = $validated['category'] ?? '';
-            $items[$itemIndex]['imageUrl'] = $validated['imageUrl'] ?? '';
-            $items[$itemIndex]['stockStatus'] = $validated['stockStatus'] ?? 'In Stock';
-            $items[$itemIndex]['variants'] = $validated['variants'] ?? [];
-            $items[$itemIndex]['tags'] = $validated['tags'] ?? [];
+            $updatedItem = array_merge($existing, [
+                'id' => $itemId,
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? '',
+                'price' => $validated['price'] ?? 0,
+                'category' => $validated['category'] ?? '',
+                'imageUrl' => $validated['imageUrl'] ?? '',
+                'stockStatus' => $validated['stockStatus'] ?? 'In Stock',
+                'quantityAvailable' => array_key_exists('quantityAvailable', $validated)
+                    ? $validated['quantityAvailable']
+                    : ($existing['quantityAvailable'] ?? null),
+                'variants' => $validated['variants'] ?? [],
+                'tags' => $validated['tags'] ?? [],
+            ]);
 
-            $catalog->items = $items;
-            $catalog->save();
+            $this->catalogItemRepository->upsertFromArray($catalog, $updatedItem);
+            $items = $this->catalogItemRepository->getItemsArray($catalog->fresh());
 
             return response()->json([
                 'success' => true,
                 'message' => 'Item updated successfully',
-                'item' => $items[$itemIndex],
+                'item' => collect($items)->firstWhere('id', $itemId),
                 'items' => $items,
             ]);
 
@@ -746,18 +785,18 @@ class ListCatalogController extends Controller
                 ->where('company_id', $companyId)
                 ->firstOrFail();
 
-            $items = $catalog->items ?? [];
+            $items = $this->catalogItemRepository->getItemsArray($catalog);
+            $found = collect($items)->contains(fn ($item) => ($item['id'] ?? null) === $itemId);
 
-            // Find and remove item
-            $items = array_filter($items, function ($item) use ($itemId) {
-                return $item['id'] !== $itemId;
-            });
+            if (! $found) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Item not found',
+                ], 404);
+            }
 
-            // Re-index array
-            $items = array_values($items);
-
-            $catalog->items = $items;
-            $catalog->save();
+            $this->catalogItemRepository->deleteByItemId($catalog, $itemId);
+            $items = $this->catalogItemRepository->getItemsArray($catalog->fresh());
 
             return response()->json([
                 'success' => true,
@@ -803,5 +842,636 @@ class ListCatalogController extends Controller
         }
 
         return null;
+    }
+
+    public function createEmpty(Request $request)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        $catalog = ListCatalog::create([
+            'company_id' => $this->activeCompanyId(),
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'version' => 1,
+            'items' => [],
+            'columns' => [],
+            'source' => 'manual',
+            'metadata' => ['created_via' => 'empty'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Catalog '{$catalog->name}' created.",
+            'catalogId' => $catalog->id,
+            'catalog' => $this->formatCatalogSummary($catalog),
+        ]);
+    }
+
+    public function reimportExcel(Request $request, $id)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv',
+            'columnMapping' => 'nullable|json',
+            'remove_missing' => 'nullable|boolean',
+            'preview_only' => 'nullable|boolean',
+        ]);
+
+        $companyId = $this->activeCompanyId();
+        $catalog = ListCatalog::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+        $company = Company::findOrFail($companyId);
+
+        $file = $request->file('file');
+        $path = $file->store('catalogs');
+        $fullPath = storage_path('app/'.$path);
+
+        try {
+            $parseResult = $this->excelService->parseExcel($fullPath);
+            $columnMapping = $request->filled('columnMapping')
+                ? json_decode($request->input('columnMapping'), true)
+                : $parseResult['column_mapping'];
+
+            $importedItems = $this->excelService->transformItems($parseResult['items'], $columnMapping);
+            $this->excelService->validateItems($importedItems);
+
+            $preview = $this->catalogReimportService->previewMerge(
+                $this->catalogItemRepository->getItemsArray($catalog),
+                $importedItems
+            );
+
+            if ($request->boolean('preview_only')) {
+                return response()->json([
+                    'success' => true,
+                    'preview' => $preview,
+                    'import_count' => count($importedItems),
+                ]);
+            }
+
+            $merge = $this->catalogReimportService->mergeByItemId(
+                $this->catalogItemRepository->getItemsArray($catalog),
+                $importedItems,
+                $request->boolean('remove_missing')
+            );
+
+            $netNew = $merge['added'];
+            if ($netNew > 0 && ! $this->catalogItemPlanLimit->canAdd($company, $netNew)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $this->catalogItemPlanLimit->limitExceededMessage($company, $netNew),
+                    'usage' => $this->catalogItemPlanLimit->getUsageSummary($company),
+                    'preview' => $preview,
+                ], 403);
+            }
+
+            $this->catalogItemRepository->replaceAllFromArray($catalog, $merge['items']);
+            $catalog->columns = $this->excelService->getColumnsFromItems($merge['items']);
+            $catalog->metadata = array_merge($catalog->metadata ?? [], [
+                'last_reimport_at' => now()->toIso8601String(),
+                'last_reimport_file' => $file->getClientOriginalName(),
+                'reimport_stats' => [
+                    'added' => $merge['added'],
+                    'updated' => $merge['updated'],
+                    'unchanged' => $merge['unchanged'],
+                ],
+            ]);
+            $catalog->save();
+
+            if ($merge['added'] > 0) {
+                $this->catalogItemPlanLimit->recordUsage($company->id, $merge['added']);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Catalog updated: {$merge['added']} added, {$merge['updated']} updated.",
+                'catalog' => $this->formatCatalogSummary($catalog->fresh()),
+                'stats' => $merge,
+            ]);
+        } finally {
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+        }
+    }
+
+    public function importShopify(Request $request)
+    {
+        return $this->importFromStore($request, 'shopify');
+    }
+
+    public function importWooCommerce(Request $request)
+    {
+        return $this->importFromStore($request, 'woocommerce');
+    }
+
+    public function getAnalytics($id)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $companyId = $this->activeCompanyId();
+        $catalog = ListCatalog::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+
+        return response()->json([
+            'success' => true,
+            'analytics' => $this->catalogAnalyticsService->summary($catalog->id),
+            'flows' => $this->catalogFlowUsageService->flowsUsingCatalog($catalog->id, $companyId),
+        ]);
+    }
+
+    public function updateAttachments(Request $request)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'ai_catalog_ids' => 'nullable|array',
+            'ai_catalog_ids.*' => 'integer',
+        ]);
+
+        $company = $this->getCompany() ?? abort(403);
+        $ids = array_values(array_unique(array_map('intval', $validated['ai_catalog_ids'] ?? [])));
+
+        $validIds = ListCatalog::where('company_id', $company->id)
+            ->whereIn('id', $ids)
+            ->pluck('id')
+            ->all();
+
+        $company->setConfig('whatsapp_ai_catalog_ids', json_encode($validIds));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Catalog attachments updated.',
+            'ai_catalog_ids' => $validIds,
+        ]);
+    }
+
+    public function uploadItemImage(Request $request, $id, $itemId)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $request->validate([
+            'image' => 'required|image|max:5120',
+        ]);
+
+        $companyId = $this->activeCompanyId();
+        $catalog = ListCatalog::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+        $items = $this->catalogItemRepository->getItemsArray($catalog);
+        $existing = collect($items)->firstWhere('id', $itemId);
+
+        if (! $existing) {
+            return response()->json(['success' => false, 'message' => 'Item not found'], 404);
+        }
+
+        $path = $request->file('image')->store("catalog-images/{$companyId}", 'public');
+        $url = Storage::disk('public')->url($path);
+
+        $existing['imageUrl'] = $url;
+        $this->catalogItemRepository->upsertFromArray($catalog, $existing);
+        $updatedItem = collect($this->catalogItemRepository->getItemsArray($catalog->fresh()))->firstWhere('id', $itemId);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Image uploaded successfully.',
+            'imageUrl' => $url,
+            'item' => $updatedItem,
+        ]);
+    }
+
+    private function importFromStore(Request $request, string $source)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'catalogName' => 'required|string|max:255',
+            'catalogId' => 'nullable|integer',
+        ]);
+
+        $company = $this->getCompany() ?? abort(403);
+
+        try {
+            $items = $source === 'shopify'
+                ? $this->storeCatalogImportService->fetchShopifyItems($company)
+                : $this->storeCatalogImportService->fetchWooCommerceItems($company);
+        } catch (\RuntimeException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+
+        if ($items === []) {
+            return response()->json(['success' => false, 'message' => 'No products found in your store.'], 400);
+        }
+
+        $companyId = $this->activeCompanyId();
+
+        if (! empty($validated['catalogId'])) {
+            $catalog = ListCatalog::where('id', $validated['catalogId'])
+                ->where('company_id', $companyId)
+                ->firstOrFail();
+
+            $merge = $this->catalogReimportService->mergeByItemId(
+                $this->catalogItemRepository->getItemsArray($catalog),
+                $items,
+                true
+            );
+            $netNew = $merge['added'];
+
+            if ($netNew > 0 && ! $this->catalogItemPlanLimit->canAdd($company, $netNew)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $this->catalogItemPlanLimit->limitExceededMessage($company, $netNew),
+                    'usage' => $this->catalogItemPlanLimit->getUsageSummary($company),
+                ], 403);
+            }
+
+            $this->catalogItemRepository->replaceAllFromArray($catalog, $merge['items']);
+            $catalog->columns = $this->excelService->getColumnsFromItems($merge['items']);
+            $catalog->source = 'api';
+            $catalog->metadata = array_merge($catalog->metadata ?? [], [
+                'store_source' => $source,
+                'synced_at' => now()->toIso8601String(),
+            ]);
+            $catalog->save();
+
+            $this->catalogStoreSyncService->linkStoreProducts($catalog, $source, $items);
+
+            if ($merge['added'] > 0) {
+                $this->catalogItemPlanLimit->recordUsage($company->id, $merge['added']);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => ucfirst($source).' catalog synced: '.$merge['added'].' added, '.$merge['updated'].' updated.',
+                'catalog' => $this->formatCatalogSummary($catalog->fresh()),
+                'itemCount' => count($merge['items']),
+            ]);
+        }
+
+        $itemCount = count($items);
+        if (! $this->catalogItemPlanLimit->canAdd($company, $itemCount)) {
+            return response()->json([
+                'success' => false,
+                'message' => $this->catalogItemPlanLimit->limitExceededMessage($company, $itemCount),
+                'usage' => $this->catalogItemPlanLimit->getUsageSummary($company),
+            ], 403);
+        }
+
+        $catalog = ListCatalog::create([
+            'company_id' => $companyId,
+            'name' => $validated['catalogName'],
+            'version' => 1,
+            'items' => $items,
+            'columns' => $this->excelService->getColumnsFromItems($items),
+            'source' => 'api',
+            'metadata' => [
+                'store_source' => $source,
+                'imported_count' => $itemCount,
+                'imported_at' => now(),
+            ],
+        ]);
+
+        $this->catalogItemRepository->replaceAllFromArray($catalog, $items);
+        $this->catalogStoreSyncService->linkStoreProducts($catalog, $source, $items);
+
+        $this->catalogItemPlanLimit->recordUsage($company->id, $itemCount);
+        $this->orderInvoiceTemplateService->ensureForCompany($company);
+
+        return response()->json([
+            'success' => true,
+            'message' => ucfirst($source)." catalog '{$catalog->name}' created with {$itemCount} products.",
+            'catalogId' => $catalog->id,
+            'catalog' => $this->formatCatalogSummary($catalog),
+            'itemCount' => $itemCount,
+        ]);
+    }
+
+    public function importFromApi(Request $request, $id)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'api_config' => 'nullable|array',
+            'api_config.url' => 'nullable|url',
+            'api_config.method' => 'nullable|string|in:GET,POST,PUT',
+            'api_config.headers' => 'nullable|array',
+            'api_config.params' => 'nullable|array',
+            'api_config.data_path' => 'nullable|string',
+            'api_config.column_mapping' => 'nullable|array',
+            'replace_missing' => 'nullable|boolean',
+        ]);
+
+        $companyId = $this->activeCompanyId();
+        $catalog = ListCatalog::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+
+        if (! empty($validated['api_config'])) {
+            $catalog->update(['api_config' => array_merge($catalog->api_config ?? [], $validated['api_config'])]);
+            $catalog->refresh();
+        }
+
+        try {
+            $stats = $this->apiCatalogImportService->importIntoCatalog(
+                $catalog,
+                $request->boolean('replace_missing')
+            );
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "API import complete: {$stats['added']} added, {$stats['updated']} updated.",
+            'catalog' => $this->formatCatalogSummary($catalog->fresh()),
+            'stats' => $stats,
+        ]);
+    }
+
+    public function syncStore(Request $request, $id)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $companyId = $this->activeCompanyId();
+        $catalog = ListCatalog::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+        $storeType = $catalog->metadata['store_source'] ?? null;
+
+        if (! in_array($storeType, ['shopify', 'woocommerce'], true)) {
+            if ($catalog->source === 'api' && is_array($catalog->api_config) && ! empty($catalog->api_config['url'])) {
+                try {
+                    $stats = $this->apiCatalogImportService->importIntoCatalog($catalog);
+                } catch (\Throwable $e) {
+                    return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'API catalog synced.',
+                    'stats' => $stats,
+                    'catalog' => $this->formatCatalogSummary($catalog->fresh()),
+                ]);
+            }
+
+            return response()->json(['success' => false, 'message' => 'Catalog is not linked to a store or API source.'], 400);
+        }
+
+        try {
+            $result = $this->catalogStoreSyncService->pullFromStore($catalog, $storeType);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Store catalog synced.',
+            'catalog' => $this->formatCatalogSummary($catalog->fresh()),
+            'stats' => $result['stats'] ?? [],
+        ]);
+    }
+
+    public function registerStoreWebhooks(Request $request)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'store_type' => 'required|string|in:shopify,woocommerce',
+        ]);
+
+        $company = $this->getCompany() ?? abort(403);
+        $result = $this->catalogStoreSyncService->registerWebhooks($company, $validated['store_type']);
+
+        return response()->json($result, ($result['success'] ?? false) ? 200 : 400);
+    }
+
+    public function listCollections()
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $collections = CatalogCollection::where('company_id', $this->activeCompanyId())
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (CatalogCollection $collection) => [
+                'id' => $collection->id,
+                'name' => $collection->name,
+                'slug' => $collection->slug,
+                'description' => $collection->description,
+                'image_url' => $collection->image_url,
+                'is_active' => $collection->is_active,
+                'item_count' => $collection->items()->count(),
+            ]);
+
+        return response()->json(['success' => true, 'collections' => $collections]);
+    }
+
+    public function createCollection(Request $request)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:120',
+            'description' => 'nullable|string',
+            'image_url' => 'nullable|url|max:2048',
+            'is_active' => 'nullable|boolean',
+            'sort_order' => 'nullable|integer|min:0',
+            'item_ids' => 'nullable|array',
+            'item_ids.*' => 'string',
+        ]);
+
+        $companyId = $this->activeCompanyId();
+        $slug = $validated['slug'] ?? Str::slug($validated['name']);
+
+        $collection = CatalogCollection::create([
+            'company_id' => $companyId,
+            'name' => $validated['name'],
+            'slug' => $slug,
+            'description' => $validated['description'] ?? null,
+            'image_url' => $validated['image_url'] ?? null,
+            'is_active' => $validated['is_active'] ?? true,
+            'sort_order' => $validated['sort_order'] ?? 0,
+        ]);
+
+        if (! empty($validated['item_ids'])) {
+            $this->syncCollectionItemIds($collection, $validated['item_ids']);
+        }
+
+        return response()->json(['success' => true, 'collection' => $collection->fresh()]);
+    }
+
+    public function updateCollection(Request $request, $collectionId)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'slug' => 'nullable|string|max:120',
+            'description' => 'nullable|string',
+            'image_url' => 'nullable|url|max:2048',
+            'is_active' => 'nullable|boolean',
+            'sort_order' => 'nullable|integer|min:0',
+            'item_ids' => 'nullable|array',
+            'item_ids.*' => 'string',
+        ]);
+
+        $collection = CatalogCollection::where('id', $collectionId)
+            ->where('company_id', $this->activeCompanyId())
+            ->firstOrFail();
+
+        $collection->update(collect($validated)->except('item_ids')->all());
+
+        if (array_key_exists('item_ids', $validated)) {
+            $this->syncCollectionItemIds($collection, $validated['item_ids'] ?? []);
+        }
+
+        return response()->json(['success' => true, 'collection' => $collection->fresh()]);
+    }
+
+    public function deleteCollection($collectionId)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $collection = CatalogCollection::where('id', $collectionId)
+            ->where('company_id', $this->activeCompanyId())
+            ->firstOrFail();
+
+        $collection->delete();
+
+        return response()->json(['success' => true, 'message' => 'Collection deleted.']);
+    }
+
+    public function listExperiments()
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        return response()->json([
+            'success' => true,
+            'experiments' => $this->catalogExperimentService->listExperiments($this->activeCompanyId()),
+        ]);
+    }
+
+    public function createExperimentVariant(Request $request, $id)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'traffic_weight' => 'nullable|integer|min:0|max:100',
+            'publish_status' => 'nullable|string|in:draft,published',
+        ]);
+
+        $catalog = ListCatalog::where('id', $id)
+            ->where('company_id', $this->activeCompanyId())
+            ->firstOrFail();
+
+        $variant = $this->catalogExperimentService->createVariant($catalog, $validated);
+
+        return response()->json([
+            'success' => true,
+            'variant' => $this->formatCatalogSummary($variant),
+        ]);
+    }
+
+    public function updateExperimentWeights(Request $request)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'variants' => 'required|array|min:1',
+            'variants.*.id' => 'required|integer',
+            'variants.*.traffic_weight' => 'required|integer|min:0|max:100',
+            'variants.*.publish_status' => 'nullable|string|in:draft,published',
+        ]);
+
+        $companyId = $this->activeCompanyId();
+
+        foreach ($validated['variants'] as $row) {
+            ListCatalog::where('id', $row['id'])
+                ->where('company_id', $companyId)
+                ->update([
+                    'traffic_weight' => $row['traffic_weight'],
+                    'publish_status' => $row['publish_status'] ?? 'draft',
+                ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'experiments' => $this->catalogExperimentService->listExperiments($companyId),
+        ]);
+    }
+
+    /**
+     * @param  list<string>  $itemIds
+     */
+    private function syncCollectionItemIds(CatalogCollection $collection, array $itemIds): void
+    {
+        $catalogItems = CatalogItem::withoutGlobalScopes()
+            ->where('company_id', $collection->company_id)
+            ->whereIn('item_id', $itemIds)
+            ->get()
+            ->keyBy('item_id');
+
+        $sync = [];
+        foreach (array_values($itemIds) as $index => $itemId) {
+            $item = $catalogItems->get($itemId);
+            if ($item) {
+                $sync[$item->id] = ['sort_order' => $index];
+            }
+        }
+
+        $collection->items()->sync($sync);
+    }
+
+    private function formatCatalogSummary(ListCatalog $catalog): array
+    {
+        $companyId = $catalog->company_id;
+        $flows = $this->catalogFlowUsageService->flowsUsingCatalog($catalog->id, $companyId);
+
+        return [
+            'id' => $catalog->id,
+            'name' => $catalog->name,
+            'slug' => $catalog->slug,
+            'description' => $catalog->description,
+            'version' => $catalog->version,
+            'source' => $catalog->source,
+            'item_count' => count($catalog->items ?? []),
+            'created_at' => $catalog->created_at,
+            'versions_count' => ($catalog->relationLoaded('versions') ? $catalog->versions->count() : 0) + 1,
+            'public_url' => $this->catalogUrlService->publicUrl($catalog),
+            'flows_count' => count($flows),
+            'flows' => $flows,
+            'store_source' => $catalog->metadata['store_source'] ?? null,
+        ];
     }
 }

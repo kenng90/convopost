@@ -74,5 +74,7 @@ class Kernel extends HttpKernel
         'XssSanitizer' => \App\Http\Middleware\XssSanitization::class,
         'plan.plugin' => \App\Http\Middleware\EnsurePlanPlugin::class,
         'plan.capability' => \App\Http\Middleware\EnsurePlanCapability::class,
+        'org.route' => \App\Http\Middleware\EnsureOrgRouteAccess::class,
+        'owner.account' => \App\Http\Middleware\EnsureOwnerAccount::class,
     ];
 }

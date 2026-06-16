@@ -4,12 +4,12 @@ namespace Modules\Agents\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\ImpersonationService;
+use App\Services\OrgAuthorization;
 use App\Services\PlanResourceLimit;
 use App\Services\PlanSeatBillingService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 
 class Main extends Controller
@@ -45,11 +45,36 @@ class Main extends Controller
     private $titlePlural = 'agent';
 
     /**
-     * Auth checker functin for the crud.
+     * View access — list and edit forms.
      */
-    private function authChecker()
+    private function authCheckerView(): void
     {
-        if (! auth()->user()->hasRole('owner')) {
+        $user = auth()->user();
+
+        if ($user->hasRole('owner')) {
+            return;
+        }
+
+        app(OrgAuthorization::class)->assertModuleAccess('agents', 'view');
+    }
+
+    /**
+     * Manage access — create, update, delete, login as.
+     */
+    private function authCheckerManage(): void
+    {
+        $user = auth()->user();
+
+        if ($user->hasRole('owner')) {
+            return;
+        }
+
+        app(OrgAuthorization::class)->assertModuleAccess('agents', 'manage');
+    }
+
+    private function assertAgentInCompany(User $agent): void
+    {
+        if ((int) $agent->company_id !== (int) $this->getCompany()->id) {
             abort(403, 'Unauthorized action.');
         }
     }
@@ -70,19 +95,21 @@ class Main extends Controller
      */
     public function index()
     {
-        $this->authChecker();
+        $this->authCheckerView();
         $fields = $this->getFields();
         unset($fields[2]);
+        $orgAuth = app(OrgAuthorization::class);
 
         return view($this->view_path.'index', ['setup' => [
             'title' => __('crud.item_managment', ['item' => __($this->titlePlural)]),
-            'action_link' => route($this->webroute_path.'create'),
+            'action_link' => $orgAuth->canManageAgents() ? route($this->webroute_path.'create') : null,
             'action_name' => __('crud.add_new_item', ['item' => __($this->title)]),
             'items' => $this->getCompany()->staff()->paginate(config('settings.paginate')),
             'item_names' => $this->titlePlural,
             'webroute_path' => $this->webroute_path,
             'fields' => $fields,
             'parameter_name' => $this->parameter_name,
+            'canManageAgents' => $orgAuth->canManageAgents(),
         ]]);
     }
 
@@ -93,7 +120,7 @@ class Main extends Controller
      */
     public function create()
     {
-        $this->authChecker();
+        $this->authCheckerManage();
 
         return view('general.form', ['setup' => [
             'inrow' => true,
@@ -113,7 +140,7 @@ class Main extends Controller
      */
     public function store(Request $request)
     {
-        $this->authChecker();
+        $this->authCheckerManage();
 
         $company = $this->getCompany();
         $resourceLimit = app(PlanResourceLimit::class);
@@ -137,6 +164,12 @@ class Main extends Controller
 
             $item->assignRole('staff');
 
+            app(\App\Services\CompanyMembershipService::class)->ensureAgentMembership(
+                $item,
+                $company,
+                auth()->user()
+            );
+
             $billingSynced = app(PlanSeatBillingService::class)->syncForCompanyOwner($company);
             $status = __('crud.item_has_been_added', ['item' => __($this->title)]);
 
@@ -153,24 +186,15 @@ class Main extends Controller
 
     public function loginas($id)
     {
-        $this->authChecker();
+        $this->authCheckerManage();
         if (config('settings.is_demo', false)) {
             return redirect()->back()->withStatus('Not allowed in demo');
         }
 
         $agent = User::findOrFail($id);
+        $this->assertAgentInCompany($agent);
 
-        if ($agent->company->user->id != auth()->user()->id) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        Auth::login($agent, true);
-
-        //Set the company
-        Session::put('company_id', $agent->company->id);
-
-        //Login as owner
-        Session::put('impersonate', $agent->id);
+        app(ImpersonationService::class)->start($agent);
 
         return redirect(route('home'));
 
@@ -183,10 +207,10 @@ class Main extends Controller
      */
     public function edit($id)
     {
-        $this->authChecker();
+        $this->authCheckerManage();
 
         $item = $this->provider::findOrFail($id);
-        if (! $this->getCompany()->id == $item->company_id) {
+        if ((int) $this->getCompany()->id !== (int) $item->company_id) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -216,8 +240,9 @@ class Main extends Controller
      */
     public function update(Request $request, $id)
     {
-        $this->authChecker();
+        $this->authCheckerManage();
         $item = $this->provider::findOrFail($id);
+        $this->assertAgentInCompany($item);
         $item->name = $request->name;
         $item->email = $request->email;
         if ($request->password && strlen($request->password) > 2) {
@@ -235,8 +260,9 @@ class Main extends Controller
      */
     public function destroy($id)
     {
-        $this->authChecker();
+        $this->authCheckerManage();
         $item = $this->provider::findOrFail($id);
+        $this->assertAgentInCompany($item);
         $company = $item->company;
         $item->delete();
 

@@ -2,19 +2,20 @@
 
 namespace Modules\Wpbox\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Scopes\CompanyScope;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use Modules\Wpbox\Support\BotRulesCache;
 
 class Reply extends Model
 {
-    
     protected $table = 'replies';
+
     public $guarded = [];
 
     public function shouldWeUseIt($receivedMessage, Contact $contact) //Brij Mohan Negi Update
     {
-        $receivedMessage = " " . strtolower($receivedMessage);
+        $receivedMessage = ' '.strtolower($receivedMessage);
         $shouldWeUseIt = false;
 
         //Check if this tipe is a welcome bot, and if this is contact first message
@@ -35,13 +36,13 @@ class Reply extends Model
                 foreach ($triggerValues as $trigger) {
                     if ($this->type == 2) {
 
-                        $trigger = " " . strtolower($trigger); //Brij Mohan Negi Update
+                        $trigger = ' '.strtolower($trigger); //Brij Mohan Negi Update
                         // Exact match
                         if ($receivedMessage == $trigger) {
                             $shouldWeUseIt = true;
                             break; // exit the loop once a match is found
                         }
-                    } else if ($this->type == 3) {
+                    } elseif ($this->type == 3) {
                         // Contains
                         if (stripos($receivedMessage, $trigger) !== false) {
                             $shouldWeUseIt = true;
@@ -51,13 +52,13 @@ class Reply extends Model
                 }
             } else {
                 //Doesn't contain commas
-                $triggerValues = " " . strtolower($triggerValues); //Brij Mohan Negi Update
+                $triggerValues = ' '.strtolower($triggerValues); //Brij Mohan Negi Update
                 if ($this->type == 2) {
                     // Exact match
                     if ($receivedMessage == $triggerValues) {
                         $shouldWeUseIt = true;
                     }
-                } else if ($this->type == 3) {
+                } elseif ($this->type == 3) {
                     // Contains
                     if (stripos($receivedMessage, $triggerValues) !== false) {
                         $shouldWeUseIt = true;
@@ -76,14 +77,14 @@ class Reply extends Model
             preg_match_all($pattern, $this->text, $matches);
             $variables = $matches[1];
             foreach ($variables as $key => $variable) {
-                if ($variable == "name") {
-                    $this->text = str_replace("{{" . $variable . "}}", $contact->name, $this->text);
-                } else if ($variable == "phone") {
-                    $this->text = str_replace("{{" . $variable . "}}", $contact->phone, $this->text);
+                if ($variable == 'name') {
+                    $this->text = str_replace('{{'.$variable.'}}', $contact->name, $this->text);
+                } elseif ($variable == 'phone') {
+                    $this->text = str_replace('{{'.$variable.'}}', $contact->phone, $this->text);
                 } else {
                     //Field
                     $val = $contact->fields->where('name', $variable)->first()->pivot->value;
-                    $this->text = str_replace("{{" . $variable . "}}", $val, $this->text);
+                    $this->text = str_replace('{{'.$variable.'}}', $val, $this->text);
                 }
             }
 
@@ -92,14 +93,14 @@ class Reply extends Model
             preg_match_all($pattern, $this->header, $matches);
             $variables = $matches[1];
             foreach ($variables as $key => $variable) {
-                if ($variable == "name") {
-                    $this->header = str_replace("{{" . $variable . "}}", $contact->name, $this->header);
-                } else if ($variable == "phone") {
-                    $this->header = str_replace("{{" . $variable . "}}", $contact->phone, $this->header);
+                if ($variable == 'name') {
+                    $this->header = str_replace('{{'.$variable.'}}', $contact->name, $this->header);
+                } elseif ($variable == 'phone') {
+                    $this->header = str_replace('{{'.$variable.'}}', $contact->phone, $this->header);
                 } else {
                     //Field
                     $val = $contact->fields->where('name', $variable)->first()->pivot->value;
-                    $this->header = str_replace("{{" . $variable . "}}", $val, $this->header);
+                    $this->header = str_replace('{{'.$variable.'}}', $val, $this->header);
                 }
             }
             Log::info("Let's send the reply");
@@ -109,11 +110,11 @@ class Reply extends Model
 
             Log::info("Let's check if this reply has a next reply");
             try {
-               //Check if this reply has a next reply
-                if($this->next_reply_id){
-                    Log::info("next_reply_id: ".$this->next_reply_id);
+                //Check if this reply has a next reply
+                if ($this->next_reply_id) {
+                    Log::info('next_reply_id: '.$this->next_reply_id);
                     $nextReply = Reply::find($this->next_reply_id);
-                    $nextReply->sendTheReply($receivedMessage,$contact);
+                    $nextReply->sendTheReply($receivedMessage, $contact);
                 }
             } catch (\Throwable $th) {
                 //throw $th;
@@ -126,70 +127,83 @@ class Reply extends Model
         }
     }
 
-    public function sendTheReply($receivedMessage,Contact $contact){
+    public function sendTheReply($receivedMessage, Contact $contact)
+    {
         Log::info("Let's send the reply");
         $this->increment('used', 1);
-            $this->update();
+        $this->update();
 
-
-            //Change the values in the  $this->text
-            $pattern = '/{{\s*([^}]+)\s*}}/';
-            preg_match_all($pattern, $this->text, $matches);
-            $variables = $matches[1];
-            foreach ($variables as $key => $variable) {
-                if($variable=="name"){
-                    $this->text=str_replace("{{".$variable."}}",$contact->name,$this->text);
-                }else if($variable=="phone"){
-                    $this->text=str_replace("{{".$variable."}}",$contact->phone,$this->text);
-                }else{
-                    //Field
-                    $val=$contact->fields->where('name',$variable)->first()->pivot->value;
-                    $this->text=str_replace("{{".$variable."}}",$val,$this->text);
-                }
+        //Change the values in the  $this->text
+        $pattern = '/{{\s*([^}]+)\s*}}/';
+        preg_match_all($pattern, $this->text, $matches);
+        $variables = $matches[1];
+        foreach ($variables as $key => $variable) {
+            if ($variable == 'name') {
+                $this->text = str_replace('{{'.$variable.'}}', $contact->name, $this->text);
+            } elseif ($variable == 'phone') {
+                $this->text = str_replace('{{'.$variable.'}}', $contact->phone, $this->text);
+            } else {
+                //Field
+                $val = $contact->fields->where('name', $variable)->first()->pivot->value;
+                $this->text = str_replace('{{'.$variable.'}}', $val, $this->text);
             }
+        }
 
-            //Change the values in the  $this->header
-            $pattern = '/{{\s*([^}]+)\s*}}/';
-            preg_match_all($pattern, $this->header, $matches);
-            $variables = $matches[1];
-            foreach ($variables as $key => $variable) {
-                if($variable=="name"){
-                    $this->header=str_replace("{{".$variable."}}",$contact->name,$this->header);
-                }else if($variable=="phone"){
-                    $this->header=str_replace("{{".$variable."}}",$contact->phone,$this->header);
-                }else{
-                    //Field
-                    $val=$contact->fields->where('name',$variable)->first()->pivot->value;
-                    $this->header=str_replace("{{".$variable."}}",$val,$this->header);
-                }
+        //Change the values in the  $this->header
+        $pattern = '/{{\s*([^}]+)\s*}}/';
+        preg_match_all($pattern, $this->header, $matches);
+        $variables = $matches[1];
+        foreach ($variables as $key => $variable) {
+            if ($variable == 'name') {
+                $this->header = str_replace('{{'.$variable.'}}', $contact->name, $this->header);
+            } elseif ($variable == 'phone') {
+                $this->header = str_replace('{{'.$variable.'}}', $contact->phone, $this->header);
+            } else {
+                //Field
+                $val = $contact->fields->where('name', $variable)->first()->pivot->value;
+                $this->header = str_replace('{{'.$variable.'}}', $val, $this->header);
             }
-            Log::info("Let's check if this reply has a next reply  before sending it");
-            
-            $contact->sendReply($this);
+        }
+        Log::info("Let's check if this reply has a next reply  before sending it");
 
-            Log::info("Let's check if this reply has a next reply");
-            try {
-               //Check if this reply has a next reply
-                if($this->next_reply_id){
-                    Log::info("next_reply_id: ".$this->next_reply_id);
-                    $nextReply = Reply::find($this->next_reply_id);
-                    $nextReply->sendTheReply($receivedMessage,$contact);
-                }
-            } catch (\Throwable $th) {
-                //throw $th;
-                Log::info($th);
+        $contact->sendReply($this);
+
+        Log::info("Let's check if this reply has a next reply");
+        try {
+            //Check if this reply has a next reply
+            if ($this->next_reply_id) {
+                Log::info('next_reply_id: '.$this->next_reply_id);
+                $nextReply = Reply::find($this->next_reply_id);
+                $nextReply->sendTheReply($receivedMessage, $contact);
             }
+        } catch (\Throwable $th) {
+            //throw $th;
+            Log::info($th);
+        }
 
-            return true;
+        return true;
     }
 
-    protected static function booted(){
+    protected static function booted()
+    {
         static::addGlobalScope(new CompanyScope);
 
-        static::creating(function ($model){
-           $company_id=session('company_id',null);
-            if($company_id){
-                $model->company_id=$company_id;
+        static::creating(function ($model) {
+            $company_id = session('company_id', null);
+            if ($company_id) {
+                $model->company_id = $company_id;
+            }
+        });
+
+        static::saved(function ($model) {
+            if ($model->company_id) {
+                BotRulesCache::forget((int) $model->company_id);
+            }
+        });
+
+        static::deleted(function ($model) {
+            if ($model->company_id) {
+                BotRulesCache::forget((int) $model->company_id);
             }
         });
     }

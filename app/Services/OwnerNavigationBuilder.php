@@ -12,11 +12,19 @@ class OwnerNavigationBuilder
      */
     public function build(User $user): array
     {
+        return $this->buildFromPool($user, $user->collectOwnerModuleMenus());
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $pool
+     * @return array<int, array{label: string, menus: array<int, array<string, mixed>>}>
+     */
+    public function buildFromPool(User $user, array $pool, bool $excludeWorkspace = false): array
+    {
         if (! config('owner-navigation.enabled', true)) {
-            return $this->wrapFlat($user->collectOwnerModuleMenus());
+            return $this->wrapFlat($pool);
         }
 
-        $pool = $user->collectOwnerModuleMenus();
         $sections = [];
         $sectionLabels = collect(config('owner-navigation.sections', []))
             ->pluck('label', 'id')
@@ -54,7 +62,11 @@ class OwnerNavigationBuilder
         }
 
         foreach (config('owner-navigation.groups', []) as $groupKey => $groupConfig) {
-            $group = $this->buildSyntheticGroup($user, $groupConfig);
+            if ($excludeWorkspace && ($groupConfig['id'] ?? null) === 'workspaceMenu') {
+                continue;
+            }
+
+            $group = $this->buildSyntheticGroup($user, $groupConfig, $excludeWorkspace);
 
             if ($group === null) {
                 continue;
@@ -102,10 +114,10 @@ class OwnerNavigationBuilder
      * @param  array<string, mixed>  $groupConfig
      * @return array<string, mixed>|null
      */
-    protected function buildSyntheticGroup(User $user, array $groupConfig): ?array
+    protected function buildSyntheticGroup(User $user, array $groupConfig, bool $excludeWorkspace = false): ?array
     {
         if (($groupConfig['id'] ?? null) === 'workspaceMenu') {
-            return $this->buildWorkspaceGroup($user);
+            return $excludeWorkspace ? null : $this->buildWorkspaceGroup($user);
         }
 
         $plugin = $groupConfig['plugin'] ?? null;

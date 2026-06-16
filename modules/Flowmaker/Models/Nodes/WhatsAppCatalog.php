@@ -2,7 +2,11 @@
 
 namespace Modules\Flowmaker\Models\Nodes;
 
+use App\Models\Company;
 use App\Models\ListCatalog;
+use App\Services\Catalog\CatalogFlowCallbackService;
+use App\Services\Catalog\CatalogUrlService;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Wpbox\Models\Message;
@@ -20,52 +24,51 @@ class WhatsAppCatalog extends Node
 
         if ($extraData == null || $extraData == '') {
             Log::info('WhatsApp Catalog: no product selected');
+
             return;
         }
 
-        // Get the selected product
         $catalogId = $settings['catalogId'] ?? null;
-        if (!$catalogId) {
+        if (! $catalogId) {
             Log::error('WhatsApp Catalog: no catalog configured');
+
             return;
         }
 
-        $catalog = ListCatalog::find($catalogId);
-        if (!$catalog) {
+        $catalog = ListCatalog::withoutGlobalScopes()->find($catalogId);
+        if (! $catalog) {
             Log::error('WhatsApp Catalog: catalog not found', ['catalogId' => $catalogId]);
+
             return;
         }
 
-        // Find the selected product in the catalog
+        $productId = $this->resolveProductIdFromExtra((string) $extraData);
         $selectedProduct = null;
-        foreach ($catalog->items as $item) {
-            if ($item['id'] === $extraData) {
+
+        foreach ($catalog->items ?? [] as $item) {
+            if (($item['id'] ?? null) === $productId) {
                 $selectedProduct = $item;
                 break;
             }
         }
 
-        // Clear the waiting state
         $contact->clearContactState($this->flow_id, 'current_node');
 
         if ($selectedProduct) {
             Log::info('WhatsApp Catalog: product selected', [
                 'productId' => $selectedProduct['id'],
                 'productTitle' => $selectedProduct['title'],
-                'nodeId' => $this->id
+                'nodeId' => $this->id,
             ]);
 
-            // Store selected product in contact state for invoice node to access
             $contact->setContactState($this->flow_id, 'selected_product', json_encode($selectedProduct));
 
-            // Route to onProductSelected handle
             $nextNode = $this->getNextNodeId('onProductSelected');
             if ($nextNode) {
                 $nextNode->process($message, $data);
             }
         } else {
-            Log::info('WhatsApp Catalog: product not found in catalog', ['productId' => $extraData]);
-            // Route to else handle if product not found
+            Log::info('WhatsApp Catalog: product not found in catalog', ['productId' => $productId]);
             $elseNode = $this->getNextNodeId('else');
             if ($elseNode) {
                 $elseNode->process($message, $data);
@@ -78,86 +81,89 @@ class WhatsAppCatalog extends Node
         Log::info('WhatsApp Catalog: processing', ['isStartNode' => $this->isStartNode, 'nodeId' => $this->id]);
 
         if ($this->isStartNode) {
-            // Check if we're resuming (user selected a product) by checking if extra data exists
             $extraData = $data->extra ?? null;
 
-            if (!empty($extraData)) {
-                // User has sent a product selection - resume and listen for reply
+            if (! empty($extraData)) {
                 Log::info('WhatsApp Catalog: resuming after product selection', ['extraData' => $extraData]);
                 $this->listenForReply($message, $data);
             } else {
-                // First time - send the catalog
                 Log::info('WhatsApp Catalog: sending catalog for first time');
+
                 return $this->sendCatalog($message, $data);
             }
+
             return ['success' => true];
         }
 
         return $this->sendCatalog($message, $data);
     }
 
-    /**
-     * Send the catalog message to the contact
-     */
     private function sendCatalog($message, $data)
     {
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
         $settings = $this->getDataAsArray()['settings'] ?? [];
-
         $catalogId = $settings['catalogId'] ?? null;
 
-        if (!$catalogId) {
+        if (! $catalogId) {
             Log::error('WhatsApp Catalog: no catalog configured');
+
             return ['success' => false];
         }
 
-        $catalog = ListCatalog::find($catalogId);
-        if (!$catalog) {
+        $catalog = ListCatalog::withoutGlobalScopes()->find($catalogId);
+        if (! $catalog) {
             Log::error('WhatsApp Catalog: catalog not found', ['catalogId' => $catalogId]);
+
             return ['success' => false];
         }
 
-        // Store catalog in contact state so it's available for the next node
         $contact->setContactState($this->flow_id, 'catalog_id', $catalogId);
         $contact->setContactState($this->flow_id, 'catalog_items', json_encode($catalog->items ?? []));
 
-        try {
-            // Build message with catalog link
-            $header = $contact->changeVariables($settings['header'] ?? 'Browse our products', $this->flow_id);
-            $catalogUrl = route('catalog.public', ['catalogId' => $catalogId]);
-            $footer = $contact->changeVariables($settings['footer'] ?? 'Click the link above to view our catalog', $this->flow_id);
+        $displayMode = $settings['displayMode'] ?? 'link';
+        $items = $catalog->items ?? [];
 
-            // Create text message with catalog link
+        if ($displayMode === 'interactive_list' && count($items) > 0 && count($items) <= 10) {
+            return $this->sendInteractiveList($contact, $catalog, $settings);
+        }
+
+        try {
+            $header = $contact->changeVariables($settings['header'] ?? 'Browse our products', $this->flow_id);
+            $footer = $contact->changeVariables($settings['footer'] ?? 'Tap the link to browse and checkout. Your order will continue in this chat.', $this->flow_id);
+
+            $flowCallback = app(CatalogFlowCallbackService::class);
+            $catalogUrl = app(CatalogUrlService::class)->publicUrl(
+                $catalog,
+                null,
+                $flowCallback->buildQueryParams($this->flow_id, $contact->id, (string) $this->id, (int) $catalogId)
+            );
+
             $messageText = "{$header}\n\n{$catalogUrl}\n\n{$footer}";
 
             $messageData = [
-                "contact_id" => $contact->id,
-                "company_id" => $contact->company_id,
-                "value" => $messageText,
-                "is_message_by_contact" => false,
-                "is_campign_messages" => false,
-                "status" => 1,
-                "fb_message_id" => null
+                'contact_id' => $contact->id,
+                'company_id' => $contact->company_id,
+                'value' => $messageText,
+                'is_message_by_contact' => false,
+                'is_campign_messages' => false,
+                'status' => 1,
+                'fb_message_id' => null,
             ];
 
             $messageToBeSend = Message::create($messageData);
             $messageToBeSend->save();
-
-            // Send via WhatsApp
             $contact->sendMessageToWhatsApp($messageToBeSend, $contact);
 
-            Log::info('WhatsApp Catalog: message sent successfully', [
-                'catalogId' => $catalogId,
-                'phone' => $contact->phone,
-                'url' => $catalogUrl
-            ]);
-
-            // Set current node to wait for product selection
             $contact->setContactState($this->flow_id, 'current_node', $this->id);
 
+            Log::info('WhatsApp Catalog: link message sent', [
+                'catalogId' => $catalogId,
+                'url' => $catalogUrl,
+            ]);
         } catch (\Exception $e) {
             Log::error('WhatsApp Catalog: failed to send catalog', ['error' => $e->getMessage()]);
+
             return ['success' => false];
         }
 
@@ -165,8 +171,82 @@ class WhatsAppCatalog extends Node
     }
 
     /**
-     * Get the next node by handle ID
+     * @param  array<string, mixed>  $settings
      */
+    private function sendInteractiveList(Contact $contact, ListCatalog $catalog, array $settings): array
+    {
+        $company = Company::find($contact->company_id);
+        $token = $company?->getConfig('plain_token', '') ?? '';
+        $header = $contact->changeVariables($settings['header'] ?? 'Choose a product', $this->flow_id);
+        $footer = $contact->changeVariables($settings['footer'] ?? 'Select an item from the list below', $this->flow_id);
+        $buttonText = $contact->changeVariables($settings['buttonText'] ?? 'View products', $this->flow_id);
+
+        $rows = [];
+        foreach (array_slice($catalog->items ?? [], 0, 10) as $item) {
+            $productId = (string) ($item['id'] ?? '');
+            if ($productId === '') {
+                continue;
+            }
+
+            $price = isset($item['price']) ? ' — '.$item['price'] : '';
+            $rows[] = [
+                'id' => $this->listRowId($productId),
+                'title' => mb_substr((string) ($item['title'] ?? 'Product'), 0, 24),
+                'description' => mb_substr(((string) ($item['description'] ?? '')).$price, 0, 72),
+            ];
+        }
+
+        if ($rows === []) {
+            return ['success' => false];
+        }
+
+        $payload = [
+            'token' => $token,
+            'phone' => $contact->phone,
+            'message' => $header,
+            'header' => $catalog->name,
+            'footer' => $footer,
+            'action' => [
+                'button' => $buttonText,
+                'sections' => [[
+                    'title' => $catalog->name,
+                    'rows' => $rows,
+                ]],
+            ],
+        ];
+
+        $contact->setContactState($this->flow_id, 'current_node', $this->id);
+
+        try {
+            $response = Http::post(config('app.url').'/api/wpbox/sendlistmessage', $payload);
+            if (! $response->successful()) {
+                Log::error('WhatsApp Catalog: interactive list failed', ['body' => $response->body()]);
+
+                return ['success' => false];
+            }
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Catalog: interactive list exception', ['error' => $e->getMessage()]);
+
+            return ['success' => false];
+        }
+
+        return ['success' => true];
+    }
+
+    private function listRowId(string $productId): string
+    {
+        return 'catalog_'.$productId.'_id'.$this->id.'_flow'.$this->flow_id;
+    }
+
+    private function resolveProductIdFromExtra(string $extraData): string
+    {
+        if (preg_match('/^catalog_(.+)_id[^_]+_flow\d+$/', $extraData, $matches)) {
+            return $matches[1];
+        }
+
+        return $extraData;
+    }
+
     protected function getNextNodeId($handleId = null)
     {
         foreach ($this->outgoingEdges as $edge) {
@@ -175,6 +255,7 @@ class WhatsAppCatalog extends Node
                 return $edge->getTarget();
             }
         }
+
         return null;
     }
 }

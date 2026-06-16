@@ -1,2 +1,2 @@
 
-export const templates= window.data.templates;
+export const getTemplates = (): any[] => (window as any).data?.templates ?? [];

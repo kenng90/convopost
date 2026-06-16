@@ -1,8 +1,6 @@
 <?php
 
 return [
-
-    'name'              => 'Journies',
-    'description'       => 'This is my awesome module',
-
+    'name' => 'Journeys',
+    'description' => 'Kanban journey pipelines with WhatsApp stage automation',
 ];

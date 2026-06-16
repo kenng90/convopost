@@ -64,6 +64,7 @@ export const useFlowActions = () => {
             type === 'datastore' ? 'datastore' :
             type === 'assign_agent' ? 'assign_agent' :
             type === 'assign_group' ? 'assign_group' :
+            type === 'assign_journey_stage' ? 'assign_journey_stage' :
             type === 'counter' ? 'counter' :
             type === 'check_pricing' ? 'check_pricing' :
             type === 'mpesa_stk_push' ? 'mpesa_stk_push' :
@@ -86,6 +87,7 @@ export const useFlowActions = () => {
                type === 'datastore' ? 'Data Store' :
                type === 'assign_agent' ? 'Assign to Agent' :
                type === 'assign_group' ? 'Assign to Group' :
+               type === 'assign_journey_stage' ? 'Move to Journey Stage' :
                type === 'counter' ? 'Counter' :
                type === 'check_pricing' ? 'Check User Pricing' :
                type === 'mpesa_stk_push' ? 'MPesa STK Push' :
@@ -125,6 +127,8 @@ export const useFlowActions = () => {
           ? { agentId: 'none' }
           : type === 'assign_group'
           ? { groupId: 'none', action: 'add' }
+          : type === 'assign_journey_stage'
+          ? { journeyId: 'none', stageId: 'none' }
           : type === 'counter'
           ? { counter: { maxExecutions: 1, period: 'all_time' } }
           : type === 'check_pricing'
@@ -306,6 +310,17 @@ export const useFlowActions = () => {
     });
   }, [createNodeBase]);
 
+  const createNodeAssignJourneyStage = useCallback((position: { x: number; y: number }) => {
+    return createNodeBase('assign_journey_stage', position, {
+      label: "Move to Journey Stage",
+      type: "assign_journey_stage",
+      settings: {
+        journeyId: 'none',
+        stageId: 'none',
+      }
+    });
+  }, [createNodeBase]);
+
   return {
     createNodeBase,
     createNodeKeyword,
@@ -321,6 +336,7 @@ export const useFlowActions = () => {
     createNodeOpenAI,
     createNodeAssignAgent,
     createNodeAssignGroup,
+    createNodeAssignJourneyStage,
     createNodeMpesaStkPush,
     deleteNode,
     updateNode

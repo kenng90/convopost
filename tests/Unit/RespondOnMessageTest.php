@@ -2,7 +2,6 @@
 
 namespace Tests\Unit;
 
-use App\Models\Company;
 use Mockery;
 use Modules\Flowmaker\Listeners\RespondOnMessage;
 use Modules\Flowmaker\Models\Flow;
@@ -18,7 +17,7 @@ class RespondOnMessageTest extends TestCase
 
     public function test_skips_voice_assigned_flow_when_other_flows_exist(): void
     {
-        $company = Mockery::mock(Company::class);
+        $company = Mockery::mock(\App\Models\Company::class);
         $company->shouldReceive('getConfig')->with('whatsapp_ai_flow_id', 0)->andReturn('10');
 
         $voiceFlow = new Flow(['id' => 10, 'name' => 'Voice']);
@@ -33,7 +32,7 @@ class RespondOnMessageTest extends TestCase
 
     public function test_keeps_voice_flow_when_it_is_the_only_flow(): void
     {
-        $company = Mockery::mock(Company::class);
+        $company = Mockery::mock(\App\Models\Company::class);
         $company->shouldReceive('getConfig')->with('whatsapp_ai_flow_id', 0)->andReturn('10');
 
         $voiceFlow = new Flow(['id' => 10, 'name' => 'Voice']);
@@ -47,7 +46,7 @@ class RespondOnMessageTest extends TestCase
 
     public function test_processes_all_flows_when_no_voice_flow_configured(): void
     {
-        $company = Mockery::mock(Company::class);
+        $company = Mockery::mock(\App\Models\Company::class);
         $company->shouldReceive('getConfig')->with('whatsapp_ai_flow_id', 0)->andReturn('');
 
         $flows = collect([

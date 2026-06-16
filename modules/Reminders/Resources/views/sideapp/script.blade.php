@@ -1,30 +1,69 @@
 <script>
     "use strict";
 
-    //Add this function to the Vue instance of chatList
-    window.addEventListener('load', function() {
+    window.addEventListener('load', function () {
+        chatList.addProperty('appointments', []);
+        chatList.addProperty('eventRegistrations', []);
+        chatList.addProperty('eventsEnabled', false);
+        chatList.addProperty('bookingsLoading', false);
 
-        //Add dynamic properties
-        chatList.addProperty('reservations', []);
+        chatList.formatBookingDate = function (isoDate) {
+            if (!isoDate) {
+                return '';
+            }
 
-        //Watch for changes in activeChat
-        chatList.$watch('activeChat', function(newVal, oldVal) {
-            if(newVal !== oldVal) {
-                console.log("Get user reservations")
+            const date = new Date(isoDate);
 
-                //Axios with post.
-                axios.post('/api/reminders/get-contact-reservations', {
-                    contact_id: newVal.id,
-                    'token': '_'
-                }).then(response => {
-                    console.log(response.data);
-                    chatList.updateProperty('reservations', response.data.reservations);
-                }).catch(error => {
-                    console.error(error);
-                });
+            return date.toLocaleString(undefined, {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+        };
 
+        chatList.hasChatBookings = function () {
+            const appointments = this.dynamicProperties.appointments || [];
+            const registrations = this.dynamicProperties.eventRegistrations || [];
+
+            return appointments.length > 0 || registrations.length > 0;
+        };
+
+        chatList.loadContactBookings = function (contactId) {
+            if (!contactId) {
+                chatList.updateProperty('appointments', []);
+                chatList.updateProperty('eventRegistrations', []);
+                chatList.updateProperty('eventsEnabled', false);
+                chatList.updateProperty('bookingsLoading', false);
+
+                return;
+            }
+
+            chatList.updateProperty('bookingsLoading', true);
+
+            axios.post('/api/reminders/get-contact-bookings', {
+                contact_id: contactId,
+                token: '_',
+            }).then(function (response) {
+                chatList.updateProperty('appointments', response.data.appointments || []);
+                chatList.updateProperty('eventRegistrations', response.data.event_registrations || []);
+                chatList.updateProperty('eventsEnabled', !!response.data.events_enabled);
+                chatList.updateProperty('bookingsLoading', false);
+            }).catch(function (error) {
+                console.error(error);
+                chatList.updateProperty('appointments', []);
+                chatList.updateProperty('eventRegistrations', []);
+                chatList.updateProperty('eventsEnabled', false);
+                chatList.updateProperty('bookingsLoading', false);
+            });
+        };
+
+        chatList.$watch('activeChat', function (newVal, oldVal) {
+            if (newVal !== oldVal) {
+                chatList.loadContactBookings(newVal?.id);
             }
         });
-
     });
 </script>

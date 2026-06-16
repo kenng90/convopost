@@ -5,9 +5,13 @@ namespace Modules\Flowmaker\Models;
 use App\Models\Company;
 use App\Scopes\CompanyScope;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Nodes\AssignAgent;
 use Modules\Flowmaker\Models\Nodes\AssignGroup;
+use Modules\Flowmaker\Models\Nodes\AssignJourneyStage;
+use Modules\Flowmaker\Models\Nodes\BookingEventRegister;
+use Modules\Flowmaker\Models\Nodes\BookingEventsList;
 use Modules\Flowmaker\Models\Nodes\Branch;
 use Modules\Flowmaker\Models\Nodes\Buttons;
 use Modules\Flowmaker\Models\Nodes\Edge;
@@ -53,42 +57,21 @@ class Flow extends Model
 
     public function processMessage($data)
     {
-        Log::info('================================');
-        Log::info('Processing message in flow', ['flow' => $this->id, 'data' => $data]);
-
-        /*
-        Example message payload shape: {"flow":2,"data":{"Modules\\Wpbox\\Models\\Message":{"contact_id":1,"value":"Hi","contact":{"id":1,"name":"Jane Smith"}}}}
-        */
         try {
-
             $message = $data->value;
-            Log::info('Message: '.$message);
 
-            $contact = $data->contact_id;
-            Log::info('Contact: '.$contact);
-
-            //Get the Flow's data
-            $flowData = json_decode($this->flow_data, false);
-
-            Log::info('Flow data', ['flowData' => $flowData]);
-
-            // Validate flow data structure
+            $flowData = $this->getDecodedFlowData();
             if (! $flowData || ! isset($flowData->nodes) || ! isset($flowData->edges)) {
                 Log::error('Invalid flow data structure - missing nodes or edges', ['flowId' => $this->id]);
 
                 return;
             }
 
-            $contact = Contact::findOrFail($contact);
+            $contact = Contact::with(['fields', 'country'])->findOrFail($data->contact_id);
+            $contact->primeFlowStateCache($this->id);
             $startNode = $contact->getContactStateValue($this->id, 'current_node');
 
-            Log::info('Start node from contact state', ['startNode' => $startNode]);
-
-            // If the message matches a keyword trigger, reset state and process ALL
-            // keyword trigger nodes — this handles flows with multiple keyword triggers
-            // correctly, since any of them could match the incoming message.
             if ($this->messageMatchesKeywordTrigger($flowData->nodes, $message)) {
-                Log::info('Keyword match detected — resetting contact state and evaluating all keyword triggers');
                 $contact->clearContactState($this->id, 'current_node');
                 $this->processAllKeywordTriggers($flowData->nodes, $flowData->edges, $message, $data);
 
@@ -98,10 +81,8 @@ class Flow extends Model
             $graph = null;
             try {
                 $graph = $this->makeGraph($flowData->nodes, $flowData->edges, $startNode);
-                Log::info('Graph node '.$graph->id);
 
                 if ($startNode && $graph->id !== $startNode) {
-                    Log::warning('Stale contact state detected - clearing current_node', ['stale' => $startNode, 'resolved' => $graph->id]);
                     $contact->clearContactState($this->id, 'current_node');
                 }
             } catch (\Exception $e) {
@@ -111,11 +92,9 @@ class Flow extends Model
             if ($graph) {
                 $graph->process($message, $data);
             }
-
         } catch (\Exception $e) {
             Log::error('Error processing message in flow', ['error' => $e->getMessage()]);
         }
-
     }
 
     /**
@@ -125,49 +104,65 @@ class Flow extends Model
      */
     private function processAllKeywordTriggers($rawNodes, $rawEdges, string $message, $data): void
     {
-        // Build a fully-wired node map (edges connected, no single start node selected)
-        $nodes = $this->buildWiredNodes($rawNodes, $rawEdges);
+        $nodes = $this->getWiredNodes($rawNodes, $rawEdges);
 
         foreach ($nodes as $node) {
             if ($node->type !== 'keyword_trigger') {
                 continue;
             }
 
-            Log::info('Evaluating keyword trigger node', ['nodeId' => $node->id]);
             $node->isStartNode = true;
             $result = $node->process($message, $data);
 
-            // If the keyword matched (process returned success), stop here
             if (is_array($result) && ($result['success'] ?? false)) {
-                Log::info('Keyword trigger matched', ['nodeId' => $node->id]);
-
                 return;
             }
         }
+    }
 
-        Log::info('No keyword trigger matched the message', ['message' => $message]);
+    private function getDecodedFlowData(): ?object
+    {
+        $timestamp = $this->updated_at?->timestamp ?? 0;
+        $cacheKey = "flow:data:{$this->id}:{$timestamp}";
+
+        return Cache::remember($cacheKey, now()->addDay(), function () {
+            return json_decode($this->flow_data, false);
+        });
+    }
+
+    /**
+     * @return array<string, Node>
+     */
+    private function getWiredNodes($rawNodes, $rawEdgesArray): array
+    {
+        $timestamp = $this->updated_at?->timestamp ?? 0;
+        $cacheKey = "flow:wired:{$this->id}:{$timestamp}";
+
+        $cached = Cache::get($cacheKey);
+        if (is_string($cached)) {
+            $nodes = @unserialize($cached);
+            if (is_array($nodes)) {
+                return $nodes;
+            }
+        }
+
+        $nodes = $this->buildWiredNodes($rawNodes, $rawEdgesArray);
+        Cache::put($cacheKey, serialize($nodes), now()->addDay());
+
+        return $nodes;
     }
 
     private function makeGraph($nodes, $edgesArray, $startNode)
     {
-
-        Log::info('Let make a graph', ['nodes' => $nodes, 'edgesArray' => $edgesArray, 'startNode' => $startNode]);
-        $nodes = $this->buildWiredNodes($nodes, $edgesArray);
-
-        Log::info('Nodes', ['nodes' => $nodes]);
+        $nodes = $this->getWiredNodes($nodes, $edgesArray);
 
         //Return the graph, it is the first node
         if ($startNode && isset($nodes[$startNode])) {
-            Log::info('Using provided start node', ['startNode' => $startNode]);
             $nodes[$startNode]->isStartNode = true;
 
             return $nodes[$startNode];
         } else {
-            if ($startNode) {
-                Log::warning('Saved start node not found in current flow nodes - stale state, falling back to default start', ['startNode' => $startNode]);
-            }
             $foundStartNode = $this->findStartNode($nodes);
-            Log::info('Found start node based on position and type', ['startNode' => $foundStartNode->id]);
             $foundStartNode->isStartNode = true;
 
             return $foundStartNode;
@@ -220,12 +215,18 @@ class Flow extends Model
                 $theNewNode = new AssignAgent($nodeArray, []);
             } elseif ($nodeArray['type'] === 'assign_group') {
                 $theNewNode = new AssignGroup($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'assign_journey_stage') {
+                $theNewNode = new AssignJourneyStage($nodeArray, []);
             } elseif ($nodeArray['type'] === 'mpesa_stk_push') {
                 $theNewNode = new MpesaStkPush($nodeArray, []);
             } elseif ($nodeArray['type'] === 'whatsapp_catalog') {
                 $theNewNode = new WhatsAppCatalog($nodeArray, []);
             } elseif ($nodeArray['type'] === 'whatsapp_flow') {
                 $theNewNode = new WhatsAppFlow($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'booking_events_list') {
+                $theNewNode = new BookingEventsList($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'booking_event_register') {
+                $theNewNode = new BookingEventRegister($nodeArray, []);
             } else {
                 $theNewNode = new Node($nodeArray, []);
             }
@@ -344,33 +345,48 @@ class Flow extends Model
      */
     public function resumeFromMpesaCallback(Contact $contact)
     {
-        Log::info('Resuming flow from MPesa callback', ['flowId' => $this->id, 'contactId' => $contact->id]);
+        $this->resumeWaitingNode($contact, null);
+    }
 
+    /**
+     * Resume a flow after a catalog web checkout completes.
+     *
+     * @param  list<array<string, mixed>>  $cartItems
+     */
+    public function resumeFromCatalogCheckout(Contact $contact, string $productId, array $cartItems = [])
+    {
+        if ($cartItems !== []) {
+            $contact->setContactState($this->id, 'catalog_cart', json_encode($cartItems));
+        }
+
+        $this->resumeWaitingNode($contact, $productId);
+    }
+
+    private function resumeWaitingNode(Contact $contact, ?string $extra): void
+    {
         try {
-            $flowData = json_decode($this->flow_data, false);
+            $flowData = $this->getDecodedFlowData();
             $startNode = $contact->getContactStateValue($this->id, 'current_node');
 
-            Log::info('MPesa resume: current_node', ['startNode' => $startNode]);
-
             if (! $startNode || ! isset($flowData->nodes) || ! isset($flowData->edges)) {
-                Log::error('MPesa resume: missing flow data or current_node');
+                Log::error('Flow resume: missing flow data or current_node', ['flowId' => $this->id]);
 
                 return;
             }
 
+            $contact->primeFlowStateCache($this->id);
             $graph = $this->makeGraph($flowData->nodes, $flowData->edges, $startNode);
 
-            // Create a minimal data object so the node can find the contact
             $mockData = new \stdClass();
             $mockData->contact_id = $contact->id;
             $mockData->company_id = $contact->company_id;
             $mockData->value = '';
-            $mockData->extra = null;
+            $mockData->extra = $extra;
 
             $graph->process('', $mockData);
 
         } catch (\Exception $e) {
-            Log::error('MPesa resume: exception', ['error' => $e->getMessage()]);
+            Log::error('Flow resume: exception', ['error' => $e->getMessage(), 'flowId' => $this->id]);
         }
     }
 

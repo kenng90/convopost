@@ -2,202 +2,465 @@
 
 namespace Modules\Reminders\Http\Controllers;
 
-use Modules\Reminders\Models\Source;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Modules\Reminders\Models\AppointmentStaff;
+use Modules\Reminders\Models\Department;
+use Modules\Reminders\Models\Source;
+use Modules\Reminders\Models\SourceStaff;
+use Modules\Reminders\Services\SourceReminderSyncService;
+use Modules\Reminders\Support\WorkingHours;
+use Modules\Wpbox\Models\Campaign;
 
 class SourcesController extends Controller
 {
-    /**
-     * Provide class.
-     */
     private $provider = Source::class;
 
-    /**
-     * Web RoutePath for the name of the routes.
-     */
     private $webroute_path = 'reminders.sources.';
 
-    /**
-     * View path.
-     */
     private $view_path = 'reminders::sources.';
 
-    /**
-     * Parameter name.
-     */
     private $parameter_name = 'source';
 
-    /**
-     * Title of this crud.
-     */
     private $title = 'source';
 
-    /**
-     * Title of this crud in plural.
-     */
     private $titlePlural = 'sources';
 
-    private function getFields($class='col-md-4')
+    public function __construct(
+        private readonly SourceReminderSyncService $sourceReminderSync
+    ) {
+    }
+
+    private function getFields($class = 'col-md-4', ?Source $source = null)
     {
-        $fields=[];
-        
-        //Add name field
-        $fields[0]=['class'=>$class, 'ftype'=>'input', 'name'=>'Name', 'id'=>'name', 'placeholder'=>'Enter name', 'required'=>true];
+        $fields = [];
 
-        //Return fields
+        $fields[] = [
+            'class' => 'col-md-12',
+            'ftype' => 'info',
+            'id' => 'service_details_intro',
+            'name' => __('Service details'),
+            'text' => __('Name and booking settings for this bookable service.'),
+        ];
+
+        $fields[] = ['class' => $class, 'ftype' => 'input', 'name' => __('Service name'), 'id' => 'name', 'placeholder' => 'Consultation', 'required' => true, 'value' => $source?->name];
+        $fields[] = ['class' => $class, 'ftype' => 'bool', 'name' => __('Bookable online'), 'id' => 'is_bookable', 'required' => false, 'value' => $source?->is_bookable ?? true];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'select',
+            'name' => __('Department'),
+            'id' => 'department_id',
+            'required' => false,
+            'value' => $source?->department_id,
+            'data' => ['' => __('All departments')] + Department::query()->orderBy('name')->pluck('name', 'id')->toArray(),
+            'additionalInfo' => __('Optional. Limits which appointment team members can be assigned.'),
+        ];
+
+        $fields[] = [
+            'class' => 'col-md-12',
+            'ftype' => 'info',
+            'id' => 'booking_rules_intro',
+            'name' => __('Booking rules'),
+            'text' => __('Duration, availability window, and team assignment for this service.'),
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'input',
+            'type' => 'number',
+            'name' => __('Default duration (minutes)'),
+            'id' => 'default_duration_minutes',
+            'placeholder' => '30',
+            'required' => true,
+            'value' => $source?->default_duration_minutes ?? 30,
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'input',
+            'name' => __('Duration options (comma-separated minutes)'),
+            'id' => 'duration_options',
+            'placeholder' => '30,60,90',
+            'required' => false,
+            'value' => $source ? implode(',', $source->durationOptions()) : '30,60',
+            'additionalInfo' => __('Choices shown to clients when booking.'),
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'input',
+            'type' => 'number',
+            'name' => __('Buffer between slots (minutes)'),
+            'id' => 'buffer_minutes',
+            'placeholder' => '0',
+            'required' => true,
+            'value' => $source?->buffer_minutes ?? 0,
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'input',
+            'name' => __('Timezone'),
+            'id' => 'timezone',
+            'placeholder' => 'UTC',
+            'required' => true,
+            'value' => $source?->timezone ?? config('app.timezone', 'UTC'),
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'input',
+            'type' => 'number',
+            'name' => __('Minimum notice (hours)'),
+            'id' => 'min_notice_hours',
+            'placeholder' => '1',
+            'required' => true,
+            'value' => $source?->min_notice_hours ?? 1,
+            'additionalInfo' => __('How soon before start time clients may book.'),
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'input',
+            'type' => 'number',
+            'name' => __('Maximum advance booking (days)'),
+            'id' => 'max_advance_days',
+            'placeholder' => '60',
+            'required' => true,
+            'value' => $source?->max_advance_days ?? 60,
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'select',
+            'name' => __('Team member assignment'),
+            'id' => 'staff_assignment_mode',
+            'required' => true,
+            'value' => $source?->staff_assignment_mode ?? Source::ASSIGNMENT_CUSTOMER_CHOICE,
+            'data' => Source::staffAssignmentModeOptions(),
+            'additionalInfo' => __('How a team member is chosen when a client books. Round-robin and least-busy hide staff names from clients.'),
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'select',
+            'name' => __('Assigned appointment team'),
+            'id' => 'appointment_staff_ids[]',
+            'placeholder' => __('Select team members'),
+            'required' => false,
+            'multiple' => true,
+            'multipleselected' => $source
+                ? $source->staffAssignments()->where('is_active', true)->pluck('appointment_staff_id')->map(fn ($id) => (string) $id)->all()
+                : [],
+            'data' => $this->appointmentStaffOptions($source?->department_id),
+            'additionalInfo' => __('Who can receive bookings and calendar notifications for this service.'),
+        ];
+
+        $campaignOptions = ['' => __('— None —')] + $this->reminderCampaignOptions();
+
+        $fields[] = [
+            'class' => 'col-md-12',
+            'ftype' => 'info',
+            'id' => 'client_notifications_intro',
+            'name' => __('Client notifications'),
+            'text' => __('WhatsApp messages sent to the client before and after their appointment. When you save this service, matching rules appear automatically under Notification rules — edit them here.'),
+            'button' => [
+                'link' => route('reminders.reminders.index'),
+                'text' => __('View synced rules'),
+            ],
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'select',
+            'separator' => __('Before appointment'),
+            'name' => __('WhatsApp template'),
+            'id' => 'reminder_before_campaign_id',
+            'required' => false,
+            'value' => $source?->reminder_before_campaign_id,
+            'data' => $campaignOptions,
+            'additionalInfo' => __('Reminder-type WhatsApp template from Campaigns.'),
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'input',
+            'type' => 'number',
+            'name' => __('Send how long before start?'),
+            'id' => 'reminder_before_value',
+            'placeholder' => '24',
+            'required' => false,
+            'value' => $source?->reminder_before_value,
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'select',
+            'name' => __('Time unit'),
+            'id' => 'reminder_before_unit',
+            'required' => false,
+            'value' => $source?->reminder_before_unit ?? 'hours',
+            'data' => ['minutes' => __('Minutes'), 'hours' => __('Hours'), 'days' => __('Days')],
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'select',
+            'separator' => __('After appointment'),
+            'name' => __('WhatsApp template'),
+            'id' => 'reminder_after_campaign_id',
+            'required' => false,
+            'value' => $source?->reminder_after_campaign_id,
+            'data' => $campaignOptions,
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'input',
+            'type' => 'number',
+            'name' => __('Send how long after end?'),
+            'id' => 'reminder_after_value',
+            'placeholder' => '1',
+            'required' => false,
+            'value' => $source?->reminder_after_value,
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'select',
+            'name' => __('Time unit'),
+            'id' => 'reminder_after_unit',
+            'required' => false,
+            'value' => $source?->reminder_after_unit ?? 'hours',
+            'data' => ['minutes' => __('Minutes'), 'hours' => __('Hours'), 'days' => __('Days')],
+        ];
+
         return $fields;
     }
 
-
-    private function getFilterFields(){
-        $fields=$this->getFields('col-md-3');
-        $fields[0]['required']=true;
-        return $fields;
+    private function getFilterFields()
+    {
+        return [[
+            'class' => 'col-md-3',
+            'ftype' => 'input',
+            'name' => __('Service name'),
+            'id' => 'name',
+            'placeholder' => __('Consultation'),
+            'required' => true,
+        ]];
     }
 
-    /**
-     * Auth checker functin for the crud.
-     */
     private function authChecker()
     {
         $this->ownerAndStaffOnly();
     }
 
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
     public function index()
     {
         $this->authChecker();
 
-        $items=$this->provider::orderBy('id', 'desc');
-        if(isset($_GET['name'])&&strlen($_GET['name'])>1){
-            $items=$items->where('name',  'like', '%'.$_GET['name'].'%');
+        $items = $this->provider::orderBy('sort_order')->orderBy('id', 'desc');
+        if (isset($_GET['name']) && strlen($_GET['name']) > 1) {
+            $items = $items->where('name', 'like', '%'.$_GET['name'].'%');
         }
-        $items=$items->paginate(config('settings.paginate'));
+        $items = $items->paginate(config('settings.paginate'));
 
         return view($this->view_path.'index', ['setup' => [
-            'usefilter'=>true,
-            'title'=>__('crud.item_managment', ['item'=>__($this->titlePlural)]),
-            'action_link'=>route($this->webroute_path.'create'),
-            'action_name'=>__('crud.add_new_item', ['item'=>__($this->title)]),
-            'items'=>$items,
-            'item_names'=>$this->titlePlural,
-            'webroute_path'=>$this->webroute_path,
-            'fields'=>$this->getFields(),
-            'filterFields'=>$this->getFilterFields(),
-            'custom_table'=>true,
-            'parameter_name'=>$this->parameter_name,
-            'parameters'=>count($_GET) != 0,
+            'usefilter' => true,
+            'title' => __('Services'),
+            'action_link' => route($this->webroute_path.'create'),
+            'action_name' => __('Add service'),
+            'items' => $items,
+            'item_names' => $this->titlePlural,
+            'webroute_path' => $this->webroute_path,
+            'fields' => $this->getFields(),
+            'filterFields' => $this->getFilterFields(),
+            'custom_table' => true,
+            'parameter_name' => $this->parameter_name,
+            'parameters' => count($_GET) != 0,
             'breadcrumbs' => [
-                [__('crud.item_managment', ['item'=>__($this->titlePlural)]), '#'],
+                [__('Services'), '#'],
             ],
         ]]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
     public function create()
     {
         $this->authChecker();
 
-
         return view('general.form', ['setup' => [
-            'title'=>__('crud.new_item', ['item'=>__($this->title)]),
-            'action_link'=>route($this->webroute_path.'index'),
-            'action_name'=>__('crud.back'),
-            'iscontent'=>true,
-            'action'=>route($this->webroute_path.'store'),
+            'title' => __('New service'),
+            'action_link' => route($this->webroute_path.'index'),
+            'action_name' => __('Back'),
+            'iscontent' => true,
+            'inrow' => true,
+            'action' => route($this->webroute_path.'store'),
             'breadcrumbs' => [
-                [__('Sources'), route('reminders.sources.index')]
+                [__('Services'), route('reminders.sources.index')],
             ],
         ],
-        'fields'=>$this->getFields() ]);
+            'fields' => $this->getFields(),
+        ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
     public function store(Request $request)
     {
         $this->authChecker();
-        
-        //Create new contact
-        $contact = $this->provider::create([
-            'name' => $request->name,
-        ]);
-        $contact->save();
 
-        return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_added', ['item'=>__($this->title)]));
+        $source = $this->provider::create($this->sourceAttributes($request));
+        $this->syncStaff($source, $request->input('appointment_staff_ids', []));
+        $this->sourceReminderSync->sync($source->fresh());
+
+        return redirect()->route($this->webroute_path.'index')->withStatus(__('Service created.'));
     }
 
-    
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Contact  $reminders
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(source $source)
+    public function edit(Source $source)
     {
         $this->authChecker();
 
-        $fields = $this->getFields();
-        $fields[0]['value'] = $source->name;
+        $fields = $this->getFields('col-md-4', $source);
 
         $parameter = [];
         $parameter[$this->parameter_name] = $source->id;
 
         return view($this->view_path.'edit', ['setup' => [
-            'title'=>__('crud.edit_item_name', ['item'=>__($this->title), 'name'=>$source->name]),
-            'action_link'=>route($this->webroute_path.'index'),
-            'action_name'=>__('crud.back'),
-            'iscontent'=>true,
-            'isupdate'=>true,
-            'action'=>route($this->webroute_path.'update', $parameter),
+            'title' => __('Edit service').': '.$source->name,
+            'action_link' => route($this->webroute_path.'index'),
+            'action_name' => __('Back'),
+            'iscontent' => true,
+            'inrow' => true,
+            'isupdate' => true,
+            'action' => route($this->webroute_path.'update', $parameter),
         ],
-        'fields'=>$fields, ]);
+            'fields' => $fields,
+            'source' => $source,
+        ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Contact  $reminders
-     * @return \Illuminate\Http\Response
-     */
     public function update(Request $request, $id)
     {
         $this->authChecker();
         $item = $this->provider::findOrFail($id);
-        $item->name = $request->name;
-        $item->update();
+        $item->update($this->sourceAttributes($request, $item));
+        $this->syncStaff($item, $request->input('appointment_staff_ids', []));
+        $this->sourceReminderSync->sync($item->fresh());
 
-        return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_updated', ['item'=>__($this->title)]));
+        return redirect()->route($this->webroute_path.'index')->withStatus(__('Service updated.'));
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Contact  $reminders
-     * @return \Illuminate\Http\Response
-     */
     public function destroy($id)
     {
         $this->authChecker();
         $item = $this->provider::findOrFail($id);
         $item->delete();
-        return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_removed', ['item'=>__($this->title)]));
+
+        return redirect()->route($this->webroute_path.'index')->withStatus(__('Service removed.'));
     }
-    
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sourceAttributes(Request $request, ?Source $existing = null): array
+    {
+        $durationOptions = collect(explode(',', (string) $request->input('duration_options', '')))
+            ->map(fn ($value) => (int) trim($value))
+            ->filter(fn ($value) => $value > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $mode = $request->input('staff_assignment_mode', Source::ASSIGNMENT_CUSTOMER_CHOICE);
+        if (! array_key_exists($mode, Source::staffAssignmentModeOptions())) {
+            $mode = Source::ASSIGNMENT_CUSTOMER_CHOICE;
+        }
+
+        return [
+            'name' => $request->name,
+            'is_bookable' => $request->boolean('is_bookable'),
+            'department_id' => $request->input('department_id') ?: null,
+            'default_duration_minutes' => (int) $request->input('default_duration_minutes', 30),
+            'duration_options' => $durationOptions ?: [(int) $request->input('default_duration_minutes', 30)],
+            'buffer_minutes' => (int) $request->input('buffer_minutes', 0),
+            'timezone' => $request->input('timezone', config('app.timezone', 'UTC')),
+            'min_notice_hours' => (int) $request->input('min_notice_hours', 1),
+            'max_advance_days' => (int) $request->input('max_advance_days', 60),
+            'staff_assignment_mode' => $mode,
+            'working_hours' => $existing?->working_hours ?: WorkingHours::default(),
+            'reminder_before_campaign_id' => $request->input('reminder_before_campaign_id') ?: null,
+            'reminder_after_campaign_id' => $request->input('reminder_after_campaign_id') ?: null,
+            'reminder_before_value' => $request->input('reminder_before_value') ?: null,
+            'reminder_before_unit' => $request->input('reminder_before_unit') ?: null,
+            'reminder_after_value' => $request->input('reminder_after_value') ?: null,
+            'reminder_after_unit' => $request->input('reminder_after_unit') ?: null,
+        ];
+    }
+
+    /**
+     * @param  array<int|string>|null  $staffIds
+     */
+    private function syncStaff(Source $source, ?array $staffIds): void
+    {
+        $staffIds = collect($staffIds ?: [])
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $existing = SourceStaff::query()
+            ->where('source_id', $source->id)
+            ->get()
+            ->keyBy('appointment_staff_id');
+
+        SourceStaff::query()
+            ->where('source_id', $source->id)
+            ->whereNotIn('appointment_staff_id', $staffIds->all())
+            ->delete();
+
+        foreach ($staffIds as $staffId) {
+            if ($existing->has($staffId)) {
+                $existing[$staffId]->update(['is_active' => true]);
+
+                continue;
+            }
+
+            SourceStaff::create([
+                'source_id' => $source->id,
+                'appointment_staff_id' => $staffId,
+                'is_active' => true,
+            ]);
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function appointmentStaffOptions(?int $departmentId = null): array
+    {
+        $query = AppointmentStaff::query()->where('is_active', true)->orderBy('name');
+
+        if ($departmentId) {
+            $query->where('department_id', $departmentId);
+        }
+
+        return $query->pluck('name', 'id')->toArray();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function reminderCampaignOptions(): array
+    {
+        $company = $this->getCompany();
+        if (! $company) {
+            return [];
+        }
+
+        return Campaign::query()
+            ->where('company_id', $company->id)
+            ->where('is_reminder', true)
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->toArray();
+    }
 }

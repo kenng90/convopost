@@ -1,0 +1,23 @@
+{
+    "alias": "managers",
+    "version": "1.0",
+    "description": "Organization manager roles with per-module access control",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Managers\\Providers\\Main"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "ownermenus": [
+        {
+            "name": "Managers",
+            "icon": "ni ni-badge text-orange",
+            "route": "orgmanager.index",
+            "onlyin": "wpbox,whatssupport",
+            "priority": 102
+        }
+    ]
+}

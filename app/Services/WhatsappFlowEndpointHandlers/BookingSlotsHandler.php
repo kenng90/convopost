@@ -3,15 +3,20 @@
 namespace App\Services\WhatsappFlowEndpointHandlers;
 
 use App\Models\WhatsappFlow;
+use Modules\Reminders\Models\Source;
+use Modules\Reminders\Services\AvailabilityService;
 
 /**
  * Endpoint template: user picks a date → server returns time slots on the same screen.
- *
- * @see Meta dynamic components tutorial (DatePicker on-select-action + Dropdown data-source)
  */
 class BookingSlotsHandler
 {
     public const TEMPLATE_KEY = 'booking_slots';
+
+    public function __construct(
+        private readonly AvailabilityService $availabilityService
+    ) {
+    }
 
     public function supportsScreen(?WhatsappFlow $flow, ?string $screenId): bool
     {
@@ -40,10 +45,10 @@ class BookingSlotsHandler
     }
 
     /**
-     * @param  array<string, mixed>  $data  Request data from Meta (form + custom payload keys)
-     * @return array<string, mixed>|null Null = not a date-update request
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>|null
      */
-    public function handleDataExchange(string $screenId, array $data): ?array
+    public function handleDataExchange(string $screenId, array $data, ?WhatsappFlow $flow = null): ?array
     {
         $date = $this->extractSelectedDate($data);
 
@@ -51,13 +56,98 @@ class BookingSlotsHandler
             return null;
         }
 
+        $source = $this->resolveSource($flow, $data);
+        if (! $source) {
+            return [
+                'screen' => $screenId,
+                'data' => [
+                    'is_dropdown_visible' => false,
+                    'available_slots' => [],
+                ],
+            ];
+        }
+
+        $duration = isset($data['duration_minutes']) ? (int) $data['duration_minutes'] : null;
+        if ($duration === null) {
+            $duration = (int) ($this->screenConfig($flow, $screenId)['booking_duration_minutes'] ?? 0);
+            $duration = $duration > 0 ? $duration : null;
+        }
+
+        $slots = $this->availabilityService->slotsForDate($source, $date, $duration);
+
         return [
             'screen' => $screenId,
             'data' => [
-                'is_dropdown_visible' => true,
-                'available_slots' => $this->slotsForDate($date),
+                'is_dropdown_visible' => count($slots) > 0,
+                'available_slots' => collect($slots)->map(fn ($slot) => [
+                    'id' => $slot['id'],
+                    'title' => $slot['title'],
+                ])->values()->all(),
             ],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function resolveSource(?WhatsappFlow $flow, array $data): ?Source
+    {
+        $sourceName = $data['booking_source']
+            ?? $data['booking_service']
+            ?? $data['service']
+            ?? null;
+
+        if (! $sourceName) {
+            foreach ($data as $key => $value) {
+                if (is_string($key) && str_starts_with($key, 'select_') && is_string($value) && $value !== '') {
+                    $sourceName = $value;
+                    break;
+                }
+            }
+        }
+
+        $companyId = session('company_id') ?: $flow?->company_id;
+
+        if (! $sourceName && $flow) {
+            foreach ($flow->flow_json['screens'] ?? [] as $screen) {
+                if (! empty($screen['booking_source'])) {
+                    $sourceName = $screen['booking_source'];
+                    break;
+                }
+            }
+        }
+
+        if (! $sourceName || ! $companyId) {
+            return null;
+        }
+
+        if ($flow?->company_id) {
+            session(['company_id' => $flow->company_id]);
+        }
+
+        return Source::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->where('is_bookable', true)
+            ->where('name', $sourceName)
+            ->first();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function screenConfig(?WhatsappFlow $flow, string $screenId): array
+    {
+        if (! $flow) {
+            return [];
+        }
+
+        foreach ($flow->flow_json['screens'] ?? [] as $screen) {
+            if (($screen['id'] ?? '') === $screenId) {
+                return $screen;
+            }
+        }
+
+        return [];
     }
 
     /**
@@ -80,21 +170,5 @@ class BookingSlotsHandler
         }
 
         return null;
-    }
-
-    /**
-     * Demo slots — replace with real calendar/booking API integration.
-     *
-     * @return array<int, array<string, string>>
-     */
-    public function slotsForDate(string $date): array
-    {
-        return [
-            ['id' => $date.'_08', 'title' => '08:00'],
-            ['id' => $date.'_09', 'title' => '09:00'],
-            ['id' => $date.'_10', 'title' => '10:00'],
-            ['id' => $date.'_11', 'title' => '11:00'],
-            ['id' => $date.'_14', 'title' => '14:00'],
-        ];
     }
 }

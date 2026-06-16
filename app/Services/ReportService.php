@@ -24,11 +24,13 @@ class ReportService
         ?string $startDate = null,
         ?string $endDate = null,
         ?string $status = null,
-        ?string $paymentStatus = null
+        ?string $paymentStatus = null,
+        ?string $source = null
     ): array {
         $query = InvoicePayment::query()
-            ->whereHas('invoice', function ($q) {
+            ->whereHas('invoice', function ($q) use ($source) {
                 $q->where('company_id', $this->company->id);
+                $this->applyInvoiceSourceFilter($q, $source);
             })
             ->with(['invoice'])
             ->orderBy('created_at', 'desc');
@@ -62,6 +64,7 @@ class ReportService
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'status' => $status,
+                'source' => $source,
             ],
         ];
     }
@@ -149,6 +152,8 @@ class ReportService
                     'created_at' => $payment->created_at->toDateTimeString(),
                 ];
             })->values()->all(),
+            'source' => $invoice->getPaymentSource(),
+            'source_label' => $invoice->getPaymentSourceLabel(),
         ];
     }
 
@@ -298,22 +303,56 @@ class ReportService
     /**
      * Format single transaction for report
      */
-    private function formatTransaction(InvoicePayment $payment): array
+    public function formatTransaction(InvoicePayment $payment): array
     {
+        $invoice = $payment->invoice;
+
         return [
             'payment_id' => $payment->id,
-            'invoice_number' => $payment->invoice->invoice_number,
-            'invoice_id' => $payment->invoice->id,
-            'public_uuid' => $payment->invoice->public_uuid,
-            'customer_name' => $payment->invoice->customer_name,
-            'customer_phone' => $payment->invoice->customer_phone,
+            'invoice_number' => $invoice->invoice_number,
+            'invoice_id' => $invoice->id,
+            'public_uuid' => $invoice->public_uuid,
+            'customer_name' => $invoice->customer_name,
+            'customer_phone' => $invoice->customer_phone,
             'amount' => (float) $payment->amount,
             'status' => $payment->status,
+            'source' => $invoice->getPaymentSource(),
+            'source_label' => $invoice->getPaymentSourceLabel(),
             'mpesa_checkout_request_id' => $payment->mpesa_checkout_request_id,
             'mpesa_receipt_number' => $payment->mpesa_receipt_number,
             'created_at' => $payment->created_at->toDateTimeString(),
             'updated_at' => $payment->updated_at->toDateTimeString(),
         ];
+    }
+
+    /**
+     * Filter invoices by payment source for transaction reports.
+     */
+    private function applyInvoiceSourceFilter($query, ?string $source): void
+    {
+        if (! $source) {
+            return;
+        }
+
+        if ($source === Invoice::SOURCE_FLOW) {
+            $query->whereJsonContains('notes->source', Invoice::SOURCE_FLOW);
+
+            return;
+        }
+
+        if ($source === Invoice::SOURCE_CATALOG) {
+            $query->whereNotNull('catalog_id');
+
+            return;
+        }
+
+        if ($source === Invoice::SOURCE_INVOICE) {
+            $query->whereNull('catalog_id')
+                ->where(function ($inner) {
+                    $inner->whereNull('notes')
+                        ->orWhereJsonDoesntContain('notes->source', Invoice::SOURCE_FLOW);
+                });
+        }
     }
 
     /**

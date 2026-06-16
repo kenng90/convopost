@@ -1,33 +1,96 @@
 {
     "alias": "journies",
-    "description": "",
-    "keywords": [],
+    "description": "Kanban journey pipelines with WhatsApp stage automation",
+    "keywords": ["journeys", "pipeline", "kanban", "crm"],
     "active": 1,
     "order": 0,
     "providers": [
         "Modules\\Journies\\Providers\\Main"
     ],
-    "hasSidebar":true,
-    "sidebarData":[
+    "hasSidebar": true,
+    "hasReports": true,
+    "reports": [
         {
-            "name":"Contact journeys",
-            "app":"journies",
-            "icon":"https://mobidonia-demo.imgix.net/icons/journey.svg",
-            "brandColor":"#7e22ce",
-            "view":"journies::sideapp.app",
-            "script":"journies::sideapp.script"
+            "name": "Journey pipelines",
+            "showOnDashboard": true,
+            "view": "journies::reports.pipelines.app",
+            "script": "journies::reports.pipelines.script"
+        }
+    ],
+    "sidebarData": [
+        {
+            "name": "Contact journeys",
+            "app": "journies",
+            "icon": "https://mobidonia-demo.imgix.net/icons/journey.svg",
+            "brandColor": "#7e22ce",
+            "view": "journies::sideapp.app",
+            "script": "journies::sideapp.script"
+        }
+    ],
+    "vendor_fields": [
+        {
+            "separator": "Journeys",
+            "title": "Enable journeys",
+            "key": "JOURNEYS_ENABLED",
+            "ftype": "bool",
+            "icon": "🧭",
+            "value": true,
+            "help": "Turn off to disable journey automation and sidebar actions."
+        },
+        {
+            "separator": "Journeys",
+            "title": "Confirm before sending campaigns from inbox",
+            "key": "JOURNEYS_CONFIRM_BEFORE_SEND",
+            "ftype": "bool",
+            "icon": "✅",
+            "value": true
+        },
+        {
+            "separator": "Journeys",
+            "title": "Auto-enroll new contacts",
+            "key": "JOURNEYS_AUTO_ENROLL_NEW_CONTACTS",
+            "ftype": "bool",
+            "icon": "🆕",
+            "value": false,
+            "help": "Adds new contacts to the default journey first stage."
+        },
+        {
+            "separator": "Journeys",
+            "title": "Default journey ID",
+            "key": "JOURNEYS_DEFAULT_JOURNEY_ID",
+            "ftype": "input",
+            "icon": "🎯",
+            "value": "",
+            "help": "Numeric journey ID used for auto-enrollment."
+        },
+        {
+            "separator": "Journeys",
+            "title": "Staff can manage journeys",
+            "key": "JOURNEYS_STAFF_CAN_MANAGE",
+            "ftype": "bool",
+            "icon": "👥",
+            "value": true
         }
     ],
     "aliases": {},
     "files": [],
     "requires": [],
-    "ownermenus":[
+    "ownermenus": [
         {
-            "name":"Journies",
-            "icon":"ni ni-folder-17 text-red",
-            "route":"journies.index",
-            "color":"#2dce89",
-            "priority":10
+            "name": "Journeys",
+            "icon": "ni ni-folder-17 text-red",
+            "route": "journies.index",
+            "color": "#2dce89",
+            "priority": 10
+        }
+    ],
+    "staffmenus": [
+        {
+            "name": "Journeys",
+            "icon": "ni ni-folder-17 text-red",
+            "route": "journies.index",
+            "color": "#2dce89",
+            "priority": 10
         }
     ]
 }

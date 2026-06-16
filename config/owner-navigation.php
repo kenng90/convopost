@@ -2,7 +2,7 @@
 
 return [
 
-  /*
+    /*
     |--------------------------------------------------------------------------
     | Job-based owner sidebar navigation
     |--------------------------------------------------------------------------
@@ -51,7 +51,9 @@ return [
     'menu_ids' => [
         'contactMenu' => 'audience',
         'more' => 'setup',
-        'remindersMenu' => 'addons',
+        'appointmentsMenu' => 'automations',
+        'eventsMenu' => 'automations',
+        'bookingSetupMenu' => 'setup',
         'knowledgeMenu' => 'addons',
     ],
 
@@ -61,6 +63,7 @@ return [
     'routes' => [
         'chat.index' => 'inbox',
         'whatsappcall.calls.index' => 'inbox',
+        'orgmanager.index' => 'setup',
 
         'campaigns.index' => 'outbound',
 

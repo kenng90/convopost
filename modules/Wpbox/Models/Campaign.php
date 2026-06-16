@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Modules\Contacts\Models\Contact as ContactModel;
 use Modules\Contacts\Models\Group;
+use Modules\Wpbox\Support\BotRulesCache;
 use Modules\Wpbox\Traits\Whatsapp;
 
 class Campaign extends Model
@@ -41,6 +42,18 @@ class Campaign extends Model
             $company_id = session('company_id', null);
             if ($company_id) {
                 $model->company_id = $company_id;
+            }
+        });
+
+        static::saved(function ($model) {
+            if ($model->company_id) {
+                BotRulesCache::forget((int) $model->company_id);
+            }
+        });
+
+        static::deleted(function ($model) {
+            if ($model->company_id) {
+                BotRulesCache::forget((int) $model->company_id);
             }
         });
     }

@@ -88,8 +88,10 @@
                             </div>
                             <div class="col-lg-6">
                                 <div class="form-group">
-                                    <label>{{ __('Image URL') }}</label>
-                                    <input type="url" id="newItemImageUrl" class="form-control" placeholder="https://example.com/image.jpg">
+                                    <label>{{ __('Image') }}</label>
+                                    <input type="url" id="newItemImageUrl" class="form-control mb-2" placeholder="https://example.com/image.jpg">
+                                    <input type="file" id="newItemImageFile" class="form-control-file" accept="image/*">
+                                    <small class="text-muted">{{ __('Upload an image or paste a URL') }}</small>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6">
@@ -220,8 +222,9 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>{{ __('Image URL') }}</label>
-                            <input type="url" id="editItemImageUrl" class="form-control">
+                            <label>{{ __('Image') }}</label>
+                            <input type="url" id="editItemImageUrl" class="form-control mb-2">
+                            <input type="file" id="editItemImageFile" class="form-control-file" accept="image/*">
                         </div>
                     </div>
                 </div>

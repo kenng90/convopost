@@ -61,6 +61,15 @@
                         <option value="cancelled" @if($filters['status'] === 'cancelled') selected @endif>Cancelled</option>
                     </select>
                 </div>
+                <div class="form-group mr-3 mb-2">
+                    <label for="source" class="mr-2">Source:</label>
+                    <select id="source" name="source" class="form-control">
+                        <option value="">All Sources</option>
+                        <option value="flow" @if($filters['source'] === 'flow') selected @endif>Flow STK Push</option>
+                        <option value="catalog" @if($filters['source'] === 'catalog') selected @endif>Catalog</option>
+                        <option value="invoice" @if($filters['source'] === 'invoice') selected @endif>Invoice</option>
+                    </select>
+                </div>
                 <button type="submit" class="btn btn-primary mb-2">
                     <i class="fas fa-search mr-2"></i>Filter
                 </button>
@@ -154,6 +163,7 @@
                         <thead class="bg-light">
                             <tr>
                                 <th>Invoice #</th>
+                                <th>Source</th>
                                 <th>Customer</th>
                                 <th>Amount</th>
                                 <th>Status</th>
@@ -169,6 +179,9 @@
                                         <a href="{{ route('reports.payments') }}" class="font-weight-bold text-dark">
                                             {{ $transaction['invoice_number'] }}
                                         </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-light border">{{ $transaction['source_label'] ?? 'Invoice' }}</span>
                                     </td>
                                     <td>
                                         <div class="small">{{ $transaction['customer_name'] }}</div>
@@ -226,6 +239,9 @@
 
                                                     <dt class="col-sm-4">Invoice Number:</dt>
                                                     <dd class="col-sm-8">{{ $transaction['invoice_number'] }}</dd>
+
+                                                    <dt class="col-sm-4">Source:</dt>
+                                                    <dd class="col-sm-8">{{ $transaction['source_label'] ?? 'Invoice' }}</dd>
 
                                                     <dt class="col-sm-4">Customer:</dt>
                                                     <dd class="col-sm-8">{{ $transaction['customer_name'] }} ({{ $transaction['customer_phone'] }})</dd>

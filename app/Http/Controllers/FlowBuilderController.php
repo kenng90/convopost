@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\WhatsappFlow;
 use App\Services\WhatsappMetaFlowService;
+use App\Support\FlowBuilderScreenValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -166,6 +167,8 @@ class FlowBuilderController extends Controller
             'screens' => 'required|array',
         ]);
 
+        $duplicateErrors = FlowBuilderScreenValidator::duplicateFieldIdErrors($data['screens']);
+
         $flow = new WhatsappFlow([
             'name' => $request->input('name', 'Validation'),
             'flow_json' => ['screens' => $data['screens']],
@@ -174,8 +177,8 @@ class FlowBuilderController extends Controller
         $result = $this->metaService->getPublishValidation($flow);
 
         return response()->json([
-            'success' => $result['errors'] === [],
-            'errors' => $result['errors'],
+            'success' => $result['errors'] === [] && $duplicateErrors === [],
+            'errors' => array_merge($duplicateErrors, $result['errors']),
             'warnings' => $result['warnings'],
         ]);
     }

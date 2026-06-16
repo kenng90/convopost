@@ -12,17 +12,32 @@
   </head>
 
   <body>
+    <div id="flow"></div>
+
     <script>
       window.data = JSON.parse(@json($data));
+
+      fetch('/flowmaker/editor-metadata/' + window.data.flow.id, {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' },
+      })
+        .then(function (response) { return response.json(); })
+        .then(function (metadata) {
+          Object.assign(window.data, metadata);
+        })
+        .catch(function () {
+          window.data.templates = window.data.templates || [];
+          window.data.agents = window.data.agents || [];
+          window.data.groups = window.data.groups || [];
+          window.data.journeys = window.data.journeys || [];
+          window.data.planPlugins = window.data.planPlugins || {};
+        })
+        .finally(function () {
+          var script = document.createElement('script');
+          script.src = '{{ '/flowmaker/script' }}';
+          document.body.appendChild(script);
+        });
     </script>
-
-    
-    
-<div id="flow" data='{{ $data }}'></div>
-
-<script src="{{ '/flowmaker/script' }}"></script>
-
-
 
 </body>
 </html>

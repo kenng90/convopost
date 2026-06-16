@@ -26,7 +26,7 @@ class ReportsController extends Controller
         $company = $accessibleCompanies->where('id', $companyId)->first();
 
         // Fallback to current company if not found or unauthorized
-        if (!$company) {
+        if (! $company) {
             $company = $user->company;
         }
 
@@ -46,7 +46,7 @@ class ReportsController extends Controller
         $company = $accessibleCompanies->where('id', $companyId)->first();
 
         // If user doesn't have access to selected company, use current company
-        if (!$company) {
+        if (! $company) {
             $company = $user->company;
         }
 
@@ -70,13 +70,16 @@ class ReportsController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
             'status' => 'nullable|in:pending,success,failed,cancelled',
+            'source' => 'nullable|in:flow,catalog,invoice',
             'format' => 'nullable|in:json,csv',
         ]);
 
         $report = $reportService->getTransactionsReport(
             $validated['start_date'] ?? null,
             $validated['end_date'] ?? null,
-            $validated['status'] ?? null
+            $validated['status'] ?? null,
+            null,
+            $validated['source'] ?? null
         );
 
         if (($validated['format'] ?? null) === 'csv') {
@@ -96,6 +99,7 @@ class ReportsController extends Controller
                 'start_date' => $validated['start_date'] ?? '',
                 'end_date' => $validated['end_date'] ?? '',
                 'status' => $validated['status'] ?? '',
+                'source' => $validated['source'] ?? '',
             ],
         ]);
     }
@@ -228,7 +232,7 @@ class ReportsController extends Controller
      */
     private function exportTransactionsCsv(array $report)
     {
-        $filename = 'transactions-' . now()->format('Y-m-d-H-i-s') . '.csv';
+        $filename = 'transactions-'.now()->format('Y-m-d-H-i-s').'.csv';
 
         $headers = [
             'Content-Type' => 'text/csv; charset=utf-8',
@@ -242,6 +246,7 @@ class ReportsController extends Controller
             fputcsv($file, [
                 'Payment ID',
                 'Invoice Number',
+                'Source',
                 'Customer Name',
                 'Customer Phone',
                 'Amount',
@@ -257,6 +262,7 @@ class ReportsController extends Controller
                 fputcsv($file, [
                     $transaction['payment_id'],
                     $transaction['invoice_number'],
+                    $transaction['source_label'] ?? '',
                     $transaction['customer_name'],
                     $transaction['customer_phone'],
                     $transaction['amount'],
@@ -276,7 +282,7 @@ class ReportsController extends Controller
             fputcsv($file, ['Failed', $report['summary']['failed']]);
             fputcsv($file, ['Pending', $report['summary']['pending']]);
             fputcsv($file, ['Total Amount', $report['summary']['total_amount']]);
-            fputcsv($file, ['Success Rate', $report['summary']['success_rate'] . '%']);
+            fputcsv($file, ['Success Rate', $report['summary']['success_rate'].'%']);
 
             fclose($file);
         };
@@ -289,7 +295,7 @@ class ReportsController extends Controller
      */
     private function exportPaymentsCsv(array $report)
     {
-        $filename = 'payments-' . now()->format('Y-m-d-H-i-s') . '.csv';
+        $filename = 'payments-'.now()->format('Y-m-d-H-i-s').'.csv';
 
         $headers = [
             'Content-Type' => 'text/csv; charset=utf-8',
@@ -345,7 +351,7 @@ class ReportsController extends Controller
             fputcsv($file, ['Total Amount', $report['summary']['total_invoice_amount']]);
             fputcsv($file, ['Total Paid', $report['summary']['total_paid_amount']]);
             fputcsv($file, ['Total Pending', $report['summary']['total_pending_amount']]);
-            fputcsv($file, ['Collection Rate', $report['summary']['collection_rate'] . '%']);
+            fputcsv($file, ['Collection Rate', $report['summary']['collection_rate'].'%']);
 
             fclose($file);
         };
@@ -358,7 +364,7 @@ class ReportsController extends Controller
      */
     private function exportReconciliationCsv(array $report)
     {
-        $filename = 'reconciliation-' . now()->format('Y-m-d-H-i-s') . '.csv';
+        $filename = 'reconciliation-'.now()->format('Y-m-d-H-i-s').'.csv';
 
         $headers = [
             'Content-Type' => 'text/csv; charset=utf-8',
@@ -374,7 +380,7 @@ class ReportsController extends Controller
             fputcsv($file, ['Reconciled', $report['summary']['reconciled']]);
             fputcsv($file, ['With Discrepancies', $report['summary']['with_discrepancies']]);
             fputcsv($file, ['Pending', $report['summary']['pending']]);
-            fputcsv($file, ['Reconciliation Rate', $report['summary']['reconciliation_rate'] . '%']);
+            fputcsv($file, ['Reconciliation Rate', $report['summary']['reconciliation_rate'].'%']);
             fputcsv($file, []);
 
             // Write reconciled transactions
@@ -456,7 +462,7 @@ class ReportsController extends Controller
      */
     private function exportDailySummaryCsv(array $report)
     {
-        $filename = 'daily-summary-' . now()->format('Y-m-d-H-i-s') . '.csv';
+        $filename = 'daily-summary-'.now()->format('Y-m-d-H-i-s').'.csv';
 
         $headers = [
             'Content-Type' => 'text/csv; charset=utf-8',

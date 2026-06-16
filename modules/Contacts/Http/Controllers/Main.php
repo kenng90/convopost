@@ -282,6 +282,9 @@ class Main extends Controller
 
         // Attaching groups to the contact
         $contact->groups()->attach($request->groups);
+        if (class_exists(\Modules\Journies\Support\GroupRuleBridge::class)) {
+            \Modules\Journies\Support\GroupRuleBridge::contactAddedToGroups($contact, (array) $request->groups);
+        }
 
         if (isset($request->custom)) {
             $this->syncCustomFieldsToContact($request->custom, $contact);
@@ -373,7 +376,10 @@ class Main extends Controller
         }
 
         // Attaching groups to the contact
-        $item->groups()->sync($request->groups);
+        $groupChanges = $item->groups()->sync($request->groups);
+        if (class_exists(\Modules\Journies\Support\GroupRuleBridge::class)) {
+            \Modules\Journies\Support\GroupRuleBridge::contactAddedToGroups($item, $groupChanges['attached'] ?? []);
+        }
         $item->update();
 
         return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_updated', ['item' => __($this->title)]));

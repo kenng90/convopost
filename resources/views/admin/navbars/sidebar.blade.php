@@ -47,7 +47,7 @@
                 </div>
 
                 <!-- Organization switcher -->
-                @if(config('settings.enable_multi_organizations',true) && auth()->user()->hasRole('owner'))
+                @if(config('settings.enable_multi_organizations',true) && (auth()->user()->hasRole('owner') || (auth()->user()->isOrganizationManager() && auth()->user()->accessibleCompanies()->count() > 1)))
                     <div class="px-3 mb-4">
                         <h6 class="text-uppercase text-muted text-xs font-weight-bolder mb-2">
                             {{ __('Organization') }}
@@ -60,17 +60,19 @@
                                 <i class="ni ni-bold-down ml-2"></i>
                             </button>
                             <div class="dropdown-menu w-100 shadow-sm" aria-labelledby="orgDropdown">
-                                @foreach(auth()->user()->companies->where('active', 1) as $company)
+                                @foreach(auth()->user()->accessibleCompanies()->where('active', 1) as $company)
                                 <a class="dropdown-item d-flex align-items-center" href="{{ route('admin.companies.switch', $company->id) }}">
                                     <i class="ni ni-building text-primary mr-2"></i>
                                     <span>{{ $company->name }}</span>
                                 </a>
                                 @endforeach
+                                @if(auth()->user()->hasRole('owner'))
                                 <div class="dropdown-divider"></div>
                                 <a href="{{ route('admin.organizations.manage') }}" class="dropdown-item d-flex align-items-center">
                                     <i class="ni ni-settings text-primary mr-2"></i>
                                     <span>{{ __('Organizations') }}</span>
                                 </a>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -102,7 +104,13 @@
                 <span></span>
                 @endif
 
-                @if(auth()->user()->hasRole('staff'))
+                @if(auth()->user()->isOrganizationManager())
+                @include('admin.navbars.menus.manager')
+                @else
+                <span></span>
+                @endif
+
+                @if(auth()->user()->hasRole('staff') || auth()->user()->isOrganizationAgent())
                 @include('admin.navbars.menus.staff')
                 @else
                 <span></span>
@@ -142,11 +150,11 @@
                                 </a>
 
                                 <!-- Home/Store Link -->
-                                @if((auth()->user()->hasRole('owner')||auth()->user()->hasRole('staff')))
+                                @if((auth()->user()->hasRole('owner')||auth()->user()->hasRole('staff')||auth()->user()->isOrganizationManager()))
                                     @if (auth()->user()->hasRole('owner'))
                                         <?php $urlToVendor=auth()->user()->companies()->get()->first()->getLinkAttribute(); ?>
                                     @endif  
-                                    @if (auth()->user()->hasRole('staff'))
+                                    @if (auth()->user()->hasRole('staff') || auth()->user()->isOrganizationAgent() || auth()->user()->isOrganizationManager())
                                         <?php $urlToVendor=auth()->user()->company->getLinkAttribute(); ?>
                                     @endif
                                     @if (config('settings.show_company_page',true))

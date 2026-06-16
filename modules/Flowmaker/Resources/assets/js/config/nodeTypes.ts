@@ -23,6 +23,7 @@ import OpenAINode from '@/components/flow/OpenAINode';
 import DataStoreNode from '@/components/flow/DataStoreNode';
 import AssignAgentNode from '@/components/flow/AssignAgentNode';
 import AssignGroupNode from '@/components/flow/AssignGroupNode';
+import AssignJourneyStageNode from '@/components/flow/AssignJourneyStageNode';
 import CounterNode from '@/components/flow/CounterNode';
 import CheckPricingNode from '@/components/flow/CheckPricingNode';
 import MpesaStkPushNode from '@/components/flow/MpesaStkPushNode';
@@ -53,6 +54,7 @@ export const nodeTypes = {
   datastore: DataStoreNode,
   assign_agent: AssignAgentNode,
   assign_group: AssignGroupNode,
+  assign_journey_stage: AssignJourneyStageNode,
   counter: CounterNode,
   check_pricing: CheckPricingNode,
   mpesa_stk_push: MpesaStkPushNode,

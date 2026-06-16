@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\MyWelcomeController;
 use App\Http\Controllers\Auth\SocialController;
+use App\Http\Controllers\CatalogWebhookController;
 use App\Http\Controllers\CompaniesController;
 use App\Http\Controllers\CreditsController;
 use App\Http\Controllers\CRUD\PostsController;
@@ -35,18 +36,26 @@ Route::get('/'.config('settings.url_route', 'company').'/{alias}', [FrontEndCont
 Route::get('/notify/{type}/{id}/{message}', [CompaniesController::class, 'notify'])->name('company.notify');
 
 // Public Catalog Routes (no authentication required)
-Route::controller(PublicCatalogController::class)->prefix('catalog')->group(function () {
-    // Specific routes first (more specific before catch-all)
-    Route::get('/invoice/{invoiceId}', 'getInvoice')->name('catalog.invoice');
-    Route::get('/pay/{invoiceId}', 'showInvoice')->name('catalog.invoice.pay');
+Route::controller(CatalogWebhookController::class)->prefix('webhooks/catalog')->group(function () {
+    Route::post('shopify/{token}', 'shopify')->name('catalog.webhooks.shopify');
+    Route::post('woocommerce/{token}', 'woocommerce')->name('catalog.webhooks.woocommerce');
+});
 
-    // Then parameterized routes
-    Route::get('/{catalogId}/items', 'getItems')->name('catalog.items');
-    Route::post('/{catalogId}/generate-order', 'generateOrder')->name('catalog.generate-order');
-    Route::post('/{catalogId}/create-invoice', 'createInvoice')->name('catalog.create-invoice');
+Route::controller(PublicCatalogController::class)->group(function () {
+    Route::get('/shop/{subdomain}/{slug}', 'showBySlug')->name('catalog.shop');
+    Route::get('/shop/{subdomain}/experiment/{experimentKey}', 'showByExperiment')->name('catalog.shop.experiment');
 
-    // Finally catch-all (most generic)
-    Route::get('/{catalogId}', 'show')->name('catalog.public');
+    Route::prefix('catalog')->group(function () {
+        Route::get('/invoice/{invoiceId}', 'getInvoice')->name('catalog.invoice');
+        Route::get('/pay/{invoiceId}', 'showInvoice')->name('catalog.invoice.pay');
+
+        Route::get('/{catalogId}/items', 'getItems')->name('catalog.items');
+        Route::post('/{catalogId}/events', 'trackEvent')->name('catalog.track-event');
+        Route::post('/{catalogId}/generate-order', 'generateOrder')->name('catalog.generate-order');
+        Route::post('/{catalogId}/create-invoice', 'createInvoice')->name('catalog.create-invoice');
+
+        Route::get('/{catalogId}', 'show')->name('catalog.public');
+    });
 });
 Route::middleware('web', WelcomesNewUsers::class)->group(function () {
     Route::get('welcome/{user}', [MyWelcomeController::class, 'showWelcomeForm'])->name('welcome');
@@ -73,7 +82,7 @@ Route::middleware('web')->group(function () {
 
 });
 
-Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(function () {
+Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject', 'org.route'])->group(function () {
     Route::get('/dashboard/{lang?}', [App\Http\Controllers\DashboardController::class, 'dashboard'])->name('dashboard');
     Route::get('/home/{lang?}', [App\Http\Controllers\DashboardController::class, 'dashboard'])->name('home');
 
@@ -159,6 +168,12 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
             Route::get('/api/list-catalogs/import-template', 'downloadImportTemplate')->name('catalogs.import-template');
             Route::post('/api/list-catalogs/preview-excel', 'previewExcel')->name('catalogs.preview-excel');
             Route::post('/api/list-catalogs/import-excel', 'importExcel')->name('catalogs.import-excel');
+            Route::post('/api/list-catalogs/create-empty', 'createEmpty')->name('catalogs.create-empty');
+            Route::post('/api/list-catalogs/import-shopify', 'importShopify')->name('catalogs.import-shopify');
+            Route::post('/api/list-catalogs/import-woocommerce', 'importWooCommerce')->name('catalogs.import-woocommerce');
+            Route::post('/api/list-catalogs/{id}/reimport-excel', 'reimportExcel')->name('catalogs.reimport-excel');
+            Route::get('/api/list-catalogs/{id}/analytics', 'getAnalytics')->name('catalogs.analytics');
+            Route::put('/api/list-catalogs/attachments', 'updateAttachments')->name('catalogs.attachments');
             Route::post('/api/list-catalogs/test-api', 'testAPI')->name('catalogs.test-api');
             Route::get('/api/list-catalogs', 'listCatalogs')->name('catalogs.list');
             Route::get('/api/list-catalogs/{id}', 'getCatalog')->name('catalogs.show');
@@ -170,6 +185,17 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject'])->group(func
             Route::post('/api/list-catalogs/{id}/manage/items', 'addItem')->name('catalogs.items.add');
             Route::put('/api/list-catalogs/{id}/manage/items/{itemId}', 'updateItem')->name('catalogs.items.update');
             Route::delete('/api/list-catalogs/{id}/manage/items/{itemId}', 'deleteItem')->name('catalogs.items.delete');
+            Route::post('/api/list-catalogs/{id}/manage/items/{itemId}/image', 'uploadItemImage')->name('catalogs.items.image');
+            Route::post('/api/list-catalogs/{id}/import-api', 'importFromApi')->name('catalogs.import-api');
+            Route::post('/api/list-catalogs/{id}/sync', 'syncStore')->name('catalogs.sync');
+            Route::post('/api/list-catalogs/register-webhooks', 'registerStoreWebhooks')->name('catalogs.register-webhooks');
+            Route::get('/api/catalog-collections', 'listCollections')->name('catalogs.collections.list');
+            Route::post('/api/catalog-collections', 'createCollection')->name('catalogs.collections.create');
+            Route::put('/api/catalog-collections/{collectionId}', 'updateCollection')->name('catalogs.collections.update');
+            Route::delete('/api/catalog-collections/{collectionId}', 'deleteCollection')->name('catalogs.collections.delete');
+            Route::get('/api/catalog-experiments', 'listExperiments')->name('catalogs.experiments.list');
+            Route::post('/api/list-catalogs/{id}/experiment-variant', 'createExperimentVariant')->name('catalogs.experiments.variant');
+            Route::put('/api/catalog-experiments/weights', 'updateExperimentWeights')->name('catalogs.experiments.weights');
         });
     });
 

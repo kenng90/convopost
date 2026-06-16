@@ -14,6 +14,12 @@ class Invoice extends Model
 {
     use SoftDeletes;
 
+    public const SOURCE_FLOW = 'flow';
+
+    public const SOURCE_CATALOG = 'catalog';
+
+    public const SOURCE_INVOICE = 'invoice';
+
     protected $table = 'invoices';
 
     protected $fillable = [
@@ -175,6 +181,94 @@ class Invoice extends Model
     }
 
     /**
+     * Determine how this invoice was created for reporting.
+     */
+    public function getPaymentSource(): string
+    {
+        $notes = is_array($this->notes) ? $this->notes : [];
+
+        if (($notes['source'] ?? null) === self::SOURCE_FLOW) {
+            return self::SOURCE_FLOW;
+        }
+
+        if ($this->catalog_id) {
+            return self::SOURCE_CATALOG;
+        }
+
+        return self::SOURCE_INVOICE;
+    }
+
+    public function getPaymentSourceLabel(): string
+    {
+        return match ($this->getPaymentSource()) {
+            self::SOURCE_FLOW => 'Flow STK Push',
+            self::SOURCE_CATALOG => 'Catalog',
+            default => 'Invoice',
+        };
+    }
+
+    public function isFlowPayment(): bool
+    {
+        return $this->getPaymentSource() === self::SOURCE_FLOW;
+    }
+
+    /**
+     * Create a lightweight invoice and pending payment for a flow STK push.
+     *
+     * @return array{invoice: self, payment: InvoicePayment}
+     */
+    public static function createForFlowStkPush(
+        Company $company,
+        string $customerName,
+        string $customerPhone,
+        int $flowId,
+        string $nodeId,
+        int $contactId,
+        float $amount,
+        string $transactionDesc,
+        string $accountReference
+    ): array {
+        $invoice = self::create([
+            'company_id' => $company->id,
+            'invoice_number' => self::generateInvoiceNumber($company),
+            'customer_name' => $customerName ?: 'Flow Contact',
+            'customer_phone' => $customerPhone,
+            'amount' => $amount,
+            'currency' => 'KES',
+            'status' => 'sent',
+            'description' => $transactionDesc,
+            'items' => [
+                [
+                    'title' => $transactionDesc,
+                    'quantity' => 1,
+                    'price' => $amount,
+                    'total' => $amount,
+                ],
+            ],
+            'notes' => [
+                'source' => self::SOURCE_FLOW,
+                'flow_id' => $flowId,
+                'contact_id' => $contactId,
+                'node_id' => $nodeId,
+                'account_reference' => $accountReference,
+            ],
+            'sent_at' => now(),
+        ]);
+
+        $payment = InvoicePayment::create([
+            'invoice_id' => $invoice->id,
+            'payment_method' => 'mpesa',
+            'amount' => $amount,
+            'status' => 'pending',
+        ]);
+
+        return [
+            'invoice' => $invoice,
+            'payment' => $payment,
+        ];
+    }
+
+    /**
      * Generate a unique invoice number
      */
     public static function generateInvoiceNumber(Company $company): string
@@ -182,6 +276,7 @@ class Invoice extends Model
         $prefix = strtoupper(substr($company->name, 0, 3));
         $count = self::where('company_id', $company->id)->count() + 1;
         $date = now()->format('Ymd');
+
         return "{$prefix}-{$date}-{$count}";
     }
 

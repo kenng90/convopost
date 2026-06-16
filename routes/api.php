@@ -1,8 +1,9 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\CatalogApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\LoginController;
 use Modules\Invoice\Http\Controllers\InvoiceController;
 
 /*
@@ -26,13 +27,12 @@ Route::middleware('auth:sanctum')->get('/accessible-companies', function (Reques
 
     return response()->json([
         'success' => true,
-        'companies' => $companies->map(fn($c) => [
+        'companies' => $companies->map(fn ($c) => [
             'id' => $c->id,
             'name' => $c->name,
         ])->toArray(),
     ]);
 });
-
 
 // Route::post('/login', [LoginController::class, 'login']);
 Route::post('/v2/login', [LoginController::class, 'login']);
@@ -65,5 +65,20 @@ Route::prefix('invoice')->group(function () {
 
         Route::get('/{invoice:id}', [InvoiceController::class, 'show'])
             ->name('invoice.show');
+    });
+});
+
+Route::group([
+    'middleware' => ['Modules\Wpbox\Http\Middleware\CheckAPIPlan'],
+], function () {
+    Route::prefix('v1/catalog')->controller(CatalogApiController::class)->group(function () {
+        Route::get('me', 'me')->name('catalog.api.me');
+        Route::get('catalogs', 'listCatalogs')->name('catalog.api.catalogs');
+        Route::get('catalogs/{id}', 'showCatalog')->name('catalog.api.catalog');
+        Route::get('catalogs/{id}/items', 'listItems')->name('catalog.api.items');
+        Route::post('catalogs/{id}/sync', 'syncCatalog')->name('catalog.api.sync');
+        Route::get('collections', 'listCollections')->name('catalog.api.collections');
+        Route::get('collections/{slug}', 'showCollection')->name('catalog.api.collection');
+        Route::get('experiments', 'listExperiments')->name('catalog.api.experiments');
     });
 });

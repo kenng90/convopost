@@ -3,8 +3,9 @@
     var chatList=null;
     var lastmessagetime="none";
     var chatMessages={};
+    var chatMessageCacheOrder=[];
+    var chatMessageCacheLimit=10;
     var pusherConn = null;
-    var pusherConnForUpdates = null;
     var channel = null;
     var channelUpdate=null;
     var pusherActiveChat=null;
@@ -12,10 +13,45 @@
     var serverTimezone = "<?php echo config('app.timezone'); ?>";
     var pusherAvailable=false;
     var searchQuery="";
-   
-    
-    
+    var searchDebounceTimer=null;
 
+    var momentDayFormatter=function(date){
+        return moment.tz(date, serverTimezone).format('dddd, D MMM, YYYY');
+    };
+
+    var formatMessageHtml=function(message){
+        if(!message){ return ''; }
+        const linkRegex = /https?:\/\/[^\s/$.?#].[^\s]*/g;
+        var replacedText = String(message).replace(linkRegex, '<a href="$&" class="text-bold">$&</a>');
+        return replacedText.replace(/\n/g, '<br>');
+    };
+
+    var prepareMessageForDisplay=function(message){
+        message._formatted = formatMessageHtml(message.value || '');
+        message._originalFormatted = message.original_message && message.original_message.length > 0
+            ? formatMessageHtml('{{ __('Original:')}}' + ' ' + message.original_message)
+            : '';
+        try {
+            message._buttons = JSON.parse(message.buttons || '[]');
+        } catch (e) {
+            message._buttons = [];
+        }
+        message._day = momentDayFormatter(message.created_at);
+        return message;
+    };
+
+    var prepareMessagesForDisplay=function(messages){
+        return messages.map(prepareMessageForDisplay);
+    };
+
+    var touchChatMessageCache=function(contactId){
+        chatMessageCacheOrder = chatMessageCacheOrder.filter(function(id){ return id !== contactId; });
+        chatMessageCacheOrder.unshift(contactId);
+        while(chatMessageCacheOrder.length > chatMessageCacheLimit){
+            var evictId = chatMessageCacheOrder.pop();
+            delete chatMessages[evictId];
+        }
+    };
     var initPusher=function(){
         if (typeof Pusher !== 'undefined') {
             // The variable is defined
@@ -27,17 +63,11 @@
             });
             pusherAvailable=true;
 
-            pusherConnForUpdates = new Pusher(PUSHER_APP_KEY, {
-                cluster: PUSHER_APP_CLUSTER
-            });
-
-            //Bind to new chat list update
-            channelUpdate = pusherConnForUpdates.subscribe('chatupdate.'+companyID);
+            channelUpdate = pusherConn.subscribe('chatupdate.'+companyID);
             channelUpdate.bind('general', chatListUpdate);
 
-            // Also subscribe for WhatsApp incoming calls to enable instant UIC handling
             try{
-                const wcChan = pusherConnForUpdates.subscribe('whatsappcall.'+companyID);
+                const wcChan = pusherConn.subscribe('whatsappcall.'+companyID);
                 wcChan.bind('incoming', function(call){
                     try{
                         if(window.wpIncomingCall){ window.wpIncomingCall(call); }
@@ -99,7 +129,7 @@
             chatMessages[data.contact.id] = [];
         }
 
-        chatMessages[data.contact.id].push(data.message);
+        chatMessages[data.contact.id].push(prepareMessageForDisplay(data.message));
       
         //Update the last message
         chatList.contacts[index].last_message = data.message.value;
@@ -117,13 +147,34 @@
     }
 
     var chatListUpdate=function(data){
-        
-        
-        if(data.contact!==chatList.activeChat.id){
-            
+        var contactId = data.contact_id || data.contact;
+        if(!contactId || !chatList){ return; }
+
+        var index = chatList.contacts.findIndex(function(item){ return item.id === contactId; });
+
+        if(index !== -1){
+            var contact = chatList.contacts[index];
+            if(data.last_message !== undefined){ contact.last_message = data.last_message; }
+            if(data.last_reply_at !== undefined){ contact.last_reply_at = data.last_reply_at; }
+            if(data.is_last_message_by_contact !== undefined){ contact.is_last_message_by_contact = data.is_last_message_by_contact; }
+            if(data.resolved_chat !== undefined){ contact.resolved_chat = data.resolved_chat; }
+
+            chatList.contacts.splice(index, 1);
+            chatList.contacts.unshift(contact);
+
+            var allIndex = chatList.all.findIndex(function(item){ return item.id === contactId; });
+            if(allIndex !== -1){
+                Object.assign(chatList.all[allIndex], contact);
+            }
+
+            if(contactId !== chatList.activeChat.id){
+                if(!chatList.stopPlaySound){ playSound(); }
+            }
+            return;
+        }
+
+        if(contactId !== chatList.activeChat.id){
             getChatsJS();
-        }else{
-            getChatJS(chatList.activeChat.id);
         }
     }
 
@@ -132,31 +183,38 @@
 
     
 
-    var getChatJS=function(contact_id){
+    var getChatJS=function(contact_id, before_id){
         if(chatMessages[contact_id]){
-            //Previous messages
             chatList.messages=chatMessages[contact_id];
         }
-        axios.get('/api/wpbox/chat/'+contact_id).then(function (response) {
-            var messages=response.data.data;
-            messages=messages.reverse();
-            chatMessages[contact_id]=messages;
-           
-            chatList.messages=chatMessages[contact_id];
 
-            //Loot in  chatList.contacts=response.data.data;
+        var url = '/api/wpbox/chat/'+contact_id;
+        if(before_id){
+            url += '?before_id=' + before_id;
+        }
+
+        axios.get(url).then(function (response) {
+            var messages=response.data.data;
+            messages=prepareMessagesForDisplay(messages.reverse());
+
+            if(before_id && chatMessages[contact_id]){
+                chatMessages[contact_id] = messages.concat(chatMessages[contact_id]);
+            } else {
+                chatMessages[contact_id]=messages;
+            }
+
+            touchChatMessageCache(contact_id);
+            chatList.messages=chatMessages[contact_id];
+            chatList.hasMoreMessages = !!response.data.has_more;
+
             const index = chatList.contacts.findIndex(item => item.id === contact_id);
             if (index !== -1) {
                 chatList.contacts[index].is_last_message_by_contact=0;
             }
-            
         }).catch(function (error) {
-            
         });
 
         connectToChannel(contact_id);
-        
-        
     }
 
     var getChatsJS=function(page=1,search_query=""){
@@ -165,7 +223,7 @@
         axios.get('/api/wpbox/chats/'+lastmessagetime+'/'+page+'/'+search_query).then(function (response) {
             if(response.data.status){
                 var initialChatLoad=chatList.contacts.length==0;
-                chatList.contacts=response.data.data.filter(contact => !contact.resolved_chat);
+                chatList.contacts=response.data.data;
                 chatList.all=response.data.data;
                 chatList.numberOfPages=response.data.numberOfPages;
 
@@ -197,11 +255,28 @@
                     
 
                 }
+
+                openPendingInitialContact();
             }
             
         }).catch(function (error) {
             
         });
+    }
+
+    function openPendingInitialContact() {
+        if (!window.pendingInitialContactId) {
+            return;
+        }
+
+        const contactId = parseInt(window.pendingInitialContactId, 10);
+        window.pendingInitialContactId = null;
+
+        if (!contactId || !chatList) {
+            return;
+        }
+
+        chatList.setCurrentChat(contactId);
     }
 
     function playSound() {
@@ -223,6 +298,8 @@
     }
 
     
+
+    window.pendingInitialContactId = @json($initialContactId ?? null);
 
     window.onload = function () {
         initPusher();
@@ -285,7 +362,21 @@
             newMessagesCount: 0,
             myMessagesCount: 0,
             totalMessagesCount: 0,
+            hasMoreMessages: false,
+            loadingOlderMessages: false,
             dynamicProperties: {}, // Placeholder object
+        },
+        mounted() {
+            var self = this;
+            this.$nextTick(function(){
+                var el = self.$refs.scrollableDiv;
+                if(!el){ return; }
+                el.addEventListener('scroll', function(){
+                    if(el.scrollTop < 80 && self.hasMoreMessages && !self.loadingOlderMessages && self.activeChat && self.activeChat.id){
+                        self.loadOlderMessages();
+                    }
+                });
+            });
         },
         errorCaptured(err, component, info) {
             console.error('An error occurred:', err);
@@ -319,7 +410,11 @@
             searchQuery(newVal, oldVal) {
                 if (newVal !== oldVal) {
                     this.stopPlaySound=true;
-                    getChatsJS(this.page, newVal);
+                    var self = this;
+                    clearTimeout(searchDebounceTimer);
+                    searchDebounceTimer = setTimeout(function(){
+                        getChatsJS(self.page, newVal);
+                    }, 400);
                 }
             }
         },
@@ -345,9 +440,8 @@
                         // Line breaks
                         .replace(/\n/g, '<br>');
             },
-            addProperty() {
-                // Dynamically add a property using $set
-                this.$set(this.dynamicProperties, 'newProperty', 'value');
+            addProperty(property, value) {
+                this.$set(this.dynamicProperties, property, value);
             },
             updateProperty(property, value) {
                 this.$set(this.dynamicProperties, property, value);
@@ -539,6 +633,19 @@
                     scrollableDiv.scrollTop = scrollableDiv.scrollHeight;
                    
                 }
+            },
+            loadOlderMessages() {
+                if(!this.activeChat || !this.activeChat.id || !this.hasMoreMessages || this.loadingOlderMessages){
+                    return;
+                }
+                var oldest = this.messages.length > 0 ? this.messages[0] : null;
+                if(!oldest || !oldest.id){
+                    return;
+                }
+                this.loadingOlderMessages = true;
+                var self = this;
+                getChatJS(this.activeChat.id, oldest.id);
+                setTimeout(function(){ self.loadingOlderMessages = false; }, 800);
             },
             parseJSON:function(jsonString){
                 if(jsonString==null||jsonString==""){

@@ -1,7 +1,7 @@
 <div v-for="(message, indexMessage) in messages" class="row mb-4" :class="[ {'justify-content-start': message.is_message_by_contact==1}, {'justify-content-end': message.is_message_by_contact==0},{'text-right': (message.is_message_by_contact==0&& message.is_campign_messages==0)} ]">
-    <div class="col-md-12" v-if="indexMessage==0 || momentDay(message.created_at)!=momentDay(messages[indexMessage-1].created_at)">
+    <div class="col-md-12" v-if="indexMessage==0 || message._day != messages[indexMessage-1]._day">
         <div class="message-separator col-md-12 text-center">
-            <span class="badge">@{{ momentDay(message.created_at) }}</span>
+            <span class="badge">@{{ message._day || momentDay(message.created_at) }}</span>
         </div>
     </div>
     <div class="col-auto" :style="{ 'max-width': ( message.is_campign_messages==1?'440px':'65%'  )    }">
@@ -30,12 +30,12 @@
                 <h4 v-if="message.header_text" class="mb-2 text-white">@{{ message.header_text }}</h4>
 
                 
-                <p  v-html="formatIt(message.value)" class="mb-2 text-left" style="text-align: left !important;" :class="[ {'text-white': message.is_message_by_contact==0} ]" ></p>
-                <p v-if="message.original_message.length>0"  v-html="formatIt('{{ __('Original:')}}'+' '+message.original_message)" class="mb-2 small text-right" style="opacity:0.7" :class="[ {'text-white': message.is_message_by_contact==0} ]" ></p>
+                <p  v-html="message._formatted || formatIt(message.value)" class="mb-2 text-left" style="text-align: left !important;" :class="[ {'text-white': message.is_message_by_contact==0} ]" ></p>
+                <p v-if="message.original_message.length>0"  v-html="message._originalFormatted || formatIt('{{ __('Original:')}}'+' '+message.original_message)" class="mb-2 small text-right" style="opacity:0.7" :class="[ {'text-white': message.is_message_by_contact==0} ]" ></p>
 
                 <p v-if="message.footer_text" class="text-muted text-xs text-white" style="opacity: 0.8">@{{ message.footer_text }}</p>
 
-                <a :href="button.type=='URL'?button.url:( button.name=='cta_url'?button.parameters.url:( button.type=='reply'?'#':'')) " target="_blank" v-for="(button, indexButton) in parseJSON(message.buttons)" type="button" class="btn btn-secondary btn-lg btn-block">@{{  button.text? button.text:( button.name=='cta_url'?button.parameters.display_text:( button.type=='reply'?button.reply.title:''))  }}</a>
+                <a :href="button.type=='URL'?button.url:( button.name=='cta_url'?button.parameters.url:( button.type=='reply'?'#':'')) " target="_blank" v-for="(button, indexButton) in (message._buttons || parseJSON(message.buttons))" type="button" class="btn btn-secondary btn-lg btn-block">@{{  button.text? button.text:( button.name=='cta_url'?button.parameters.display_text:( button.type=='reply'?button.reply.title:''))  }}</a>
                 </template>
 
                 <div class="box-sizing: content-box; d-flex text-sm opacity-6 align-items-center" :class="[ {'text-white': message.is_message_by_contact==0 || message.is_call_brief==1 || message.is_note==1} , {'justify-content-end': message.is_message_by_contact==0},{'text-right': message.is_message_by_contact==0} ]">

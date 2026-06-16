@@ -188,6 +188,23 @@ function renderPagination(pagination) {
     container.innerHTML = html;
 }
 
+function uploadItemImageFile(catalogId, itemId, fileInput) {
+    if (!fileInput || !fileInput.files || !fileInput.files.length) {
+        return Promise.resolve();
+    }
+
+    const formData = new FormData();
+    formData.append('image', fileInput.files[0]);
+
+    return fetch(`/api/list-catalogs/${catalogId}/manage/items/${encodeURIComponent(itemId)}/image`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        },
+        body: formData,
+    }).then(response => response.json());
+}
+
 function addNewItem() {
     const catalogId = document.getElementById('currentCatalogId').value;
     const itemId = document.getElementById('newItemId').value;
@@ -236,9 +253,12 @@ function addNewItem() {
             }
 
             if (data.success) {
-                showSuccess('Item added successfully');
-                document.getElementById('addItemForm').reset();
-                loadItems(catalogId, 1);
+                const imageFile = document.getElementById('newItemImageFile');
+                uploadItemImageFile(catalogId, itemId, imageFile).finally(() => {
+                    showSuccess('Item added successfully');
+                    document.getElementById('addItemForm').reset();
+                    loadItems(catalogId, 1);
+                });
             } else {
                 showError(data.message || 'Failed to add item');
             }
@@ -330,11 +350,14 @@ function saveEditedItem() {
             }
 
             if (data.success) {
-                showSuccess('Item updated successfully');
-                reloadItems();
-                if (window.$ && window.$.fn.modal) {
-                    window.jQuery('#editItemModal').modal('hide');
-                }
+                const imageFile = document.getElementById('editItemImageFile');
+                uploadItemImageFile(catalogId, itemId, imageFile).finally(() => {
+                    showSuccess('Item updated successfully');
+                    reloadItems();
+                    if (window.$ && window.$.fn.modal) {
+                        window.jQuery('#editItemModal').modal('hide');
+                    }
+                });
             } else {
                 showError(data.message || 'Failed to update item');
             }
