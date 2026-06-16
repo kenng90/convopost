@@ -7,6 +7,7 @@ use App\Models\Company;
 use Illuminate\Http\Request;
 use Modules\Reminders\Models\Source;
 use Modules\Reminders\Services\BookingCatalogService;
+use Modules\Reminders\Services\BookingPublicKeyService;
 use Modules\Reminders\Services\EventCatalogService;
 use Modules\Reminders\Services\GoogleCalendarService;
 
@@ -15,6 +16,7 @@ class BookingSettingsController extends Controller
     public function __construct(
         private readonly GoogleCalendarService $googleCalendarService,
         private readonly BookingCatalogService $catalogService,
+        private readonly BookingPublicKeyService $bookingPublicKeyService,
         private readonly EventCatalogService $eventCatalogService
     ) {
     }
@@ -40,6 +42,7 @@ class BookingSettingsController extends Controller
             'redirectUri' => route('reminders.google.callback', [], true),
             'catalogUrl' => $company ? route('reminders.booking.catalog', ['subdomain' => $company->subdomain]) : null,
             'eventsCatalogUrl' => $company ? route('reminders.booking.events', ['subdomain' => $company->subdomain]) : null,
+            'bookingPublicKey' => $company ? $this->bookingPublicKeyService->ensureKey($company) : null,
             'eventsEnabled' => $company ? $this->eventCatalogService->eventsEnabled($company) : false,
             'bookingContactsInInbox' => filter_var($company?->getConfig('BOOKING_CONTACTS_IN_INBOX', 'false'), FILTER_VALIDATE_BOOLEAN),
         ]);
@@ -65,6 +68,23 @@ class BookingSettingsController extends Controller
             ->withStatus(__('Inbox settings updated.'));
     }
 
+    public function regenerateBookingKey()
+    {
+        $this->ownerAndStaffOnly();
+
+        $company = $this->getCompany();
+
+        if (! $company) {
+            abort(403);
+        }
+
+        $this->bookingPublicKeyService->rotate($company);
+
+        return redirect()
+            ->route('reminders.booking-settings.index')
+            ->withStatus(__('Booking public key regenerated. Update any embedded widgets using the old key.'));
+    }
+
     public function updateCalendar(Request $request)
     {
         $this->ownerAndStaffOnly();
@@ -88,7 +108,6 @@ class BookingSettingsController extends Controller
         return view('reminders::booking.catalog', [
             'company' => $company,
             'services' => $services,
-            'token' => $request->query('token', ''),
         ]);
     }
 
@@ -105,7 +124,7 @@ class BookingSettingsController extends Controller
             'company' => $company,
             'source' => $source,
             'services' => $this->catalogService->bookableServicesForCompany($company),
-            'token' => $request->query('token', ''),
+            'bookingKey' => $this->bookingPublicKeyService->ensureKey($company),
             'showServicePicker' => false,
         ]);
     }
@@ -119,7 +138,6 @@ class BookingSettingsController extends Controller
         return view('reminders::booking.events-catalog', [
             'company' => $company,
             'events' => $this->eventCatalogService->publishedEventsForCompany($company),
-            'token' => $request->query('token', ''),
         ]);
     }
 
@@ -140,7 +158,7 @@ class BookingSettingsController extends Controller
             'company' => $company,
             'event' => $event,
             'occurrence' => $formattedOccurrence,
-            'token' => $request->query('token', ''),
+            'bookingKey' => $this->bookingPublicKeyService->ensureKey($company),
         ]);
     }
 }

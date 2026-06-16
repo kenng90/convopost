@@ -38,15 +38,26 @@
         @if ($catalogUrl ?? null)
             <hr class="my-4">
             <h3 class="mb-2">{{ __('Public booking page') }}</h3>
-            <p class="text-muted">{{ __('Share this link so customers can choose a service and book.') }}</p>
-            <code class="d-block p-2 bg-light rounded user-select-all">{{ $catalogUrl }}?token=YOUR_API_TOKEN</code>
+            <p class="text-muted">{{ __('Share this link so customers can choose a service and book. No API token is needed in the URL.') }}</p>
+            <code class="d-block p-2 bg-light rounded user-select-all">{{ $catalogUrl }}</code>
         @endif
 
         @if (($eventsEnabled ?? false) && ($eventsCatalogUrl ?? null))
             <hr class="my-4">
             <h3 class="mb-2">{{ __('Public events page') }}</h3>
             <p class="text-muted">{{ __('Share this link so guests can register for upcoming events.') }}</p>
-            <code class="d-block p-2 bg-light rounded user-select-all">{{ $eventsCatalogUrl }}?token=YOUR_API_TOKEN</code>
+            <code class="d-block p-2 bg-light rounded user-select-all">{{ $eventsCatalogUrl }}</code>
+        @endif
+
+        @if ($bookingPublicKey ?? null)
+            <hr class="my-4">
+            <h3 class="mb-2">{{ __('Booking API key') }}</h3>
+            <p class="text-muted">{{ __('Use this scoped key for custom widgets and server-side integrations. Do not put your owner API token in public URLs.') }}</p>
+            <code class="d-block p-2 bg-light rounded user-select-all mb-3">{{ $bookingPublicKey }}</code>
+            <form method="POST" action="{{ route('reminders.booking-settings.regenerate-key') }}" onsubmit="return confirm('{{ __('Regenerating will invalidate the current key. Continue?') }}');">
+                @csrf
+                <button type="submit" class="btn btn-outline-warning btn-sm">{{ __('Regenerate booking key') }}</button>
+            </form>
         @endif
 
         <hr class="my-4">

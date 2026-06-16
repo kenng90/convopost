@@ -10,7 +10,7 @@
 <div
     class="max-w-lg mx-auto p-6"
     x-data="eventRegister({
-        token: @js($token),
+        bookingKey: @js($bookingKey),
         occurrenceId: @js($occurrence['id']),
         eventTitle: @js($event['title']),
         startsAtLabel: @js($occurrence['starts_at_label']),
@@ -19,7 +19,7 @@
 >
     <div class="bg-white rounded-2xl shadow-lg p-6 space-y-6" x-show="view === 'form'">
         <div>
-            <a href="{{ route('reminders.booking.events', ['subdomain' => $company->subdomain, 'token' => $token]) }}" class="text-sm text-violet-600 hover:underline">{{ __('← All events') }}</a>
+            <a href="{{ route('reminders.booking.events', ['subdomain' => $company->subdomain]) }}" class="text-sm text-violet-600 hover:underline">{{ __('← All events') }}</a>
             <h1 class="text-2xl font-semibold text-slate-900 mt-2" x-text="eventTitle"></h1>
             <p class="text-sm text-slate-500 mt-1" x-text="startsAtLabel"></p>
             <p class="text-xs text-slate-500 mt-1" x-text="`${seatsRemaining} {{ __('seats remaining') }}`"></p>
@@ -50,14 +50,14 @@
         <div class="text-4xl">✓</div>
         <h2 class="text-xl font-semibold text-slate-900">{{ __('You are registered!') }}</h2>
         <p class="text-sm text-slate-600" x-text="confirmationLine"></p>
-        <a href="{{ route('reminders.booking.events', ['subdomain' => $company->subdomain, 'token' => $token]) }}" class="inline-block text-sm text-violet-600 hover:underline">{{ __('Browse more events') }}</a>
+        <a href="{{ route('reminders.booking.events', ['subdomain' => $company->subdomain]) }}" class="inline-block text-sm text-violet-600 hover:underline">{{ __('Browse more events') }}</a>
     </div>
 </div>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script>
 function eventRegister(config) {
     return {
-        token: config.token,
+        bookingKey: config.bookingKey,
         occurrenceId: config.occurrenceId,
         eventTitle: config.eventTitle,
         startsAtLabel: config.startsAtLabel,
@@ -77,7 +77,7 @@ function eventRegister(config) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({
-                        token: this.token,
+                        booking_key: this.bookingKey,
                         occurrence_id: this.occurrenceId,
                         name: this.name.trim(),
                         phone: this.phone.trim(),

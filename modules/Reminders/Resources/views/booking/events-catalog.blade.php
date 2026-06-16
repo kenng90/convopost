@@ -13,7 +13,7 @@
         <h1 class="text-2xl font-semibold text-slate-900">{{ __('Upcoming events') }}</h1>
         <p class="text-sm text-slate-500 mt-1">{{ __('Register for a session below.') }}</p>
         <div class="mt-4 flex gap-2 text-sm">
-            <a href="{{ route('reminders.booking.catalog', ['subdomain' => $company->subdomain, 'token' => $token]) }}" class="text-violet-600 hover:underline">{{ __('Book an appointment') }}</a>
+            <a href="{{ route('reminders.booking.catalog', ['subdomain' => $company->subdomain]) }}" class="text-violet-600 hover:underline">{{ __('Book an appointment') }}</a>
         </div>
     </div>
 
@@ -32,7 +32,7 @@
                 @foreach ($event['occurrences'] as $occurrence)
                     @if ($occurrence['is_registerable'])
                         <a
-                            href="{{ route('reminders.booking.event', ['subdomain' => $company->subdomain, 'occurrence' => $occurrence['id'], 'token' => $token]) }}"
+                            href="{{ route('reminders.booking.event', ['subdomain' => $company->subdomain, 'occurrence' => $occurrence['id']]) }}"
                             class="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 hover:border-violet-400 hover:bg-violet-50 transition"
                         >
                             <span class="text-sm font-medium text-slate-900">{{ $occurrence['starts_at_label'] }}</span>

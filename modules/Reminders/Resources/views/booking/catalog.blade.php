@@ -10,7 +10,6 @@
 <div
     class="max-w-lg mx-auto p-6"
     x-data="bookingCatalog({
-        token: @js($token),
         services: @js($services),
         subdomain: @js($company->subdomain),
     })"
@@ -21,14 +20,14 @@
             <h1 class="text-2xl font-semibold text-slate-900">Book an appointment</h1>
             <p class="text-sm text-slate-500 mt-1">Choose a service to continue.</p>
             <p class="text-sm mt-3">
-                <a href="{{ route('reminders.booking.events', ['subdomain' => $company->subdomain]) }}@if($token)?token={{ urlencode($token) }}@endif" class="text-violet-600 hover:underline">Browse upcoming events</a>
+                <a href="{{ route('reminders.booking.events', ['subdomain' => $company->subdomain]) }}" class="text-violet-600 hover:underline">Browse upcoming events</a>
             </p>
         </div>
 
         <div class="space-y-2">
             <template x-for="service in services" :key="service.id">
                 <a
-                    :href="`/book/${subdomain}/${encodeURIComponent(service.name)}?token=${encodeURIComponent(token)}`"
+                    :href="`/book/${subdomain}/${encodeURIComponent(service.name)}`"
                     class="block rounded-xl border border-slate-200 px-4 py-3 hover:border-violet-400 hover:bg-violet-50 transition"
                 >
                     <p class="font-medium text-slate-900" x-text="service.name"></p>
@@ -44,7 +43,6 @@
 <script>
 function bookingCatalog(config) {
     return {
-        token: config.token,
         services: config.services || [],
         subdomain: config.subdomain,
     };

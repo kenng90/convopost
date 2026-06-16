@@ -16,6 +16,7 @@ use Modules\Reminders\Models\Source;
 use Modules\Reminders\Services\AvailabilityService;
 use Modules\Reminders\Services\BookingCatalogService;
 use Modules\Reminders\Services\BookingChatPanelService;
+use Modules\Reminders\Services\BookingPublicKeyService;
 use Modules\Reminders\Services\EventCatalogService;
 use Modules\Reminders\Services\EventRegistrationService;
 use Modules\Reminders\Services\ReservationBookingService;
@@ -30,6 +31,7 @@ class APIController extends Controller
         private readonly ReservationBookingService $bookingService,
         private readonly BookingCatalogService $catalogService,
         private readonly BookingChatPanelService $chatPanelService,
+        private readonly BookingPublicKeyService $bookingPublicKeyService,
         private readonly EventCatalogService $eventCatalogService,
         private readonly EventRegistrationService $eventRegistrationService
     ) {
@@ -59,6 +61,83 @@ class APIController extends Controller
         Auth::login($user);
 
         return $next($request);
+    }
+
+    private function publicBookingAuthRules(array $rules = []): array
+    {
+        return array_merge([
+            'booking_key' => 'required_without:token|string',
+            'token' => 'required_without:booking_key|string',
+        ], $rules);
+    }
+
+    private function authenticatePublicBooking(Request $request, \Closure $next, array $rules = [])
+    {
+        $validator = Validator::make($request->all(), $this->publicBookingAuthRules($rules));
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'errors' => $validator->errors(),
+            ], 400);
+        }
+
+        if (Auth::check()) {
+            return $next($request);
+        }
+
+        $bookingKey = $request->input('booking_key') ?? $request->header('X-Booking-Key');
+        $legacyToken = $request->input('token');
+
+        if (! $bookingKey && $this->bookingPublicKeyService->isBookingKey($legacyToken)) {
+            $bookingKey = $legacyToken;
+        }
+
+        if ($bookingKey) {
+            $company = $this->bookingPublicKeyService->companyForKey($bookingKey);
+
+            if (! $company) {
+                return response()->json(['status' => 'error', 'message' => 'Invalid booking key'], 401);
+            }
+
+            if ($request->filled('subdomain') && $request->subdomain !== $company->subdomain) {
+                return response()->json(['status' => 'error', 'message' => 'Invalid booking key for this company'], 403);
+            }
+
+            $request->attributes->set('booking_company', $company);
+            session(['company_id' => $company->id]);
+
+            return $next($request);
+        }
+
+        if ($legacyToken) {
+            $token = PersonalAccessToken::findToken($legacyToken);
+
+            if ($token) {
+                Auth::login(User::findOrFail($token->tokenable_id));
+
+                return $next($request);
+            }
+        }
+
+        return response()->json(['status' => 'error', 'message' => 'Invalid credentials'], 401);
+    }
+
+    private function resolveBookingCompany(Request $request): Company
+    {
+        $company = $request->attributes->get('booking_company');
+
+        if ($company instanceof Company) {
+            return $company;
+        }
+
+        $company = $this->getCompany();
+
+        if (! $company) {
+            abort(401, 'Company not resolved');
+        }
+
+        return $company;
     }
 
     public function getReminders(Request $request)
@@ -123,8 +202,8 @@ class APIController extends Controller
 
     public function events(Request $request)
     {
-        return $this->authenticate($request, function ($request) {
-            $company = $this->getCompany();
+        return $this->authenticatePublicBooking($request, function ($request) {
+            $company = $this->resolveBookingCompany($request);
 
             if (! $this->eventCatalogService->eventsEnabled($company)) {
                 return response()->json(['status' => 'success', 'events' => []]);
@@ -134,15 +213,13 @@ class APIController extends Controller
                 'status' => 'success',
                 'events' => $this->eventCatalogService->publishedEventsForCompany($company),
             ]);
-        }, [
-            'token' => 'required',
-        ]);
+        });
     }
 
     public function registerForEvent(Request $request)
     {
-        return $this->authenticate($request, function ($request) {
-            $company = $this->getCompany();
+        return $this->authenticatePublicBooking($request, function ($request) {
+            $company = $this->resolveBookingCompany($request);
 
             if (! $this->eventCatalogService->eventsEnabled($company)) {
                 return response()->json([
@@ -173,7 +250,6 @@ class APIController extends Controller
 
             return response()->json(['status' => 'success', 'registration' => $registration->load(['event', 'occurrence', 'contact'])], 201);
         }, [
-            'token' => 'required',
             'occurrence_id' => 'required|integer',
             'phone' => 'required',
             'name' => 'required',
@@ -183,8 +259,8 @@ class APIController extends Controller
 
     public function cancelEventRegistration(Request $request)
     {
-        return $this->authenticate($request, function ($request) {
-            $company = $this->getCompany();
+        return $this->authenticatePublicBooking($request, function ($request) {
+            $company = $this->resolveBookingCompany($request);
             $registration = EventRegistration::where('company_id', $company->id)
                 ->where('id', $request->registration_id)
                 ->firstOrFail();
@@ -193,7 +269,6 @@ class APIController extends Controller
 
             return response()->json(['status' => 'success', 'registration' => $registration]);
         }, [
-            'token' => 'required',
             'registration_id' => 'required|integer',
         ]);
     }
@@ -233,22 +308,20 @@ class APIController extends Controller
 
     public function services(Request $request)
     {
-        return $this->authenticate($request, function ($request) {
-            $company = $this->getCompany();
+        return $this->authenticatePublicBooking($request, function ($request) {
+            $company = $this->resolveBookingCompany($request);
 
             return response()->json([
                 'status' => 'success',
                 'services' => $this->catalogService->bookableServicesForCompany($company),
             ]);
-        }, [
-            'token' => 'required',
-        ]);
+        });
     }
 
     public function availability(Request $request)
     {
-        return $this->authenticate($request, function ($request) {
-            $company = $this->getCompany();
+        return $this->authenticatePublicBooking($request, function ($request) {
+            $company = $this->resolveBookingCompany($request);
             $source = $this->resolveSource($company, $request->input('source'));
 
             $duration = $request->filled('duration_minutes')
@@ -283,7 +356,6 @@ class APIController extends Controller
                 'dates' => $dates,
             ]);
         }, [
-            'token' => 'required',
             'source' => 'required',
             'date' => 'nullable|date_format:Y-m-d',
             'duration_minutes' => 'nullable|integer|min:5|max:480',
@@ -292,8 +364,8 @@ class APIController extends Controller
 
     public function createReservation(Request $request)
     {
-        return $this->authenticate($request, function ($request) {
-            $company = $this->getCompany();
+        return $this->authenticatePublicBooking($request, function ($request) {
+            $company = $this->resolveBookingCompany($request);
 
             try {
                 $reservation = $this->bookingService->book($company, $request->only([
@@ -321,7 +393,6 @@ class APIController extends Controller
 
             return response()->json(['status' => 'success', 'reservation' => $reservation], 201);
         }, [
-            'token' => 'required',
             'phone' => 'required',
             'name' => 'required',
             'source' => 'required',
@@ -335,8 +406,8 @@ class APIController extends Controller
 
     public function cancelReservation(Request $request)
     {
-        return $this->authenticate($request, function ($request) {
-            $company = $this->getCompany();
+        return $this->authenticatePublicBooking($request, function ($request) {
+            $company = $this->resolveBookingCompany($request);
             $reservation = Reservation::where('company_id', $company->id)
                 ->where('id', $request->reservation_id)
                 ->firstOrFail();
@@ -345,15 +416,14 @@ class APIController extends Controller
 
             return response()->json(['status' => 'success', 'reservation' => $reservation]);
         }, [
-            'token' => 'required',
             'reservation_id' => 'required|integer',
         ]);
     }
 
     public function rescheduleReservation(Request $request)
     {
-        return $this->authenticate($request, function ($request) {
-            $company = $this->getCompany();
+        return $this->authenticatePublicBooking($request, function ($request) {
+            $company = $this->resolveBookingCompany($request);
             $reservation = Reservation::where('company_id', $company->id)
                 ->where('id', $request->reservation_id)
                 ->firstOrFail();
@@ -380,7 +450,6 @@ class APIController extends Controller
 
             return response()->json(['status' => 'success', 'reservation' => $reservation]);
         }, [
-            'token' => 'required',
             'reservation_id' => 'required|integer',
             'slot_id' => 'required_without_all:start_date,end_date',
             'start_date' => 'required_without:slot_id|required_with:end_date|date',

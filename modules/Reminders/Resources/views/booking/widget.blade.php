@@ -10,7 +10,7 @@
 <div
     class="max-w-lg mx-auto px-4 py-8 sm:px-6"
     x-data="bookingWidget({
-        token: @js($token),
+        bookingKey: @js($bookingKey),
         source: @js($source->name),
         companyName: @js($company->name),
         services: @js($services ?? []),
@@ -210,7 +210,7 @@
 <script>
 function bookingWidget(config) {
     return {
-        token: config.token,
+        bookingKey: config.bookingKey,
         source: config.source,
         companyName: config.companyName,
         services: config.services || [],
@@ -289,7 +289,7 @@ function bookingWidget(config) {
 
             try {
                 const params = new URLSearchParams({
-                    token: this.token,
+                    booking_key: this.bookingKey,
                     source: this.source,
                     duration_minutes: this.durationMinutes,
                 });
@@ -326,7 +326,7 @@ function bookingWidget(config) {
 
             try {
                 const params = new URLSearchParams({
-                    token: this.token,
+                    booking_key: this.bookingKey,
                     source: this.source,
                     date: this.selectedDate,
                     duration_minutes: this.durationMinutes,
@@ -359,7 +359,7 @@ function bookingWidget(config) {
                         'Accept': 'application/json',
                     },
                     body: JSON.stringify({
-                        token: this.token,
+                        booking_key: this.bookingKey,
                         source: this.source,
                         slot_id: this.selectedSlot,
                         name: this.name.trim(),

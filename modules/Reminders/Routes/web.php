@@ -53,6 +53,7 @@ Route::group([
         Route::get('booking-settings', 'BookingSettingsController@index')->name('reminders.booking-settings.index');
         Route::post('booking-settings/calendar', 'BookingSettingsController@updateCalendar')->name('reminders.booking-settings.calendar');
         Route::post('booking-settings/inbox', 'BookingSettingsController@updateInbox')->name('reminders.booking-settings.inbox');
+        Route::post('booking-settings/regenerate-key', 'BookingSettingsController@regenerateBookingKey')->name('reminders.booking-settings.regenerate-key');
         Route::get('google/connect', 'GoogleCalendarController@connect')->name('reminders.google.connect');
         Route::get('google/callback', 'GoogleCalendarController@callback')->name('reminders.google.callback');
         Route::get('google/disconnect', 'GoogleCalendarController@disconnect')->name('reminders.google.disconnect');
