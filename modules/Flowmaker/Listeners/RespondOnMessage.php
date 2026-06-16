@@ -4,7 +4,7 @@ namespace Modules\Flowmaker\Listeners;
 
 use App\Models\Company;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
+use Modules\Flowmaker\Jobs\ProcessFlowMessage;
 use Modules\Flowmaker\Models\Flow;
 
 class RespondOnMessage
@@ -18,17 +18,18 @@ class RespondOnMessage
                 $company_id = $contact->company_id;
                 $company = Company::findOrFail($company_id);
 
-                Log::info('Message received in flowmaker');
+                $flows = Flow::query()
+                    ->where('company_id', $company_id)
+                    ->whereNotNull('flow_data')
+                    ->where('flow_data', '!=', '')
+                    ->where('flow_data', '!=', '{}')
+                    ->get(['id', 'name', 'company_id']);
 
-                $flows = Flow::where('company_id', $company_id)->get();
                 $flowsForChat = $this->filterFlowsForChat($company, $flows);
 
                 foreach ($flowsForChat as $flow) {
-                    Log::info('Flow: '.$flow->name);
-                    $flow->processMessage($message);
-                    Log::info('Flow processed');
+                    ProcessFlowMessage::dispatch($flow->id, $message->id)->onQueue('flows');
                 }
-
             }
         } catch (\Throwable $th) {
         }

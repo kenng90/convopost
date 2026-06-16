@@ -8,6 +8,7 @@ use App\Services\MpesaCallbackValidator;
 use App\Services\MpesaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Modules\Flowmaker\Jobs\ResumeFlowFromMpesa;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Flowmaker\Models\ContactState;
 use Modules\Flowmaker\Models\Flow;
@@ -117,7 +118,7 @@ class MpesaController extends Controller
                 'paymentId' => $payment?->id,
             ]);
 
-            $flow->resumeFromMpesaCallback($contact);
+            ResumeFlowFromMpesa::dispatch($flow->id, $contact->id)->onQueue('flows');
 
             MpesaCallbackValidator::logCallback($body, 'processed');
         } catch (\Exception $e) {

@@ -243,25 +243,21 @@ class Contact extends ModelsContact
 
     public function botReply($content, $messageToBeSend)
     {
-        //Reply bot
-        $textReplies = Reply::where('type', '!=', 1)->where('company_id', $this->company_id)->get();
+        [$textReplies, $campaignReplies] = \Modules\Wpbox\Support\BotRulesCache::get($this->company_id);
         $replySend = false;
-        Log::info('textReplies', [$content]);
         foreach ($textReplies as $key => $qr) {
             if (! $replySend) {
                 $replySend = $qr->shouldWeUseIt($content, $this);
             }
         }
 
-        //If no text reply found, look for campaign reply
         if (! $replySend) {
-            $campaignReplies = Campaign::where('is_bot', 1)->where('is_bot_active', 1)->where('company_id', $this->company_id)->get();
             foreach ($campaignReplies as $key => $cr) {
                 if (! $replySend) {
                     try {
                         $replySend = $cr->shouldWeUseIt($content, $this);
                     } catch (\Exception $e) {
-                        Log::error('Error calling shouldWeUseIt:', ['exception' => $e->getMessage()]);
+                        \Illuminate\Support\Facades\Log::error('Error calling shouldWeUseIt:', ['exception' => $e->getMessage()]);
                     }
                 }
             }
@@ -315,9 +311,9 @@ class Contact extends ModelsContact
             'fb_message_id' => $fb_message_id,
         ]);
 
-        //Set the original message
-        if ($messageType == 'TEXT') {
-            $messageToBeSend->doTranslation($is_message_by_contact);
+        //Set the original message — queued to avoid blocking webhooks
+        if ($messageType == 'TEXT' && $is_message_by_contact) {
+            \Modules\Wpbox\Jobs\TranslateMessage::dispatch($messageToBeSend->id);
         }
 
         Log::info('messageToBeSend', [$messageToBeSend]);

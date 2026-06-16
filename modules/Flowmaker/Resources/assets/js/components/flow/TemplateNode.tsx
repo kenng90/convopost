@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/context-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { templates } from '@/data/templateData';
+import { getTemplates } from '@/data/templateData';
 import { NodeData } from '@/types/flow';
 import { VariableInput } from '@/components/common/VariableInput';
 import { useFlowActions } from "@/hooks/useFlowActions";
@@ -70,7 +70,7 @@ const TemplateNode = ({ data, id }: TemplateNodeProps) => {
 
   const selectedTemplate = useMemo(() => {
     console.log("Selected template ID:", selectedTemplateId);
-    const template = templates.find(t => t.id === selectedTemplateId);
+    const template = getTemplates().find(t => t.id === selectedTemplateId);
     console.log("Found template:", template);
     return template;
   }, [selectedTemplateId]);
@@ -572,7 +572,7 @@ const TemplateNode = ({ data, id }: TemplateNodeProps) => {
                     <SelectValue placeholder="Select a template" />
                   </SelectTrigger>
                   <SelectContent>
-                    {templates.map((template) => (
+                    {getTemplates().map((template) => (
                       <SelectItem key={template.id} value={template.id}>
                         {template.name}
                       </SelectItem>

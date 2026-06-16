@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Modules\Contacts\Models\Field;
 use Modules\Flowmaker\Models\Flow;
-use Modules\Flowmaker\Models\Flowdocument;
 use Modules\Wpbox\Models\Template;
 
 class Main extends Controller
@@ -21,7 +20,6 @@ class Main extends Controller
      */
     public function edit(Flow $flow)
     {
-        //Get the company custom fields
         $customFields = Field::where('company_id', $flow->company_id)->get();
 
         $variables = [
@@ -32,7 +30,6 @@ class Main extends Controller
             ['label' => 'Last Message', 'value' => 'contact_last_message', 'category' => 'Contact'],
         ];
 
-        //Now add the custom fields to the variables
         foreach ($customFields as $customField) {
             $variables[] = [
                 'label' => $customField->name,
@@ -41,17 +38,22 @@ class Main extends Controller
             ];
         }
 
-        //Get the company templates
-        $templates = Template::where('company_id', $flow->company_id)->get();
-        //Loop throught all the templates anc convert the components from string to object
+        $data = [
+            'flow' => $flow->only(['id', 'name', 'flow_data', 'company_id', 'updated_at']),
+            'variables' => $variables,
+        ];
+
+        return view('flowmaker::index')->with('data', json_encode($data));
+    }
+
+    public function editorMetadata(Flow $flow)
+    {
+        $templates = Template::where('company_id', $flow->company_id)->get(['id', 'name', 'language', 'components']);
         foreach ($templates as $template) {
             $template->components = json_decode($template->components);
         }
 
-        //Get staff users (agents) for this company
         $agents = \App\Models\User::role('staff')->where('company_id', $flow->company_id)->get(['id', 'name', 'email']);
-
-        //Get contact groups for this company
         $groups = \Modules\Contacts\Models\Group::where('company_id', $flow->company_id)->get(['id', 'name']);
 
         $journeys = [];
@@ -62,46 +64,10 @@ class Main extends Controller
                 ->get(['id', 'name']);
         }
 
-        // Get flowdocuments for this flow and format for frontend
-        $flowdocuments = Flowdocument::where('flow_id', $flow->id)->get();
-
-        $faqs = [];
-        $trainedWebsites = [];
-        $trainedFiles = [];
-
-        foreach ($flowdocuments as $document) {
-            $formattedData = $document->getFormattedData();
-
-            switch ($document->source_type) {
-                case 'faq':
-                    $faqs[] = $formattedData;
-                    break;
-
-                case 'website':
-                    $trainedWebsites[] = $formattedData;
-                    break;
-
-                case 'knowledge_article':
-                case 'pdf':
-                case 'txt':
-                case 'docx':
-                case 'doc':
-                case 'xls':
-                case 'xlsx':
-                    $trainedFiles[] = $formattedData;
-                    break;
-            }
-        }
-
         $company = auth()->user()->currentCompany();
 
-        $data = [
-            'flow' => $flow,
-            'variables' => $variables,
+        return response()->json([
             'templates' => $templates,
-            'faqs' => $faqs,
-            'trainedWebsites' => $trainedWebsites,
-            'trainedFiles' => $trainedFiles,
             'agents' => $agents,
             'groups' => $groups,
             'journeys' => $journeys,
@@ -109,9 +75,7 @@ class Main extends Controller
                 'whatsappflows' => $company ? $company->hasPlanPlugin('whatsappflows') : false,
                 'whatsappcatalog' => $company ? $company->hasPlanPlugin('whatsappcatalog') : false,
             ],
-        ];
-
-        return view('flowmaker::index')->with('data', json_encode($data));
+        ]);
     }
 
     public function script()

@@ -38,7 +38,7 @@ class ChatController extends Controller
         //Find the users of the company
         $users = $this->getCompany()->users()->pluck('name', 'id');
 
-        //Get all the modules where type is "link_fetcher"
+        // Link fetcher data is lazy-loaded when the user opens a fetcher modal (refreshLinkData).
         $fetcherModules = [];
         $sidebarModules = [];
         foreach (Module::all() as $key => $module) {
@@ -46,11 +46,10 @@ class ChatController extends Controller
                 try {
                     $fetcherModules[$module->get('alias')] = [
                         'name' => $this->getCompany()->getConfig($module->get('alias').'_button_name', __('No name')),
-                        'data' => app($module->get('namespace').'\Main')->getData(),
+                        'data' => [],
                     ];
                 } catch (\Exception $e) {
                     //Do nothing
-                    //dd($e);
                 }
             }
             if ($module->get('hasSidebar')) {
@@ -121,82 +120,70 @@ class ChatController extends Controller
      */
     public function chatlist($lastmessagetime, $page = 1, $search_query = '')
     {
-        //Number of chats to return per page
         $pageSize = config('wpbox.chat_page_size', 6);
+        $companyId = $this->getCompany()->id;
+        $userId = Auth::id();
+        $agentAssignedOnly = Auth::user()->hasRole('staff')
+            && $this->getCompany()->getConfig('agent_assigned_only', 'false') != 'false';
 
-        $shouldWeReturnChats = true;
+        $baseQuery = Contact::query()
+            ->where('company_id', $companyId)
+            ->where('has_chat', 1)
+            ->when($agentAssignedOnly, fn ($query) => $query->where('user_id', $userId))
+            ->when($lastmessagetime !== 'none' && $lastmessagetime !== '', function ($query) use ($lastmessagetime) {
+                $query->where('last_reply_at', '>', $lastmessagetime);
+            });
 
-        if ($shouldWeReturnChats) {
-            //Return list of contacts that have chat actives
-            //check if current user in agent
-            $numberOfPages = 1;
-            if (Auth::user()->hasRole('staff') && $this->getCompany()->getConfig('agent_assigned_only', 'false') != 'false') {
-                $chatList = Contact::where('has_chat', 1)->where('user_id', Auth::user()->id)->with(['messages', 'country'])->orderBy('last_reply_at', 'DESC');
-            } else {
-                $chatList = Contact::where('has_chat', 1)->with(['messages', 'country'])->orderBy('last_reply_at', 'DESC');
-            }
+        $stats = (clone $baseQuery)->selectRaw('
+            COUNT(*) as total,
+            SUM(CASE WHEN user_id = ? THEN 1 ELSE 0 END) as mine,
+            SUM(CASE WHEN is_last_message_by_contact = 1 THEN 1 ELSE 0 END) as unread,
+            SUM(CASE WHEN resolved_chat = 1 THEN 1 ELSE 0 END) as resolved
+        ', [$userId])->first();
 
-            //Total number of chats
-            $numberOfChats = $chatList->count();
+        $chatList = clone $baseQuery;
 
-            //Mine chats
-            $myChatsCount = Contact::where('has_chat', 1)->where('user_id', Auth::user()->id)->count();
-
-            //We also need to know the total number of pages, from the total number of chats
-            $numberOfPages = ceil($chatList->count() / $pageSize);
-
-            //Unread chats
-            if (Auth::user()->hasRole('staff') && $this->getCompany()->getConfig('agent_assigned_only', 'false') != 'false') {
-                $unreadChatsCount = Contact::where('has_chat', 1)->where('user_id', Auth::user()->id)->where('is_last_message_by_contact', 1)->count();
-            } else {
-                $unreadChatsCount = Contact::where('has_chat', 1)->where('is_last_message_by_contact', 1)->count();
-            }
-
-            //Resolved chats count
-            if (Auth::user()->hasRole('staff') && $this->getCompany()->getConfig('agent_assigned_only', 'false') != 'false') {
-                $resolvedChatsCount = Contact::where('has_chat', 1)->where('user_id', Auth::user()->id)->where('resolved_chat', 1)->count();
-            } else {
-                $resolvedChatsCount = Contact::where('has_chat', 1)->where('resolved_chat', 1)->count();
-            }
-
-            //Query, also by last_message
-            if ($search_query != '' && strlen($search_query) > 3) {
-                $chatList = $chatList->where(function ($query) use ($search_query) {
-                    $query->where('name', 'like', '%'.$search_query.'%')
-                        ->orWhere('phone', 'like', '%'.$search_query.'%')
-                        ->orWhereHas('messages', function ($q) use ($search_query) {
-                            $q->where('value', 'like', '%'.$search_query.'%');
-                        });
-                });
-            }
-
-            //Filter by resolved status if requested
-            if (request()->has('filter') && request()->filter == 'resolved') {
-                $chatList = $chatList->where('resolved_chat', 1);
-            }
-
-            //Now get the chats for the current page
-            $chatList = $chatList->skip(($page - 1) * $pageSize)->limit($pageSize)->get();
-
-            return response()->json([
-                'data' => $chatList,
-                'numberOfPages' => $numberOfPages,
-                'page' => $page,
-                'totalChats' => $numberOfChats,
-                'myChatsCount' => $myChatsCount,
-                'unreadChatsCount' => $unreadChatsCount,
-                'newMessagesCount' => $unreadChatsCount,
-                'resolvedChatsCount' => $resolvedChatsCount,
-                'status' => true,
-                'errMsg' => '',
-            ]);
-        } else {
-            return response()->json([
-                'status' => false,
-                'errMsg' => 'No changes',
-            ]);
+        if ($search_query != '' && strlen($search_query) > 3) {
+            $chatList->where(function ($query) use ($search_query) {
+                $query->where('name', 'like', '%'.$search_query.'%')
+                    ->orWhere('phone', 'like', '%'.$search_query.'%')
+                    ->orWhere('last_message', 'like', '%'.$search_query.'%');
+            });
         }
 
+        if (request()->has('filter') && request()->filter == 'resolved') {
+            $chatList->where('resolved_chat', 1);
+        } elseif (request()->input('filter') !== 'all') {
+            $chatList->where('resolved_chat', 0);
+        }
+
+        $totalForPage = (clone $chatList)->count();
+        $numberOfPages = max(1, (int) ceil($totalForPage / $pageSize));
+
+        $contacts = $chatList
+            ->select([
+                'id', 'name', 'phone', 'avatar', 'last_message', 'last_reply_at',
+                'is_last_message_by_contact', 'resolved_chat', 'user_id', 'country_id',
+                'last_client_reply_at', 'language', 'enabled_ai_bot',
+            ])
+            ->with('country:id,name,iso2')
+            ->orderByDesc('last_reply_at')
+            ->skip(($page - 1) * $pageSize)
+            ->limit($pageSize)
+            ->get();
+
+        return response()->json([
+            'data' => $contacts,
+            'numberOfPages' => $numberOfPages,
+            'page' => (int) $page,
+            'totalChats' => (int) ($stats->total ?? 0),
+            'myChatsCount' => (int) ($stats->mine ?? 0),
+            'unreadChatsCount' => (int) ($stats->unread ?? 0),
+            'newMessagesCount' => (int) ($stats->unread ?? 0),
+            'resolvedChatsCount' => (int) ($stats->resolved ?? 0),
+            'status' => true,
+            'errMsg' => '',
+        ]);
     }
 
     public function setLanguage(Request $request, Contact $contact)
@@ -258,16 +245,27 @@ class ChatController extends Controller
             //Do nothing
         }
 
+        $limit = min((int) request()->input('limit', 50), 100);
+        $beforeId = request()->input('before_id');
+
         $messages = Message::withoutGlobalScopes()
             ->where('contact_id', $contactUser->id)
             ->where('company_id', $this->getCompany()->id)
             ->where('status', '>', 0)
+            ->when($beforeId, fn ($query) => $query->where('id', '<', $beforeId))
             ->orderBy('id', 'desc')
-            ->limit(50)
-            ->get();
+            ->limit($limit)
+            ->get([
+                'id', 'contact_id', 'company_id', 'value', 'original_message',
+                'header_text', 'header_image', 'header_document', 'header_video',
+                'header_audio', 'header_location', 'footer_text', 'buttons', 'components',
+                'is_message_by_contact', 'is_campign_messages', 'is_note', 'is_call_brief',
+                'call_brief_payload', 'sender_name', 'error', 'status', 'created_at',
+            ]);
 
         return response()->json([
             'data' => $messages,
+            'has_more' => $messages->count() === $limit,
             'status' => true,
             'errMsg' => '',
         ]);
