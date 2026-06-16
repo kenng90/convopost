@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\ListCatalog;
 use App\Models\Plans;
 use App\Models\User;
+use App\Services\Catalog\CatalogItemRepository;
 use App\Services\CatalogItemPlanLimit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -90,8 +91,7 @@ class CatalogItemPlanLimitTest extends TestCase
         $service = new CatalogItemPlanLimit;
         $this->assertFalse($service->canAdd($company, 1));
 
-        $catalog->items = [['id' => '1', 'title' => 'Item A']];
-        $catalog->save();
+        app(CatalogItemRepository::class)->deleteByItemId($catalog, '2');
 
         $this->assertTrue($service->canAdd($company, 1));
         $this->assertSame(1, $service->getUsageSummary($company)['used']);

@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\ListCatalog;
 use App\Models\Plans;
 use App\Scopes\CompanyScope;
+use Illuminate\Support\Facades\Schema;
 
 class CatalogItemPlanLimit
 {
@@ -44,6 +45,10 @@ class CatalogItemPlanLimit
      */
     public function countActiveItems(int $companyId): int
     {
+        if (Schema::hasTable('catalog_items')) {
+            return app(\App\Services\Catalog\CatalogItemRepository::class)->countForCompany($companyId);
+        }
+
         return (int) ListCatalog::withoutGlobalScope(CompanyScope::class)
             ->where('company_id', $companyId)
             ->get()

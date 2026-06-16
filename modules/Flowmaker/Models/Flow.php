@@ -345,12 +345,31 @@ class Flow extends Model
      */
     public function resumeFromMpesaCallback(Contact $contact)
     {
+        $this->resumeWaitingNode($contact, null);
+    }
+
+    /**
+     * Resume a flow after a catalog web checkout completes.
+     *
+     * @param  list<array<string, mixed>>  $cartItems
+     */
+    public function resumeFromCatalogCheckout(Contact $contact, string $productId, array $cartItems = [])
+    {
+        if ($cartItems !== []) {
+            $contact->setContactState($this->id, 'catalog_cart', json_encode($cartItems));
+        }
+
+        $this->resumeWaitingNode($contact, $productId);
+    }
+
+    private function resumeWaitingNode(Contact $contact, ?string $extra): void
+    {
         try {
             $flowData = $this->getDecodedFlowData();
             $startNode = $contact->getContactStateValue($this->id, 'current_node');
 
             if (! $startNode || ! isset($flowData->nodes) || ! isset($flowData->edges)) {
-                Log::error('MPesa resume: missing flow data or current_node');
+                Log::error('Flow resume: missing flow data or current_node', ['flowId' => $this->id]);
 
                 return;
             }
@@ -358,17 +377,16 @@ class Flow extends Model
             $contact->primeFlowStateCache($this->id);
             $graph = $this->makeGraph($flowData->nodes, $flowData->edges, $startNode);
 
-            // Create a minimal data object so the node can find the contact
             $mockData = new \stdClass();
             $mockData->contact_id = $contact->id;
             $mockData->company_id = $contact->company_id;
             $mockData->value = '';
-            $mockData->extra = null;
+            $mockData->extra = $extra;
 
             $graph->process('', $mockData);
 
         } catch (\Exception $e) {
-            Log::error('MPesa resume: exception', ['error' => $e->getMessage()]);
+            Log::error('Flow resume: exception', ['error' => $e->getMessage(), 'flowId' => $this->id]);
         }
     }
 

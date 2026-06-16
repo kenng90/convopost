@@ -19,6 +19,7 @@ interface WhatsAppCatalogNodeProps {
 interface NodeSettings {
   catalogId?: number;
   header?: string;
+  displayMode?: 'link' | 'interactive_list';
 }
 
 interface Catalog {
@@ -29,44 +30,41 @@ interface Catalog {
 }
 
 const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
-  console.log('WhatsAppCatalogNode: COMPONENT RENDERED');
   const { deleteNode } = useFlowActions();
   
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(data.settings?.catalogId || "");
   const [catalogs, setCatalogs] = useState<Catalog[]>([]);
   const [header, setHeader] = useState<string>(data.settings?.header || 'Browse our products');
+  const [displayMode, setDisplayMode] = useState<'link' | 'interactive_list'>(
+    data.settings?.displayMode || 'link'
+  );
 
-  // Load catalogs on mount
   useEffect(() => {
-    console.log('WhatsAppCatalogNode: useEffect triggered');
     const loadCatalogs = async () => {
-      console.log('WhatsAppCatalogNode: loadCatalogs called');
       try {
         const response = await fetch('/api/list-catalogs');
         const result = await response.json();
-        console.log('WhatsAppCatalogNode: fetch result', result);
         
         if (result.success && Array.isArray(result.catalogs)) {
           setCatalogs(result.catalogs);
         }
       } catch (error) {
-        console.error('WhatsAppCatalogNode: Error loading catalogs:', error);
+        console.error('Error loading catalogs:', error);
       }
     };
 
     loadCatalogs();
   }, []);
 
-  // Persist settings to node data
   useEffect(() => {
     if (data && data.settings) {
       data.settings.catalogId = selectedTemplateId;
       data.settings.header = header;
+      data.settings.displayMode = displayMode;
     }
-  }, [selectedTemplateId, header, data]);
+  }, [selectedTemplateId, header, displayMode, data]);
 
   const handleCatalogSelect = (value: string) => {
-    console.log('WhatsAppCatalogNode: catalog selected', value);
     setSelectedTemplateId(value);
     if (data && data.settings) {
       data.settings.catalogId = value;
@@ -81,6 +79,7 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
   };
 
   const selectedCatalog = catalogs.find(c => c.id.toString() === selectedTemplateId);
+  const canUseInteractiveList = selectedCatalog ? selectedCatalog.item_count > 0 && selectedCatalog.item_count <= 10 : false;
 
   return (
     <ContextMenu>
@@ -94,14 +93,17 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
           
           <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 px-4 pt-3 bg-gray-50">
             <Database className="h-4 w-4 text-purple-600" />
-            <div className="font-medium">WhatsApp Catalog</div>
+            <div className="font-medium">Send Catalog Link</div>
           </div>
 
           <div className="p-4">
             <div className="space-y-4">
-              {/* Header Text */}
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Sends a branded shop link (or in-chat product list for ≤10 items). When opened from a flow, checkout resumes automation.
+              </p>
+
               <div className="space-y-2">
-                <Label htmlFor="header">Message Header</Label>
+                <Label htmlFor="header">Message header</Label>
                 <textarea
                   id="header"
                   placeholder="Browse our products"
@@ -110,15 +112,13 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
                   rows={2}
                   className="w-full px-2 py-1 text-xs border rounded"
                 />
-                <p className="text-xs text-gray-500">Text to show above the catalog</p>
               </div>
 
-              {/* Catalog Selection */}
               <div className="space-y-2">
-                <Label htmlFor="catalog-select">Select Catalog</Label>
+                <Label htmlFor="catalog-select">Catalog</Label>
                 {catalogs.length === 0 ? (
                   <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded border border-gray-200">
-                    No catalogs found. Import one via List Message node.
+                    No catalogs yet. Create one under Automations → Product catalogs.
                   </div>
                 ) : (
                   <select
@@ -137,7 +137,23 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
                 )}
               </div>
 
-              {/* Selected Catalog Preview */}
+              {selectedCatalog && (
+                <div className="space-y-2">
+                  <Label htmlFor="display-mode">Display mode</Label>
+                  <select
+                    id="display-mode"
+                    value={displayMode}
+                    onChange={(e) => setDisplayMode(e.target.value as 'link' | 'interactive_list')}
+                    className="w-full px-2 py-2 text-xs border rounded bg-white"
+                  >
+                    <option value="link">Shop link (web storefront)</option>
+                    <option value="interactive_list" disabled={!canUseInteractiveList}>
+                      In-chat product list (≤10 items){!canUseInteractiveList ? ' — unavailable' : ''}
+                    </option>
+                  </select>
+                </div>
+              )}
+
               {selectedCatalog && (
                 <div className="bg-purple-50 border border-purple-200 p-2 rounded text-xs">
                   <div className="font-medium text-purple-900">{selectedCatalog.name}</div>
@@ -147,9 +163,8 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
             </div>
           </div>
 
-          {/* Output Handles */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-            <span className="text-xs text-gray-500">On selection</span>
+            <span className="text-xs text-gray-500">After checkout / selection</span>
             <Handle
               type="source"
               position={Position.Right}
@@ -158,7 +173,6 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
             />
           </div>
 
-          {/* Else Handle */}
           <div className="flex items-center justify-center px-4 py-2 border-t border-gray-100 bg-white">
             <span className="text-xs text-gray-500 mr-2">No selection</span>
             <Handle

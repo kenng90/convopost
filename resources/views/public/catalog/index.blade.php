@@ -494,11 +494,11 @@
                 </div>
                 <div class="form-row align-items-end">
                     <div class="form-group col-md-2 col-6">
-                        <label for="filter-min-price" class="small text-muted mb-1">Min price (KSh)</label>
+                        <label for="filter-min-price" class="small text-muted mb-1">Min price ({{ $currencySymbol }})</label>
                         <input type="number" id="filter-min-price" name="min_price" class="form-control" min="0" step="0.01" placeholder="0" value="{{ $filters['min_price'] }}">
                     </div>
                     <div class="form-group col-md-2 col-6">
-                        <label for="filter-max-price" class="small text-muted mb-1">Max price (KSh)</label>
+                        <label for="filter-max-price" class="small text-muted mb-1">Max price ({{ $currencySymbol }})</label>
                         <input type="number" id="filter-max-price" name="max_price" class="form-control" min="0" step="0.01" placeholder="Any" value="{{ $filters['max_price'] }}">
                     </div>
                     <div class="form-group col-md-8 col-12 filter-actions">
@@ -561,7 +561,7 @@
         <div class="cart-footer">
             <div class="cart-total">
                 <span>Total:</span>
-                <span id="cartTotal">KSh 0.00</span>
+                <span id="cartTotal">{{ $currencySymbol }} 0.00</span>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <button class="checkout-btn" id="checkoutBtn" onclick="proceedToCheckout()" disabled style="background-color: #25D366;">
@@ -588,14 +588,35 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        function formatKsh(amount) {
+        function formatPrice(amount) {
             const value = parseFloat(amount) || 0;
-
-            return 'KSh ' + value.toLocaleString('en-KE', {
+            const formatted = value.toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
             });
+
+            @if(in_array($currencyCode, ['USD', 'EUR', 'GBP']))
+                return '{{ $currencySymbol }}' + formatted;
+            @else
+                return '{{ $currencySymbol }} ' + formatted;
+            @endif
         }
+
+        const flowToken = @json($flowToken);
+        const catalogId = {{ $catalog->id }};
+
+        function trackCatalogEvent(event, metadata = {}) {
+            fetch(`/catalog/${catalogId}/events`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({ event, metadata }),
+            }).catch(() => {});
+        }
+
+        trackCatalogEvent('view');
 
         // Cart state with selected variants
         let cart = JSON.parse(localStorage.getItem('catalog_{{ $catalog->id }}_cart')) || [];
@@ -651,6 +672,7 @@
 
             saveCart();
             updateCartDisplay();
+            trackCatalogEvent('cart_add', { product_id: productId, quantity });
             
             // Reset quantity and variant
             qtyInput.value = 1;
@@ -698,7 +720,7 @@
             if (cart.length === 0) {
                 cartItemsDiv.innerHTML = '<div class="empty-cart"><div class="empty-cart-icon"><i class="fas fa-shopping-bag"></i></div><p>Your cart is empty</p></div>';
                 cartBadge.style.display = 'none';
-                cartTotal.textContent = formatKsh(0);
+                cartTotal.textContent = formatPrice(0);
                 checkoutBtn.disabled = true;
                 return;
             }
@@ -725,13 +747,13 @@
                         </button>
                         <div class="cart-item-title">${item.title}</div>
                         ${variantText}
-                        <div class="cart-item-qty">${formatKsh(price)} × ${item.quantity} = ${formatKsh(itemTotal)}</div>
+                        <div class="cart-item-qty">${formatPrice(price)} × ${item.quantity} = ${formatPrice(itemTotal)}</div>
                     </div>
                 `;
             });
 
             cartItemsDiv.innerHTML = html;
-            cartTotal.textContent = formatKsh(total);
+            cartTotal.textContent = formatPrice(total);
             checkoutBtn.disabled = false;
             document.getElementById('invoiceBtn').disabled = false;
         }
@@ -747,42 +769,36 @@
         function proceedToCheckout() {
             if (cart.length === 0) return;
 
-            // Generate order message
-            let orderMessage = "📦 *Order from Catalog: {{ $catalog->name }}*\n\n";
-            orderMessage += "📋 *Items:*\n";
-            let total = 0;
-
-            cart.forEach(item => {
-                const price = parseFloat(item.price) || 0;
-                const itemTotal = price * item.quantity;
-                total += itemTotal;
-
-                let itemLine = `• ${item.title}`;
-                if (item.variant) {
-                    itemLine += ` (${item.variant})`;
-                }
-                itemLine += ` (x${item.quantity}) - ${formatKsh(price)} = ${formatKsh(itemTotal)}\n`;
-
-                orderMessage += itemLine;
-            });
-
-            orderMessage += `\n💰 *Total: ${formatKsh(total)}*\n`;
-            orderMessage += "\nPlease confirm this order.";
-
-            // Get company WhatsApp number from data
             const whatsappNumber = "{{ $company->getConfig('whatsapp_phone_number', '') }}";
-
             if (!whatsappNumber) {
                 alert('WhatsApp number not configured for this seller. Please contact the seller directly.');
                 return;
             }
 
-            // Create WhatsApp link
-            const encodedMessage = encodeURIComponent(orderMessage);
-            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+            const payload = {
+                items: cart.map(item => ({ id: item.id, quantity: item.quantity })),
+                flow_token: flowToken,
+            };
 
-            // Open WhatsApp
-            window.open(whatsappUrl, '_blank');
+            fetch(`/catalog/${catalogId}/generate-order`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify(payload),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.message || 'Could not generate order');
+                    return;
+                }
+
+                const encodedMessage = encodeURIComponent(data.message);
+                window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank');
+            })
+            .catch(() => alert('Could not start WhatsApp checkout. Please try again.'));
         }
 
         // Generate invoice and redirect to payment
@@ -829,6 +845,7 @@
                     customerPhone: customerPhone,
                     customerEmail: customerEmail || null,
                     amount: total.toFixed(2),
+                    flow_token: flowToken,
                 })
             })
             .then(response => {

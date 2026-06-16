@@ -52,7 +52,7 @@ return [
             'name' => 'Growth',
             'price' => 79,
             'description' => 'Outbound campaigns, catalog commerce, and store integrations for WhatsApp sales teams.',
-            'features' => 'Everything in Starter, Campaigns & broadcasts, Product catalog, Shopify/WooCommerce, Chat widget, 5 agents, 5,000 contacts, 10 campaigns/mo',
+            'features' => 'Everything in Starter, Campaigns & broadcasts, Product catalog & branded shop, Shopify/WooCommerce import, Chat widget, 5 agents, 5,000 contacts, 10 campaigns/mo',
             'limit_items' => 10,
             'limit_views' => 5000,
             'limit_orders' => 5000,

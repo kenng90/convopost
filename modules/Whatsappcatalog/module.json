@@ -11,6 +11,17 @@
     "aliases": {},
     "files": [],
     "requires": [],
+    "hasSidebar": true,
+    "sidebarData": [
+        {
+            "name": "Catalog",
+            "app": "whatsappcatalog",
+            "icon": "https://mobidonia-demo.imgix.net/icons/catalog.svg",
+            "brandColor": "#8966FE",
+            "view": "whatsappcatalog::sideapp.app",
+            "script": "whatsappcatalog::sideapp.script"
+        }
+    ],
     "vendor_fields": [
         {
             "separator": "WhatsApp Catalog",

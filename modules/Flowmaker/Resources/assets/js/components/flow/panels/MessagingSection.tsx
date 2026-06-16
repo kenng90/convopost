@@ -143,13 +143,13 @@ const messagingActions = [
   {
     type: 'whatsapp_catalog',
     icon: Database,
-    label: "WhatsApp catalog",
+    label: "Send catalog link",
     bgColor: "bg-purple-100",
     textColor: "text-purple-600",
     onClick: (actions: ReturnType<typeof useFlowActions>) => {
       const position = { x: 250, y: 100 };
       const data: NodeData = {
-        label: "WhatsApp Catalog",
+        label: "Send Catalog Link",
         type: "whatsapp_catalog",
         settings: {
           catalogId: undefined,

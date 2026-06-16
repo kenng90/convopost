@@ -727,7 +727,7 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Product Catalog & Commerce</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Import products. Sell inside<br/><span class="grad-text">WhatsApp.</span></h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Connect your store, import your catalog, and let customers browse, order, pay, and get invoiced — all without leaving WhatsApp.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">Import from Excel, Shopify, or WooCommerce. Share a branded shop link in WhatsApp, automate checkout in flows, and collect payment via invoice.</p>
     </div>
 
     <!-- 3-step flow -->
@@ -735,12 +735,12 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">🛒</div>
         <p class="font-display font-700 text-base mb-2">1. Import Your Catalog</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Connect Shopify or WooCommerce — or upload products manually with images, prices, and variants. Your catalog syncs automatically.</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Import from Shopify or WooCommerce, upload Excel, or add products manually. Re-import anytime to update prices and stock.</p>
       </div>
       <div class="card-lift border rounded-2xl p-6 text-center" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.15);">⚡</div>
         <p class="font-display font-700 text-base mb-2" style="color:#25D366;">2. Send via Automation</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Add a Catalog node to any automation flow. Let customers browse products, add to cart, and place orders through a rich WhatsApp experience.</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Add a Send Catalog Link node to any flow. Customers browse your branded shop; checkout resumes the automation automatically.</p>
       </div>
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">💳</div>
@@ -766,7 +766,7 @@ tailwind.config = {
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🔀</div>
             <div>
               <p class="text-sm font-semibold text-white mb-0.5">Catalog node in flow builder</p>
-              <p class="text-sm text-gray-500">Drop a Catalog node into any Flowmaker automation. Show products, let customers select items, confirm quantities — all in-chat.</p>
+              <p class="text-sm text-gray-500">Drop a Send Catalog Link node into Flowmaker. For small catalogs (≤10 items), use an in-chat product list — no browser required.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
