@@ -30,7 +30,15 @@ class Remineder extends Model
 
     public function managedByServiceLabel(): ?string
     {
-        if (! $this->isServiceManaged() || ! $this->source_id) {
+        if (! $this->isServiceManaged()) {
+            return null;
+        }
+
+        if ($this->event_id) {
+            return $this->event?->title;
+        }
+
+        if (! $this->source_id) {
             return null;
         }
 
@@ -46,6 +54,11 @@ class Remineder extends Model
     public function source()
     {
         return $this->belongsTo(Source::class);
+    }
+
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
     }
 
     public function makeMessages(Reservation $reservation)
@@ -168,6 +181,84 @@ class Remineder extends Model
 
         } catch (\Throwable $th) {
             //throw $th;
+        }
+    }
+
+    public function makeEventRegistrationMessages(EventRegistration $registration): void
+    {
+        $campaign = Campaign::findOrFail($this->campaign_id);
+        $occurrence = $registration->occurrence;
+        $eventStart = Carbon::parse($occurrence->starts_at);
+        $eventEnd = Carbon::parse($occurrence->ends_at);
+
+        $timeOfSendInMinutes = $this->time;
+
+        if ($this->time_type == 'hours') {
+            $timeOfSendInMinutes = $timeOfSendInMinutes * 60;
+        } elseif ($this->time_type == 'days') {
+            $timeOfSendInMinutes = $timeOfSendInMinutes * 24 * 60;
+        } elseif ($this->time_type == 'weeks') {
+            $timeOfSendInMinutes = $timeOfSendInMinutes * 24 * 60 * 7;
+        } elseif ($this->time_type == 'months') {
+            $timeOfSendInMinutes = $timeOfSendInMinutes * 24 * 60 * 30;
+        }
+
+        if ($this->type == 1) {
+            $timeOfSend = $eventStart->copy()->subMinutes($timeOfSendInMinutes);
+        } else {
+            $timeOfSend = $eventEnd->copy()->addMinutes($timeOfSendInMinutes);
+        }
+
+        $request = new Request();
+        $request->replace([
+            'send_time' => $timeOfSend->toDateTimeString(),
+        ]);
+
+        $contact = $registration->contact;
+        $contact->extra_value = [
+            'start_date' => $eventStart->toDateString(),
+            'start_time' => $eventStart->toTimeString(),
+            'start_date_time' => $eventStart->toDateTimeString(),
+            'end_date' => $eventEnd->toDateString(),
+            'end_time' => $eventEnd->toTimeString(),
+            'end_date_time' => $eventEnd->toDateTimeString(),
+            'external_id' => $registration->external_id,
+            'event_title' => $registration->event?->title,
+        ];
+
+        $campaign_variables = json_decode($campaign->variables, true);
+        $campaign_variables_match = json_decode($campaign->variables_match, true);
+
+        $map_variables_match = [
+            -4 => 'start_date',
+            -5 => 'start_time',
+            -6 => 'start_date_time',
+            -7 => 'end_date',
+            -8 => 'end_time',
+            -9 => 'end_date_time',
+            -10 => 'external_id',
+        ];
+
+        foreach ($campaign_variables_match as $key => $matches) {
+            foreach ($matches as $match_key => $match_value) {
+                $match_value_int = (int) $match_value;
+
+                if ($match_value_int < -3 && isset($map_variables_match[$match_value_int])) {
+                    $campaign_variables[$key][$match_key] = $map_variables_match[$match_value_int];
+                    $campaign_variables_match[$key][$match_key] = '-3';
+                }
+            }
+        }
+
+        $campaign->variables = json_encode($campaign_variables);
+        $campaign->variables_match = json_encode($campaign_variables_match);
+
+        $message = $campaign->makeMessages($request, $contact);
+
+        try {
+            $message->extra = 'event_reg:'.$registration->id;
+            $message->save();
+        } catch (\Throwable $th) {
         }
     }
 

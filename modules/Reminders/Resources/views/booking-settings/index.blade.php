@@ -42,6 +42,13 @@
             <code class="d-block p-2 bg-light rounded user-select-all">{{ $catalogUrl }}?token=YOUR_API_TOKEN</code>
         @endif
 
+        @if (($eventsEnabled ?? false) && ($eventsCatalogUrl ?? null))
+            <hr class="my-4">
+            <h3 class="mb-2">{{ __('Public events page') }}</h3>
+            <p class="text-muted">{{ __('Share this link so guests can register for upcoming events.') }}</p>
+            <code class="d-block p-2 bg-light rounded user-select-all">{{ $eventsCatalogUrl }}?token=YOUR_API_TOKEN</code>
+        @endif
+
         <hr class="my-4">
         <h3 class="mb-2">{{ __('Team inbox') }}</h3>
         <p class="text-muted">{{ __('By default, customers who only book an appointment do not appear in the chat inbox. Agents can open a conversation from the booking detail page when needed.') }}</p>

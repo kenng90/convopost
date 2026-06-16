@@ -197,11 +197,28 @@
                     
 
                 }
+
+                openPendingInitialContact();
             }
             
         }).catch(function (error) {
             
         });
+    }
+
+    function openPendingInitialContact() {
+        if (!window.pendingInitialContactId) {
+            return;
+        }
+
+        const contactId = parseInt(window.pendingInitialContactId, 10);
+        window.pendingInitialContactId = null;
+
+        if (!contactId || !chatList) {
+            return;
+        }
+
+        chatList.setCurrentChat(contactId);
     }
 
     function playSound() {
@@ -223,6 +240,8 @@
     }
 
     
+
+    window.pendingInitialContactId = @json($initialContactId ?? null);
 
     window.onload = function () {
         initPusher();

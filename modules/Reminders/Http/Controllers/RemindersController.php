@@ -87,7 +87,7 @@ class RemindersController extends Controller
         return view($this->view_path.'index', ['setup' => [
             'usefilter' => true,
             'title' => __('Client notification rules'),
-            'subtitle' => __('Most rules are configured on each service under Client notifications. This list shows what will run when appointments are booked.'),
+            'subtitle' => __('Rules for WhatsApp messages sent before or after appointments and events. Service- and event-managed rules sync from their setup pages.'),
             'action_link' => route('reminders.sources.index'),
             'action_name' => __('Configure on services'),
             'action_link2' => route('campaigns.create', ['type' => 'group']).'?type=reminder',

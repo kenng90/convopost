@@ -138,4 +138,27 @@ class RemindersReservationShowTest extends TestCase
         $response->assertOk();
         $response->assertSee(__('Insert'));
     }
+
+    public function test_message_customer_from_appointment_opens_chat(): void
+    {
+        $reservation = $this->bookReservation();
+
+        $response = $this->actingAs($this->owner)->get(
+            route('reminders.reservations.open-chat', ['reservation' => $reservation->id])
+        );
+
+        $response->assertRedirect(route('chat.index', ['contact' => $reservation->contact_id]));
+    }
+
+    public function test_message_customer_works_when_contact_is_soft_deleted(): void
+    {
+        $reservation = $this->bookReservation();
+        $reservation->contact->delete();
+
+        $response = $this->actingAs($this->owner)->get(
+            route('reminders.reservations.open-chat', ['reservation' => $reservation->id])
+        );
+
+        $response->assertRedirect(route('chat.index', ['contact' => $reservation->contact_id]));
+    }
 }

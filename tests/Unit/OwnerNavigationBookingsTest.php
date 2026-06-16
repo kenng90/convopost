@@ -13,7 +13,7 @@ class OwnerNavigationBookingsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_bookings_menu_is_grouped_under_automations(): void
+    public function test_appointment_menus_are_under_automations_and_setup_is_under_setup(): void
     {
         Role::firstOrCreate(['name' => 'owner']);
 
@@ -28,9 +28,39 @@ class OwnerNavigationBookingsTest extends TestCase
 
         $this->assertNotNull($automations);
 
-        $bookingsMenu = collect($automations['menus'])->firstWhere('id', 'remindersMenu');
+        $appointmentsMenu = collect($automations['menus'])->firstWhere('id', 'appointmentsMenu');
+        $eventsMenu = collect($automations['menus'])->firstWhere('id', 'eventsMenu');
 
-        $this->assertNotNull($bookingsMenu);
-        $this->assertSame('Bookings', $bookingsMenu['name']);
+        $this->assertNotNull($appointmentsMenu);
+        $this->assertSame('Appointments', $appointmentsMenu['name']);
+        $this->assertNotNull($eventsMenu);
+        $this->assertSame('Events', $eventsMenu['name']);
+        $this->assertNull(collect($automations['menus'])->firstWhere('id', 'bookingSetupMenu'));
+
+        $setup = collect($sections)->firstWhere('label', __('Setup'));
+        $this->assertNotNull($setup);
+
+        $bookingSetupMenu = collect($setup['menus'])->firstWhere('id', 'bookingSetupMenu');
+        $this->assertNotNull($bookingSetupMenu);
+        $this->assertSame('Booking setup', $bookingSetupMenu['name']);
+    }
+
+    public function test_events_menu_is_hidden_when_feature_disabled(): void
+    {
+        Role::firstOrCreate(['name' => 'owner']);
+
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+        $company->setConfig('ENABLE_EVENTS_BOOKING', 'false');
+        $owner->update(['company_id' => $company->id]);
+
+        $sections = app(OwnerNavigationBuilder::class)->build($owner);
+        $automations = collect($sections)->firstWhere('label', __('Automations & commerce'));
+
+        $this->assertNotNull($automations);
+        $this->assertNull(collect($automations['menus'])->firstWhere('id', 'eventsMenu'));
+        $this->assertNotNull(collect($automations['menus'])->firstWhere('id', 'appointmentsMenu'));
     }
 }

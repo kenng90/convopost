@@ -15,8 +15,22 @@ class SlotIdentifier
         ]);
     }
 
+    public static function encodeAuto(Carbon $start, int $durationMinutes): string
+    {
+        return implode('|', [
+            'auto',
+            $start->copy()->utc()->format('Y-m-d\TH:i:s\Z'),
+            $durationMinutes,
+        ]);
+    }
+
+    public static function isAutoAssign(string $slotId): bool
+    {
+        return str_starts_with($slotId, 'auto|');
+    }
+
     /**
-     * @return array{appointment_staff_id: int, staff_user_id: int|null, start: Carbon, duration_minutes: int}|null
+     * @return array{appointment_staff_id: int, staff_user_id: int|null, start: Carbon, duration_minutes: int, auto_assign: bool}|null
      */
     public static function decode(string $slotId): ?array
     {
@@ -27,7 +41,11 @@ class SlotIdentifier
 
         [$staffId, $startIso, $duration] = $parts;
 
-        if (! is_numeric($staffId) || ! is_numeric($duration)) {
+        if (! is_numeric($duration) && $staffId !== 'auto') {
+            return null;
+        }
+
+        if ($staffId !== 'auto' && ! is_numeric($staffId)) {
             return null;
         }
 
@@ -38,10 +56,11 @@ class SlotIdentifier
         }
 
         return [
-            'appointment_staff_id' => (int) $staffId,
+            'appointment_staff_id' => $staffId === 'auto' ? 0 : (int) $staffId,
             'staff_user_id' => null,
             'start' => $start,
             'duration_minutes' => (int) $duration,
+            'auto_assign' => $staffId === 'auto',
         ];
     }
 }

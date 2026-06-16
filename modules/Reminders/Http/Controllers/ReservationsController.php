@@ -3,7 +3,9 @@
 namespace Modules\Reminders\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Modules\Reminders\Models\AppointmentStaff;
 use Modules\Reminders\Models\Reservation;
 use Modules\Reminders\Models\Source;
 use Modules\Wpbox\Events\Chatlistchange;
@@ -11,6 +13,7 @@ use Modules\Wpbox\Http\Controllers\APIController;
 use Modules\Wpbox\Models\Contact as WpboxContact;
 use Modules\Wpbox\Models\Message;
 use Modules\Wpbox\Traits\Contacts;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReservationsController extends Controller
 {
@@ -123,20 +126,103 @@ class ReservationsController extends Controller
         return $fields;
     }
 
-    private function getFilterFields()
+    private function getFilterFields(): array
     {
-        $fields = $this->getFields('col-md-3');
-        $fields[0]['required'] = true;
+        return [
+            [
+                'class' => 'col-md-3',
+                'ftype' => 'select',
+                'name' => __('Status'),
+                'id' => 'display_status',
+                'placeholder' => __('All statuses'),
+                'required' => false,
+                'data' => [
+                    '' => __('All statuses'),
+                    'upcoming' => __('Upcoming'),
+                    'in_progress' => __('In progress'),
+                    'completed' => __('Completed'),
+                    'cancelled' => __('Cancelled'),
+                    'confirmed' => __('Confirmed'),
+                ],
+            ],
+            [
+                'class' => 'col-md-3',
+                'ftype' => 'select',
+                'name' => __('Service'),
+                'id' => 'source_id',
+                'placeholder' => __('All services'),
+                'required' => false,
+                'data' => ['' => __('All services')] + Source::query()->orderBy('name')->pluck('name', 'id')->toArray(),
+            ],
+            [
+                'class' => 'col-md-3',
+                'ftype' => 'select',
+                'name' => __('Team member'),
+                'id' => 'appointment_staff_id',
+                'placeholder' => __('All team members'),
+                'required' => false,
+                'data' => ['' => __('All team members')] + AppointmentStaff::query()->orderBy('name')->pluck('name', 'id')->toArray(),
+            ],
+            [
+                'class' => 'col-md-3',
+                'ftype' => 'input',
+                'type' => 'date',
+                'name' => __('Start date from'),
+                'id' => 'start_date',
+                'placeholder' => __('Start date'),
+                'required' => false,
+            ],
+            [
+                'class' => 'col-md-3',
+                'ftype' => 'input',
+                'type' => 'date',
+                'name' => __('End date to'),
+                'id' => 'end_date',
+                'placeholder' => __('End date'),
+                'required' => false,
+            ],
+            [
+                'class' => 'col-md-3',
+                'ftype' => 'input',
+                'name' => __('Reference'),
+                'id' => 'external_id',
+                'placeholder' => __('Reference'),
+                'required' => false,
+            ],
+        ];
+    }
 
-        //Unset the dates
-        $fields[2]['type'] = 'date';
-        $fields[2]['required'] = false;
-        $fields[3]['type'] = 'date';
-        $fields[3]['required'] = false;
-        unset($fields[2]['step']);
-        unset($fields[3]['step']);
+    private function filteredQuery(Request $request): Builder
+    {
+        $items = $this->provider::query()
+            ->with(['contact', 'source', 'appointmentStaffMember'])
+            ->orderByDesc('start_date');
 
-        return $fields;
+        if ($request->filled('external_id') && strlen((string) $request->external_id) > 1) {
+            $items->where('external_id', 'like', '%'.$request->external_id.'%');
+        }
+
+        if ($request->filled('source_id')) {
+            $items->where('source_id', $request->source_id);
+        }
+
+        if ($request->filled('appointment_staff_id')) {
+            $items->where('appointment_staff_id', $request->appointment_staff_id);
+        }
+
+        if ($request->filled('start_date')) {
+            $items->whereDate('start_date', '>=', $request->start_date);
+        }
+
+        if ($request->filled('end_date')) {
+            $items->whereDate('start_date', '<=', $request->end_date);
+        }
+
+        if ($request->filled('display_status')) {
+            $items->filterByDisplayStatus($request->display_status);
+        }
+
+        return $items;
     }
 
     /**
@@ -152,41 +238,29 @@ class ReservationsController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
         $this->authChecker();
 
-        $items = $this->provider::query()
-            ->with(['contact', 'source', 'appointmentStaffMember'])
-            ->orderBy('id', 'desc');
-        if (isset($_GET['external_id']) && strlen($_GET['external_id']) > 1) {
-            $items = $items->where('external_id', 'like', '%'.$_GET['external_id'].'%');
-        }
+        $items = $this->filteredQuery($request)->paginate(config('settings.paginate'));
 
-        if (isset($_GET['source_id']) && ! empty($_GET['source_id'])) {
-            $items = $items->where('source_id', $_GET['source_id']);
-        }
-
-        if (isset($_GET['contact_id']) && ! empty($_GET['contact_id'])) {
-            $items = $items->where('contact_id', $_GET['contact_id']);
-        }
-
-        if (isset($_GET['start_date']) && ! empty($_GET['start_date'])) {
-            $items = $items->whereDate('start_date', '>=', $_GET['start_date']);
-        }
-
-        if (isset($_GET['end_date']) && ! empty($_GET['end_date'])) {
-            $items = $items->whereDate('end_date', '<=', $_GET['end_date']);
-        }
-
-        $items = $items->paginate(config('settings.paginate'));
+        $exportQuery = array_filter($request->only([
+            'display_status',
+            'source_id',
+            'appointment_staff_id',
+            'start_date',
+            'end_date',
+            'external_id',
+        ]));
 
         return view($this->view_path.'index', ['setup' => [
             'usefilter' => true,
-            'title' => __('Bookings'),
-            'subtitle' => __('Appointments booked via web, WhatsApp, API, or manually.'),
+            'title' => __('Appointments'),
+            'subtitle' => __('One-to-one bookings via web, WhatsApp, API, or manually.'),
             'action_link' => route($this->webroute_path.'create'),
             'action_name' => __('crud.add_new_item', ['item' => __($this->title)]),
+            'action_link2' => route($this->webroute_path.'export', $exportQuery),
+            'action_name2' => __('Export CSV'),
             'items' => $items,
             'item_names' => $this->titlePlural,
             'webroute_path' => $this->webroute_path,
@@ -194,11 +268,55 @@ class ReservationsController extends Controller
             'filterFields' => $this->getFilterFields(),
             'custom_table' => true,
             'parameter_name' => $this->parameter_name,
-            'parameters' => count($_GET) != 0,
+            'parameters' => count($request->query()) !== 0,
             'breadcrumbs' => [
-                [__('Bookings'), '#'],
+                [__('Appointments'), '#'],
             ],
         ]]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $this->authChecker();
+
+        $reservations = $this->filteredQuery($request)->get();
+        $filename = 'appointments-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->stream(function () use ($reservations) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, [
+                'Status',
+                'Client',
+                'Phone',
+                'Service',
+                'Team member',
+                'Start',
+                'End',
+                'Duration (minutes)',
+                'Reference',
+                'Booked at',
+            ]);
+
+            foreach ($reservations as $reservation) {
+                fputcsv($file, [
+                    $reservation->displayStatusLabel(),
+                    $reservation->contact?->name,
+                    $reservation->contact?->phone,
+                    $reservation->source?->name,
+                    $reservation->appointmentStaffMember?->name,
+                    $reservation->start_date?->format('Y-m-d H:i'),
+                    $reservation->end_date?->format('Y-m-d H:i'),
+                    $reservation->duration_minutes,
+                    $reservation->external_id,
+                    $reservation->created_at?->format('Y-m-d H:i'),
+                ]);
+            }
+
+            fclose($file);
+        }, 200, [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 
     public function show(Reservation $reservation)
@@ -222,7 +340,7 @@ class ReservationsController extends Controller
                 'action_name2' => __('Edit'),
                 'iscontent' => true,
                 'breadcrumbs' => [
-                    [__('Bookings'), route('reminders.reservations.index')],
+                    [__('Appointments'), route('reminders.reservations.index')],
                     ['#'.($reservation->external_id ?: $reservation->id), '#'],
                 ],
             ],
@@ -235,17 +353,18 @@ class ReservationsController extends Controller
     {
         $this->authChecker();
 
-        $contact = WpboxContact::query()->find($reservation->contact_id);
-
-        if (! $contact) {
+        $companyId = $this->activeCompanyId();
+        if (! $companyId || (int) $reservation->company_id !== (int) $companyId) {
             abort(404);
         }
+
+        $contact = $this->findBookingContact($reservation->contact_id, $companyId);
 
         $this->promoteContactToInbox($contact);
 
         event(new Chatlistchange($contact->id, $contact->company_id));
 
-        return redirect('/chat/'.$contact->id);
+        return $this->redirectToContactChat($contact);
     }
 
     /**
@@ -264,7 +383,7 @@ class ReservationsController extends Controller
             'iscontent' => true,
             'action' => route($this->webroute_path.'store'),
             'breadcrumbs' => [
-                [__('Bookings'), route('reminders.reservations.index')],
+                [__('Appointments'), route('reminders.reservations.index')],
             ],
         ],
             'fields' => $this->getFields()]);

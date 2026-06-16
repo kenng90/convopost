@@ -29,4 +29,7 @@
     @if ($field['ftype']=="iconselect")
         @include('partials.iconselect',$field)
     @endif
+    @if ($field['ftype']=="working_hours")
+        @include('reminders::partials.working-hours',$field)
+    @endif
 @endforeach

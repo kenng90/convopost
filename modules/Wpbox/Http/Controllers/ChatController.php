@@ -92,7 +92,22 @@ class ChatController extends Controller
             'languages' => $languages,
             'fetcherModules' => $fetcherModules,
             'sidebarModules' => $sidebarModules,
+            'initialContactId' => $this->resolveInitialChatContactId(request()),
         ]);
+    }
+
+    private function resolveInitialChatContactId(Request $request): ?int
+    {
+        if (! $request->filled('contact')) {
+            return null;
+        }
+
+        $contact = Contact::query()
+            ->where('company_id', $this->getCompany()->id)
+            ->where('id', $request->integer('contact'))
+            ->first();
+
+        return $contact?->id;
     }
 
     /**

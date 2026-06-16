@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Modules\Reminders\Support\WorkingHours;
 
 class Department extends Model
 {
@@ -19,6 +20,7 @@ class Department extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'working_hours' => 'array',
     ];
 
     public function company(): BelongsTo
@@ -36,6 +38,21 @@ class Department extends Model
         return $this->hasMany(Source::class, 'department_id');
     }
 
+    public function closures(): HasMany
+    {
+        return $this->hasMany(BookingClosure::class, 'department_id');
+    }
+
+    public function normalizedWorkingHours(): array
+    {
+        return WorkingHours::normalize($this->working_hours);
+    }
+
+    public function effectiveTimezone(): string
+    {
+        return $this->timezone ?: config('app.timezone', 'UTC');
+    }
+
     protected static function booted(): void
     {
         static::addGlobalScope(new CompanyScope);
@@ -43,6 +60,10 @@ class Department extends Model
         static::creating(function (self $model) {
             if (session('company_id') && ! $model->company_id) {
                 $model->company_id = session('company_id');
+            }
+
+            if (! $model->working_hours) {
+                $model->working_hours = WorkingHours::default();
             }
         });
     }

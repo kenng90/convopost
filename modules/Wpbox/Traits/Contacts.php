@@ -102,4 +102,27 @@ trait Contacts
 
         return $contact;
     }
+
+    protected function redirectToContactChat(Contact $contact): \Illuminate\Http\RedirectResponse
+    {
+        return redirect()->route('chat.index', ['contact' => $contact->id]);
+    }
+
+    protected function findBookingContact(?int $contactId, int $companyId): Contact
+    {
+        if (! $contactId) {
+            abort(404);
+        }
+
+        $contact = Contact::withoutGlobalScopes()
+            ->withTrashed()
+            ->where('company_id', $companyId)
+            ->find($contactId);
+
+        if (! $contact) {
+            abort(404);
+        }
+
+        return $contact;
+    }
 }

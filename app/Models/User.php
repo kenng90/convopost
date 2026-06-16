@@ -339,6 +339,10 @@ class User extends Authenticatable
                     continue;
                 }
 
+                if (! $this->ownerMenuVisibleForCompany($menu)) {
+                    continue;
+                }
+
                 $menus[] = $menu;
             }
         }
@@ -346,6 +350,35 @@ class User extends Authenticatable
         usort($menus, fn ($a, $b) => ($a['priority'] ?? 100) <=> ($b['priority'] ?? 100));
 
         return $menus;
+    }
+
+    /**
+     * @param  array<string, mixed>  $menu
+     */
+    protected function ownerMenuVisibleForCompany(array $menu): bool
+    {
+        $rule = $menu['requires_company_config'] ?? null;
+
+        if (! is_array($rule)) {
+            return true;
+        }
+
+        $company = $this->currentCompany();
+
+        if (! $company) {
+            return false;
+        }
+
+        $key = $rule['key'] ?? null;
+
+        if (! $key) {
+            return true;
+        }
+
+        $expected = $rule['equals'] ?? 'true';
+        $actual = $company->getConfig($key, $expected);
+
+        return filter_var($actual, FILTER_VALIDATE_BOOLEAN) === filter_var($expected, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**

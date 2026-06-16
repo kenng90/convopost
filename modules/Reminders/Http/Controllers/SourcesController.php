@@ -134,6 +134,17 @@ class SourcesController extends Controller
         $fields[] = [
             'class' => $class,
             'ftype' => 'select',
+            'name' => __('Team member assignment'),
+            'id' => 'staff_assignment_mode',
+            'required' => true,
+            'value' => $source?->staff_assignment_mode ?? Source::ASSIGNMENT_CUSTOMER_CHOICE,
+            'data' => Source::staffAssignmentModeOptions(),
+            'additionalInfo' => __('How a team member is chosen when a client books. Round-robin and least-busy hide staff names from clients.'),
+        ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'select',
             'name' => __('Assigned appointment team'),
             'id' => 'appointment_staff_ids[]',
             'placeholder' => __('Select team members'),
@@ -331,7 +342,7 @@ class SourcesController extends Controller
     {
         $this->authChecker();
         $item = $this->provider::findOrFail($id);
-        $item->update($this->sourceAttributes($request));
+        $item->update($this->sourceAttributes($request, $item));
         $this->syncStaff($item, $request->input('appointment_staff_ids', []));
         $this->sourceReminderSync->sync($item->fresh());
 
@@ -350,7 +361,7 @@ class SourcesController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function sourceAttributes(Request $request): array
+    private function sourceAttributes(Request $request, ?Source $existing = null): array
     {
         $durationOptions = collect(explode(',', (string) $request->input('duration_options', '')))
             ->map(fn ($value) => (int) trim($value))
@@ -358,6 +369,11 @@ class SourcesController extends Controller
             ->unique()
             ->values()
             ->all();
+
+        $mode = $request->input('staff_assignment_mode', Source::ASSIGNMENT_CUSTOMER_CHOICE);
+        if (! array_key_exists($mode, Source::staffAssignmentModeOptions())) {
+            $mode = Source::ASSIGNMENT_CUSTOMER_CHOICE;
+        }
 
         return [
             'name' => $request->name,
@@ -369,7 +385,8 @@ class SourcesController extends Controller
             'timezone' => $request->input('timezone', config('app.timezone', 'UTC')),
             'min_notice_hours' => (int) $request->input('min_notice_hours', 1),
             'max_advance_days' => (int) $request->input('max_advance_days', 60),
-            'working_hours' => WorkingHours::default(),
+            'staff_assignment_mode' => $mode,
+            'working_hours' => $existing?->working_hours ?: WorkingHours::default(),
             'reminder_before_campaign_id' => $request->input('reminder_before_campaign_id') ?: null,
             'reminder_after_campaign_id' => $request->input('reminder_after_campaign_id') ?: null,
             'reminder_before_value' => $request->input('reminder_before_value') ?: null,

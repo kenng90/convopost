@@ -120,7 +120,7 @@ class BookingInboxTest extends TestCase
             route('reminders.reservations.open-chat', ['reservation' => $reservation->id])
         );
 
-        $response->assertRedirect('/chat/'.$contact->id);
+        $response->assertRedirect(route('chat.index', ['contact' => $contact->id]));
 
         $contact->refresh();
 

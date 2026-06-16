@@ -54,4 +54,24 @@ class WorkingHours
     {
         return strtolower($date->englishDayOfWeek);
     }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array<string, array{enabled: bool, start: string, end: string}>
+     */
+    public static function fromRequest(array $input): array
+    {
+        $hours = [];
+
+        foreach (array_keys(self::default()) as $day) {
+            $dayInput = $input[$day] ?? [];
+            $hours[$day] = [
+                'enabled' => isset($dayInput['enabled']),
+                'start' => (string) ($dayInput['start'] ?? '09:00'),
+                'end' => (string) ($dayInput['end'] ?? '17:00'),
+            ];
+        }
+
+        return self::normalize($hours);
+    }
 }

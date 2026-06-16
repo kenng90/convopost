@@ -60,6 +60,16 @@
 			"key": "external_id",
 			"value": "crm-appointment-12",
 			"type": "string"
+		},
+		{
+			"key": "occurrence_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "registration_id",
+			"value": "",
+			"type": "string"
 		}
 	],
 	"item": [
@@ -417,6 +427,96 @@
 						"description": "Cancels a reservation.\n\nSets `status` to `2`, stamps `cancelled_at`, removes pending reminder messages, deletes the Google Calendar event, and notifies staff."
 					},
 					"response": []
+				}
+			]
+		},
+		{
+			"name": "Events",
+			"description": "Fixed-date events with capacity-based registration. Run in order for a full flow test.",
+			"item": [
+				{
+					"name": "1. List published events",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const json = pm.response.json();",
+									"if (json.events && json.events[0] && json.events[0].occurrences && json.events[0].occurrences[0]) {",
+									"    pm.collectionVariables.set('occurrence_id', String(json.events[0].occurrences[0].id));",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [{"key": "Accept", "value": "application/json"}],
+						"url": "{{api_endpoint}}api/reminders/events?token={{token}}"
+					}
+				},
+				{
+					"name": "2. Register for occurrence",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const json = pm.response.json();",
+									"if (json.registration && json.registration.id) {",
+									"    pm.collectionVariables.set('registration_id', String(json.registration.id));",
+									"    if (json.registration.contact_id) {",
+									"        pm.collectionVariables.set('contact_id', String(json.registration.contact_id));",
+									"    }",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Accept", "value": "application/json"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{token}}\",\n    \"occurrence_id\": {{occurrence_id}},\n    \"phone\": \"{{phone}}\",\n    \"name\": \"{{name}}\",\n    \"party_size\": 1,\n    \"external_id\": \"{{external_id}}\"\n}"
+						},
+						"url": "{{api_endpoint}}api/reminders/events/register"
+					}
+				},
+				{
+					"name": "3. Get contact event registrations",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Accept", "value": "application/json"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{token}}\",\n    \"contact_id\": {{contact_id}}\n}"
+						},
+						"url": "{{api_endpoint}}api/reminders/get-contact-event-registrations"
+					}
+				},
+				{
+					"name": "4. Cancel registration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Accept", "value": "application/json"},
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{token}}\",\n    \"registration_id\": {{registration_id}}\n}"
+						},
+						"url": "{{api_endpoint}}api/reminders/events/cancel-registration"
+					}
 				}
 			]
 		},

@@ -20,7 +20,8 @@ class ReservationBookingService
     public function __construct(
         private readonly AvailabilityService $availabilityService,
         private readonly GoogleCalendarService $googleCalendarService,
-        private readonly AppointmentStaffNotificationService $staffNotifications
+        private readonly AppointmentStaffNotificationService $staffNotifications,
+        private readonly StaffAssignmentService $staffAssignmentService
     ) {
     }
 
@@ -164,8 +165,13 @@ class ReservationBookingService
                 throw new \InvalidArgumentException('Invalid slot_id.');
             }
 
-            $member = AppointmentStaff::withoutGlobalScopes()->findOrFail($decoded['appointment_staff_id']);
             $start = $decoded['start']->timezone($source->timezone ?: 'UTC');
+
+            if ($decoded['auto_assign'] || $decoded['appointment_staff_id'] === 0) {
+                $member = $this->staffAssignmentService->assign($source, $start, $decoded['duration_minutes']);
+            } else {
+                $member = AppointmentStaff::withoutGlobalScopes()->findOrFail($decoded['appointment_staff_id']);
+            }
 
             return [
                 $start,

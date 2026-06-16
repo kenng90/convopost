@@ -85,9 +85,9 @@
                         <a href="{{ route('reminders.reservations.open-chat', ['reservation' => $reservation->id]) }}" class="btn btn-sm btn-primary mr-2 mb-2">
                             <i class="ni ni-chat-round"></i> {{ __('Message customer') }}
                         </a>
-                        <a href="{{ route('contacts.edit', ['contact' => $reservation->contact_id]) }}" class="btn btn-sm btn-outline-primary mr-2 mb-2">
+                        <!-- <a href="{{ route('contacts.edit', ['contact' => $reservation->contact_id]) }}" class="btn btn-sm btn-outline-primary mr-2 mb-2">
                             {{ __('Contact profile') }}
-                        </a>
+                        </a> -->
                     @endif
                     @if ($reservation->source_id)
                         <a href="{{ route('reminders.sources.edit', ['source' => $reservation->source_id]) }}" class="btn btn-sm btn-outline-default mb-2">

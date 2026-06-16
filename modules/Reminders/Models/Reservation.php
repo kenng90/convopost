@@ -4,6 +4,7 @@ namespace Modules\Reminders\Models;
 
 use App\Models\User;
 use App\Scopes\CompanyScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -118,6 +119,39 @@ class Reservation extends Model
     public function isActive(): bool
     {
         return (int) $this->status === 1 && $this->cancelled_at === null;
+    }
+
+    public function scopeFilterByDisplayStatus(Builder $query, ?string $status): Builder
+    {
+        if (! $status || $status === 'all') {
+            return $query;
+        }
+
+        return match ($status) {
+            'cancelled' => $query->where(function (Builder $builder) {
+                $builder->whereNotNull('cancelled_at')->orWhere('status', 2);
+            }),
+            'completed' => $query->whereNull('cancelled_at')
+                ->where('status', '!=', 2)
+                ->where('end_date', '<', now()),
+            'upcoming' => $query->whereNull('cancelled_at')
+                ->where('status', '!=', 2)
+                ->where('start_date', '>', now()),
+            'in_progress' => $query->whereNull('cancelled_at')
+                ->where('status', '!=', 2)
+                ->where('start_date', '<=', now())
+                ->where('end_date', '>=', now()),
+            'confirmed' => $query->whereNull('cancelled_at')
+                ->where('status', 1)
+                ->where(function (Builder $builder) {
+                    $builder->where('start_date', '>', now())
+                        ->orWhere(function (Builder $nested) {
+                            $nested->where('start_date', '<=', now())
+                                ->where('end_date', '>=', now());
+                        });
+                }),
+            default => $query,
+        };
     }
 
     public function makeMessages()

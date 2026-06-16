@@ -9,11 +9,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Sanctum\PersonalAccessToken;
+use Modules\Reminders\Models\EventRegistration;
 use Modules\Reminders\Models\Remineder;
 use Modules\Reminders\Models\Reservation;
 use Modules\Reminders\Models\Source;
 use Modules\Reminders\Services\AvailabilityService;
 use Modules\Reminders\Services\BookingCatalogService;
+use Modules\Reminders\Services\BookingChatPanelService;
+use Modules\Reminders\Services\EventCatalogService;
+use Modules\Reminders\Services\EventRegistrationService;
 use Modules\Reminders\Services\ReservationBookingService;
 use Modules\Wpbox\Traits\Contacts;
 
@@ -24,7 +28,10 @@ class APIController extends Controller
     public function __construct(
         private readonly AvailabilityService $availabilityService,
         private readonly ReservationBookingService $bookingService,
-        private readonly BookingCatalogService $catalogService
+        private readonly BookingCatalogService $catalogService,
+        private readonly BookingChatPanelService $chatPanelService,
+        private readonly EventCatalogService $eventCatalogService,
+        private readonly EventRegistrationService $eventRegistrationService
     ) {
     }
 
@@ -66,10 +73,129 @@ class APIController extends Controller
     public function getContactReservations(Request $request)
     {
         return $this->authenticate($request, function ($request) {
-            $reservations = Reservation::where('contact_id', $request->contact_id)->get();
+            $company = $this->getCompany();
+            $panel = $this->chatPanelService->forContact($company, (int) $request->contact_id);
 
-            return response()->json(['status' => 'success', 'reservations' => $reservations]);
-        });
+            return response()->json([
+                'status' => 'success',
+                'reservations' => $panel['appointments'],
+                'appointments' => $panel['appointments'],
+            ]);
+        }, [
+            'token' => 'required',
+            'contact_id' => 'required|integer',
+        ]);
+    }
+
+    public function getContactBookings(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+            $panel = $this->chatPanelService->forContact($company, (int) $request->contact_id);
+
+            return response()->json([
+                'status' => 'success',
+                ...$panel,
+            ]);
+        }, [
+            'token' => 'required',
+            'contact_id' => 'required|integer',
+        ]);
+    }
+
+    public function getContactEventRegistrations(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $registrations = EventRegistration::query()
+                ->with(['event', 'occurrence'])
+                ->where('contact_id', $request->contact_id)
+                ->orderByDesc('registered_at')
+                ->get()
+                ->map(fn (EventRegistration $registration) => $this->chatPanelService->formatEventRegistration($registration))
+                ->values();
+
+            return response()->json(['status' => 'success', 'registrations' => $registrations]);
+        }, [
+            'token' => 'required',
+            'contact_id' => 'required|integer',
+        ]);
+    }
+
+    public function events(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+
+            if (! $this->eventCatalogService->eventsEnabled($company)) {
+                return response()->json(['status' => 'success', 'events' => []]);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'events' => $this->eventCatalogService->publishedEventsForCompany($company),
+            ]);
+        }, [
+            'token' => 'required',
+        ]);
+    }
+
+    public function registerForEvent(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+
+            if (! $this->eventCatalogService->eventsEnabled($company)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Events booking is disabled for this company.',
+                ], 403);
+            }
+
+            try {
+                $registration = $this->eventRegistrationService->register($company, $request->only([
+                    'occurrence_id',
+                    'phone',
+                    'name',
+                    'party_size',
+                    'external_id',
+                ]));
+            } catch (\InvalidArgumentException $exception) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $exception->getMessage(),
+                ], 422);
+            } catch (\RuntimeException $exception) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $exception->getMessage(),
+                ], 409);
+            }
+
+            return response()->json(['status' => 'success', 'registration' => $registration->load(['event', 'occurrence', 'contact'])], 201);
+        }, [
+            'token' => 'required',
+            'occurrence_id' => 'required|integer',
+            'phone' => 'required',
+            'name' => 'required',
+            'party_size' => 'nullable|integer|min:1|max:100',
+        ]);
+    }
+
+    public function cancelEventRegistration(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+            $registration = EventRegistration::where('company_id', $company->id)
+                ->where('id', $request->registration_id)
+                ->firstOrFail();
+
+            $registration = $this->eventRegistrationService->cancel($registration);
+
+            return response()->json(['status' => 'success', 'registration' => $registration]);
+        }, [
+            'token' => 'required',
+            'registration_id' => 'required|integer',
+        ]);
     }
 
     public function createReminder(Request $request)

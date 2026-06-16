@@ -24,10 +24,18 @@ Route::group([
     Route::prefix('api/reminders')->group(function () {
         Route::get('availability', 'APIController@availability');
         Route::get('services', 'APIController@services');
+        Route::get('events', 'APIController@events');
+        Route::post('events/register', 'APIController@registerForEvent');
+        Route::post('events/cancel-registration', 'APIController@cancelEventRegistration');
+        Route::post('get-contact-event-registrations', 'APIController@getContactEventRegistrations');
     });
 
     Route::get('book/{subdomain}', 'BookingSettingsController@widgetCatalog')
         ->name('reminders.booking.catalog');
+    Route::get('book/{subdomain}/events', 'BookingSettingsController@eventsCatalog')
+        ->name('reminders.booking.events');
+    Route::get('book/{subdomain}/events/{occurrence}', 'BookingSettingsController@eventRegister')
+        ->name('reminders.booking.event');
     Route::get('book/{subdomain}/{source}', 'BookingSettingsController@widget')
         ->name('reminders.booking.widget');
 });
@@ -38,6 +46,7 @@ Route::group([
 ], function () {
 
     Route::post('/api/reminders/get-contact-reservations', 'APIController@getContactReservations')->name('reminders.get-contact-reservations');
+    Route::post('/api/reminders/get-contact-bookings', 'APIController@getContactBookings')->name('reminders.get-contact-bookings');
 
     Route::prefix('reminders')->group(function () {
 
@@ -76,7 +85,22 @@ Route::group([
         Route::put('appointment-staff/{appointmentStaff}', 'AppointmentStaffController@update')->name('reminders.appointment-staff.update');
         Route::get('appointment-staff/del/{appointmentStaff}', 'AppointmentStaffController@destroy')->name('reminders.appointment-staff.delete');
 
+        Route::get('events', 'EventsController@index')->name('reminders.events.index');
+        Route::get('events/create', 'EventsController@create')->name('reminders.events.create');
+        Route::post('events', 'EventsController@store')->name('reminders.events.store');
+        Route::get('events/del/{event}', 'EventsController@destroy')->name('reminders.events.delete');
+        Route::get('events/{event}/edit', 'EventsController@edit')->name('reminders.events.edit');
+        Route::put('events/{event}', 'EventsController@update')->name('reminders.events.update');
+        Route::post('events/{event}/occurrences', 'EventsController@storeOccurrence')->name('reminders.events.occurrences.store');
+        Route::get('events/{event}/occurrences/del/{occurrence}', 'EventsController@destroyOccurrence')->name('reminders.events.occurrences.delete');
+
+        Route::get('event-registrations', 'EventRegistrationsController@index')->name('reminders.event-registrations.index');
+        Route::get('event-registrations/{eventRegistration}/open-chat', 'EventRegistrationsController@openChat')->name('reminders.event-registrations.open-chat');
+        Route::get('event-registrations/{eventRegistration}/cancel', 'EventRegistrationsController@cancel')->name('reminders.event-registrations.cancel');
+        Route::get('event-registrations/{eventRegistration}', 'EventRegistrationsController@show')->name('reminders.event-registrations.show');
+
         Route::get('reservations', 'ReservationsController@index')->name('reminders.reservations.index');
+        Route::get('reservations/export', 'ReservationsController@export')->name('reminders.reservations.export');
         Route::get('reservations/create', 'ReservationsController@create')->name('reminders.reservations.create');
         Route::get('reservations/del/{reservation}', 'ReservationsController@destroy')->name('reminders.reservations.delete');
         Route::get('reservations/{reservation}/open-chat', 'ReservationsController@openChat')->name('reminders.reservations.open-chat');

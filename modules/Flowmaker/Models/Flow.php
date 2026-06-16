@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Nodes\AssignAgent;
 use Modules\Flowmaker\Models\Nodes\AssignGroup;
+use Modules\Flowmaker\Models\Nodes\BookingEventRegister;
+use Modules\Flowmaker\Models\Nodes\BookingEventsList;
 use Modules\Flowmaker\Models\Nodes\Branch;
 use Modules\Flowmaker\Models\Nodes\Buttons;
 use Modules\Flowmaker\Models\Nodes\Edge;
@@ -226,6 +228,10 @@ class Flow extends Model
                 $theNewNode = new WhatsAppCatalog($nodeArray, []);
             } elseif ($nodeArray['type'] === 'whatsapp_flow') {
                 $theNewNode = new WhatsAppFlow($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'booking_events_list') {
+                $theNewNode = new BookingEventsList($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'booking_event_register') {
+                $theNewNode = new BookingEventRegister($nodeArray, []);
             } else {
                 $theNewNode = new Node($nodeArray, []);
             }

@@ -14,6 +14,12 @@ class Source extends Model
 {
     use HasFactory;
 
+    public const ASSIGNMENT_CUSTOMER_CHOICE = 'customer_choice';
+
+    public const ASSIGNMENT_ROUND_ROBIN = 'round_robin';
+
+    public const ASSIGNMENT_LEAST_BUSY = 'least_busy';
+
     protected $table = 'rem_res_sources';
 
     public $guarded = [];
@@ -78,6 +84,26 @@ class Source extends Model
     public function normalizedWorkingHours(): array
     {
         return WorkingHours::normalize($this->working_hours);
+    }
+
+    public function usesAutoStaffAssignment(): bool
+    {
+        return in_array($this->staff_assignment_mode, [
+            self::ASSIGNMENT_ROUND_ROBIN,
+            self::ASSIGNMENT_LEAST_BUSY,
+        ], true);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function staffAssignmentModeOptions(): array
+    {
+        return [
+            self::ASSIGNMENT_CUSTOMER_CHOICE => __('Customer picks team member'),
+            self::ASSIGNMENT_ROUND_ROBIN => __('Round-robin assignment'),
+            self::ASSIGNMENT_LEAST_BUSY => __('Least busy team member'),
+        ];
     }
 
     protected static function booted()

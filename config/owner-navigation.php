@@ -51,7 +51,9 @@ return [
     'menu_ids' => [
         'contactMenu' => 'audience',
         'more' => 'setup',
-        'remindersMenu' => 'automations',
+        'appointmentsMenu' => 'automations',
+        'eventsMenu' => 'automations',
+        'bookingSetupMenu' => 'setup',
         'knowledgeMenu' => 'addons',
     ],
 

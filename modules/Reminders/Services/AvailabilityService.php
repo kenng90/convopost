@@ -15,15 +15,18 @@ use Modules\Reminders\Support\WorkingHours;
 class AvailabilityService
 {
     public function __construct(
-        private readonly GoogleCalendarService $googleCalendarService
+        private readonly GoogleCalendarService $googleCalendarService,
+        private readonly BookingClosureService $closureService
     ) {
     }
 
     /**
-     * @return array<int, array{id: string, title: string, start: string, end: string, appointment_staff_id: int, staff_user_id: int|null, staff_name: string, duration_minutes: int}>
+     * @return array<int, array{id: string, title: string, start: string, end: string, appointment_staff_id: int|null, staff_user_id: int|null, staff_name: string|null, duration_minutes: int}>
      */
     public function slotsForDate(Source $source, string $date, ?int $durationMinutes = null): array
     {
+        $source->loadMissing('department');
+
         $durationMinutes = $this->resolveDuration($source, $durationMinutes);
         $timezone = $source->timezone ?: 'UTC';
         $day = Carbon::parse($date, $timezone)->startOfDay();
@@ -44,10 +47,13 @@ class AvailabilityService
             $slots = $slots->merge($staffSlots);
         }
 
-        return $slots
-            ->sortBy('start')
-            ->values()
-            ->all();
+        $slots = $slots->sortBy('start')->values();
+
+        if ($source->usesAutoStaffAssignment()) {
+            return $this->aggregateSlotsForAutoAssignment($slots->all());
+        }
+
+        return $slots->all();
     }
 
     /**
@@ -74,6 +80,8 @@ class AvailabilityService
         int $durationMinutes,
         ?int $ignoreReservationId = null
     ): bool {
+        $source->loadMissing('department');
+
         $end = $start->copy()->addMinutes($durationMinutes);
         $staff = SourceStaff::query()
             ->with('appointmentStaff.user')
@@ -201,6 +209,34 @@ class AvailabilityService
     }
 
     /**
+     * @param  array<int, array{id: string, title: string, start: string, end: string, appointment_staff_id: int, staff_user_id: int|null, staff_name: string, duration_minutes: int}>  $slots
+     * @return array<int, array{id: string, title: string, start: string, end: string, appointment_staff_id: int|null, staff_user_id: int|null, staff_name: string|null, duration_minutes: int}>
+     */
+    private function aggregateSlotsForAutoAssignment(array $slots): array
+    {
+        return collect($slots)
+            ->groupBy(fn (array $slot) => $slot['start'].'|'.$slot['duration_minutes'])
+            ->map(function (Collection $group) {
+                $slot = $group->first();
+                $start = Carbon::parse($slot['start']);
+
+                return [
+                    'id' => SlotIdentifier::encodeAuto($start, $slot['duration_minutes']),
+                    'title' => $start->format('H:i'),
+                    'start' => $slot['start'],
+                    'end' => $slot['end'],
+                    'appointment_staff_id' => null,
+                    'staff_user_id' => null,
+                    'staff_name' => null,
+                    'duration_minutes' => $slot['duration_minutes'],
+                ];
+            })
+            ->sortBy('start')
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return array{enabled: bool, start: string, end: string}
      */
     private function workingHoursForStaff(Source $source, SourceStaff $staff, Carbon $day): array
@@ -209,6 +245,7 @@ class AvailabilityService
             $staff->working_hours
                 ?: $staff->appointmentStaff?->working_hours
                 ?: $source->working_hours
+                ?: $source->department?->working_hours
         );
         $dayKey = WorkingHours::dayKey($day);
 
@@ -221,7 +258,11 @@ class AvailabilityService
         $today = now($timezone)->startOfDay();
         $maxDate = $today->copy()->addDays((int) $source->max_advance_days);
 
-        return $day->betweenIncluded($today, $maxDate);
+        if (! $day->betweenIncluded($today, $maxDate)) {
+            return false;
+        }
+
+        return ! $this->closureService->blocksDate($source, $day);
     }
 
     private function hasReservationConflict(
