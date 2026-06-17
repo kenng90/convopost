@@ -4,6 +4,7 @@ namespace Modules\Wpbox\Http\Controllers;
 
 use Akaunting\Module\Facade as Module;
 use App\Http\Controllers\Controller;
+use App\Services\Platform\ActivationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -27,9 +28,24 @@ class ChatController extends Controller
      */
     public function index()
     {
-        if ($this->getCompany()->getConfig('whatsapp_webhook_verified', 'no') != 'yes' || $this->getCompany()->getConfig('whatsapp_settings_done', 'no') != 'yes') {
-            return redirect(route('whatsapp.setup'));
+        $user = auth()->user();
+        $company = $this->getCompany();
+        $whatsappReady = $company->getConfig('whatsapp_webhook_verified', 'no') == 'yes'
+            && $company->getConfig('whatsapp_settings_done', 'no') == 'yes';
+
+        if (! $whatsappReady) {
+            if ($user->hasRole('owner')) {
+                return redirect(route('whatsapp.setup'));
+            }
+
+            return redirect()->route('dashboard')->withError(__('WhatsApp is not configured for this workspace yet. Please contact the account owner.'));
         }
+
+        $activation = app(ActivationService::class);
+        if ($activation->shouldRedirectUserToActivation($user, $company)) {
+            return redirect()->route('activation.index');
+        }
+
         $templates = Template::where('status', 'APPROVED')->select('name', 'id', 'language')->get();
         $replies = Reply::where('type', 1)->where('flow_id', null)->get();
 
@@ -77,13 +93,12 @@ class ChatController extends Controller
             }
         }
 
-        //Sort the sidebar modules, so that "Contact" is first ,"AI Message Style" is second, and the rest in alphabetical order
         usort($sidebarModules, function ($a, $b) {
-            if ($a['name'] === 'Contact') {
-                return -1;
-            }
-            if ($b['name'] === 'Contact') {
-                return 1;
+            $priority = ['Contact' => 0, 'Customer 360' => 1];
+            $pa = $priority[$a['name']] ?? 99;
+            $pb = $priority[$b['name']] ?? 99;
+            if ($pa !== $pb) {
+                return $pa <=> $pb;
             }
 
             return strcmp($a['name'], $b['name']);

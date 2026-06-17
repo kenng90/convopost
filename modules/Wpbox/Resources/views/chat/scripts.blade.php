@@ -343,6 +343,7 @@
             activeChatCustomFields:{},
             messages:[],
             activeMessage:"",
+            copilotSuggestions:[],
             activeNote:"",
             selectedImage: null,
             selectedFile: null,
@@ -728,8 +729,6 @@
                 });
             },
             sendChatMessage(){
-               
-            
                 var message=this.activeMessage;
                 this.activeMessage="";
                 axios.post('/api/wpbox/send/'+chatList.activeChat.id, {message: message}).then(function (response) {
@@ -743,6 +742,19 @@
                 
                     });
                     
+            },
+            loadCopilotSuggestions(){
+                if(!this.activeChat || !this.activeChat.id){ return; }
+                var draft = encodeURIComponent(this.activeMessage || '');
+                axios.get('/api/wpbox/copilot/'+this.activeChat.id+'/suggest?draft='+draft).then((response) => {
+                    this.copilotSuggestions = response.data.suggestions || [];
+                    if(response.data.tone_variants && response.data.tone_variants.friendly){
+                        this.copilotSuggestions.push({
+                            text: response.data.tone_variants.friendly,
+                            source: '{{ __("Friendly tone") }}'
+                        });
+                    }
+                }).catch(function(){});
             },
             sendNote(){
                 var note=this.activeNote;

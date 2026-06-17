@@ -30,6 +30,10 @@ return [
         'agent.store',
         'agent.update',
         'agent.delete',
+        'flow-templates.install',
+        'flow-templates.generate',
+        'integrations.connect',
+        'integrations.disconnect',
     ],
 
     /*
@@ -94,6 +98,13 @@ return [
         'admin.backup.restore.languages',
         'whatsapp.setup',
         'billing.portal',
+        'activation.index',
+        'activation.complete',
+        'activation.skip',
+        'activation.test-message',
+        'integrations.index',
+        'integrations.connect',
+        'integrations.disconnect',
     ],
 
     /*
@@ -132,6 +143,7 @@ return [
         'journies' => 'Journeys',
         'agents' => 'Agents',
         'managers' => 'Managers',
+        'platform' => 'Platform tools',
     ],
 
     /*

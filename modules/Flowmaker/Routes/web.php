@@ -37,6 +37,9 @@ Route::group([
         Route::post('flowmaker/update/{flow}', 'Main@updateFlow')
             ->name('flowmaker.update')
             ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        Route::get('flows/templates', 'FlowTemplatesController@index')->name('flow-templates.index');
+        Route::post('flows/templates/{key}/install', 'FlowTemplatesController@install')->name('flow-templates.install');
+        Route::post('flows/templates/ai/generate', 'FlowTemplatesController@generate')->name('flow-templates.generate');
         Route::post('flowmakermedia', 'Main@uploadMedia')
             ->name('flowmaker.media.upload')
             ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);

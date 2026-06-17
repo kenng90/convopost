@@ -82,6 +82,8 @@ Route::group([
             Route::post('updateAIBot', 'APIController@updateAIBot');
             Route::post('updateChatStatus/{contact}', 'ChatController@updateChatStatus');
             Route::post('reopenChat/{contact}', 'ChatController@reopenChat');
+            Route::get('copilot/{contact}/suggest', 'CopilotController@suggest')->name('copilot.suggest');
+            Route::get('copilot/templates', 'CopilotController@templates')->name('copilot.templates');
             Route::get('contact-groups-and-custom-fields/{contact}', 'APIController@getContactGroupsAndCustomFields');
             Route::get('notes/{contact}', 'APIController@getNotes');
 

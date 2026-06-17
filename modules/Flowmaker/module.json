@@ -29,6 +29,13 @@
             "route":"flows.index",
             "color":"#2dce89",
             "priority":10
+        },
+        {
+            "name":"Flow templates",
+            "icon":"ni ni-settings-gear-65 text-primary",
+            "route":"flow-templates.index",
+            "color":"#8966FE",
+            "priority": 11
         }
     ],
     "vendor_fields":[

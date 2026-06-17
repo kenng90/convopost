@@ -13,6 +13,8 @@
                 @include('dashboard::tasks')
             @endif
 
+            @include('platform::partials.health-alerts')
+
             @foreach (config('global.modulesWithDashboardInfo') as $moduleWithDashboardInfo)
                 @include($moduleWithDashboardInfo.'::dashboard')
             @endforeach
