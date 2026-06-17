@@ -4,11 +4,11 @@ namespace Modules\Journies\Services;
 
 use App\Models\Company;
 use Illuminate\Support\Facades\Auth;
+use Modules\Contacts\Models\Contact;
 use Modules\Journies\Events\ContactMovedToStage;
 use Modules\Journies\Models\Journey;
 use Modules\Journies\Models\JourneyActivity;
 use Modules\Journies\Models\JourneyStage;
-use Modules\Wpbox\Models\Contact;
 
 class JourneyContactService
 {

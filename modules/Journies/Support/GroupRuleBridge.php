@@ -2,8 +2,8 @@
 
 namespace Modules\Journies\Support;
 
+use Modules\Contacts\Models\Contact;
 use Modules\Journies\Events\ContactAddedToGroup;
-use Modules\Wpbox\Models\Contact;
 
 class GroupRuleBridge
 {

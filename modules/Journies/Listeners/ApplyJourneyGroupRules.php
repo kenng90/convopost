@@ -3,9 +3,9 @@
 namespace Modules\Journies\Listeners;
 
 use App\Models\Company;
+use Modules\Contacts\Models\Contact;
 use Modules\Journies\Services\JourneyContactService;
 use Modules\Journies\Services\JourneySettings;
-use Modules\Wpbox\Models\Contact;
 
 class ApplyJourneyGroupRules
 {

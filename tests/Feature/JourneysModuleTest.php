@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Modules\Contacts\Models\Contact as ContactsContact;
 use Modules\Contacts\Models\Group;
 use Modules\Journies\Events\ContactMovedToStage;
 use Modules\Journies\Models\Journey;
@@ -180,6 +181,36 @@ class JourneysModuleTest extends TestCase
         $response->assertOk();
         $response->assertJsonFragment(['name' => 'Outside Contact']);
         $response->assertJsonMissing(['name' => 'Inside Contact']);
+    }
+
+    public function test_new_contacts_contact_auto_enrolls_when_configured(): void
+    {
+        $journey = Journey::create([
+            'company_id' => $this->company->id,
+            'name' => 'Onboarding',
+            'description' => null,
+        ]);
+
+        $stage = JourneyStage::create([
+            'journey_id' => $journey->id,
+            'name' => 'Welcome',
+            'order' => 0,
+        ]);
+
+        $this->company->setConfig('JOURNEYS_ENABLED', 'true');
+        $this->company->setConfig('JOURNEYS_AUTO_ENROLL_NEW_CONTACTS', 'true');
+        $this->company->setConfig('JOURNEYS_DEFAULT_JOURNEY_ID', (string) $journey->id);
+
+        $contact = ContactsContact::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id,
+            'name' => 'New Signup',
+            'phone' => '+254700000007',
+        ]);
+
+        $this->assertDatabaseHas('journey_stage_contacts', [
+            'stage_id' => $stage->id,
+            'contact_id' => $contact->id,
+        ]);
     }
 
     public function test_group_rule_moves_contact_when_added_to_group(): void

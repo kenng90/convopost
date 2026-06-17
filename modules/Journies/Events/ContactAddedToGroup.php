@@ -3,7 +3,7 @@
 namespace Modules\Journies\Events;
 
 use Illuminate\Queue\SerializesModels;
-use Modules\Wpbox\Models\Contact;
+use Modules\Contacts\Models\Contact;
 
 class ContactAddedToGroup
 {
