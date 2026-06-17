@@ -24,7 +24,15 @@
     <div class="tab-content mb-0" id="chatTabsContent" >
         <div v-if="chatTab === 'reply'" class="tab-pane fade show active" id="reply" role="tabpanel" aria-labelledby="reply-tab">
             <div class="align-items-center">
-                <div class="px-0 py-4 d-flex">
+                <div class="px-0 py-4 d-flex flex-column">
+                    <div v-if="copilotSuggestions && copilotSuggestions.length" class="mb-2 p-2 border rounded bg-light small">
+                        <strong>{{ __('Copilot') }}</strong>
+                        <div v-for="(s, idx) in copilotSuggestions" :key="idx" class="mt-1">
+                            <button type="button" class="btn btn-link btn-sm p-0 text-left" @click="activeMessage = s.text">@{{ s.text }}</button>
+                            <span class="text-muted"> — @{{ s.source }}</span>
+                        </div>
+                    </div>
+                    <div class="d-flex">
                     <div class="input-group">
                         <div class="input-group-prepend">
                             <button  v-if="!mobileChat" type="button" class="btn btn-outline-primary" id="emoji-btn" style="border-color:#cad1d7; border-right-color:transparent">
@@ -36,11 +44,15 @@
                         
                     </div>
                     <div class="ml-2">
+                        <button type="button" class="btn btn-outline-primary btn-icon rounded-circle" @click="loadCopilotSuggestions" title="{{ __('AI Copilot suggestions') }}">
+                            ✨
+                        </button>
                         <button type="button" class="btn btn-success btn-icon rounded-circle wpbox-send-btn" @click="sendChatMessage" aria-label="{{ __('Send message') }}">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6" style="width: 20px; height:20px">
                                 <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
                             </svg>
                         </button>
+                    </div>
                     </div>
                 </div>
             </div>

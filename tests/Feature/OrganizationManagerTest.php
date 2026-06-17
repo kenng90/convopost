@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\EnsurePlanPlugin;
 use App\Models\Company;
 use App\Models\CompanyMembership;
 use App\Models\CompanyMembershipModule;
 use App\Models\User;
 use App\Services\CompanyMembershipService;
+use App\Services\OrgAuthorization;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -38,6 +40,8 @@ class OrganizationManagerTest extends TestCase
         ]);
 
         $this->owner->update(['company_id' => $this->company->id]);
+
+        OrgAuthorization::clearRouteModuleMapCache();
     }
 
     public function test_owner_can_create_manager_with_module_grants(): void
@@ -225,6 +229,71 @@ class OrganizationManagerTest extends TestCase
             ->assertRedirect(route('home'));
 
         $this->assertEquals($companyB->id, session('company_id'));
+    }
+
+    public function test_manager_cannot_access_activation_routes(): void
+    {
+        $manager = $this->createManager(['wpbox']);
+        $this->connectWhatsapp($this->company);
+
+        $this->actingAs($manager)
+            ->withSession(['company_id' => $this->company->id])
+            ->get(route('activation.index'))
+            ->assertForbidden();
+    }
+
+    public function test_manager_with_wpbox_can_access_health_alerts_api(): void
+    {
+        $manager = $this->createManager(['wpbox']);
+        $this->connectWhatsapp($this->company);
+
+        $this->actingAs($manager)
+            ->withSession(['company_id' => $this->company->id])
+            ->getJson(route('health-alerts.index'))
+            ->assertOk()
+            ->assertJsonStructure(['alerts', 'count']);
+    }
+
+    public function test_manager_with_flowmaker_can_access_flow_templates(): void
+    {
+        $this->withoutMiddleware(EnsurePlanPlugin::class);
+
+        $manager = $this->createManager(['flowmaker']);
+
+        $this->actingAs($manager)
+            ->withSession(['company_id' => $this->company->id])
+            ->get(route('flow-templates.index'))
+            ->assertOk()
+            ->assertSee('Flow templates library');
+    }
+
+    public function test_manager_is_not_redirected_to_activation_from_chat(): void
+    {
+        $this->withoutMiddleware(EnsurePlanPlugin::class);
+
+        $manager = $this->createManager(['wpbox']);
+        $this->connectWhatsapp($this->company);
+
+        $this->actingAs($manager)
+            ->withSession(['company_id' => $this->company->id])
+            ->get(route('chat.index'))
+            ->assertOk();
+    }
+
+    public function test_manager_without_wpbox_cannot_access_health_alerts_api(): void
+    {
+        $manager = $this->createManager(['reports']);
+
+        $orgAuth = app(OrgAuthorization::class);
+        $this->assertFalse($orgAuth->canAccessRoute($manager, 'health-alerts.index'));
+    }
+
+    private function connectWhatsapp(Company $company): void
+    {
+        $company->setMultipleConfig([
+            'whatsapp_webhook_verified' => 'yes',
+            'whatsapp_settings_done' => 'yes',
+        ]);
     }
 
     private function createManager(array $modules): User

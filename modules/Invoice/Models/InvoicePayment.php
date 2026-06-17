@@ -79,6 +79,7 @@ class InvoicePayment extends Model
         // Update invoice status to paid if payment amount covers invoice amount
         if ($this->amount >= $this->invoice->amount) {
             $this->invoice->markAsPaid();
+            app(\App\Services\Platform\InvoicePaidSyncService::class)->sync($this->invoice->fresh());
         } else {
             // Partial payment, update status to pending
             $this->invoice->update(['status' => 'pending']);

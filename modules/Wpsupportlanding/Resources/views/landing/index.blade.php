@@ -250,6 +250,7 @@ tailwind.config = {
     <!-- Desktop Nav -->
     <div class="hidden lg:flex items-center gap-7">
       <a href="#features" class="text-sm text-gray-400 hover:text-white transition-colors">Features</a>
+      <a href="#platform" class="text-sm text-gray-400 hover:text-white transition-colors">Platform</a>
       <a href="#bookings" class="text-sm text-gray-400 hover:text-white transition-colors">Bookings</a>
       <a href="#catalog" class="text-sm text-gray-400 hover:text-white transition-colors">Catalog</a>
       <a href="#automation" class="text-sm text-gray-400 hover:text-white transition-colors">Automation</a>
@@ -279,6 +280,7 @@ tailwind.config = {
   <!-- Mobile Menu -->
   <div x-show="mobileOpen" x-cloak class="lg:hidden border-t border-white/5 px-4 py-4 space-y-1" style="background:rgba(4,15,12,0.98);">
     <a href="#features" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Features</a>
+    <a href="#platform" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Platform</a>
     <a href="#bookings" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Bookings</a>
     <a href="#catalog" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Catalog</a>
     <a href="#automation" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Automation</a>
@@ -320,7 +322,7 @@ tailwind.config = {
       </h1>
 
       <p class="text-lg text-gray-400 leading-relaxed mb-8 max-w-xl">
-        Team inbox with catalog & booking sidebars, smart campaigns, appointment scheduling, product shops, visual workflows, and in-chat payments — one platform for sales, support, and operations on WhatsApp.
+        Team inbox with Customer 360 and AI copilot, smart campaigns, visual flows with ready-made templates, revenue dashboard, and in-chat payments — go from signup to first reply in as little as 15 minutes.
       </p>
 
       <div class="flex flex-wrap gap-3 mb-10">
@@ -455,8 +457,8 @@ tailwind.config = {
       <p class="text-sm text-gray-500">Official Meta API compliant</p>
     </div>
     <div class="stat-item text-center px-6 py-4">
-      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">99.9%</p>
-      <p class="text-sm text-gray-500">Automation uptime SLA</p>
+      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">15 min</p>
+      <p class="text-sm text-gray-500">Average time to first reply</p>
     </div>
     <div class="stat-item text-center px-6 py-4">
       <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">4.9★</p>
@@ -472,7 +474,7 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Everything in one platform</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Every tool your WhatsApp<br/>business needs</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Shared inbox, smart campaigns, product catalogs, appointment booking, and payments — run your entire WhatsApp business from one place.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">Shared inbox, automation templates, journey pipelines, revenue analytics, and payments — everything to run and grow your WhatsApp business.</p>
     </div>
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -480,12 +482,12 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">👥</div>
         <h3 class="font-display font-700 text-lg mb-2">Shared Team Inbox</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Multi-agent WhatsApp inbox with modular sidebars for bookings, catalogs, and store integrations — all in one conversation view.</p>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Multi-agent inbox with Customer 360 — journeys, bookings, orders, and conversation context in one panel. AI Copilot suggests replies from your knowledge base.</p>
         <ul class="space-y-2">
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Customer 360 unified sidebar</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>AI Copilot reply suggestions</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Chat assignment & agent handover</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Bookings & catalog sidebar apps</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Quick replies, notes & templates</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Real-time updates & voice calls</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Bookings, catalog & store sidebars</li>
         </ul>
       </div>
       <!-- Card 2 -->
@@ -504,24 +506,24 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">🗂️</div>
         <h3 class="font-display font-700 text-lg mb-2">Contact CRM</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">A full-featured CRM inside WhatsApp. Segment contacts, build pipelines, and track every touchpoint.</p>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Segment contacts, run kanban journey pipelines with ready-made playbooks, and see every touchpoint from one CRM.</p>
         <ul class="space-y-2">
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Journey playbooks (sales, e-commerce, events)</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Groups, tags & custom fields</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Stage-triggered campaigns</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>CSV import & export</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Kanban journey pipelines</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Contact merge & deduplication</li>
         </ul>
       </div>
       <!-- Card 4 -->
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">⚡</div>
         <h3 class="font-display font-700 text-lg mb-2">Flow Automation</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Build sophisticated automation visually. No code. Trigger, branch, and respond based on customer behavior.</p>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Install curated flow templates in one click, or describe what you want and let the AI Flow Assistant draft automation for you to review.</p>
         <ul class="space-y-2">
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Flow template library (payments, booking, support)</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>AI Flow Assistant — natural language to draft</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Visual no-code flow builder</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Keyword & event triggers</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Conditional routing & branching</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>AI nodes for tier-1 deflection</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>M-Pesa, HTTP, catalog & AI nodes</li>
         </ul>
       </div>
       <!-- Card 5 -->
@@ -553,12 +555,12 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">💰</div>
         <h3 class="font-display font-700 text-lg mb-2">Invoices & Payments</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Generate invoices and collect payments without leaving WhatsApp. M-Pesa and Stripe built in.</p>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Share public invoice pages, collect M-Pesa or Stripe in-chat, and sync paid status back to contacts and journey stages automatically.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Invoice generation & PDF export</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Public invoice & payment links</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>M-Pesa STK push integration</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Stripe card payment links</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Payment link via WhatsApp</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Auto-update CRM on payment</li>
         </ul>
       </div>
       <!-- Card 8 -->
@@ -586,6 +588,51 @@ tailwind.config = {
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Checkout via WhatsApp or invoice</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Catalog analytics & A/B tests</li>
         </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PLATFORM INTELLIGENCE ===== -->
+<section id="platform" class="py-24 border-y border-white/5 relative overflow-hidden" style="background:rgba(37,211,102,0.02);">
+  <div class="absolute inset-0 dots-bg opacity-40"></div>
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="text-center mb-16">
+      <div class="badge inline-flex mb-4">Go live faster · Run smarter</div>
+      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Operations intelligence<br/>built into the platform</h2>
+      <p class="text-gray-400 max-w-2xl mx-auto">From guided activation to revenue dashboards and proactive health alerts — ConvoConnect helps you launch quickly and stay on top of what matters.</p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">🚀</div>
+        <h3 class="font-display font-700 text-base mb-2">Activation OS</h3>
+        <p class="text-sm text-gray-500 leading-relaxed">Step-by-step onboarding wizard tracks WhatsApp setup, team invites, first flow, and first campaign — so owners go live in minutes, not days.</p>
+      </div>
+      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">👤</div>
+        <h3 class="font-display font-700 text-base mb-2">Customer 360</h3>
+        <p class="text-sm text-gray-500 leading-relaxed">See journeys, bookings, orders, invoices, and conversation history in one inbox sidebar — agents never hunt across tabs again.</p>
+      </div>
+      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">✨</div>
+        <h3 class="font-display font-700 text-base mb-2">Agent Copilot</h3>
+        <p class="text-sm text-gray-500 leading-relaxed">AI suggests on-brand replies from your knowledge base. Agents stay in control — accept, edit, or ignore every suggestion.</p>
+      </div>
+      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">📊</div>
+        <h3 class="font-display font-700 text-base mb-2">Revenue Dashboard</h3>
+        <p class="text-sm text-gray-500 leading-relaxed">Pipeline value, paid invoices, and journey stage metrics on your home screen — see WhatsApp revenue at a glance.</p>
+      </div>
+      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">🔔</div>
+        <h3 class="font-display font-700 text-base mb-2">Health Monitor</h3>
+        <p class="text-sm text-gray-500 leading-relaxed">Proactive alerts for disconnected numbers, failed webhooks, low credits, and stalled journeys — fix issues before customers notice.</p>
+      </div>
+      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">👥</div>
+        <h3 class="font-display font-700 text-base mb-2">Organization Managers</h3>
+        <p class="text-sm text-gray-500 leading-relaxed">Invite managers with scoped module access — they run inbox and campaigns without full owner permissions.</p>
       </div>
     </div>
   </div>
@@ -997,7 +1044,7 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Workflow Automation</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Orchestrate every<br/>customer touchpoint</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Build sales, support, and onboarding flows visually — from cart recovery to agent handoff. AI is one node in the graph, not the whole product.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">Build sales, support, and onboarding flows visually — start from curated templates or describe what you need and let the AI Flow Assistant draft it for you.</p>
     </div>
 
     <div class="grid lg:grid-cols-2 gap-12 items-center">
@@ -1099,7 +1146,7 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Integrations</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Connects with<br/>your stack</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">ConvoConnect plugs into your existing tools — e-commerce platforms, payments, email, and more.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">ConvoConnect plugs into your existing tools — e-commerce, payments, email, and more. The Integration Hub centralizes connector setup in one place.</p>
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
@@ -1402,7 +1449,7 @@ tailwind.config = {
           <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 1 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div x-show="open === 1" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Yes — ConvoConnect is built on the official Meta WhatsApp Business Cloud API. We handle the entire onboarding through Meta's Embedded Signup flow, so you can be live in under 10 minutes without touching any APIs yourself.</p>
+          <p class="text-sm text-gray-400 leading-relaxed">Yes — ConvoConnect is built on the official Meta WhatsApp Business Cloud API. Our Activation OS walks you through Embedded Signup, team setup, and your first flow — most businesses send their first reply within 15 minutes.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
@@ -1429,7 +1476,7 @@ tailwind.config = {
           <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 4 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div x-show="open === 4" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">We currently support: Shopify, WooCommerce, Stripe, M-Pesa (STK push and C2B), Google Calendar, Twilio SMS, SMTP email, and our embeddable WhatsApp chat widget. Product catalogs sync via webhooks, and bookings integrate with Google Calendar. Our REST API and webhooks also let you build custom integrations with any system.</p>
+          <p class="text-sm text-gray-400 leading-relaxed">We support Shopify, WooCommerce, Stripe, M-Pesa (STK push and C2B), Google Calendar, Twilio SMS, SMTP email, and our embeddable WhatsApp chat widget. The Integration Hub lets owners connect and manage these from one dashboard. Our REST API and webhooks also let you build custom integrations.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
@@ -1456,7 +1503,7 @@ tailwind.config = {
           <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 7 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div x-show="open === 7" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Meta's Business Agent is great for simple FAQ support inside WhatsApp Business. ConvoConnect is the operations layer: shared team inbox with catalog and booking sidebars, smart campaigns with file/group/quick broadcasts, appointment and event booking, product shops, M-Pesa and Stripe payments, multi-number management, and deep integrations — with AI as one step in your flows, not a black-box replacement for your whole stack.</p>
+          <p class="text-sm text-gray-400 leading-relaxed">Meta's Business Agent is great for simple FAQ support inside WhatsApp Business. ConvoConnect is the operations layer: Customer 360 inbox, AI Copilot for agents, flow templates and AI-assisted automation, journey playbooks, revenue dashboard, public invoices with payment sync, multi-number management, and deep integrations — with AI as one step in your flows, not a black-box replacement for your whole stack.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
@@ -1483,7 +1530,25 @@ tailwind.config = {
           <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 10 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div x-show="open === 10" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Yes. Build product catalogs and branded shop pages, then sell from the inbox catalog sidebar — search products and send shop links without leaving the conversation. Catalogs sync from Shopify, WooCommerce, Excel, or your own API. Customers checkout via WhatsApp or receive an invoice with M-Pesa/Stripe payment links.</p>
+          <p class="text-sm text-gray-400 leading-relaxed">Yes. Build product catalogs and branded shop pages, then sell from the inbox catalog sidebar — search products and send shop links without leaving the conversation. Catalogs sync from Shopify, WooCommerce, Excel, or your own API. Customers checkout via WhatsApp or receive a public invoice page with M-Pesa/Stripe payment links that sync back to your CRM.</p>
+        </div>
+      </div>
+      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 11 ? null : 11">
+          <span class="text-sm font-semibold text-white">What are flow templates and the AI Flow Assistant?</span>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 11 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+        <div x-show="open === 11" x-cloak class="px-6 pb-4">
+          <p class="text-sm text-gray-400 leading-relaxed">Flow templates are pre-built automations for common use cases — payment reminders, booking confirmations, support triage, and more. Install one in a click, then customize. The AI Flow Assistant lets you describe what you want in plain language and generates a draft flow you review and publish — no blank canvas required.</p>
+        </div>
+      </div>
+      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 12 ? null : 12">
+          <span class="text-sm font-semibold text-white">Can I invite managers without giving them full owner access?</span>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 12 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+        <div x-show="open === 12" x-cloak class="px-6 pb-4">
+          <p class="text-sm text-gray-400 leading-relaxed">Yes. Organization managers get scoped access to specific modules — like inbox, campaigns, or flows — without billing or WhatsApp setup permissions. They see Customer 360, Copilot suggestions, and revenue widgets based on what you grant them. Owners keep control of activation, integrations, and account settings.</p>
         </div>
       </div>
     </div>
@@ -1499,7 +1564,7 @@ tailwind.config = {
     <h2 class="font-display text-5xl sm:text-6xl lg:text-7xl font-800 leading-tight mb-6" style="letter-spacing:-0.02em;">
       Start selling on<br/><span class="grad-text">WhatsApp today</span>
     </h2>
-    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Join 2,400+ businesses running inbox, campaigns, bookings, catalogs, and payments on WhatsApp with ConvoConnect.</p>
+    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Join 2,400+ businesses running inbox, automation, revenue tracking, and payments on WhatsApp — go live in as little as 15 minutes.</p>
     <div class="flex flex-wrap justify-center gap-4 mb-6">
       <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
         Start Free Today
@@ -1507,7 +1572,7 @@ tailwind.config = {
       </a>
       <a href="#" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-white rounded-xl border border-white/10 hover:border-white/20 transition-all hover:bg-white/5">Contact Sales</a>
     </div>
-    <p class="text-sm text-gray-600">No credit card required · Cancel anytime · Setup in under 10 minutes</p>
+    <p class="text-sm text-gray-600">No credit card required · Cancel anytime · Guided activation in ~15 minutes</p>
   </div>
 </section>
 <!-- ===== BOOKING SECTION ===== -->

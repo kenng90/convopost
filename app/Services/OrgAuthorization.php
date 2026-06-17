@@ -62,6 +62,25 @@ class OrgAuthorization
         return $membership !== null && $membership->isManager();
     }
 
+    public function canViewDashboardMetrics(?User $user = null): bool
+    {
+        $user ??= auth()->user();
+
+        if ($user === null) {
+            return false;
+        }
+
+        if ($this->isOwnerAccount($user) || $user->hasRole('staff')) {
+            return true;
+        }
+
+        if ($this->isOrganizationManager($user)) {
+            return $this->canAccessModule($user, 'wpbox');
+        }
+
+        return false;
+    }
+
     public function isOrganizationAgent(?User $user = null): bool
     {
         $user ??= auth()->user();
@@ -296,6 +315,11 @@ class OrgAuthorization
         return $modules;
     }
 
+    public static function clearRouteModuleMapCache(): void
+    {
+        self::$routeModuleMap = null;
+    }
+
     /**
      * @return array<string, string|null>
      */
@@ -335,6 +359,14 @@ class OrgAuthorization
         $map['orgmanager.update'] = 'managers';
         $map['orgmanager.delete'] = 'managers';
         $map['orgmanager.loginas'] = 'managers';
+
+        $map['health-alerts.index'] = 'wpbox';
+        $map['customer360.show'] = 'wpbox';
+        $map['copilot.suggest'] = 'wpbox';
+        $map['copilot.templates'] = 'wpbox';
+        $map['flow-templates.index'] = 'flowmaker';
+        $map['flow-templates.install'] = 'flowmaker';
+        $map['flow-templates.generate'] = 'flowmaker';
 
         return self::$routeModuleMap = $map;
     }

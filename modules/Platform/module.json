@@ -1,0 +1,36 @@
+{
+    "alias": "platform",
+    "description": "Activation, health monitoring, revenue dashboard, Customer 360, and integration hub",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "alwayson": true,
+    "hasSidebar": true,
+    "hasDashboardInfo": true,
+    "nameSpace": "Modules\\Platform",
+    "providers": [
+        "Modules\\Platform\\Providers\\Main"
+    ],
+    "sidebarData": [
+        {
+            "name": "Customer 360",
+            "app": "customer360",
+            "icon": "https://mobidonia-demo.imgix.net/icons/person.svg",
+            "brandColor": "#0ea5e9",
+            "view": "platform::sideapp.app",
+            "script": "platform::sideapp.script"
+        }
+    ],
+    "ownermenus": [
+        {
+            "name": "Integrations",
+            "icon": "ni ni-app text-info",
+            "route": "integrations.index",
+            "color": "#0ea5e9",
+            "priority": 85
+        }
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

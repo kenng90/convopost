@@ -53,6 +53,38 @@ class JourneyTemplateService
                     __('Active'),
                 ],
             ],
+            'revenue' => [
+                'name' => __('Revenue Pipeline'),
+                'description' => __('Track deals from lead to payment — ideal for WhatsApp sales teams.'),
+                'stages' => [
+                    __('New Lead'),
+                    __('Qualified'),
+                    __('Proposal'),
+                    __('Paid'),
+                    __('Onboarded'),
+                ],
+            ],
+            'ecommerce' => [
+                'name' => __('E-commerce Orders'),
+                'description' => __('Manage catalog orders from inquiry through delivery.'),
+                'stages' => [
+                    __('Inquiry'),
+                    __('Quoted'),
+                    __('Awaiting Payment'),
+                    __('Paid'),
+                    __('Fulfilled'),
+                ],
+            ],
+            'events' => [
+                'name' => __('Event Registrations'),
+                'description' => __('Move registrants from interest to attendance.'),
+                'stages' => [
+                    __('Interested'),
+                    __('Registered'),
+                    __('Confirmed'),
+                    __('Attended'),
+                ],
+            ],
         ];
     }
 
