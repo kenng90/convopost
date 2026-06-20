@@ -199,7 +199,7 @@ We may update this Privacy Policy from time to time. When we make material chang
 If you have questions about this Privacy Policy or our data practices, contact us at:
 
 **ConvoConnect**  
-Email: [privacy@convoconnect.io](mailto:privacy@convoconnect.io)  
+Email: [support@convoconnect.tech](mailto:support@convoconnect.tech)  
 Website: [{{APP_URL}}]({{APP_URL}})
 
 ---
