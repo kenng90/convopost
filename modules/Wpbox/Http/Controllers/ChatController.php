@@ -3,11 +3,7 @@
 namespace Modules\Wpbox\Http\Controllers;
 
 use Akaunting\Module\Facade as Module;
-use App\Enums\MessagingChannelType;
 use App\Http\Controllers\Controller;
-use App\Models\Messaging\ChannelConnection;
-use App\Models\User;
-use App\Services\PlanEntitlementResolver;
 use App\Services\Platform\ActivationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -37,16 +33,7 @@ class ChatController extends Controller
         $whatsappReady = $company->getConfig('whatsapp_webhook_verified', 'no') == 'yes'
             && $company->getConfig('whatsapp_settings_done', 'no') == 'yes';
 
-        $hasMessagingChannel = $whatsappReady || ChannelConnection::withoutGlobalScopes()
-            ->where('company_id', $company->id)
-            ->where('status', 'connected')
-            ->whereIn('channel', [
-                MessagingChannelType::Instagram->value,
-                MessagingChannelType::Messenger->value,
-            ])
-            ->exists();
-
-        if (! $hasMessagingChannel) {
+        if (! $whatsappReady) {
             if ($user->hasRole('owner')) {
                 return redirect(route('whatsapp.setup'));
             }
@@ -117,8 +104,6 @@ class ChatController extends Controller
             return strcmp($a['name'], $b['name']);
         });
 
-        $entitlements = app(PlanEntitlementResolver::class);
-
         return view('wpbox::chat.master', [
             'company' => $this->getCompany(),
             'templates' => $templates->toArray(),
@@ -128,8 +113,6 @@ class ChatController extends Controller
             'fetcherModules' => $fetcherModules,
             'sidebarModules' => $sidebarModules,
             'initialContactId' => $this->resolveInitialChatContactId(request()),
-            'enabledChannels' => $this->resolveEnabledChannels($company, $user, $entitlements),
-            'channelFilter' => request()->input('channel', 'all'),
         ]);
     }
 
@@ -158,23 +141,12 @@ class ChatController extends Controller
         $agentAssignedOnly = Auth::user()->hasRole('staff')
             && $this->getCompany()->getConfig('agent_assigned_only', 'false') != 'false';
 
-        Contact::query()
-            ->where('company_id', $companyId)
-            ->where('has_chat', 1)
-            ->where('is_last_message_by_contact', 1)
-            ->where('resolved_chat', 1)
-            ->update(['resolved_chat' => 0]);
-
         $baseQuery = Contact::query()
             ->where('company_id', $companyId)
             ->where('has_chat', 1)
             ->when($agentAssignedOnly, fn ($query) => $query->where('user_id', $userId))
             ->when($lastmessagetime !== 'none' && $lastmessagetime !== '', function ($query) use ($lastmessagetime) {
                 $query->where('last_reply_at', '>', $lastmessagetime);
-            })
-            ->when(request()->filled('channel') && request()->input('channel') !== 'all', function ($query) {
-                $channel = request()->input('channel');
-                $query->whereHas('channelIdentities', fn ($identityQuery) => $identityQuery->where('channel', $channel));
             });
 
         $stats = (clone $baseQuery)->selectRaw('
@@ -194,15 +166,11 @@ class ChatController extends Controller
             });
         }
 
-        $filter = request()->input('filter', 'open');
-
-        match ($filter) {
-            'resolved', 'closed' => $chatList->where('resolved_chat', 1),
-            'new' => $chatList->where('is_last_message_by_contact', 1),
-            'mine' => $chatList->where('user_id', $userId),
-            'all' => null,
-            default => $chatList->where('resolved_chat', 0),
-        };
+        if (request()->has('filter') && request()->filter == 'resolved') {
+            $chatList->where('resolved_chat', 1);
+        } elseif (request()->input('filter') !== 'all') {
+            $chatList->where('resolved_chat', 0);
+        }
 
         $totalForPage = (clone $chatList)->count();
         $numberOfPages = max(1, (int) ceil($totalForPage / $pageSize));
@@ -213,20 +181,11 @@ class ChatController extends Controller
                 'is_last_message_by_contact', 'resolved_chat', 'user_id', 'country_id',
                 'last_client_reply_at', 'language', 'enabled_ai_bot',
             ])
-            ->with([
-                'country:id,name,iso2',
-                'channelIdentities:id,contact_id,channel,display_name',
-            ])
+            ->with('country:id,name,iso2')
             ->orderByDesc('last_reply_at')
             ->skip(($page - 1) * $pageSize)
             ->limit($pageSize)
-            ->get()
-            ->map(function (Contact $contact) {
-                $contact->channel = $contact->channelIdentities->first()?->channel?->value
-                    ?? MessagingChannelType::Whatsapp->value;
-
-                return $contact;
-            });
+            ->get();
 
         return response()->json([
             'data' => $contacts,
@@ -506,43 +465,6 @@ class ChatController extends Controller
             'status' => true,
             'message' => 'Chat reopened successfully',
         ]);
-    }
-
-    /**
-     * @return array<int, array{value: string, label: string}>
-     */
-    private function resolveEnabledChannels($company, User $user, PlanEntitlementResolver $entitlements): array
-    {
-        $channels = [
-            ['value' => 'all', 'label' => __('All channels')],
-            ['value' => MessagingChannelType::Whatsapp->value, 'label' => __('WhatsApp')],
-        ];
-
-        if ($entitlements->userHasCapability($user, 'inbox_instagram')) {
-            $hasInstagram = ChannelConnection::withoutGlobalScopes()
-                ->where('company_id', $company->id)
-                ->where('channel', MessagingChannelType::Instagram->value)
-                ->where('status', 'connected')
-                ->exists();
-
-            if ($hasInstagram) {
-                $channels[] = ['value' => MessagingChannelType::Instagram->value, 'label' => __('Instagram')];
-            }
-        }
-
-        if ($entitlements->userHasCapability($user, 'inbox_messenger')) {
-            $hasMessenger = ChannelConnection::withoutGlobalScopes()
-                ->where('company_id', $company->id)
-                ->where('channel', MessagingChannelType::Messenger->value)
-                ->where('status', 'connected')
-                ->exists();
-
-            if ($hasMessenger) {
-                $channels[] = ['value' => MessagingChannelType::Messenger->value, 'label' => __('Messenger')];
-            }
-        }
-
-        return $channels;
     }
 
     protected function contactBelongsToActiveCompany(Contact $contact): bool

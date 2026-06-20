@@ -45,7 +45,6 @@ return [
                 'inbox',
                 'contacts',
                 'flows',
-                'inbox_instagram',
             ],
         ],
 
@@ -82,7 +81,6 @@ return [
                 'campaigns',
                 'catalog',
                 'integrations',
-                'inbox_instagram',
             ],
         ],
 
@@ -132,8 +130,6 @@ return [
                 'reminders',
                 'knowledge',
                 'api_access',
-                'inbox_instagram',
-                'inbox_messenger',
             ],
         ],
 
@@ -191,8 +187,6 @@ return [
         'reminders' => 'Bookings & appointments',
         'knowledge' => 'Knowledge base',
         'api_access' => 'REST API access',
-        'inbox_instagram' => 'Instagram DMs inbox',
-        'inbox_messenger' => 'Facebook Messenger inbox',
     ],
 
 ];

@@ -167,8 +167,6 @@
                 Object.assign(chatList.all[allIndex], contact);
             }
 
-            chatList.filterContacts();
-
             if(contactId !== chatList.activeChat.id){
                 if(!chatList.stopPlaySound){ playSound(); }
             }
@@ -176,7 +174,7 @@
         }
 
         if(contactId !== chatList.activeChat.id){
-            getChatsJS(1, chatList.searchQuery || '', false);
+            getChatsJS();
         }
     }
 
@@ -219,52 +217,23 @@
         connectToChannel(contact_id);
     }
 
-    var getChatsJS=function(page=1,search_query="",incremental=false){
-        if (!chatList) {
-            return;
-        }
-
-        var params = new URLSearchParams();
-        if (chatList.channelFilter && chatList.channelFilter !== 'all') {
-            params.set('channel', chatList.channelFilter);
-        }
-        var filterMap = { all: 'open', mine: 'mine', new: 'new', resolved: 'resolved' };
-        params.set('filter', filterMap[chatList.tab] || 'open');
-        var queryString = params.toString();
-
-        var messageTimeParam = incremental ? lastmessagetime : 'none';
-        var url = '/api/wpbox/chats/'+messageTimeParam+'/'+page+'/'+(search_query || '');
-        if (queryString) {
-            url += (url.indexOf('?') === -1 ? '?' : '&') + queryString;
-        }
-
-        axios.get(url).then(function (response) {
+    var getChatsJS=function(page=1,search_query=""){
+        console.log("Search query");
+        console.log(search_query);
+        axios.get('/api/wpbox/chats/'+lastmessagetime+'/'+page+'/'+search_query).then(function (response) {
             if(response.data.status){
                 var initialChatLoad=chatList.contacts.length==0;
-                var incomingContacts = response.data.data || [];
-
-                if (incremental && incomingContacts.length > 0) {
-                    incomingContacts.forEach(function (contact) {
-                        var existingIndex = chatList.all.findIndex(function (item) { return item.id === contact.id; });
-                        if (existingIndex !== -1) {
-                            chatList.all.splice(existingIndex, 1, contact);
-                        } else {
-                            chatList.all.unshift(contact);
-                        }
-                    });
-                } else {
-                    chatList.all = incomingContacts;
-                }
-
+                chatList.contacts=response.data.data;
+                chatList.all=response.data.data;
                 chatList.numberOfPages=response.data.numberOfPages;
 
                 chatList.myMessagesCount=response.data.myChatsCount;
                 chatList.totalMessagesCount=response.data.totalChats;
                 chatList.newMessagesCount=response.data.newMessagesCount;
 
-                chatList.filterContacts();
 
                 if(chatList.contacts.length>0){
+                    
                     if(chatList.activeChat.id==null){
                         /*getChatJS(chatList.contacts[0].id);
                         chatList.contacts[0].isActive=true;
@@ -277,15 +246,14 @@
                             chatList.contacts[index].isActive = true;
                         }
                     }
-
-                    if (!incremental || messageTimeParam === 'none') {
-                        lastmessagetime=chatList.contacts[0].last_reply_at;
-                    }
-
+                    lastmessagetime=chatList.contacts[0].last_reply_at; 
+                    
                     //Play Sound
-                    if(!initialChatLoad && incremental){
+                    if(!initialChatLoad){
                         playSound();
                     }
+                    
+
                 }
 
                 openPendingInitialContact();
@@ -335,6 +303,7 @@
 
     window.onload = function () {
         initPusher();
+        getChatsJS();
         axios.defaults.baseURL = window.location.origin;
 
         //Emoji picker
@@ -397,12 +366,9 @@
             hasMoreMessages: false,
             loadingOlderMessages: false,
             dynamicProperties: {}, // Placeholder object
-            enabledChannels: @json($enabledChannels ?? [['value' => 'all', 'label' => 'All channels']]),
-            channelFilter: @json($channelFilter ?? 'all'),
         },
         mounted() {
             var self = this;
-            getChatsJS();
             this.$nextTick(function(){
                 var el = self.$refs.scrollableDiv;
                 if(!el){ return; }
@@ -454,27 +420,6 @@
             }
         },
         methods: {
-            setChannelFilter(value) {
-                this.channelFilter = value;
-                this.page = 1;
-                getChatsJS(1, this.searchQuery);
-            },
-            channelLabel(channel) {
-                const labels = {
-                    whatsapp: '{{ __('WhatsApp') }}',
-                    instagram: '{{ __('Instagram') }}',
-                    messenger: '{{ __('Messenger') }}',
-                };
-                return labels[channel] || channel;
-            },
-            channelBadgeClass(channel) {
-                const classes = {
-                    instagram: 'badge-danger',
-                    messenger: 'badge-primary',
-                    whatsapp: 'badge-success',
-                };
-                return classes[channel] || 'badge-secondary';
-            },
             async requestWaCallPermission(){
             },
             marked(text) {
@@ -510,52 +455,35 @@
             },
             mineMessages:function(){
                 this.tab="mine";
-                this.page=1;
-                getChatsJS(1, this.searchQuery);
+                this.filterContacts();
             },
             allMessages:function(){
                 this.tab="all";
-                this.page=1;
-                getChatsJS(1, this.searchQuery);
+                this.filterContacts();
             },
             newMessages:function(){
                 this.tab="new";
-                this.page=1;
-                getChatsJS(1, this.searchQuery);
+                this.filterContacts();
             },
             resolvedMessages:function(){
                 this.tab="resolved";
-                this.page=1;
-                getChatsJS(1, this.searchQuery);
-            },
-            isOpenChat(contact) {
-                return Number(contact.resolved_chat) === 0;
-            },
-            isClosedChat(contact) {
-                return Number(contact.resolved_chat) === 1;
-            },
-            isUnreadChat(contact) {
-                return Number(contact.is_last_message_by_contact) === 1;
+                this.filterContacts();
             },
             filterContacts() {
-                const activeId = this.activeChat && this.activeChat.id;
-                const activeIndex = this.all.findIndex(item => item.id === activeId);
-                if (activeIndex !== -1) {
-                    this.all[activeIndex].name = this.all[activeIndex].name+" ";
-                    this.all[activeIndex].isActive = true;
-                }
+                const index = this.contacts.findIndex(item => item.id === chatList.activeChat.id);
+                        if (index !== -1) {
+                            chatList.contacts[index].name = chatList.contacts[index].name+" ";
+                            chatList.contacts[index].isActive = true;
+                        }
 
-                // Server already applies the active tab filter; mirror it for live updates.
                 if(this.tab=="all"){
-                    this.contacts=this.all.filter(contact => this.isOpenChat(contact));
+                    this.contacts=this.all.filter(contact => !contact.resolved_chat);
                 }else if(this.tab=="mine"){
-                    this.contacts=this.all.filter(contact => Number(contact.user_id) === Number(this.currentUserID));
+                    this.contacts=this.all.filter(contact => contact.user_id==this.currentUserID);
                 }else if(this.tab=="new"){
-                    this.contacts=this.all.filter(contact => this.isUnreadChat(contact));
+                    this.contacts=this.all.filter(contact => contact.is_last_message_by_contact);
                 }else if(this.tab=="resolved"){
-                    this.contacts=this.all.filter(contact => this.isClosedChat(contact));
-                }else{
-                    this.contacts=this.all.slice();
+                    this.contacts=this.all.filter(contact => contact.resolved_chat);
                 }
             },
             formatIt: function(message){
@@ -756,43 +684,34 @@
                 } else {
                     this.currentSideApp = appName;
                     this.currentSideAppName = appTitle;
+                    // this.chatAndToolsContentClass="col-8";
+                    // this.sideAppsClass="col-4";
 
-                    const chatAndTools = document.querySelector('#chatAndTools');
-                    const sideApps = document.querySelector('#sideApps');
-                    const sideBarButtons = document.querySelector('#sideBarButtons');
+                    //Add transition class for smooth width change
+                    document.querySelector('#chatAndTools').classList.add('transition');
+                    document.querySelector('#sideApps').classList.add('transition');
+                    document.querySelector('#sideBarButtons').classList.add('rounded-0');
+                    //document.querySelector('#dropdown-right__BV_button_').classList.add('d-none');
 
-                    if (chatAndTools) {
-                        chatAndTools.classList.add('transition');
-                    }
-                    if (sideApps) {
-                        sideApps.classList.add('transition');
-                    }
-                    if (sideBarButtons) {
-                        sideBarButtons.classList.add('rounded-0');
-                    }
-
+                    //Use setTimeout to ensure transition class is applied before changing columns
                     setTimeout(() => {
-                        if (chatAndTools) {
-                            chatAndTools.classList.remove('transition');
-                        }
-                        if (sideApps) {
-                            sideApps.classList.remove('transition');
-                        }
+                    document.querySelector('#chatAndTools').classList.remove('transition');
+                    document.querySelector('#sideApps').classList.remove('transition');
+                        // document.querySelector('#chatAndTools').classList.remove('col-11');
+                        // document.querySelector('#chatAndTools').classList.add('col-8');
+                        // document.querySelector('#sideApps').classList.remove('col-1'); 
+                        // document.querySelector('#sideApps').classList.add('col-4');
                     }, 50);
                 }
             },
             closeSideApp() {
                 this.currentSideApp = null;
-
-                const dropdownButton = document.querySelector('#dropdown-right__BV_button_');
-                if (dropdownButton) {
-                    dropdownButton.classList.remove('d-none');
-                }
-
-                const sideBarButtons = document.querySelector('#sideBarButtons');
-                if (sideBarButtons) {
-                    sideBarButtons.classList.remove('rounded-0');
-                }
+                document.querySelector('#dropdown-right__BV_button_').classList.remove('d-none');
+                document.querySelector('#sideBarButtons').classList.remove('rounded-0');
+                // document.querySelector('#chatAndTools').classList.remove('col-8');
+                // document.querySelector('#chatAndTools').classList.add('col-11');
+                // document.querySelector('#sideApps').classList.remove('col-4');
+                // document.querySelector('#sideApps').classList.add('col-1');
             },
             capitalize(value) {
                 if (!value) return '';
