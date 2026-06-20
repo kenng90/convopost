@@ -21,6 +21,21 @@
         </div>
     </div>
 
+    <div class="w-100 px-3 pt-3 wpbox-filter-tabs" v-if="enabledChannels.length > 2">
+        <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+            <button
+                v-for="channelOption in enabledChannels"
+                :key="channelOption.value"
+                type="button"
+                class="btn"
+                :class="channelFilter === channelOption.value ? 'btn-primary' : 'btn-outline-primary'"
+                @click="setChannelFilter(channelOption.value)"
+            >
+                @{{ channelOption.label }}
+            </button>
+        </div>
+    </div>
+
     <div class="w-100 px-3 pt-3 wpbox-filter-tabs">
         <b-tabs pills small link justified>
             <b-tab @click.prevent="allMessages" title-link-class="small-tab" title-link-style="padding: 0.35rem 0.5rem;">
@@ -54,7 +69,10 @@
                     <img v-if="contact.avatar!='' && contact.avatar!=null" alt="" :src="contact.avatar" :data-src="contact.avatar" class="avatar">
                     <div class="d-flex flex-column w-100">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h4 :class="['mb-0', { 'text-primary': contact.isActive }]">@{{ contact.name }}</h4>
+                            <h4 :class="['mb-0', { 'text-primary': contact.isActive }]">
+                                @{{ contact.name }}
+                                <span v-if="contact.channel && contact.channel !== 'whatsapp'" class="badge badge-sm ml-1" :class="channelBadgeClass(contact.channel)">@{{ channelLabel(contact.channel) }}</span>
+                            </h4>
                             <span :class="['text-nowrap', 'text-xs', 'text-muted', 'opacity-6', 'px-2']">@{{ momentIt(contact.last_reply_at) }}</span>
                         </div>
                         <div class="d-flex justify-content-between align-items-center">
