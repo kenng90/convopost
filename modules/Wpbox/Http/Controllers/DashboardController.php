@@ -88,11 +88,15 @@ class DashboardController extends Controller
 
         //Do we have embedded login module and we have set facebook.config_id
         if (Module::has('embeddedlogin') && config('embeddedlogin.config_id', '') != '') {
-            //We have embedded login, and we have set facebook.config_id
-
             $setupDone = $company->getConfig('whatsapp_settings_done', 'no') == 'yes';
+            $signupOptions = app(\Modules\Embeddedlogin\Services\EmbeddedSignupFlowResolver::class)
+                ->optionsForUser(auth()->user());
 
-            return view('embeddedlogin::index', ['setupDone' => $setupDone, 'company' => $company]);
+            return view('embeddedlogin::index', [
+                'setupDone' => $setupDone,
+                'company' => $company,
+                'signupOptions' => $signupOptions,
+            ]);
         }
 
         return view('wpbox::setup.index', ['token' => $planText, 'company' => $company]);

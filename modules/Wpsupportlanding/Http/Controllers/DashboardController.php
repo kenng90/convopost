@@ -2,11 +2,11 @@
 
 namespace Modules\Wpsupportlanding\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Services\ConfChanger;
 use Akaunting\Module\Facade as Module;
+use App\Http\Controllers\Controller;
 use App\Models\Plans;
 use App\Models\Posts;
+use App\Services\ConfChanger;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cookie;
 
@@ -20,7 +20,7 @@ class DashboardController extends Controller
     public function asCompany()
     {
 
-        $company=$this->getCompany();
+        $company = $this->getCompany();
 
         //Change Language
         ConfChanger::switchLanguage($company);
@@ -28,22 +28,18 @@ class DashboardController extends Controller
         //Change currency
         ConfChanger::switchCurrency($company);
 
-
-        $data=[
-                'non_wpsupportlanding'=>[
-                    'title'=>'Campaigns',
-                    'icon'=>'ni-notification-70',
-                    'icon_color'=>'bg-gradient-info',
-                    'main_value'=>0,
-                    'sub_value'=>0,
-                    'sub_value_color'=>'text-success',
-                    'sub_title'=>"Read rate",
-                    'href'=>route('campaigns.index')
-                ]
-            ];
-        
-
-    
+        $data = [
+            'non_wpsupportlanding' => [
+                'title' => 'Campaigns',
+                'icon' => 'ni-notification-70',
+                'icon_color' => 'bg-gradient-info',
+                'main_value' => 0,
+                'sub_value' => 0,
+                'sub_value_color' => 'text-success',
+                'sub_title' => 'Read rate',
+                'href' => route('campaigns.index'),
+            ],
+        ];
 
         return $data;
     }
@@ -97,6 +93,31 @@ class DashboardController extends Controller
         return $response;
     }
 
+    public function privacyPolicy()
+    {
+        return $this->renderLegalPage('policy.md', 'wpsupportlanding::landing.privacy');
+    }
+
+    public function termsOfService()
+    {
+        return $this->renderLegalPage('terms.md', 'wpsupportlanding::landing.terms');
+    }
+
+    private function renderLegalPage(string $markdownFile, string $view)
+    {
+        $markdownPath = resource_path('markdown/'.$markdownFile);
+        $markdown = file_exists($markdownPath) ? file_get_contents($markdownPath) : "# Legal\n\nContent unavailable.";
+        $markdown = str_replace('{{APP_URL}}', rtrim(config('app.url'), '/'), $markdown);
+
+        $lastUpdated = 'June 16, 2026';
+        if (preg_match('/\*\*Last updated:\*\*\s*(.+)/', $markdown, $matches)) {
+            $lastUpdated = trim($matches[1]);
+        }
+
+        return view($view, [
+            'content' => \Illuminate\Support\Str::markdown($markdown),
+            'lastUpdated' => $lastUpdated,
+            'hasBlog' => Module::has('blog'),
+        ]);
+    }
 }
-
-

@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ConvoConnect — WhatsApp Operations & Revenue Platform</title>
+<title>ConvoConnect — Social Commerce Platform for WhatsApp</title>
+<meta name="description" content="Sell from chat, run campaigns, take bookings, and get paid on WhatsApp. ConvoConnect is the social commerce platform with catalogs, team inbox, and M-Pesa payments." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet" />
@@ -312,17 +313,17 @@ tailwind.config = {
     <div>
       <div class="badge inline-flex mb-6">
         <span class="w-2 h-2 rounded-full mr-2 pulse-ring relative" style="background:#25D366;"></span>
-        Official Meta WhatsApp Business API
+        Social commerce platform · Official Meta WhatsApp Business API
       </div>
 
       <h1 class="font-display text-5xl sm:text-6xl lg:text-7xl font-800 leading-[1.05] mb-6" style="letter-spacing:-0.02em;">
-        Turn WhatsApp<br />
-        Into Your<br />
-        <span class="grad-text">Revenue Engine</span>
+        The social commerce<br />
+        platform for<br />
+        <span class="grad-text">WhatsApp</span>
       </h1>
 
       <p class="text-lg text-gray-400 leading-relaxed mb-8 max-w-xl">
-        Team inbox with Customer 360 and AI copilot, smart campaigns, visual flows with ready-made templates, revenue dashboard, and in-chat payments — go from signup to first reply in as little as 15 minutes.
+        Sell from chat, run campaigns, take bookings, and get paid — product catalogs, team inbox, and M-Pesa in one platform. Go from signup to your first sale in as little as 15 minutes.
       </p>
 
       <div class="flex flex-wrap gap-3 mb-10">
@@ -357,10 +358,10 @@ tailwind.config = {
       <!-- Floating stat badges -->
       <div class="absolute -left-4 top-12 float2 hidden md:block">
         <div class="bg-[#0f1f1a] border border-green-900/40 rounded-2xl px-4 py-3 shadow-2xl">
-          <p class="text-xs text-gray-500 mb-1">Messages sent today</p>
-          <p class="text-xl font-display font-bold" style="color:#25D366;">84,291</p>
+          <p class="text-xs text-gray-500 mb-1">Sales via WhatsApp today</p>
+          <p class="text-xl font-display font-bold" style="color:#25D366;">KES 284K</p>
           <div class="flex items-center gap-1 mt-1">
-            <span class="text-xs text-emerald-400">↑ 12%</span>
+            <span class="text-xs text-emerald-400">↑ 18%</span>
             <span class="text-xs text-gray-600">vs yesterday</span>
           </div>
         </div>
@@ -384,7 +385,7 @@ tailwind.config = {
         <div class="flex items-center gap-2.5 px-3 py-2.5" style="background:#1f2c34;">
           <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style="background:linear-gradient(135deg,#25D366,#075E54);">CC</div>
           <div class="flex-1 min-w-0">
-            <p class="text-xs font-semibold text-white">StyleHive Support</p>
+            <p class="text-xs font-semibold text-white">StyleHive Shop</p>
             <p class="text-xs" style="color:#25D366;">● Online</p>
           </div>
           <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
@@ -394,41 +395,38 @@ tailwind.config = {
         <div class="px-3 py-3 space-y-3 overflow-hidden" style="background:#0b1418; height:calc(100% - 130px);">
           <div class="flex justify-start">
             <div class="bubble-in px-3 py-2 max-w-[80%]">
-              <p class="text-xs text-white">👋 Hi John! Your order #1042 is out for delivery. Need anything else?</p>
+              <p class="text-xs text-white">👋 Hi John! New arrivals just dropped. Want to see the catalog?</p>
               <p class="text-right text-xs text-gray-500 mt-1">09:41</p>
             </div>
           </div>
           <div class="flex justify-end">
             <div class="bubble-out px-3 py-2 max-w-[80%]">
-              <p class="text-xs text-white">I'd like to book a haircut for Saturday</p>
+              <p class="text-xs text-white">Yes — do you have the blue sneakers in 42?</p>
               <p class="text-right text-xs text-gray-400 mt-1">09:42 ✓✓</p>
             </div>
           </div>
-          <!-- Booking widget card -->
+          <!-- Product card -->
           <div class="bg-[#1f2c34] rounded-xl overflow-hidden border border-white/5">
             <div class="px-3 pt-3 pb-2">
               <div class="flex items-center gap-2 mb-2">
-                <div class="w-4 h-4 rounded" style="background:#25D366;">
-                  <svg viewBox="0 0 24 24" fill="white" class="w-4 h-4 p-0.5"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                </div>
-                <p class="text-xs font-semibold text-white">Book Appointment</p>
-              </div>
-              <div class="space-y-1.5">
-                <div class="bg-[#2a3942] rounded-lg px-2 py-1.5">
-                  <p class="text-xs text-gray-500" style="font-size:9px;">Service</p>
-                  <p class="text-xs text-white">Premium Cut · 45 min</p>
-                </div>
-                <div class="bg-[#2a3942] rounded-lg px-2 py-1.5">
-                  <p class="text-xs text-gray-500" style="font-size:9px;">Sat, Jun 21 · 2:00 PM</p>
-                  <p class="text-xs text-white">with Sarah M. ▾</p>
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style="background:rgba(37,211,102,0.15);">👟</div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs font-semibold text-white">Blue Runner Sneakers</p>
+                  <p class="text-xs" style="color:#25D366;">KES 4,500 · Size 42</p>
                 </div>
               </div>
-              <button class="w-full mt-2 py-1.5 rounded-lg text-xs font-semibold text-black" style="background:#25D366;">Confirm Booking →</button>
+              <button class="w-full mt-1 py-1.5 rounded-lg text-xs font-semibold text-black" style="background:#25D366;">Buy on WhatsApp →</button>
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <div class="bubble-out px-3 py-2 max-w-[80%]">
+              <p class="text-xs text-white">I'll take them!</p>
+              <p class="text-right text-xs text-gray-400 mt-1">09:43 ✓✓</p>
             </div>
           </div>
           <div class="flex justify-start">
             <div class="bubble-in px-3 py-2 max-w-[80%]">
-              <p class="text-xs text-white">✅ Confirmed! Reminder sent for Saturday 1:45 PM.</p>
+              <p class="text-xs text-white">✅ M-Pesa received · Order #1042 confirmed. Delivery tomorrow!</p>
               <p class="text-right text-xs text-gray-500 mt-1">09:44</p>
             </div>
           </div>
@@ -472,9 +470,9 @@ tailwind.config = {
   <div class="absolute inset-0 dots-bg opacity-50"></div>
   <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
     <div class="text-center mb-16">
-      <div class="badge inline-flex mb-4">Everything in one platform</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Every tool your WhatsApp<br/>business needs</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Shared inbox, automation templates, journey pipelines, revenue analytics, and payments — everything to run and grow your WhatsApp business.</p>
+      <div class="badge inline-flex mb-4">Commerce + operations</div>
+      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Everything to sell and<br/>support on WhatsApp</h2>
+      <p class="text-gray-400 max-w-xl mx-auto">Catalogs and checkout for social selling, plus inbox, campaigns, bookings, and payments — one platform for your entire WhatsApp business.</p>
     </div>
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1449,7 +1447,7 @@ tailwind.config = {
           <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 1 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div x-show="open === 1" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Yes — ConvoConnect is built on the official Meta WhatsApp Business Cloud API. Our Activation OS walks you through Embedded Signup, team setup, and your first flow — most businesses send their first reply within 15 minutes.</p>
+          <p class="text-sm text-gray-400 leading-relaxed">No — ConvoConnect is built on the official Meta WhatsApp Business Cloud API. Our Activation OS walks you through Embedded Signup, team setup, and your first flow — most businesses send their first reply within 15 minutes.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
@@ -1503,7 +1501,7 @@ tailwind.config = {
           <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 7 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div x-show="open === 7" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Meta's Business Agent is great for simple FAQ support inside WhatsApp Business. ConvoConnect is the operations layer: Customer 360 inbox, AI Copilot for agents, flow templates and AI-assisted automation, journey playbooks, revenue dashboard, public invoices with payment sync, multi-number management, and deep integrations — with AI as one step in your flows, not a black-box replacement for your whole stack.</p>
+          <p class="text-sm text-gray-400 leading-relaxed">Meta's Business Agent handles simple FAQ support. ConvoConnect is a full social commerce platform: sell from catalog sidebars and branded shops, run file/group/quick campaigns, take bookings, manage a Customer 360 inbox with AI Copilot, collect M-Pesa and Stripe payments, and track revenue — with AI as one step in your flows, not a black-box replacement for your stack.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
@@ -1564,7 +1562,7 @@ tailwind.config = {
     <h2 class="font-display text-5xl sm:text-6xl lg:text-7xl font-800 leading-tight mb-6" style="letter-spacing:-0.02em;">
       Start selling on<br/><span class="grad-text">WhatsApp today</span>
     </h2>
-    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Join 2,400+ businesses running inbox, automation, revenue tracking, and payments on WhatsApp — go live in as little as 15 minutes.</p>
+    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Join 2,400+ brands selling on WhatsApp — catalogs, campaigns, bookings, inbox, and payments in one social commerce platform.</p>
     <div class="flex flex-wrap justify-center gap-4 mb-6">
       <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
         Start Free Today
@@ -1669,7 +1667,7 @@ tailwind.config = {
           </div>
           <span class="font-display font-800 text-lg tracking-tight">Convo<span class="grad-text">Connect</span></span>
         </a>
-        <p class="text-sm text-gray-500 leading-relaxed max-w-xs mb-5">WhatsApp revenue & operations platform — team inbox, campaigns, bookings, product catalogs, workflows, and payments. Built on the official Meta WhatsApp Business API.</p>
+        <p class="text-sm text-gray-500 leading-relaxed max-w-xs mb-5">The social commerce platform for WhatsApp — sell from chat, run campaigns, take bookings, and get paid. Built on the official Meta WhatsApp Business API.</p>
         <div class="flex items-center gap-3">
           <a href="#" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all">
             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
@@ -1699,8 +1697,8 @@ tailwind.config = {
           <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">About</a></li>
           <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Blog</a></li>
           <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Contact</a></li>
-          <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
-          <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+          <li><a href="{{ route('policy.show') }}" class="text-sm text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
+          <li><a href="{{ route('terms.show') }}" class="text-sm text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
           <li><a href="#faq" class="text-sm text-gray-400 hover:text-white transition-colors">FAQ</a></li>
         </ul>
       </div>

@@ -220,7 +220,10 @@
     var getChatsJS=function(page=1,search_query=""){
         console.log("Search query");
         console.log(search_query);
-        axios.get('/api/wpbox/chats/'+lastmessagetime+'/'+page+'/'+search_query).then(function (response) {
+        var channelParam = chatList && chatList.channelFilter && chatList.channelFilter !== 'all'
+            ? '?channel=' + encodeURIComponent(chatList.channelFilter)
+            : '';
+        axios.get('/api/wpbox/chats/'+lastmessagetime+'/'+page+'/'+search_query + channelParam).then(function (response) {
             if(response.data.status){
                 var initialChatLoad=chatList.contacts.length==0;
                 chatList.contacts=response.data.data;
@@ -366,6 +369,8 @@
             hasMoreMessages: false,
             loadingOlderMessages: false,
             dynamicProperties: {}, // Placeholder object
+            enabledChannels: @json($enabledChannels ?? [['value' => 'all', 'label' => 'All channels']]),
+            channelFilter: @json($channelFilter ?? 'all'),
         },
         mounted() {
             var self = this;
@@ -420,6 +425,27 @@
             }
         },
         methods: {
+            setChannelFilter(value) {
+                this.channelFilter = value;
+                this.page = 1;
+                getChatsJS(1, this.searchQuery);
+            },
+            channelLabel(channel) {
+                const labels = {
+                    whatsapp: '{{ __('WhatsApp') }}',
+                    instagram: '{{ __('Instagram') }}',
+                    messenger: '{{ __('Messenger') }}',
+                };
+                return labels[channel] || channel;
+            },
+            channelBadgeClass(channel) {
+                const classes = {
+                    instagram: 'badge-danger',
+                    messenger: 'badge-primary',
+                    whatsapp: 'badge-success',
+                };
+                return classes[channel] || 'badge-secondary';
+            },
             async requestWaCallPermission(){
             },
             marked(text) {
