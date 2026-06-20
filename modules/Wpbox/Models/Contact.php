@@ -310,8 +310,8 @@ class Contact extends ModelsContact
 
         //If message is from contact, and fb_message_id is set, check if the message is already in the system
         if ($is_message_by_contact && $fb_message_id) {
-            //Set the resolved_chat to 1
-            $this->resolved_chat = 1;
+            // Customer replied — reopen the conversation (0 = open, 1 = closed).
+            $this->resolved_chat = 0;
             $this->update();
 
             $message = Message::where('fb_message_id', $fb_message_id)->first();

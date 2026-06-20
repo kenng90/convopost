@@ -158,6 +158,13 @@ class ChatController extends Controller
         $agentAssignedOnly = Auth::user()->hasRole('staff')
             && $this->getCompany()->getConfig('agent_assigned_only', 'false') != 'false';
 
+        Contact::query()
+            ->where('company_id', $companyId)
+            ->where('has_chat', 1)
+            ->where('is_last_message_by_contact', 1)
+            ->where('resolved_chat', 1)
+            ->update(['resolved_chat' => 0]);
+
         $baseQuery = Contact::query()
             ->where('company_id', $companyId)
             ->where('has_chat', 1)
@@ -187,11 +194,15 @@ class ChatController extends Controller
             });
         }
 
-        if (request()->has('filter') && request()->filter == 'resolved') {
-            $chatList->where('resolved_chat', 1);
-        } elseif (request()->input('filter') !== 'all') {
-            $chatList->where('resolved_chat', 0);
-        }
+        $filter = request()->input('filter', 'open');
+
+        match ($filter) {
+            'resolved', 'closed' => $chatList->where('resolved_chat', 1),
+            'new' => $chatList->where('is_last_message_by_contact', 1),
+            'mine' => $chatList->where('user_id', $userId),
+            'all' => null,
+            default => $chatList->where('resolved_chat', 0),
+        };
 
         $totalForPage = (clone $chatList)->count();
         $numberOfPages = max(1, (int) ceil($totalForPage / $pageSize));

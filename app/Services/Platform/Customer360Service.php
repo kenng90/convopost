@@ -117,16 +117,36 @@ class Customer360Service
             ->where('contact_id', $contact->id)
             ->orderByDesc('created_at')
             ->limit(5)
-            ->get(['id', 'name', 'status', 'created_at', 'delivered_to', 'read_by'])
+            ->get(['id', 'name', 'is_active', 'created_at', 'delivered_to', 'read_by', 'send_to', 'sended_to'])
             ->map(fn (Campaign $c) => [
                 'id' => $c->id,
                 'name' => $c->name,
-                'status' => $c->status,
+                'status' => $this->campaignStatusLabel($c),
                 'delivered' => $c->delivered_to,
                 'read' => $c->read_by,
                 'created_at' => $c->created_at?->toDateTimeString(),
             ])
             ->all();
+    }
+
+    private function campaignStatusLabel(Campaign $campaign): string
+    {
+        if (! $campaign->is_active) {
+            return __('Paused');
+        }
+
+        $sendTo = (int) $campaign->send_to;
+        $sendedTo = (int) $campaign->sended_to;
+
+        if ($sendTo > 0 && $sendedTo >= $sendTo) {
+            return __('Sent');
+        }
+
+        if ($sendedTo > 0) {
+            return __('Sending');
+        }
+
+        return __('Scheduled');
     }
 
     private function summarizeRecentMessages(Contact $contact): string

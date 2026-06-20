@@ -119,7 +119,7 @@ class ConversationService
         if ($fromContact) {
             $contact->last_client_reply_at = now();
             $contact->is_last_message_by_contact = true;
-            $contact->resolved_chat = 1;
+            $contact->resolved_chat = 0;
         } else {
             $contact->last_support_reply_at = now();
             $contact->is_last_message_by_contact = false;
