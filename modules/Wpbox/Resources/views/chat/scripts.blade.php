@@ -146,35 +146,137 @@
         
     }
 
-    var chatListUpdate=function(data){
-        var contactId = data.contact_id || data.contact;
-        if(!contactId || !chatList){ return; }
+    var getChatListFilter=function(){
+        if(!chatList){
+            return 'open';
+        }
 
-        var index = chatList.contacts.findIndex(function(item){ return item.id === contactId; });
+        switch(chatList.tab){
+            case 'mine':
+                return 'mine';
+            case 'new':
+                return 'new';
+            case 'resolved':
+                return 'resolved';
+            default:
+                return 'open';
+        }
+    };
 
-        if(index !== -1){
-            var contact = chatList.contacts[index];
-            if(data.last_message !== undefined){ contact.last_message = data.last_message; }
-            if(data.last_reply_at !== undefined){ contact.last_reply_at = data.last_reply_at; }
-            if(data.is_last_message_by_contact !== undefined){ contact.is_last_message_by_contact = data.is_last_message_by_contact; }
-            if(data.resolved_chat !== undefined){ contact.resolved_chat = data.resolved_chat; }
-
-            chatList.contacts.splice(index, 1);
-            chatList.contacts.unshift(contact);
-
-            var allIndex = chatList.all.findIndex(function(item){ return item.id === contactId; });
-            if(allIndex !== -1){
-                Object.assign(chatList.all[allIndex], contact);
+    var mergeContactsIntoList=function(incoming){
+        incoming.forEach(function(incomingContact){
+            var idx=chatList.all.findIndex(function(contact){ return contact.id===incomingContact.id; });
+            if(idx!==-1){
+                Object.assign(chatList.all[idx], incomingContact);
+            }else{
+                chatList.all.unshift(incomingContact);
             }
+        });
 
-            if(contactId !== chatList.activeChat.id){
-                if(!chatList.stopPlaySound){ playSound(); }
-            }
+        chatList.all.sort(function(a, b){
+            return new Date(b.last_reply_at)-new Date(a.last_reply_at);
+        });
+    };
+
+    var buildContactFromPusher=function(data){
+        return {
+            id: data.contact_id || data.contact,
+            name: data.name || '',
+            last_message: data.last_message || '',
+            last_reply_at: data.last_reply_at,
+            is_last_message_by_contact: data.is_last_message_by_contact ? 1 : 0,
+            resolved_chat: data.resolved_chat ? 1 : 0,
+        };
+    };
+
+    var applyChatListResponse=function(response, options){
+        options=options||{};
+        var incremental=options.incremental===true;
+        var playSoundOnUpdate=options.playSoundOnUpdate!==false;
+
+        if(!response.data.status){
             return;
         }
 
-        if(contactId !== chatList.activeChat.id){
-            getChatsJS();
+        var initialChatLoad=chatList.all.length===0;
+        var incomingContacts=response.data.data || [];
+
+        if(incremental && incomingContacts.length>0){
+            mergeContactsIntoList(incomingContacts);
+        }else if(!incremental){
+            chatList.all=incomingContacts;
+        }
+
+        chatList.numberOfPages=response.data.numberOfPages;
+        chatList.myMessagesCount=response.data.myChatsCount;
+        chatList.totalMessagesCount=response.data.totalChats;
+        chatList.newMessagesCount=response.data.newMessagesCount;
+
+        chatList.filterContacts();
+
+        if(incomingContacts.length>0){
+            var newestTimestamp=incremental
+                ? incomingContacts[0].last_reply_at
+                : (chatList.all[0] ? chatList.all[0].last_reply_at : null);
+
+            if(newestTimestamp){
+                lastmessagetime=newestTimestamp;
+            }
+
+            if(!initialChatLoad && playSoundOnUpdate){
+                playSound();
+            }
+        }
+
+        openPendingInitialContact();
+    };
+
+    var chatListUpdate=function(data){
+        var contactId=data.contact_id || data.contact;
+        if(!contactId || !chatList){ return; }
+
+        var allIndex=chatList.all.findIndex(function(item){ return item.id===contactId; });
+
+        if(allIndex!==-1){
+            var contact=chatList.all[allIndex];
+            if(data.last_message!==undefined){ contact.last_message=data.last_message; }
+            if(data.last_reply_at!==undefined){ contact.last_reply_at=data.last_reply_at; }
+            if(data.is_last_message_by_contact!==undefined){
+                contact.is_last_message_by_contact=data.is_last_message_by_contact ? 1 : 0;
+            }
+            if(data.resolved_chat!==undefined){
+                contact.resolved_chat=data.resolved_chat ? 1 : 0;
+            }
+            if(data.name!==undefined && data.name){
+                contact.name=data.name;
+            }
+
+            chatList.all.splice(allIndex, 1);
+            chatList.all.unshift(contact);
+            chatList.filterContacts();
+
+            if(contactId!==chatList.activeChat.id){
+                if(!chatList.stopPlaySound){ playSound(); }
+            }
+
+            return;
+        }
+
+        if(data.last_reply_at){
+            if(data.is_last_message_by_contact && chatList.tab==='resolved'){
+                chatList.tab='all';
+            }
+
+            mergeContactsIntoList([buildContactFromPusher(data)]);
+            chatList.filterContacts();
+
+            if(contactId!==chatList.activeChat.id){
+                if(!chatList.stopPlaySound){ playSound(); }
+            }
+        }
+
+        if(contactId!==chatList.activeChat.id){
+            getChatsJS(1, chatList.searchQuery, { incremental: false, playSoundOnUpdate: false });
         }
     }
 
@@ -208,8 +310,13 @@
             chatList.hasMoreMessages = !!response.data.has_more;
 
             const index = chatList.contacts.findIndex(item => item.id === contact_id);
+            const allIndex = chatList.all.findIndex(item => item.id === contact_id);
             if (index !== -1) {
                 chatList.contacts[index].is_last_message_by_contact=0;
+            }
+            if (allIndex !== -1) {
+                chatList.all[allIndex].is_last_message_by_contact=0;
+                chatList.filterContacts();
             }
         }).catch(function (error) {
         });
@@ -217,50 +324,14 @@
         connectToChannel(contact_id);
     }
 
-    var getChatsJS=function(page=1,search_query=""){
-        console.log("Search query");
-        console.log(search_query);
-        axios.get('/api/wpbox/chats/'+lastmessagetime+'/'+page+'/'+search_query).then(function (response) {
-            if(response.data.status){
-                var initialChatLoad=chatList.contacts.length==0;
-                chatList.contacts=response.data.data;
-                chatList.all=response.data.data;
-                chatList.numberOfPages=response.data.numberOfPages;
+    var getChatsJS=function(page=1,search_query="",options={}){
+        var incremental=options.incremental===true;
+        var cursor=incremental ? lastmessagetime : 'none';
+        var params={ filter: getChatListFilter() };
 
-                chatList.myMessagesCount=response.data.myChatsCount;
-                chatList.totalMessagesCount=response.data.totalChats;
-                chatList.newMessagesCount=response.data.newMessagesCount;
-
-
-                if(chatList.contacts.length>0){
-                    
-                    if(chatList.activeChat.id==null){
-                        /*getChatJS(chatList.contacts[0].id);
-                        chatList.contacts[0].isActive=true;
-                        chatList.activeChat=chatList.contacts[0];*/
-                    }else{
-                        //Stays the same last active chat
-                        const index = chatList.contacts.findIndex(item => item.id === chatList.activeChat.id);
-                        if (index !== -1) {
-                            chatList.contacts[index].name = chatList.contacts[index].name+" ";
-                            chatList.contacts[index].isActive = true;
-                        }
-                    }
-                    lastmessagetime=chatList.contacts[0].last_reply_at; 
-                    
-                    //Play Sound
-                    if(!initialChatLoad){
-                        playSound();
-                    }
-                    
-
-                }
-
-                openPendingInitialContact();
-            }
-            
+        axios.get('/api/wpbox/chats/'+cursor+'/'+page+'/'+search_query, { params: params }).then(function (response) {
+            applyChatListResponse(response, options);
         }).catch(function (error) {
-            
         });
     }
 
@@ -302,29 +373,9 @@
     window.pendingInitialContactId = @json($initialContactId ?? null);
 
     window.onload = function () {
-        initPusher();
-        getChatsJS();
-        axios.defaults.baseURL = window.location.origin;
-
-        //Emoji picker
-        setTimeout(() => {
-            new EmojiPicker({
-                trigger: [
-                    {
-                    selector: '#emoji-btn',
-                    insertInto: '#message'
-
-                }
-            ],
-           
-            closeButton: true,
-            specialButtons: 'green' // #008000, rgba(0, 128, 0);
-        });
-        }, 1000);
-        //VUE Chat list
+        //VUE Chat list — initialize first so sideapp scripts can use chatList on load
         Vue.config.devtools=true;
 
-        
         chatList = new Vue({
         el: '#chatList',
         data: {
@@ -403,9 +454,8 @@
             page(newVal, oldVal) {
                 if (newVal !== oldVal) {
                     this.stopPlaySound=true;
-                    //Clear search query
                     this.searchQuery="";
-                    getChatsJS(newVal);
+                    getChatsJS(newVal, "", { incremental: false, playSoundOnUpdate: false });
                 }
             },
             searchQuery(newVal, oldVal) {
@@ -414,7 +464,8 @@
                     var self = this;
                     clearTimeout(searchDebounceTimer);
                     searchDebounceTimer = setTimeout(function(){
-                        getChatsJS(self.page, newVal);
+                        self.page = 1;
+                        getChatsJS(1, newVal, { incremental: false, playSoundOnUpdate: false });
                     }, 400);
                 }
             }
@@ -455,35 +506,32 @@
             },
             mineMessages:function(){
                 this.tab="mine";
-                this.filterContacts();
+                this.page=1;
+                getChatsJS(1, this.searchQuery, { incremental: false, playSoundOnUpdate: false });
             },
             allMessages:function(){
                 this.tab="all";
-                this.filterContacts();
+                this.page=1;
+                getChatsJS(1, this.searchQuery, { incremental: false, playSoundOnUpdate: false });
             },
             newMessages:function(){
                 this.tab="new";
-                this.filterContacts();
+                this.page=1;
+                getChatsJS(1, this.searchQuery, { incremental: false, playSoundOnUpdate: false });
             },
             resolvedMessages:function(){
                 this.tab="resolved";
-                this.filterContacts();
+                this.page=1;
+                getChatsJS(1, this.searchQuery, { incremental: false, playSoundOnUpdate: false });
             },
             filterContacts() {
-                const index = this.contacts.findIndex(item => item.id === chatList.activeChat.id);
-                        if (index !== -1) {
-                            chatList.contacts[index].name = chatList.contacts[index].name+" ";
-                            chatList.contacts[index].isActive = true;
-                        }
+                this.contacts=this.all.slice();
 
-                if(this.tab=="all"){
-                    this.contacts=this.all.filter(contact => !contact.resolved_chat);
-                }else if(this.tab=="mine"){
-                    this.contacts=this.all.filter(contact => contact.user_id==this.currentUserID);
-                }else if(this.tab=="new"){
-                    this.contacts=this.all.filter(contact => contact.is_last_message_by_contact);
-                }else if(this.tab=="resolved"){
-                    this.contacts=this.all.filter(contact => contact.resolved_chat);
+                if(this.activeChat && this.activeChat.id){
+                    const index = this.contacts.findIndex(item => item.id === this.activeChat.id);
+                    if (index !== -1) {
+                        this.contacts[index].isActive = true;
+                    }
                 }
             },
             formatIt: function(message){
@@ -529,7 +577,7 @@
                         if (indexUpdate !== -1) {
                             chatList.all[indexUpdate].user_id = user_id;
                         }
-                        chatList.filterContacts();
+                        getChatsJS(chatList.page, chatList.searchQuery, { incremental: false, playSoundOnUpdate: false });
                     }else{  
                         js.notify(response.data.errMsg,"danger");
                     }
@@ -614,7 +662,7 @@
                 
             },
             getChats:function (){
-                getChatsJS(this.page,this.searchQuery);
+                getChatsJS(this.page, this.searchQuery, { incremental: false, playSoundOnUpdate: false });
             },
             momentIt: function (date) {
                 return moment.tz(date,serverTimezone).fromNow();
@@ -684,34 +732,43 @@
                 } else {
                     this.currentSideApp = appName;
                     this.currentSideAppName = appTitle;
-                    // this.chatAndToolsContentClass="col-8";
-                    // this.sideAppsClass="col-4";
 
-                    //Add transition class for smooth width change
-                    document.querySelector('#chatAndTools').classList.add('transition');
-                    document.querySelector('#sideApps').classList.add('transition');
-                    document.querySelector('#sideBarButtons').classList.add('rounded-0');
-                    //document.querySelector('#dropdown-right__BV_button_').classList.add('d-none');
+                    var chatAndTools = document.querySelector('#chatAndTools');
+                    var sideApps = document.querySelector('#sideApps');
+                    var sideBarButtons = document.querySelector('#sideBarButtons');
 
-                    //Use setTimeout to ensure transition class is applied before changing columns
-                    setTimeout(() => {
-                    document.querySelector('#chatAndTools').classList.remove('transition');
-                    document.querySelector('#sideApps').classList.remove('transition');
-                        // document.querySelector('#chatAndTools').classList.remove('col-11');
-                        // document.querySelector('#chatAndTools').classList.add('col-8');
-                        // document.querySelector('#sideApps').classList.remove('col-1'); 
-                        // document.querySelector('#sideApps').classList.add('col-4');
+                    if (chatAndTools) {
+                        chatAndTools.classList.add('transition');
+                    }
+                    if (sideApps) {
+                        sideApps.classList.add('transition');
+                    }
+                    if (sideBarButtons) {
+                        sideBarButtons.classList.add('rounded-0');
+                    }
+
+                    setTimeout(function () {
+                        if (chatAndTools) {
+                            chatAndTools.classList.remove('transition');
+                        }
+                        if (sideApps) {
+                            sideApps.classList.remove('transition');
+                        }
                     }, 50);
                 }
             },
             closeSideApp() {
                 this.currentSideApp = null;
-                document.querySelector('#dropdown-right__BV_button_').classList.remove('d-none');
-                document.querySelector('#sideBarButtons').classList.remove('rounded-0');
-                // document.querySelector('#chatAndTools').classList.remove('col-8');
-                // document.querySelector('#chatAndTools').classList.add('col-11');
-                // document.querySelector('#sideApps').classList.remove('col-4');
-                // document.querySelector('#sideApps').classList.add('col-1');
+
+                var dropdownBtn = document.querySelector('#dropdown-right__BV_button_');
+                if (dropdownBtn) {
+                    dropdownBtn.classList.remove('d-none');
+                }
+
+                var sideBarButtons = document.querySelector('#sideBarButtons');
+                if (sideBarButtons) {
+                    sideBarButtons.classList.remove('rounded-0');
+                }
             },
             capitalize(value) {
                 if (!value) return '';
@@ -849,7 +906,7 @@
                         if (response.data.status) {
                             this.activeChat.resolved_chat = 1;
                             js.notify('Chat marked as closed', 'success');
-                            this.filterContacts();
+                            getChatsJS(this.page, this.searchQuery, { incremental: false, playSoundOnUpdate: false });
                         } else {
                             js.notify(response.data.message, 'danger');
                         }
@@ -865,7 +922,7 @@
                         if (response.data.status) {
                             this.activeChat.resolved_chat = 0;
                             js.notify('Chat reopened successfully', 'success');
-                            this.filterContacts();
+                            getChatsJS(this.page, this.searchQuery, { incremental: false, playSoundOnUpdate: false });
                         } else {
                             js.notify(response.data.message, 'danger');
                         }
@@ -916,9 +973,27 @@
                 }
             },
         },
-    })
+    });
 
-     
+        initPusher();
+        getChatsJS();
+        axios.defaults.baseURL = window.location.origin;
+
+        //Emoji picker
+        setTimeout(() => {
+            new EmojiPicker({
+                trigger: [
+                    {
+                    selector: '#emoji-btn',
+                    insertInto: '#message'
+
+                }
+            ],
+           
+            closeButton: true,
+            specialButtons: 'green' // #008000, rgba(0, 128, 0);
+        });
+        }, 1000);
 };
 
 

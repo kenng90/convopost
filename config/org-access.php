@@ -31,6 +31,7 @@ return [
         'agent.update',
         'agent.delete',
         'flow-templates.install',
+        'flows.create-from-template',
         'flow-templates.generate',
         'integrations.connect',
         'integrations.disconnect',

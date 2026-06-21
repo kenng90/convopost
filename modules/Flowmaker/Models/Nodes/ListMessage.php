@@ -3,34 +3,35 @@
 namespace Modules\Flowmaker\Models\Nodes;
 
 use App\Models\Company;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
-use Illuminate\Support\Facades\Http;
 
 class ListMessage extends Node
 {
-    public function listenForReply($message, $data){
+    public function listenForReply($message, $data)
+    {
         Log::info('Listening for reply in list message node');
 
         // Get extra data
         $extraData = $data->extra;
         $node = null;
-        $elseNode = $this->getNextNodeId("else");
-        
+        $elseNode = $this->getNextNodeId('else');
+
         $itemMatched = false;
 
-        if($extraData != null && $extraData != ''){
+        if ($extraData != null && $extraData != '') {
             Log::info('Extra data found', ['extraData' => $extraData]);
 
             $settings = $this->getDataAsArray()['settings'];
             $sections = $settings['sections'] ?? [];
 
             // Check if the extra data matches any of the list options
-            foreach($sections as $section){
+            foreach ($sections as $section) {
                 $rows = $section['rows'] ?? [];
-                foreach($rows as $row){
+                foreach ($rows as $row) {
                     $listItemId = "{$section['id']}-{$row['id']}_id{$this->id}_flow{$this->flow_id}";
-                    if($listItemId == $extraData){
+                    if ($listItemId == $extraData) {
                         Log::info('List item ID found', ['listItemId' => $listItemId]);
                         $itemMatched = true;
 
@@ -40,7 +41,7 @@ class ListMessage extends Node
 
                         // Get node with handle
                         $node = $this->getNextNodeId($handleId);
-                        if($node != null){
+                        if ($node != null) {
                             Log::info('Next node found', ['node' => $node]);
                         } else {
                             Log::info('Node not found, go with else case');
@@ -56,22 +57,23 @@ class ListMessage extends Node
 
         // If no extra data, the user sent a plain text message (not a list selection)
         // Keep the current_node state so we continue waiting for a list selection
-        if($extraData == null || $extraData == ''){
+        if ($extraData == null || $extraData == '') {
             Log::info('No list selection detected (no extra data) - keeping current_node state');
+
             return;
         }
 
         // A list item was selected - clear the waiting state and route accordingly
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
-        Log::info("Clearing current node from contact state for contact ".$contact->id." and flow ".$this->flow_id);
+        Log::info('Clearing current node from contact state for contact '.$contact->id.' and flow '.$this->flow_id);
         $contact->clearContactState($this->flow_id, 'current_node');
-        Log::info("Current node cleared");
+        Log::info('Current node cleared');
 
-        if($node != null){
+        if ($node != null) {
             Log::info('Node found, process it');
             $node->process($message, $data);
-        } else if($elseNode != null){
+        } elseif ($elseNode != null) {
             Log::info('Node not found, go with else case');
             $elseNode->process($message, $data);
         } else {
@@ -82,15 +84,16 @@ class ListMessage extends Node
     public function process($message, $data)
     {
         Log::info('Processing message in list message node', ['message' => $message, 'data' => $data]);
-        
-        if($this->isStartNode){
+
+        if ($this->isStartNode) {
             // In this case we need to listen for a reply
             $this->listenForReply($message, $data);
+
             return [
-                'success' => true
+                'success' => true,
             ];
         }
-        
+
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
 
@@ -111,21 +114,21 @@ class ListMessage extends Node
         $sections = [];
         $settingSections = $settings['sections'] ?? [];
 
-        foreach($settingSections as $section){
+        foreach ($settingSections as $section) {
             $rows = [];
             $sectionRows = $section['rows'] ?? [];
-            
-            foreach($sectionRows as $row){
+
+            foreach ($sectionRows as $row) {
                 $rows[] = [
                     'id' => "{$section['id']}-{$row['id']}_id{$this->id}_flow{$this->flow_id}",
                     'title' => $contact->changeVariables($row['title'] ?? ''),
-                    'description' => $contact->changeVariables($row['description'] ?? '')
+                    'description' => $contact->changeVariables($row['description'] ?? ''),
                 ];
             }
 
             $sections[] = [
                 'title' => $contact->changeVariables($section['title'] ?? ''),
-                'rows' => $rows
+                'rows' => $rows,
             ];
         }
 
@@ -138,8 +141,8 @@ class ListMessage extends Node
             'footer' => $footer,
             'action' => [
                 'button' => $buttonText,
-                'sections' => $sections
-            ]
+                'sections' => $sections,
+            ],
         ];
 
         Log::info('List message payload', ['payload' => $payload]);
@@ -153,7 +156,7 @@ class ListMessage extends Node
             $response = Http::post(config('app.url').'/api/wpbox/sendlistmessage', $payload);
             Log::info('List message API response', ['response' => $response->json()]);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::error('Failed to send list message', ['error' => $response->body()]);
             }
         } catch (\Exception $e) {
@@ -161,7 +164,7 @@ class ListMessage extends Node
         }
 
         return [
-            'success' => true
+            'success' => true,
         ];
     }
 
@@ -173,6 +176,7 @@ class ListMessage extends Node
                 return $edge->getTarget();
             }
         }
+
         return null;
     }
 }

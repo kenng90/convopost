@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Akaunting\Module\Facade as Module;
 use App\Models\Plans;
 use App\Models\User;
+use App\Services\DefaultPlanService;
 use App\Services\PlanCreditAllocator;
 use App\Services\PlanSeatBillingService;
 use Illuminate\Http\RedirectResponse;
@@ -20,6 +21,7 @@ class PlansController extends Controller
     public function __construct(
         private readonly PlanCreditAllocator $planCreditAllocator,
         private readonly PlanSeatBillingService $planSeatBillingService,
+        private readonly DefaultPlanService $defaultPlanService,
     ) {
     }
 
@@ -299,8 +301,7 @@ class PlansController extends Controller
     {
         auth()->user()->subscription('main')->cancelNow();
         auth()->user()->cancel_url = '';
-        auth()->user()->plan_id = intval(config('settings.free_pricing_id'));
-        auth()->user()->update();
+        $this->defaultPlanService->assignToUser(auth()->user());
 
         return redirect()->route('plans.current')->withError(__('Subscription canceled'));
 

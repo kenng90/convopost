@@ -5,20 +5,24 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\User;
+use App\Services\DefaultPlanService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
 class SocialController extends Controller
 {
+    public function __construct(
+        private readonly DefaultPlanService $defaultPlanService,
+    ) {
+    }
+
     public function redirectTo()
     {
         return route('home');
 
     }
-
 
     private function createCompany(User $user)
     {
@@ -55,6 +59,7 @@ class SocialController extends Controller
 
             $user->assignRole('owner');
             $this->createCompany($user);
+            $this->defaultPlanService->assignToUser($user);
         }
 
         // login
@@ -83,6 +88,7 @@ class SocialController extends Controller
             $user->save();
             $user->assignRole('owner');
             $this->createCompany($user);
+            $this->defaultPlanService->assignToUser($user);
         }
         // login
         Auth::loginUsingId($user->id);

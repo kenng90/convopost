@@ -2,6 +2,7 @@
 
 namespace Modules\Wpbox\Events;
 
+use Carbon\Carbon;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -44,7 +45,9 @@ class Chatlistchange implements ShouldBroadcast
             'company_id' => (int) $this->company,
             'contact' => (int) $this->contact,
             'last_message' => $contact?->last_message,
-            'last_reply_at' => $contact?->last_reply_at?->toIso8601String(),
+            'last_reply_at' => $contact?->last_reply_at
+                ? Carbon::parse($contact->last_reply_at)->toIso8601String()
+                : null,
             'is_last_message_by_contact' => (bool) $contact?->is_last_message_by_contact,
             'resolved_chat' => (bool) $contact?->resolved_chat,
             'name' => $contact?->name,

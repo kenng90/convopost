@@ -105,6 +105,8 @@
             </div>
         </div>
 
+        @yield('customfooter')
+
         @include('layouts.footers.auth')
     </div>
 @endsection

@@ -366,6 +366,7 @@ class OrgAuthorization
         $map['copilot.templates'] = 'wpbox';
         $map['flow-templates.index'] = 'flowmaker';
         $map['flow-templates.install'] = 'flowmaker';
+        $map['flows.create-from-template'] = 'flowmaker';
         $map['flow-templates.generate'] = 'flowmaker';
 
         return self::$routeModuleMap = $map;

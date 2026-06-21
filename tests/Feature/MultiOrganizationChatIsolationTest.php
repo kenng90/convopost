@@ -62,6 +62,9 @@ class MultiOrganizationChatIsolationTest extends TestCase
                     'changes' => [
                         [
                             'value' => [
+                                'metadata' => [
+                                    'phone_number_id' => 'ORG_B_PHONE_ID',
+                                ],
                                 'messages' => [
                                     [
                                         'from' => $sharedPhone,
@@ -82,6 +85,8 @@ class MultiOrganizationChatIsolationTest extends TestCase
             ],
         ];
 
+        $companyB->setConfig('whatsapp_phone_number_id', 'ORG_B_PHONE_ID');
+
         $this->withSession(['company_id' => $companyA->id])
             ->postJson('/webhook/wpbox/receive/'.$token, $payload)
             ->assertOk();
@@ -97,6 +102,115 @@ class MultiOrganizationChatIsolationTest extends TestCase
             'contact_id' => $contactA->id,
             'fb_message_id' => 'wamid.TEST_MESSAGE_001',
         ]);
+    }
+
+    public function test_webhook_routes_by_phone_number_id_when_two_orgs_share_waba(): void
+    {
+        Event::fake();
+
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+
+        $companyA = Company::factory()->create(['user_id' => $owner->id, 'name' => 'Org A']);
+        $companyB = Company::factory()->create(['user_id' => $owner->id, 'name' => 'Org B']);
+
+        $sharedWaba = '999888777666555';
+        $companyA->setConfig('whatsapp_business_account_id', $sharedWaba);
+        $companyA->setConfig('whatsapp_phone_number_id', 'PHONE_ORG_A');
+        $companyB->setConfig('whatsapp_business_account_id', $sharedWaba);
+        $companyB->setConfig('whatsapp_phone_number_id', 'PHONE_ORG_B');
+
+        $contactB = Contact::withoutGlobalScope(CompanyScope::class)->create([
+            'name' => 'Customer',
+            'phone' => '254711122233',
+            'company_id' => $companyB->id,
+            'has_chat' => true,
+        ]);
+
+        $token = $owner->createToken('webhook-test')->plainTextToken;
+
+        $payload = [
+            'entry' => [
+                [
+                    'id' => $sharedWaba,
+                    'changes' => [
+                        [
+                            'value' => [
+                                'metadata' => [
+                                    'phone_number_id' => 'PHONE_ORG_B',
+                                ],
+                                'messages' => [
+                                    [
+                                        'from' => '254711122233',
+                                        'id' => 'wamid.TEST_SHARED_WABA',
+                                        'type' => 'text',
+                                        'text' => ['body' => 'Routed to Org B line'],
+                                    ],
+                                ],
+                                'contacts' => [
+                                    [
+                                        'profile' => ['name' => 'Customer'],
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->postJson('/webhook/wpbox/receive/'.$token, $payload)->assertOk();
+
+        $this->assertDatabaseHas('messages', [
+            'contact_id' => $contactB->id,
+            'company_id' => $companyB->id,
+            'value' => 'Routed to Org B line',
+        ]);
+    }
+
+    public function test_chatlist_only_shows_contacts_for_active_organisation(): void
+    {
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+
+        $companyA = Company::factory()->create(['user_id' => $owner->id, 'name' => 'Org A']);
+        $companyB = Company::factory()->create(['user_id' => $owner->id, 'name' => 'Org B']);
+
+        $sharedPhone = '254700000099';
+
+        Contact::withoutGlobalScope(CompanyScope::class)->create([
+            'name' => 'Org A Customer',
+            'phone' => $sharedPhone,
+            'company_id' => $companyA->id,
+            'has_chat' => true,
+            'last_message' => 'Message for A',
+            'last_reply_at' => now(),
+        ]);
+
+        Contact::withoutGlobalScope(CompanyScope::class)->create([
+            'name' => 'Org B Customer',
+            'phone' => $sharedPhone,
+            'company_id' => $companyB->id,
+            'has_chat' => true,
+            'last_message' => 'Message for B',
+            'last_reply_at' => now(),
+        ]);
+
+        $this->actingAs($owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $companyA->id])
+            ->getJson('/api/wpbox/chats/none/1/?filter=open')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.last_message', 'Message for A');
+
+        $this->actingAs($owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $companyB->id])
+            ->getJson('/api/wpbox/chats/none/1/?filter=open')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.last_message', 'Message for B');
     }
 
     public function test_chat_messages_endpoint_rejects_contacts_from_other_organisations(): void

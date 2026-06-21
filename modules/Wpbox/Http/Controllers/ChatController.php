@@ -5,6 +5,7 @@ namespace Modules\Wpbox\Http\Controllers;
 use Akaunting\Module\Facade as Module;
 use App\Http\Controllers\Controller;
 use App\Services\Platform\ActivationService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -144,9 +145,17 @@ class ChatController extends Controller
         $baseQuery = Contact::query()
             ->where('company_id', $companyId)
             ->where('has_chat', 1)
-            ->when($agentAssignedOnly, fn ($query) => $query->where('user_id', $userId))
+            ->when($agentAssignedOnly, function ($query) use ($userId) {
+                $query->where(function ($assignedQuery) use ($userId) {
+                    $assignedQuery->where('user_id', $userId)
+                        ->orWhere(function ($unassignedQuery) {
+                            $unassignedQuery->whereNull('user_id')
+                                ->where('is_last_message_by_contact', 1);
+                        });
+                });
+            })
             ->when($lastmessagetime !== 'none' && $lastmessagetime !== '', function ($query) use ($lastmessagetime) {
-                $query->where('last_reply_at', '>', $lastmessagetime);
+                $query->where('last_reply_at', '>', Carbon::parse($lastmessagetime));
             });
 
         $stats = (clone $baseQuery)->selectRaw('
@@ -166,11 +175,7 @@ class ChatController extends Controller
             });
         }
 
-        if (request()->has('filter') && request()->filter == 'resolved') {
-            $chatList->where('resolved_chat', 1);
-        } elseif (request()->input('filter') !== 'all') {
-            $chatList->where('resolved_chat', 0);
-        }
+        $this->applyInboxTabFilter($chatList, request()->input('filter', 'open'), $userId);
 
         $totalForPage = (clone $chatList)->count();
         $numberOfPages = max(1, (int) ceil($totalForPage / $pageSize));
@@ -354,7 +359,7 @@ class ChatController extends Controller
 
             return response()->json([
                 'message' => $messageSend,
-                'messagetime' => $messageSend->created_at->format('Y-m-d H:i:s'),
+                'messagetime' => $messageSend->created_at->toIso8601String(),
                 'status' => true,
                 'errMsg' => '',
             ]);
@@ -400,7 +405,7 @@ class ChatController extends Controller
 
         return response()->json([
             'message' => $messageSend,
-            'messagetime' => $messageSend->created_at->format('Y-m-d H:i:s'),
+            'messagetime' => $messageSend->created_at->toIso8601String(),
             'status' => true,
             'errMsg' => '',
         ]);
@@ -429,10 +434,35 @@ class ChatController extends Controller
 
         return response()->json([
             'message' => $messageSend,
-            'messagetime' => $messageSend->created_at->format('Y-m-d H:i:s'),
+            'messagetime' => $messageSend->created_at->toIso8601String(),
             'status' => true,
             'errMsg' => '',
         ]);
+    }
+
+    protected function applyInboxTabFilter($query, ?string $filter, int $userId): void
+    {
+        $filter = $filter ?? 'open';
+
+        if (in_array($filter, ['resolved', 'closed'], true)) {
+            $query->where('resolved_chat', 1);
+
+            return;
+        }
+
+        if ($filter === 'mine') {
+            $query->where('user_id', $userId)->where('resolved_chat', 0);
+
+            return;
+        }
+
+        if ($filter === 'new') {
+            $query->where('is_last_message_by_contact', 1)->where('resolved_chat', 0);
+
+            return;
+        }
+
+        $query->where('resolved_chat', 0);
     }
 
     public function updateChatStatus(Request $request, Contact $contact)

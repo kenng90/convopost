@@ -283,10 +283,6 @@ class Contact extends ModelsContact
 
         //If message is from contact, and fb_message_id is set, check if the message is already in the system
         if ($is_message_by_contact && $fb_message_id) {
-            //Set the resolved_chat to 1
-            $this->resolved_chat = 1;
-            $this->update();
-
             $message = Message::where('fb_message_id', $fb_message_id)->first();
             if ($message) {
                 return $message;
@@ -347,6 +343,7 @@ class Contact extends ModelsContact
         $messageToBeSend->save();
 
         //Update the contact last message, time etc
+        $broadcastChatListChange = false;
 
         if (! $is_campaign_messages) {
             $this->has_chat = true;
@@ -354,6 +351,8 @@ class Contact extends ModelsContact
             if ($is_message_by_contact) {
                 $this->last_client_reply_at = now();
                 $this->is_last_message_by_contact = true;
+                $this->resolved_chat = 0;
+                $broadcastChatListChange = true;
 
                 //Reply bots
                 if ($this->enabled_ai_bot) {
@@ -374,7 +373,6 @@ class Contact extends ModelsContact
                 }
 
                 $messageToBeSend->extra = null;
-                event(new Chatlistchange($this->id, $this->company_id));
 
                 //Check if we need to update the contact based on the message
 
@@ -406,6 +404,10 @@ class Contact extends ModelsContact
         }
         $this->last_message = $this->trimString($content, 40);
         $this->update();
+
+        if ($broadcastChatListChange) {
+            event(new Chatlistchange($this->id, $this->company_id));
+        }
 
         return $messageToBeSend;
     }

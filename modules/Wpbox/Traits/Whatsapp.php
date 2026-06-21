@@ -4,10 +4,10 @@ namespace Modules\Wpbox\Traits;
 
 use Akaunting\Module\Facade as Module;
 use App\Models\Company;
-use App\Models\Config;
 use App\Models\User;
 use App\Services\Billing\CreditBillingResolver;
 use App\Services\Billing\CreditCharger;
+use App\Services\WhatsApp\WebhookCompanyResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -206,20 +206,15 @@ trait Whatsapp
 
             //if the user is admin
             if ($user->hasRole('admin') || true) {
-                //Find company based on the WABAID
-                $wabaid = $request->entry[0]['id'];
-                $configRecord = Config::where('value', $wabaid)->first();
-                if ($configRecord && $configRecord->model_id) {
-                    $company_id = $configRecord->model_id;
-                    $company = Company::find($company_id);
-                    if (! $company) {
-                        return response()->json(['send' => false, 'error' => 'Company not found']);
-                    } else {
-                        Auth::login($company->user);
-                    }
-                } else {
-                    return response()->json(['send' => false, 'error' => 'Company not found for WABAID: '.$wabaid]);
+                $company = app(WebhookCompanyResolver::class)->resolveFromWebhookRequest($request);
+
+                if (! $company) {
+                    $wabaid = $request->entry[0]['id'] ?? 'unknown';
+
+                    return response()->json(['send' => false, 'error' => 'Company not found for WhatsApp webhook (WABAID: '.$wabaid.')']);
                 }
+
+                Auth::login($company->user);
             } else {
                 //Company, -- not used anymore
                 $company = $this->getCompany();

@@ -9,7 +9,7 @@ class ManagedAiService
 {
     public function monthlyAllowance(Company $company): int
     {
-        $plan = $company->plan;
+        $plan = $this->resolvePlan($company);
         if (! $plan) {
             return (int) config('managed-ai.default_monthly_credits', 0);
         }
@@ -75,6 +75,16 @@ class ManagedAiService
             'used' => (int) $company->getConfig('managed_ai_credits_used', '0'),
             'has_own_key' => filled($company->getConfig('openrouter_api_key', '')),
         ];
+    }
+
+    private function resolvePlan(Company $company): ?Plans
+    {
+        $user = $company->user;
+        if (! $user) {
+            return null;
+        }
+
+        return Plans::withTrashed()->find($user->mplanid());
     }
 
     private function resolveTierKey(Plans $plan): string

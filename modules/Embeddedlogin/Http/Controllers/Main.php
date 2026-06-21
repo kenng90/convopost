@@ -2,6 +2,7 @@
 
 namespace Modules\Embeddedlogin\Http\Controllers;
 
+use App\Services\WhatsApp\WebhookCompanyResolver;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -278,6 +279,15 @@ class Main extends Controller
         //Get the current user
         $user = Auth::user();
         $company = $user->getCurrentCompany();
+
+        if (app(WebhookCompanyResolver::class)->phoneNumberIdUsedByAnotherCompany($phoneID, $company->id)) {
+            Log::warning('Embedded WhatsApp signup rejected: phone number already linked to another organisation', [
+                'company_id' => $company->id,
+                'phone_number_id' => $phoneID,
+            ]);
+
+            return;
+        }
 
         $company->setConfig('whatsapp_permanent_access_token', $accessToken);
         $company->setConfig('whatsapp_business_account_id', $wabid);

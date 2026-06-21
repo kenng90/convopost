@@ -9,7 +9,6 @@ use App\Services\Platform\ManagedAiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Modules\Flowmaker\Models\Flow;
 
 class FlowTemplatesController extends Controller
@@ -21,13 +20,11 @@ class FlowTemplatesController extends Controller
     ) {
     }
 
-    public function index(): View
+    public function index(): RedirectResponse
     {
         $this->ownerAndStaffOnly();
 
-        return view('flowmaker::templates.index', [
-            'grouped' => $this->templates->groupedByCategory(),
-        ]);
+        return redirect()->route('flows.index');
     }
 
     public function install(Request $request, string $key): RedirectResponse
@@ -36,7 +33,7 @@ class FlowTemplatesController extends Controller
         $flow = $this->templates->install($key, $request->input('name'));
 
         if (! $flow) {
-            return redirect()->route('flow-templates.index')->withError(__('Template not found.'));
+            return redirect()->route('flows.index')->withError(__('Template not found.'));
         }
 
         return redirect()->route('flowmaker.edit', $flow)

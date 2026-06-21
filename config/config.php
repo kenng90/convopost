@@ -30,9 +30,8 @@ $env = [
             ['title' => 'Facebook app secret (ES)', 'key' => 'FACEBOOK_APP_SECRET', 'value' => ''],
             ['title' => 'Facebook config id (ES)', '' => 'Used for WhatsApp Embeded Signup', 'key' => 'FACEBOOK_CONFIG_ID', 'value' => ''],
 
-            ['separator' =>'Static pages', 'title' => 'Privacy Policy', 'key' => 'PRIVACY_POLICY', 'value' => '','ftype' => 'select', 'data' => []],
+            ['separator' => 'Static pages', 'title' => 'Privacy Policy', 'key' => 'PRIVACY_POLICY', 'value' => '', 'ftype' => 'select', 'data' => []],
             ['title' => 'Terms of Service', 'key' => 'TERMS_OF_SERVICE', 'value' => '', 'ftype' => 'select', 'data' => []],
-     
 
             ['separator' => 'Other settings', 'title' => 'Enable Multiple Organizations', 'key' => 'ENABLE_MULTI_ORGANIZATIONS', 'value' => 'true', 'ftype' => 'bool'],
             ['title' => 'Vendor entity name', 'help' => 'Ex. Company, Company, Shop, Business etc', 'key' => 'VENDOR_ENTITY_NAME', 'value' => 'Company'],
@@ -55,8 +54,8 @@ $env = [
         'fields' => [
             ['separator' => 'General', 'title' => 'Tool used for subscriptions', 'key' => 'SUBSCRIPTION_PROCESSOR', 'value' => 'Stripe', 'ftype' => 'select', 'data' => []],
             ['title' => 'Enable Pricing', 'key' => 'ENABLE_PRICING', 'value' => 'false', 'ftype' => 'bool', 'help' => 'If enabled, users will be able to subscribe to plans. If disabled, users will us the platform without any restrictions.'],
-            ['title' => 'Default plan', 'key' => 'FREE_PRICING_ID', 'value' => '1', 'ftype' => 'select', 'data' => [], 'help' => 'This is the plan that will be automatically assigned to new users, or when user subscription is paused or cancelled'],
-            ['title' => 'Force users to use paid plan', 'key' => 'FORCE_USERS_TO_PAY', 'value' => 'false', 'ftype' => 'bool', 'help' => 'If enabled, users will be forced to use a paid plan. If disabled, users will be able to use the any plan.'],
+            ['title' => 'Default plan', 'key' => 'FREE_PRICING_ID', 'value' => '1', 'ftype' => 'select', 'data' => [], 'help' => 'Plan assigned on signup and when a subscription is paused or cancelled. New owners can explore the platform on this plan without paying.'],
+            ['title' => 'Force users to use paid plan', 'key' => 'FORCE_USERS_TO_PAY', 'value' => 'false', 'ftype' => 'bool', 'help' => 'If enabled, owners on the default plan are blocked until they subscribe to a higher plan. Keep disabled when the default plan is your free explore tier (e.g. Starter).'],
             ['separator' => 'Credits System (Beta)', 'title' => 'Enable Credits System', 'key' => 'ENABLE_CREDITS', 'value' => 'true', 'ftype' => 'bool', 'help' => 'If enabled, users will be charged credits for each action. Base on the plan, the credits will be different and given to the user on subscription payment.'],
             ['separator' => 'Stripe', 'title' => 'Stripe API key', 'key' => 'STRIPE_KEY', 'value' => 'pk_test_XXXXXXXXXXXXXX'],
             ['title' => 'Stripe API Secret', 'key' => 'STRIPE_SECRET', 'value' => 'sk_test_XXXXXXXXXXXXXXX'],

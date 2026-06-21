@@ -1492,7 +1492,7 @@ tailwind.config = {
           <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 6 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div x-show="open === 6" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Yes — all plans include a 14-day free trial with no credit card required. You get full access to the plan's features from day one. After the trial, you can subscribe or cancel — no questions asked.</p>
+          <p class="text-sm text-gray-400 leading-relaxed">Yes — create a free account and explore ConvoConnect on the Starter plan: team inbox, contacts, and flow builder. No credit card required. Upgrade anytime when you need campaigns, catalog commerce, or higher limits.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">

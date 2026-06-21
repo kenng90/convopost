@@ -3,7 +3,7 @@
 namespace Modules\Whatsappcall\Traits;
 
 use App\Models\Company;
-use App\Models\Config;
+use App\Services\WhatsApp\WebhookCompanyResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Broadcast;
@@ -353,10 +353,8 @@ trait WhatsappCall
             $value = $entry['changes'][0]['value'] ?? [];
             $field = $entry['changes'][0]['field'] ?? 'messages';
 
-            // Identify company by WABA id in entry.id, same approach as Wpbox receiveMessage
-            $wabaId = $entry['id'] ?? null;
-            $companyId = Config::where('value', $wabaId)->first()->model_id ?? null;
-            $company = $companyId ? Company::find($companyId) : null;
+            // Identify organisation by phone number ID first, then WABA ID.
+            $company = app(WebhookCompanyResolver::class)->resolveFromWebhookRequest($request);
 
             // Determine direction and participants
             $waUserId = $value['contacts'][0]['wa_id'] ?? ($value['statuses'][0]['recipient_id'] ?? null);

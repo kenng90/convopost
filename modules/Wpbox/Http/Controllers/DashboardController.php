@@ -9,6 +9,7 @@ use App\Models\Posts;
 use App\Services\ConfChanger;
 use App\Services\OrgAuthorization;
 use App\Services\Platform\ActivationService;
+use App\Services\WhatsApp\WebhookCompanyResolver;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -111,6 +112,12 @@ class DashboardController extends Controller
             $setupDone = false;
         }
         if ($request->has('phone') && strlen($request->phone) > 4) {
+            if (app(WebhookCompanyResolver::class)->phoneNumberIdUsedByAnotherCompany($request->phone, $company->id)) {
+                return redirect(route('whatsapp.setup'))->withErrors([
+                    'phone' => __('This WhatsApp phone number is already connected to another organisation.'),
+                ]);
+            }
+
             $company->setConfig('whatsapp_phone_number_id', $request->phone);
         } else {
             $company->setConfig('whatsapp_phone_number_id', '');

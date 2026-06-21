@@ -4,6 +4,7 @@ namespace Modules\StripehSubscribe\Http\Controllers;
 
 use App\Models\Plans;
 use App\Models\User;
+use App\Services\DefaultPlanService;
 use App\Services\PlanSeatBillingService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -145,9 +146,14 @@ class Main extends Controller
 
         switch ($event->type) {
             case 'checkout.session.completed':
-                $session = $event->data->object; // Process session data
+                $session = $event->data->object;
 
                 return $this->handleCheckoutSessionCompleted($session);
+
+            case 'customer.subscription.deleted':
+            case 'customer.subscription.updated':
+                app(DefaultPlanService::class)->handleStripeSubscriptionChange((array) $event->data->object);
+
                 break;
 
             case 'payment_intent.succeeded':

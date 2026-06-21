@@ -20,6 +20,7 @@ Route::group([
 
         //Flows
         Route::get('flows', 'FlowsController@index')->name('flows.index');
+        Route::get('flows/template/{template}', 'FlowsController@createFromTemplate')->name('flows.create-from-template');
         Route::get('flows/{flow}/edit', 'FlowsController@edit')->name('flows.edit');
         Route::get('flows/create', 'FlowsController@create')->name('flows.create');
         Route::post('flows', 'FlowsController@store')->name('flows.store');
