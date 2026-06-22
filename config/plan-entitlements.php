@@ -184,7 +184,7 @@ return [
         'voice' => 'WhatsApp voice calling',
         'journeys' => 'Journey pipelines',
         'payments' => 'In-chat payments',
-        'reminders' => 'Bookings & appointments',
+        'reminders' => 'Bookings (appointments & events)',
         'knowledge' => 'Knowledge base',
         'api_access' => 'REST API access',
     ],

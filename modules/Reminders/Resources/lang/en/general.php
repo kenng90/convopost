@@ -2,7 +2,7 @@
 
 return [
 
-    'name'              => 'Bookings',
-    'description'       => 'This is my awesome module',
+    'name' => 'Bookings',
+    'description' => 'One-to-one appointments and fixed-date events with WhatsApp notifications.',
 
 ];

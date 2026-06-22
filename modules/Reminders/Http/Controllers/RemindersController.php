@@ -86,14 +86,14 @@ class RemindersController extends Controller
 
         return view($this->view_path.'index', ['setup' => [
             'usefilter' => true,
-            'title' => __('Client notification rules'),
+            'title' => __('Client notifications'),
             'subtitle' => __('Rules for WhatsApp messages sent before or after appointments and events. Service- and event-managed rules sync from their setup pages.'),
             'action_link' => route('reminders.sources.index'),
             'action_name' => __('Configure on services'),
             'action_link2' => route('campaigns.create', ['type' => 'group']).'?type=reminder',
             'action_name2' => __('Advanced manual rule'),
             'items' => $items,
-            'item_names' => __('notification rules'),
+            'item_names' => __('client notifications'),
             'webroute_path' => $this->webroute_path,
             'fields' => $this->getFields(),
             'filterFields' => $this->getFilterFields(),
@@ -101,7 +101,7 @@ class RemindersController extends Controller
             'parameter_name' => $this->parameter_name,
             'parameters' => count($_GET) != 0,
             'breadcrumbs' => [
-                [__('Client notification rules'), '#'],
+                [__('Client notifications'), '#'],
             ],
         ]]);
     }
@@ -117,7 +117,7 @@ class RemindersController extends Controller
 
         return redirect()
             ->route('reminders.sources.index')
-            ->withStatus(__('Configure client notifications on each service. Use “Advanced manual rule” from the notification rules list only for custom rules not tied to a service.'));
+            ->withStatus(__('Configure client notifications on each service. Use “Advanced manual rule” from the client notifications list only for custom rules not tied to a service.'));
     }
 
     /**

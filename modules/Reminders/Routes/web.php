@@ -50,6 +50,8 @@ Route::group([
 
     Route::prefix('reminders')->group(function () {
 
+        Route::get('overview', 'BookingsOverviewController@index')->name('reminders.overview.index');
+
         Route::get('booking-settings', 'BookingSettingsController@index')->name('reminders.booking-settings.index');
         Route::post('booking-settings/calendar', 'BookingSettingsController@updateCalendar')->name('reminders.booking-settings.calendar');
         Route::post('booking-settings/inbox', 'BookingSettingsController@updateInbox')->name('reminders.booking-settings.inbox');

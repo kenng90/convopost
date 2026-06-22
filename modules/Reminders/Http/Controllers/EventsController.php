@@ -37,8 +37,9 @@ class EventsController extends Controller
             ['class' => $class, 'ftype' => 'input', 'name' => __('Virtual URL'), 'id' => 'virtual_url', 'placeholder' => 'https://zoom.us/...', 'required' => false, 'value' => $event?->virtual_url],
             ['class' => $class, 'ftype' => 'input', 'name' => __('Timezone'), 'id' => 'timezone', 'placeholder' => 'UTC', 'required' => true, 'value' => $event?->timezone ?? config('app.timezone', 'UTC')],
             ['class' => $class, 'ftype' => 'bool', 'name' => __('Published'), 'id' => 'is_published', 'required' => false, 'value' => $event?->is_published ?? false],
-            ['class' => $class, 'ftype' => 'select', 'name' => __('Department'), 'id' => 'department_id', 'required' => false, 'value' => $event?->department_id, 'data' => ['' => __('None')] + Department::query()->orderBy('name')->pluck('name', 'id')->toArray()],
-            ['class' => $class, 'ftype' => 'select', 'name' => __('Host'), 'id' => 'appointment_staff_id', 'required' => false, 'value' => $event?->appointment_staff_id, 'data' => ['' => __('None')] + AppointmentStaff::query()->orderBy('name')->pluck('name', 'id')->toArray()],
+            ['class' => $class, 'ftype' => 'select', 'name' => __('Department'), 'id' => 'department_id', 'required' => false, 'value' => $event?->department_id, 'data' => ['' => __('None')] + Department::query()->orderBy('name')->pluck('name', 'id')->toArray(), 'additionalInfo' => __('Optional label for your records. Does not filter the public events page or affect registration.')],
+            ['class' => $class, 'ftype' => 'select', 'name' => __('Host'), 'id' => 'appointment_staff_id', 'required' => false, 'value' => $event?->appointment_staff_id, 'data' => ['' => __('None')] + AppointmentStaff::query()->orderBy('name')->pluck('name', 'id')->toArray(), 'additionalInfo' => __('Optional. Choose someone from Bookings → Team to receive WhatsApp alerts when guests register or cancel.')],
+            ['class' => 'col-md-12', 'ftype' => 'info', 'id' => 'event_calendar_note', 'name' => __('Google Calendar'), 'text' => __('Events do not sync to Google Calendar. Calendar integration applies to one-to-one appointments only.')],
             ['class' => 'col-md-12', 'ftype' => 'info', 'id' => 'event_notifications_intro', 'name' => __('Client notifications'), 'text' => __('Confirmation and reminder messages for registrants.')],
             ['class' => $class, 'ftype' => 'select', 'name' => __('Confirmation campaign'), 'id' => 'confirmation_campaign_id', 'required' => false, 'value' => $event?->confirmation_campaign_id, 'data' => ['' => __('None')] + $campaigns],
             ['class' => $class, 'ftype' => 'select', 'name' => __('Reminder before (campaign)'), 'id' => 'reminder_before_campaign_id', 'required' => false, 'value' => $event?->reminder_before_campaign_id, 'data' => ['' => __('None')] + $campaigns],
@@ -58,7 +59,7 @@ class EventsController extends Controller
 
         return view($this->view_path.'index', ['setup' => [
             'title' => __('Events'),
-            'subtitle' => __('Fixed-date events with seat capacity.'),
+            'subtitle' => __('Fixed-date events with seat capacity. Team and departments are managed under Bookings → Shared setup.'),
             'action_link' => route($this->webroute_path.'create'),
             'action_name' => __('Add event'),
             'items' => $items,
@@ -66,6 +67,7 @@ class EventsController extends Controller
             'webroute_path' => $this->webroute_path,
             'parameter_name' => 'event',
             'custom_table' => true,
+            'getting_started_type' => 'events',
         ]]);
     }
 

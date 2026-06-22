@@ -32,8 +32,8 @@ class BookingSettingsController extends Controller
         return view('reminders::booking-settings.index', [
             'setup' => [
                 'title' => __('Booking settings'),
-                'action_link' => route('reminders.reservations.index'),
-                'action_name' => __('Back to appointments'),
+                'action_link' => route('reminders.overview.index'),
+                'action_name' => __('Back to bookings'),
                 'iscontent' => true,
             ],
             'connected' => $this->googleCalendarService->isConnected($user),
@@ -108,6 +108,7 @@ class BookingSettingsController extends Controller
         return view('reminders::booking.catalog', [
             'company' => $company,
             'services' => $services,
+            'eventsEnabled' => $this->eventCatalogService->eventsEnabled($company),
         ]);
     }
 

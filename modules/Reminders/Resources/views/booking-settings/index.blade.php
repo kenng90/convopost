@@ -4,7 +4,7 @@
 <div class="card shadow-sm border-0">
     <div class="card-body">
         <h3 class="mb-3">{{ __('Google Calendar') }}</h3>
-        <p class="text-muted">{{ __('Connect your personal Google Calendar so availability reflects your busy times and new bookings appear on your calendar.') }}</p>
+        <p class="text-muted">{{ __('Connect your personal Google Calendar so availability reflects your busy times and new appointments appear on your calendar. This applies to one-to-one appointments only — events use fixed session dates and do not sync to Google Calendar.') }}</p>
 
         <div class="alert alert-secondary small mb-4">
             <strong>{{ __('Google redirect URI') }}:</strong>
@@ -62,13 +62,13 @@
 
         <hr class="my-4">
         <h3 class="mb-2">{{ __('Team inbox') }}</h3>
-        <p class="text-muted">{{ __('By default, customers who only book an appointment do not appear in the chat inbox. Agents can open a conversation from the booking detail page when needed.') }}</p>
+        <p class="text-muted">{{ __('By default, customers who book an appointment or register for an event do not appear in the chat inbox. Agents can open a conversation from the booking or registration detail page when needed.') }}</p>
 
         <form method="POST" action="{{ route('reminders.booking-settings.inbox') }}">
             @csrf
             <div class="custom-control custom-checkbox mb-3">
                 <input type="checkbox" class="custom-control-input" id="booking_contacts_in_inbox" name="booking_contacts_in_inbox" value="1" @if($bookingContactsInInbox) checked @endif>
-                <label class="custom-control-label" for="booking_contacts_in_inbox">{{ __('Show new booking customers in inbox automatically') }}</label>
+                <label class="custom-control-label" for="booking_contacts_in_inbox">{{ __('Show new appointment and event customers in inbox automatically') }}</label>
             </div>
             <button type="submit" class="btn btn-primary">{{ __('Save inbox settings') }}</button>
         </form>

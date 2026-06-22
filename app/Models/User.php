@@ -343,6 +343,13 @@ class User extends Authenticatable
                     continue;
                 }
 
+                if (isset($menu['menus']) && is_array($menu['menus'])) {
+                    $menu['menus'] = array_values(array_filter(
+                        $menu['menus'],
+                        fn (array $submenu) => $this->ownerMenuVisibleForCompany($submenu)
+                    ));
+                }
+
                 $menus[] = $menu;
             }
         }

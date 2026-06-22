@@ -42,12 +42,12 @@ class ReservationsController extends Controller
     /**
      * Title of this crud.
      */
-    private $title = 'reservation';
+    private $title = 'appointment';
 
     /**
      * Title of this crud in plural.
      */
-    private $titlePlural = 'reservations';
+    private $titlePlural = 'appointments';
 
     private function getFields($class = 'col-md-4')
     {
@@ -72,16 +72,16 @@ class ReservationsController extends Controller
             })->pluck('text', 'id')->toArray(),
         ];
 
-        //Add source
+        //Add service
         $fields[] = [
             'class' => $class,
             'ftype' => 'select',
-            'name' => 'Source',
+            'name' => 'Service',
             'id' => 'source_id',
-            'placeholder' => 'Select source',
+            'placeholder' => 'Select service',
             'required' => true,
-            'label' => __('Source'),
-            'additionalInfo' => "<a class='mt-2' href='".route('reminders.sources.create')."'>".__('Add new source').'</a>',
+            'label' => __('Service'),
+            'additionalInfo' => "<a class='mt-2' href='".route('reminders.sources.create')."'>".__('Add new service').'</a>',
             'data' => Source::pluck('name', 'id')->toArray(),
         ];
 
@@ -258,7 +258,7 @@ class ReservationsController extends Controller
             'title' => __('Appointments'),
             'subtitle' => __('One-to-one bookings via web, WhatsApp, API, or manually.'),
             'action_link' => route($this->webroute_path.'create'),
-            'action_name' => __('crud.add_new_item', ['item' => __($this->title)]),
+            'action_name' => __('Add appointment'),
             'action_link2' => route($this->webroute_path.'export', $exportQuery),
             'action_name2' => __('Export CSV'),
             'items' => $items,
@@ -269,6 +269,7 @@ class ReservationsController extends Controller
             'custom_table' => true,
             'parameter_name' => $this->parameter_name,
             'parameters' => count($request->query()) !== 0,
+            'getting_started_type' => 'appointments',
             'breadcrumbs' => [
                 [__('Appointments'), '#'],
             ],
@@ -332,7 +333,7 @@ class ReservationsController extends Controller
 
         return view($this->view_path.'show', [
             'setup' => [
-                'title' => __('Reservation').' #'.($reservation->external_id ?: $reservation->id),
+                'title' => __('Appointment').' #'.($reservation->external_id ?: $reservation->id),
                 'subtitle' => $reservation->source?->name,
                 'action_link' => route($this->webroute_path.'index'),
                 'action_name' => __('Back to list'),
@@ -377,7 +378,7 @@ class ReservationsController extends Controller
         $this->authChecker();
 
         return view('general.form', ['setup' => [
-            'title' => __('crud.new_item', ['item' => __($this->title)]),
+            'title' => __('crud.new_item', ['item' => __('appointment')]),
             'action_link' => route($this->webroute_path.'index'),
             'action_name' => __('crud.back'),
             'iscontent' => true,

@@ -22,6 +22,7 @@ class DepartmentsController extends Controller
     private function fields(?Department $department = null): array
     {
         return [
+            ['class' => 'col-md-12', 'ftype' => 'info', 'id' => 'department_intro', 'name' => __('About departments'), 'text' => __('Working hours and closure dates apply to appointment services in this department. Events use their own session dates — department on an event is an optional label only.')],
             ['class' => 'col-md-6', 'ftype' => 'input', 'name' => 'Name', 'id' => 'name', 'placeholder' => 'Reception', 'required' => true, 'value' => $department?->name],
             ['class' => 'col-md-6', 'ftype' => 'textarea', 'name' => 'Description', 'id' => 'description', 'required' => false, 'value' => $department?->description],
             ['class' => 'col-md-6', 'ftype' => 'bool', 'name' => 'Active', 'id' => 'is_active', 'required' => false, 'value' => $department?->is_active ?? true],
@@ -54,6 +55,7 @@ class DepartmentsController extends Controller
 
         return view($this->view_path.'index', ['setup' => [
             'title' => __('Departments'),
+            'subtitle' => __('Shared by appointments and events. Working hours here affect appointment availability only.'),
             'action_link' => route($this->webroute_path.'create'),
             'action_name' => __('Add department'),
             'items' => $items,
@@ -61,6 +63,7 @@ class DepartmentsController extends Controller
             'webroute_path' => $this->webroute_path,
             'parameter_name' => 'department',
             'custom_table' => true,
+            'getting_started_type' => 'departments',
         ]]);
     }
 

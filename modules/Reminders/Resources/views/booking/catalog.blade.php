@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $company->name }} — Book appointment</title>
+    <title>{{ $company->name }} — {{ __('Book an appointment') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -17,11 +17,13 @@
     <div class="bg-white rounded-2xl shadow-lg p-6 space-y-6">
         <div>
             <p class="text-sm text-slate-500">{{ $company->name }}</p>
-            <h1 class="text-2xl font-semibold text-slate-900">Book an appointment</h1>
-            <p class="text-sm text-slate-500 mt-1">Choose a service to continue.</p>
-            <p class="text-sm mt-3">
-                <a href="{{ route('reminders.booking.events', ['subdomain' => $company->subdomain]) }}" class="text-violet-600 hover:underline">Browse upcoming events</a>
-            </p>
+            <h1 class="text-2xl font-semibold text-slate-900">{{ __('Book an appointment') }}</h1>
+            <p class="text-sm text-slate-500 mt-1">{{ __('Choose a service to continue.') }}</p>
+            @if ($eventsEnabled ?? false)
+                <p class="text-sm mt-3">
+                    <a href="{{ route('reminders.booking.events', ['subdomain' => $company->subdomain]) }}" class="text-violet-600 hover:underline">{{ __('Browse upcoming events') }}</a>
+                </p>
+            @endif
         </div>
 
         <div class="space-y-2">
@@ -36,7 +38,7 @@
             </template>
         </div>
 
-        <p x-show="!services.length" class="text-sm text-slate-500">No bookable services are available right now.</p>
+        <p x-show="!services.length" class="text-sm text-slate-500">{{ __('No bookable services are available right now.') }}</p>
     </div>
 </div>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>

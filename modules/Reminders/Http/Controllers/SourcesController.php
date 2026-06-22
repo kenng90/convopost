@@ -54,7 +54,7 @@ class SourcesController extends Controller
             'required' => false,
             'value' => $source?->department_id,
             'data' => ['' => __('All departments')] + Department::query()->orderBy('name')->pluck('name', 'id')->toArray(),
-            'additionalInfo' => __('Optional. Limits which appointment team members can be assigned.'),
+            'additionalInfo' => __('Optional. Limits which team members can be assigned to this service.'),
         ];
 
         $fields[] = [
@@ -145,7 +145,7 @@ class SourcesController extends Controller
         $fields[] = [
             'class' => $class,
             'ftype' => 'select',
-            'name' => __('Assigned appointment team'),
+            'name' => __('Assigned team'),
             'id' => 'appointment_staff_ids[]',
             'placeholder' => __('Select team members'),
             'required' => false,
@@ -164,7 +164,7 @@ class SourcesController extends Controller
             'ftype' => 'info',
             'id' => 'client_notifications_intro',
             'name' => __('Client notifications'),
-            'text' => __('WhatsApp messages sent to the client before and after their appointment. When you save this service, matching rules appear automatically under Notification rules — edit them here.'),
+            'text' => __('WhatsApp messages sent to the client before and after their appointment. When you save this service, matching rules appear automatically under Client notifications — edit them here.'),
             'button' => [
                 'link' => route('reminders.reminders.index'),
                 'text' => __('View synced rules'),
@@ -269,6 +269,7 @@ class SourcesController extends Controller
         return view($this->view_path.'index', ['setup' => [
             'usefilter' => true,
             'title' => __('Services'),
+            'subtitle' => __('Bookable appointment types for your public booking page.'),
             'action_link' => route($this->webroute_path.'create'),
             'action_name' => __('Add service'),
             'items' => $items,
@@ -279,6 +280,7 @@ class SourcesController extends Controller
             'custom_table' => true,
             'parameter_name' => $this->parameter_name,
             'parameters' => count($_GET) != 0,
+            'getting_started_type' => 'services',
             'breadcrumbs' => [
                 [__('Services'), '#'],
             ],
