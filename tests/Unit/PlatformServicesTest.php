@@ -9,7 +9,7 @@ class PlatformServicesTest extends TestCase
 {
     public function test_ai_flow_assistant_builds_mpesa_flow_for_payment_description(): void
     {
-        $draft = app(AiFlowAssistantService::class)->generate('When customer says pay, collect M-Pesa payment');
+        $draft = app(AiFlowAssistantService::class)->generateRuleBased('When customer says pay, collect M-Pesa payment');
 
         $this->assertNotEmpty($draft['nodes']);
         $this->assertTrue(
@@ -29,9 +29,34 @@ class PlatformServicesTest extends TestCase
         $this->assertArrayHasKey('support_ai_escalation', $templates);
     }
 
-    public function test_managed_ai_config_defines_tiers(): void
+    public function test_managed_ai_credit_actions_are_registered(): void
     {
-        $this->assertArrayHasKey('pro', config('managed-ai.tiers'));
-        $this->assertGreaterThan(0, config('managed-ai.tiers.pro.monthly_credits'));
+        $actions = collect(config('credit-actions.actions'))->pluck('action');
+
+        $this->assertTrue($actions->contains('ai_flow_generate'));
+        $this->assertTrue($actions->contains('ai_llm_reply'));
+        $this->assertTrue($actions->contains('ai_embedding'));
+    }
+
+    public function test_pro_tier_includes_ai_flow_assistant_capability(): void
+    {
+        $capabilities = config('plan-entitlements.tiers.pro.capabilities');
+
+        $this->assertContains('ai_flow_assistant', $capabilities);
+    }
+
+    public function test_starter_tier_excludes_ai_flow_assistant_capability(): void
+    {
+        $capabilities = config('plan-entitlements.tiers.starter.capabilities');
+
+        $this->assertNotContains('ai_flow_assistant', $capabilities);
+    }
+
+    public function test_usage_limit_labels_reference_billing_period(): void
+    {
+        $labels = config('plan-entitlements.limit_labels');
+
+        $this->assertStringContainsString('billing period', $labels['campaigns']);
+        $this->assertStringContainsString('billing period', $labels['messages']);
     }
 }

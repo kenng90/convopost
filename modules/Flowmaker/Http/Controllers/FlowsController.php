@@ -4,6 +4,8 @@ namespace Modules\Flowmaker\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Services\Flowmaker\FlowTemplateService;
+use App\Services\PlanEntitlementResolver;
+use App\Services\PlanUsageLimit;
 use App\Services\Platform\ManagedAiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -105,12 +107,17 @@ class FlowsController extends Controller
         $company = auth()->user()?->currentCompany();
         $aiStatus = $company
             ? app(ManagedAiService::class)->status($company)
-            : ['enabled' => false, 'monthly_allowance' => 0, 'remaining' => 0];
+            : ['enabled' => false, 'monthly_allowance' => 0, 'remaining' => 0, 'can_generate' => false, 'generate_cost' => 0];
+
+        $user = auth()->user();
+        $plan = $user ? app(PlanUsageLimit::class)->resolvePlanForUser($user) : null;
+        $hasAiFlowAssistant = $plan && app(PlanEntitlementResolver::class)->hasCapability($plan, 'ai_flow_assistant');
 
         return view($this->view_path.'index', [
             'setup' => $setup,
             'templates' => $this->templates->all(),
             'aiStatus' => $aiStatus,
+            'hasAiFlowAssistant' => $hasAiFlowAssistant,
         ]);
     }
 

@@ -153,6 +153,7 @@ class PlansController extends Controller
 
         $this->updatePlanPlugins($plan, $request->pluginsSelector);
         $this->updatePlanCapabilities($plan, $request->capabilitiesSelector);
+        $this->updatePlanManagedAiMonthlyCredits($plan, $request);
 
         return redirect()->route('plans.index')->withStatus(__('Plan successfully created!'));
     }
@@ -248,6 +249,7 @@ class PlansController extends Controller
 
         $this->updatePlanPlugins($plan, $request->pluginsSelector);
         $this->updatePlanCapabilities($plan, $request->capabilitiesSelector);
+        $this->updatePlanManagedAiMonthlyCredits($plan, $request);
 
         return redirect()->route('plans.index')->withStatus(__('Plan successfully updated!'));
     }
@@ -270,6 +272,16 @@ class PlansController extends Controller
         } else {
             $plan->setConfig('capabilities', null);
         }
+    }
+
+    private function updatePlanManagedAiMonthlyCredits(Plans $plan, Request $request): void
+    {
+        if (! config('managed-ai.enabled', true)) {
+            return;
+        }
+
+        $credits = max(0, (int) $request->input('managed_ai_monthly_credits', 0));
+        $plan->setConfig('managed_ai_monthly_credits', (string) $credits);
     }
 
     /**

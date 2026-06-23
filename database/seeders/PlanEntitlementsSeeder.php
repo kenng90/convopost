@@ -55,6 +55,11 @@ class PlanEntitlementsSeeder extends Seeder
             } else {
                 $plan->setConfig('capabilities', json_encode($tier['capabilities']));
             }
+
+            $plan->setConfig(
+                'managed_ai_monthly_credits',
+                (string) ($tier['managed_ai_monthly_credits'] ?? config('managed-ai.default_monthly_credits', 0))
+            );
         }
     }
 }

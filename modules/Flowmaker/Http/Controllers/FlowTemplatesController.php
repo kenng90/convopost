@@ -50,26 +50,39 @@ class FlowTemplatesController extends Controller
             'name' => 'nullable|string|max:120',
         ]);
 
-        if (! $this->managedAi->canConsume($company, 5)) {
+        $cost = $this->managedAi->actionCost('ai_flow_generate');
+
+        if (! $this->managedAi->canPerformAction($company, 'ai_flow_generate')) {
             return response()->json([
                 'success' => false,
-                'message' => __('Managed AI credits exhausted. Add an OpenRouter key or upgrade your plan.'),
+                'message' => $this->managedAi->exhaustionMessage($company),
             ], 402);
         }
 
-        $draft = $this->assistant->generate($validated['description']);
+        try {
+            $draft = $this->assistant->generate($company, $validated['description']);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
         $flow = Flow::create(['name' => $validated['name'] ?: __('AI Draft Flow')]);
         $flow->flow_data = json_encode(['nodes' => $draft['nodes'], 'edges' => $draft['edges']]);
         $flow->save();
 
-        $this->managedAi->consume($company, 5);
         $company->setConfig('activation_flow_installed', 'yes');
 
         return response()->json([
             'success' => true,
             'summary' => $draft['summary'],
+            'source' => $draft['source'] ?? 'llm',
             'flow_id' => $flow->id,
             'edit_url' => route('flowmaker.edit', $flow),
+            'credits_charged' => ($draft['source'] ?? '') === 'rules' && ! config('managed-ai.charge_rules_fallback', false)
+                ? 0
+                : ($this->managedAi->hasByokOpenRouter($company) ? 0 : $cost),
         ]);
     }
 }

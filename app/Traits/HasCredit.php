@@ -130,21 +130,39 @@ trait HasCredit
 
     public function getPercentageOfCreditsUsed()
     {
-        $totalCredits = $this->credits()
-            ->where(function ($query) {
-                $query->whereNull('expiration_date')
-                    ->orWhere('expiration_date', '>=', now());
-            })
-            ->sum('credit_amount');
-        $usedCredits = $this->credits()
-            ->where(function ($query) {
-                $query->whereNull('expiration_date')
-                    ->orWhere('expiration_date', '>=', now());
-            })
-            ->sum('used_credit_amount');
+        $stats = $this->getMessagingCreditWalletStats();
 
-        $percentage = $totalCredits > 0 ? round(($usedCredits / $totalCredits) * 100) : 0;
+        return [$stats['percent_used'], $stats['total'], $stats['used']];
+    }
 
-        return [$percentage, $totalCredits, $usedCredits];
+    /**
+     * @return array{available: int, used: int, total: int, percent_used: int}
+     */
+    public function getMessagingCreditWalletStats(): array
+    {
+        $nonExpiredQuery = $this->credits()->where(function ($query) {
+            $query->whereNull('expiration_date')
+                ->orWhere('expiration_date', '>=', Carbon::now());
+        });
+
+        $totalGranted = (int) (clone $nonExpiredQuery)->sum('credit_amount');
+        $remainingTotal = (int) (clone $nonExpiredQuery)->sum('remaining_credit_amount');
+        $used = max(0, $totalGranted - $remainingTotal);
+        $available = (int) $this->getTotalRemainingCredits();
+
+        $percentUsed = 0;
+        if ($totalGranted > 0) {
+            $percentUsed = (int) round(($used / $totalGranted) * 100);
+            if ($used > 0 && $percentUsed === 0) {
+                $percentUsed = 1;
+            }
+        }
+
+        return [
+            'available' => $available,
+            'used' => $used,
+            'total' => $totalGranted,
+            'percent_used' => $percentUsed,
+        ];
     }
 }

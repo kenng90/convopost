@@ -28,9 +28,20 @@
                 </div>
                 @endif
 
+                @if (!empty($planAttribute['creditWallets']))
+                <div class="mt-3">
+                    <h4 class="mb-3">{{ __('Credits this billing period') }}</h4>
+                    @include('partials.credit-wallets', [
+                        'creditWallets' => $planAttribute['creditWallets'],
+                        'rowClass' => '',
+                        'columnClass' => 'col-md-6',
+                    ])
+                </div>
+                @endif
+
                 @if (!empty($planAttribute['usageSummary']))
                 <div class="mt-3">
-                    <h4 class="mb-3">{{ __('Plan usage this period') }}</h4>
+                    <h4 class="mb-3">{{ __('Plan usage this billing period') }}</h4>
                     @foreach ($planAttribute['usageSummary'] as $usage)
                     <div class="alert alert-{{ $usage['alert'] }}" role="alert">
                         {{ $usage['label'] }}:

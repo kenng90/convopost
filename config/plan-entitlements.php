@@ -41,6 +41,7 @@ return [
                 'agents',
                 'flowmaker',
             ],
+            'managed_ai_monthly_credits' => 50,
             'capabilities' => [
                 'inbox',
                 'contacts',
@@ -74,6 +75,7 @@ return [
                 'woolist',
                 'embedwhatsapp',
             ],
+            'managed_ai_monthly_credits' => 250,
             'capabilities' => [
                 'inbox',
                 'contacts',
@@ -116,6 +118,7 @@ return [
                 'knowledge',
                 'reports',
             ],
+            'managed_ai_monthly_credits' => 1000,
             'capabilities' => [
                 'inbox',
                 'contacts',
@@ -130,6 +133,7 @@ return [
                 'reminders',
                 'knowledge',
                 'api_access',
+                'ai_flow_assistant',
             ],
         ],
 
@@ -150,6 +154,7 @@ return [
             'included_companies' => 0,
             'company_seat_price' => 0,
             'plugins' => null,
+            'managed_ai_monthly_credits' => 5000,
             'capabilities' => null,
         ],
     ],
@@ -158,8 +163,8 @@ return [
     | Human-readable labels for usage meters on the billing page.
     */
     'limit_labels' => [
-        'campaigns' => 'Campaigns this period',
-        'messages' => 'Messages this period',
+        'campaigns' => 'Campaigns this billing period',
+        'messages' => 'Messages this billing period',
         'contacts' => 'Contacts stored',
     ],
 
@@ -187,6 +192,7 @@ return [
         'reminders' => 'Bookings (appointments & events)',
         'knowledge' => 'Knowledge base',
         'api_access' => 'REST API access',
+        'ai_flow_assistant' => 'AI Flow Assistant',
     ],
 
 ];

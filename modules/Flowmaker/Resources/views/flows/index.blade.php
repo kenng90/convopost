@@ -41,28 +41,76 @@
     @endforeach
 @endsection
 @section('customfooter')
+@if(!empty($hasAiFlowAssistant))
 <div class="row mt-4">
     <div class="col-12">
         <div class="card shadow-sm">
             <div class="card-body">
                 <h3 class="mb-1">{{ __('AI Flow Assistant') }}</h3>
                 <p class="text-muted small mb-3">{{ __('Describe what you want in plain language — we draft a flow you can review and publish.') }}</p>
+
+                @php
+                    $generateCost = (int) ($aiStatus['generate_cost'] ?? 5);
+                    $canGenerate = !empty($aiStatus['can_generate']);
+                    $hasOwnKey = !empty($aiStatus['has_own_key']);
+                @endphp
+
                 @if(!empty($aiStatus['enabled']) && ($aiStatus['monthly_allowance'] ?? 0) > 0)
-                    <p class="small text-muted mb-3">
-                        {{ __('AI credits remaining this month: :count', ['count' => $aiStatus['remaining'] ?? 0]) }}
+                    <p class="small text-muted mb-2">
+                        {{ __('AI credits remaining this billing period: :count of :total', [
+                            'count' => $aiStatus['remaining'] ?? 0,
+                            'total' => $aiStatus['monthly_allowance'] ?? 0,
+                        ]) }}
                     </p>
                 @endif
+
+                @if($hasOwnKey)
+                    <p class="small text-muted mb-2">{{ __('Using your OpenRouter API key — drafts do not use AI credits.') }}</p>
+                @elseif($generateCost > 0)
+                    <p class="small text-muted mb-2">
+                        {{ trans_choice(':count AI credit per draft|:count AI credits per draft', $generateCost, ['count' => $generateCost]) }}
+                    </p>
+                @endif
+
                 <form id="ai-flow-form" class="form-inline flex-wrap">
                     @csrf
-                    <input type="text" name="description" class="form-control flex-grow-1 mb-2 mr-2" style="min-width: 280px;" placeholder="{{ __('When someone says pay, send M-Pesa STK and confirm...') }}" required minlength="10">
-                    <input type="text" name="name" class="form-control mb-2 mr-2" placeholder="{{ __('Flow name (optional)') }}">
-                    <button type="submit" class="btn btn-primary mb-2">{{ __('Generate draft') }}</button>
+                    <input type="text" name="description" class="form-control flex-grow-1 mb-2 mr-2" style="min-width: 280px;" placeholder="{{ __('When someone says pay, send M-Pesa STK and confirm...') }}" required minlength="10" @if(!$canGenerate) disabled @endif>
+                    <input type="text" name="name" class="form-control mb-2 mr-2" placeholder="{{ __('Flow name (optional)') }}" @if(!$canGenerate) disabled @endif>
+                    <button type="submit" class="btn btn-primary mb-2" @if(!$canGenerate) disabled @endif>{{ __('Generate draft') }}</button>
                 </form>
+
+                @if(!$canGenerate)
+                    <p class="small text-warning mb-0 mt-2">
+                        @if(($aiStatus['monthly_allowance'] ?? 0) <= 0 && !$hasOwnKey)
+                            {{ __('Managed AI is available on Pro and above, or add your OpenRouter key in workspace settings.') }}
+                        @else
+                            {{ __('Not enough AI credits for a draft this billing period.') }}
+                            <a href="{{ route('plans.current') }}">{{ __('View billing') }}</a>
+                        @endif
+                    </p>
+                @endif
+
                 <div id="ai-flow-result" class="small text-muted mt-2"></div>
             </div>
         </div>
     </div>
 </div>
+@else
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-light">
+            <div class="card-body">
+                <h3 class="mb-1">{{ __('AI Flow Assistant') }}</h3>
+                <p class="text-muted small mb-2">{{ __('Generate draft flows from plain-language descriptions.') }}</p>
+                <p class="small mb-0">
+                    {{ __('Included on Pro and Agency plans.') }}
+                    <a href="{{ route('plans.current') }}">{{ __('Upgrade plan') }}</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
 <div class="row mt-4">
     <div class="col-12 mb-3">
@@ -89,6 +137,7 @@
 @endsection
 
 @push('js')
+@if(!empty($hasAiFlowAssistant))
 <script>
 document.getElementById('ai-flow-form')?.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -107,9 +156,9 @@ document.getElementById('ai-flow-form')?.addEventListener('submit', function (e)
             name: form.name.value,
         }),
     })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
+    .then(r => r.json().then(data => ({ ok: r.ok, data })))
+    .then(({ ok, data }) => {
+        if (ok && data.success) {
             result.innerHTML = data.summary + ' <a href="' + data.edit_url + '">{{ __("Open editor") }}</a>';
         } else {
             result.textContent = data.message || '{{ __("Generation failed") }}';
@@ -118,4 +167,5 @@ document.getElementById('ai-flow-form')?.addEventListener('submit', function (e)
     .catch(() => result.textContent = '{{ __("Generation failed") }}');
 });
 </script>
+@endif
 @endpush

@@ -37,7 +37,10 @@
                                     <th scope="col">{{ __('Name') }}</th>
                                     <th scope="col">{{ __('Price') }}</th>
                                     @if (config('settings.enable_credits'))
-                                        <th scope="col">{{ __('Credit amount') }}</th>
+                                        <th scope="col">{{ __('Messaging credits') }}</th>
+                                    @endif
+                                    @if (config('managed-ai.enabled', true))
+                                        <th scope="col">{{ __('AI credits') }}</th>
                                     @endif
                                     <th scope="col">{{ __('Period') }}</th>
                                     <th scope="col"></th>
@@ -50,6 +53,9 @@
                                     <td>@money($plan->price, config('settings.site_currency','usd'),config('settings.site_do_currency',true))/{{ $plan->period==1?__('m'):__('y') }}</td>
                                     @if (config('settings.enable_credits'))
                                         <td>{{ $plan->credit_amount }}</td>
+                                    @endif
+                                    @if (config('managed-ai.enabled', true))
+                                        <td>{{ $plan->getConfig('managed_ai_monthly_credits', 0) }}</td>
                                     @endif
                                     <td>{{ $plan->period == 1 ? __("Monthly") : __("Anually") }}</td>
                                    

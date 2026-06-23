@@ -2,6 +2,7 @@
 
 namespace Modules\Flowmaker\Http\Controllers;
 
+use App\Services\Platform\ManagedAiService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -20,8 +21,11 @@ class AIController extends Controller
 
     protected $documentParserService;
 
-    public function __construct(WebsiteScraperService $websiteScraperService, DocumentParserService $documentParserService)
-    {
+    public function __construct(
+        WebsiteScraperService $websiteScraperService,
+        DocumentParserService $documentParserService,
+        private ManagedAiService $managedAi,
+    ) {
         $this->websiteScraperService = $websiteScraperService;
         $this->documentParserService = $documentParserService;
     }
@@ -99,6 +103,7 @@ class AIController extends Controller
             $fileName = $request->input('file_name');
             $fileType = $request->input('file_type');
             $flowId = $request->input('flow_id');
+            $flow = Flow::findOrFail($flowId);
 
             Log::info('Processing file for embeddings', [
                 'file_url' => $fileUrl,
@@ -153,7 +158,7 @@ class AIController extends Controller
                     continue;
                 }
 
-                $embedding = $this->createEmbedding($chunk);
+                $embedding = $this->createEmbedding($chunk, $flow);
 
                 if ($embedding) {
                     EmbeddedChunk::create([
@@ -216,6 +221,7 @@ class AIController extends Controller
             $question = trim($request->input('question'));
             $answer = trim($request->input('answer'));
             $flowId = $request->input('flow_id');
+            $flow = Flow::findOrFail($flowId);
 
             // Check if this exact FAQ already exists for this flow
             $existingFAQ = Flowdocument::where('flow_id', $flowId)
@@ -250,7 +256,7 @@ class AIController extends Controller
                 ], 422);
             }
 
-            $embedding = $this->createEmbedding($combinedContent);
+            $embedding = $this->createEmbedding($combinedContent, $flow);
 
             if (! $embedding) {
                 // Delete the document if embedding creation failed
@@ -334,6 +340,7 @@ class AIController extends Controller
 
             $url = $request->input('url');
             $flowId = $request->input('flow_id');
+            $flow = Flow::findOrFail($flowId);
 
             // Check if this URL has already been processed for this flow
             $existingDocument = Flowdocument::where('flow_id', $flowId)
@@ -374,7 +381,7 @@ class AIController extends Controller
                     continue;
                 }
 
-                $embedding = $this->createEmbedding($chunk);
+                $embedding = $this->createEmbedding($chunk, $flow);
 
                 if ($embedding) {
                     EmbeddedChunk::create([
@@ -571,6 +578,8 @@ class AIController extends Controller
      */
     private function trainArticle($flowId, $article, $isUpdate = false)
     {
+        $flow = Flow::findOrFail($flowId);
+
         // Create unique identifier for this article
         $sourceUrl = "knowledge_article_{$article->id}";
 
@@ -616,7 +625,7 @@ class AIController extends Controller
                 continue;
             }
 
-            $embedding = $this->createEmbedding($chunk);
+            $embedding = $this->createEmbedding($chunk, $flow);
 
             if ($embedding) {
                 EmbeddedChunk::create([
@@ -638,12 +647,28 @@ class AIController extends Controller
     }
 
     /**
-     * Create embedding using OpenAI API
+     * Create embedding using OpenAI API (platform key is metered via managed AI credits).
      */
-    private function createEmbedding($text)
+    private function createEmbedding(string $text, Flow $flow): ?array
     {
         try {
-            $apiKey = config('wpbox.openai_api_key');
+            $company = $flow->company;
+            if (! $company) {
+                Log::error('Flow has no company for embedding metering');
+
+                return null;
+            }
+
+            $apiKey = $this->managedAi->platformOpenAiKey();
+            $usesPlatformKey = filled($apiKey);
+            $action = 'ai_embedding';
+            $cost = $this->managedAi->actionCost($action);
+
+            if ($usesPlatformKey && ! $this->managedAi->canConsume($company, $cost)) {
+                Log::warning('Managed AI credits exhausted for embedding', ['flow_id' => $flow->id]);
+
+                return null;
+            }
 
             if (empty($apiKey)) {
                 Log::error('OpenAI API key not configured');
@@ -661,13 +686,21 @@ class AIController extends Controller
 
             if ($response->successful()) {
                 $data = $response->json();
+                $embedding = $data['data'][0]['embedding'] ?? null;
 
-                return $data['data'][0]['embedding'] ?? null;
-            } else {
-                Log::error('OpenAI API error: '.$response->body());
+                if ($embedding && $usesPlatformKey) {
+                    $this->managedAi->consume($company, $cost, $action, [
+                        'model' => 'text-embedding-3-small',
+                        'flow_id' => $flow->id,
+                    ]);
+                }
 
-                return null;
+                return $embedding;
             }
+
+            Log::error('OpenAI API error: '.$response->body());
+
+            return null;
         } catch (\Exception $e) {
             Log::error('Error creating embedding: '.$e->getMessage());
 
