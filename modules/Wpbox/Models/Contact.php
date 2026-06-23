@@ -305,6 +305,7 @@ class Contact extends ModelsContact
             'buttons' => '[]',
             'components' => '',
             'fb_message_id' => $fb_message_id,
+            'extra' => $extra ?? '',
         ]);
 
         //Set the original message — queued to avoid blocking webhooks
@@ -354,13 +355,13 @@ class Contact extends ModelsContact
                 $this->resolved_chat = 0;
                 $broadcastChatListChange = true;
 
-                //Reply bots
-                if ($this->enabled_ai_bot) {
+                // Reply bots — skip title-based matching for interactive replies (list/button),
+                // those are routed by flow nodes using the persisted `extra` field.
+                if ($this->enabled_ai_bot && empty($extra)) {
                     $this->botReply($content, $messageToBeSend);
                 }
 
                 //Notify
-                $messageToBeSend->extra = $extra;
                 event(new ContactReplies(auth()->user(), $messageToBeSend, $this));
 
                 //Send the notification
@@ -371,8 +372,6 @@ class Contact extends ModelsContact
                 } catch (\Exception $e) {
 
                 }
-
-                $messageToBeSend->extra = null;
 
                 //Check if we need to update the contact based on the message
 

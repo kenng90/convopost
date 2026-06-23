@@ -1,13 +1,15 @@
 <?php
 
 namespace Modules\Wpbox\Jobs;
+
 use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Modules\Wpbox\Models\Message;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Modules\Wpbox\Models\Campaign;
+use Modules\Wpbox\Models\Message;
 
 class ReceiveUpdate implements ShouldQueue
 {
@@ -20,75 +22,75 @@ class ReceiveUpdate implements ShouldQueue
      */
     public function __construct(protected $value)
     {
-            
+
     }
 
     public function handle()
-{
-    Log::info("ReceiveUpdate JOB START", ['value' => $this->value]);
+    {
+        Log::info('ReceiveUpdate JOB START', ['value' => $this->value]);
 
-    try {
-        $value = $this->value;
+        try {
+            $value = $this->value;
 
-        if (!isset($value['statuses'])) {
-            Log::warning("No statuses in payload");
-            return;
-        }
+            if (! isset($value['statuses'])) {
+                Log::warning('No statuses in payload');
 
-        $newStatus = $value['statuses'][0]['status'] ?? null;
-        $messageFBID = $value['statuses'][0]['id'] ?? null;
+                return;
+            }
 
-        Log::info("Processing status", [
-            'status' => $newStatus,
-            'message_id' => $messageFBID
-        ]);
+            $newStatus = $value['statuses'][0]['status'] ?? null;
+            $messageFBID = $value['statuses'][0]['id'] ?? null;
 
-        if (!$messageFBID) {
-            Log::error("Missing message ID");
-            return;
-        }
+            Log::info('Processing status', [
+                'status' => $newStatus,
+                'message_id' => $messageFBID,
+            ]);
 
+            if (! $messageFBID) {
+                Log::error('Missing message ID');
+
+                return;
+            }
 
             //Status change -- Message update
-            $newStatus=$value['statuses'][0]['status'];
-            $messageFBID=$value['statuses'][0]['id'];
-            $message=Message::where('fb_message_id',$messageFBID)->first();
-            if($message){
-                $message_previous_status=$message->status;
-                if($newStatus=="sent"&&$message->status!=3){
-                    $message->status=2;
-                }else if($newStatus=="delivered"&&$message->status!=4){
-                    $message->status=3;
-                }else if($newStatus=="read"){
-                    $message->status=4;
-                }else if($newStatus=="failed"){
-                    $message->status=5;
-                    $message->error=$value['statuses'][0]['errors'][0]['message'];
+            $newStatus = $value['statuses'][0]['status'];
+            $messageFBID = $value['statuses'][0]['id'];
+            $message = Message::where('fb_message_id', $messageFBID)->first();
+            if ($message) {
+                $message_previous_status = $message->status;
+                if ($newStatus == 'sent' && $message->status != 3) {
+                    $message->status = 2;
+                } elseif ($newStatus == 'delivered' && $message->status != 4) {
+                    $message->status = 3;
+                } elseif ($newStatus == 'read') {
+                    $message->status = 4;
+                } elseif ($newStatus == 'failed') {
+                    $message->status = 5;
+                    $message->error = $value['statuses'][0]['errors'][0]['message'];
                 }
                 $message->update();
 
-                if($message->campaign_id!=null &&  $message_previous_status!=$message->status){
-                    $campaign=Campaign::where('id',$message->campaign_id)->first();
-                    if($campaign){
-                        if($newStatus=="sent"){
+                if ($message->campaign_id != null && $message_previous_status != $message->status) {
+                    $campaign = Campaign::where('id', $message->campaign_id)->first();
+                    if ($campaign) {
+                        if ($newStatus == 'sent') {
                             $campaign->increment('sended_to', 1);
-                        }else if($newStatus=="delivered"){
+                        } elseif ($newStatus == 'delivered') {
                             $campaign->increment('delivered_to', 1);
-                        }else if($newStatus=="read"){
+                        } elseif ($newStatus == 'read') {
                             $campaign->increment('read_by', 1);
                         }
                         $campaign->update();
                     }
-                    
+
                 }
             }
 
-    } catch (\Throwable $e) {
-        Log::error("ReceiveUpdate FAILED", [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
+        } catch (\Throwable $e) {
+            Log::error('ReceiveUpdate FAILED', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
     }
-}
-  
 }
