@@ -129,6 +129,7 @@ class ReportService
             'customer_name' => $invoice->customer_name,
             'customer_phone' => $invoice->customer_phone,
             'customer_email' => $invoice->customer_email,
+            'delivery_address' => $invoice->delivery_address,
             'currency' => $invoice->currency,
             'items' => $invoice->items ?? [],
             'invoice_amount' => (float) $invoice->amount,

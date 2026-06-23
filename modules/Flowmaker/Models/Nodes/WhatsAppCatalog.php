@@ -13,14 +13,38 @@ use Modules\Wpbox\Models\Message;
 
 class WhatsAppCatalog extends Node
 {
+    private const CHECKOUT_RESUMED_STATE = 'catalog_checkout_resumed';
+
     public function listenForReply($message, $data)
     {
         Log::info('WhatsApp Catalog: listening for product selection', ['nodeId' => $this->id]);
 
-        $extraData = $data->extra;
+        $extraData = is_object($data) ? ($data->extra ?? null) : ($data['extra'] ?? null);
+        $messageText = is_object($data) ? ($data->value ?? '') : ($data['value'] ?? '');
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
-        $settings = $this->getDataAsArray()['settings'] ?? [];
+
+        if (! $contact) {
+            return;
+        }
+
+        if ($this->isCheckoutCompleteSignal((string) $extraData)) {
+            $this->advanceAfterCheckout($message, $data, $contact);
+
+            return;
+        }
+
+        if (($extraData === null || $extraData === '') && $this->messageLooksLikeCatalogOrder($messageText)) {
+            if ($this->hasCheckoutAlreadyResumed($contact)) {
+                Log::info('WhatsApp Catalog: order message ignored, checkout already resumed', ['nodeId' => $this->id]);
+
+                return;
+            }
+
+            $this->advanceAfterCheckout($message, $data, $contact);
+
+            return;
+        }
 
         if ($extraData == null || $extraData == '') {
             Log::info('WhatsApp Catalog: no product selected');
@@ -28,6 +52,7 @@ class WhatsAppCatalog extends Node
             return;
         }
 
+        $settings = $this->getDataAsArray()['settings'] ?? [];
         $catalogId = $settings['catalogId'] ?? null;
         if (! $catalogId) {
             Log::error('WhatsApp Catalog: no catalog configured');
@@ -63,7 +88,7 @@ class WhatsAppCatalog extends Node
 
             $contact->setContactState($this->flow_id, 'selected_product', json_encode($selectedProduct));
 
-            $nextNode = $this->getNextNodeId('onProductSelected');
+            $nextNode = $this->resolveCheckoutNextNode();
             if ($nextNode) {
                 $nextNode->process($message, $data);
             }
@@ -81,10 +106,13 @@ class WhatsAppCatalog extends Node
         Log::info('WhatsApp Catalog: processing', ['isStartNode' => $this->isStartNode, 'nodeId' => $this->id]);
 
         if ($this->isStartNode) {
-            $extraData = $data->extra ?? null;
+            $extraData = is_object($data) ? ($data->extra ?? null) : ($data['extra'] ?? null);
+            $messageText = is_object($data) ? ($data->value ?? '') : ($data['value'] ?? '');
 
-            if (! empty($extraData)) {
-                Log::info('WhatsApp Catalog: resuming after product selection', ['extraData' => $extraData]);
+            if ($this->isCheckoutCompleteSignal((string) $extraData)
+                || (! empty($extraData))
+                || $this->messageLooksLikeCatalogOrder($messageText)) {
+                Log::info('WhatsApp Catalog: resuming after selection or checkout', ['extraData' => $extraData]);
                 $this->listenForReply($message, $data);
             } else {
                 Log::info('WhatsApp Catalog: sending catalog for first time');
@@ -96,6 +124,79 @@ class WhatsAppCatalog extends Node
         }
 
         return $this->sendCatalog($message, $data);
+    }
+
+    private function advanceAfterCheckout($message, $data, Contact $contact): void
+    {
+        if ($this->hasCheckoutAlreadyResumed($contact)) {
+            Log::info('WhatsApp Catalog: checkout already resumed', ['nodeId' => $this->id]);
+
+            return;
+        }
+
+        Log::info('WhatsApp Catalog: advancing after checkout', ['nodeId' => $this->id]);
+
+        $contact->setContactState($this->flow_id, self::CHECKOUT_RESUMED_STATE, '1');
+        $contact->clearContactState($this->flow_id, 'current_node');
+
+        $nextNode = $this->resolveCheckoutNextNode();
+        if ($nextNode) {
+            $nextNode->process($message, $data);
+        } else {
+            Log::warning('WhatsApp Catalog: no next node after checkout', ['nodeId' => $this->id]);
+        }
+    }
+
+    private function hasCheckoutAlreadyResumed(Contact $contact): bool
+    {
+        return $contact->getContactStateValue($this->flow_id, self::CHECKOUT_RESUMED_STATE) === '1';
+    }
+
+    private function isCheckoutCompleteSignal(string $extraData): bool
+    {
+        return $extraData === CatalogFlowCallbackService::CHECKOUT_COMPLETE_EXTRA;
+    }
+
+    private function messageLooksLikeCatalogOrder(?string $message): bool
+    {
+        if ($message === null || $message === '') {
+            return false;
+        }
+
+        if (str_contains($message, 'New Order from Catalog:')) {
+            return true;
+        }
+
+        return str_contains($message, '*Items:*') && str_contains($message, '*Total:*');
+    }
+
+    /**
+     * Prefer explicit checkout handles, then generic/default edges (not "else").
+     */
+    protected function resolveCheckoutNextNode(): ?Node
+    {
+        foreach (['onProductSelected', 'onCheckoutComplete'] as $handle) {
+            $nextNode = $this->getNextNodeId($handle);
+            if ($nextNode) {
+                return $nextNode;
+            }
+        }
+
+        foreach ($this->outgoingEdges as $edge) {
+            $handle = $edge->getSourceHandle() ?? '';
+            if ($handle === '' && $edge->getTarget()) {
+                return $edge->getTarget();
+            }
+        }
+
+        foreach ($this->outgoingEdges as $edge) {
+            $handle = $edge->getSourceHandle() ?? '';
+            if ($handle !== 'else' && $edge->getTarget()) {
+                return $edge->getTarget();
+            }
+        }
+
+        return $this->getNextNodeId('else');
     }
 
     private function sendCatalog($message, $data)
@@ -118,6 +219,7 @@ class WhatsAppCatalog extends Node
             return ['success' => false];
         }
 
+        $contact->clearContactState($this->flow_id, self::CHECKOUT_RESUMED_STATE);
         $contact->setContactState($this->flow_id, 'catalog_id', $catalogId);
         $contact->setContactState($this->flow_id, 'catalog_items', json_encode($catalog->items ?? []));
 
@@ -251,7 +353,7 @@ class WhatsAppCatalog extends Node
     {
         foreach ($this->outgoingEdges as $edge) {
             $sourceHandle = $edge->getSourceHandle() ?? '';
-            if ($handleId === null || str_contains($sourceHandle, $handleId)) {
+            if ($handleId === null || str_contains($sourceHandle, (string) $handleId)) {
                 return $edge->getTarget();
             }
         }

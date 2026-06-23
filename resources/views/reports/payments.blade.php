@@ -157,6 +157,7 @@
                             <tr>
                                 <th>Invoice #</th>
                                 <th>Customer</th>
+                                <th>Delivery Address</th>
                                 <th>Invoice Amount</th>
                                 <th>Total Paid</th>
                                 <th>Remaining</th>
@@ -180,8 +181,10 @@
                                         </strong>
                                     </td>
                                     <td>
-                                        <div class="small">{{ $payment['customer_name'] }}</div>
-                                        <div class="text-muted small">{{ $payment['customer_phone'] }}</div>
+                                        <div class="small">{{ $payment['customer_phone'] }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="small">{{ $payment['delivery_address'] ?? '—' }}</div>
                                     </td>
                                     <td>KES {{ number_format($payment['invoice_amount'], 2) }}</td>
                                     <td>

@@ -176,6 +176,7 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject', 'org.route']
             Route::post('/api/list-catalogs/{id}/reimport-excel', 'reimportExcel')->name('catalogs.reimport-excel');
             Route::get('/api/list-catalogs/{id}/analytics', 'getAnalytics')->name('catalogs.analytics');
             Route::put('/api/list-catalogs/attachments', 'updateAttachments')->name('catalogs.attachments');
+            Route::put('/api/list-catalogs/commerce-settings', 'updateCommerceSettings')->name('catalogs.commerce-settings');
             Route::post('/api/list-catalogs/test-api', 'testAPI')->name('catalogs.test-api');
             Route::get('/api/list-catalogs', 'listCatalogs')->name('catalogs.list');
             Route::get('/api/list-catalogs/{id}', 'getCatalog')->name('catalogs.show');

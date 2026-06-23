@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ManageCatalogItemsRequest;
+use App\Http\Requests\UpdateCatalogCommerceSettingsRequest;
 use App\Models\CatalogCollection;
 use App\Models\CatalogItem;
 use App\Models\Company;
@@ -16,6 +17,7 @@ use App\Services\Catalog\CatalogItemRepository;
 use App\Services\Catalog\CatalogReimportService;
 use App\Services\Catalog\CatalogStoreSyncService;
 use App\Services\Catalog\CatalogUrlService;
+use App\Services\Catalog\CatalogWhatsAppOrderService;
 use App\Services\Catalog\StoreCatalogImportService;
 use App\Services\CatalogItemFilterService;
 use App\Services\CatalogItemPlanLimit;
@@ -44,6 +46,7 @@ class ListCatalogController extends Controller
         protected CatalogStoreSyncService $catalogStoreSyncService,
         protected ApiCatalogImportService $apiCatalogImportService,
         protected CatalogExperimentService $catalogExperimentService,
+        protected CatalogWhatsAppOrderService $catalogWhatsAppOrderService,
     ) {
     }
 
@@ -329,6 +332,7 @@ class ListCatalogController extends Controller
                 'ai_catalog_ids' => $aiCatalogIds,
                 'has_shopify' => $company ? (bool) $company->getConfig('shopify_access_token') : false,
                 'has_woocommerce' => $company ? (bool) $company->getConfig('woocommerce_consumer_key') : false,
+                'commerce_settings' => $company ? $this->commerceSettingsPayload($company) : null,
             ]);
 
         } catch (\Exception $e) {
@@ -1015,6 +1019,33 @@ class ListCatalogController extends Controller
             'message' => 'Catalog attachments updated.',
             'ai_catalog_ids' => $validIds,
         ]);
+    }
+
+    public function updateCommerceSettings(UpdateCatalogCommerceSettingsRequest $request)
+    {
+        $company = $this->getCompany() ?? abort(403);
+
+        $this->catalogWhatsAppOrderService->save(
+            $company,
+            $request->validated('whatsapp_order_number')
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Catalog checkout settings saved.',
+            'commerce_settings' => $this->commerceSettingsPayload($company),
+        ]);
+    }
+
+    /**
+     * @return array{whatsapp_order_number: string, whatsapp_order_number_configured: bool}
+     */
+    private function commerceSettingsPayload(Company $company): array
+    {
+        return [
+            'whatsapp_order_number' => $this->catalogWhatsAppOrderService->displayValue($company),
+            'whatsapp_order_number_configured' => $this->catalogWhatsAppOrderService->resolveNumber($company) !== null,
+        ];
     }
 
     public function uploadItemImage(Request $request, $id, $itemId)

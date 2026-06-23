@@ -87,6 +87,7 @@ function loadCatalogs() {
                 hasShopify = !!data.has_shopify;
                 hasWooCommerce = !!data.has_woocommerce;
                 displayCatalogItemUsage(data.catalog_item_usage);
+                displayCommerceSettings(data.commerce_settings);
                 displayCatalogs(data.catalogs);
                 renderAiCatalogAttachments(data.catalogs, data.ai_catalog_ids || []);
                 toggleStoreButtons();
@@ -126,6 +127,53 @@ function displayCatalogItemUsage(usage) {
     }
 
     el.style.display = 'block';
+}
+
+function displayCommerceSettings(settings) {
+    const input = document.getElementById('whatsappOrderNumber');
+    const status = document.getElementById('whatsappOrderNumberStatus');
+    if (!input || !status) {
+        return;
+    }
+
+    input.value = settings?.whatsapp_order_number || '';
+
+    if (settings?.whatsapp_order_number_configured) {
+        status.textContent = 'WhatsApp checkout is ready for customers.';
+        status.className = 'small mt-2 text-success';
+    } else {
+        status.textContent = 'Set a number to enable WhatsApp checkout from your shop.';
+        status.className = 'small mt-2 text-warning';
+    }
+}
+
+function saveCommerceSettings() {
+    const input = document.getElementById('whatsappOrderNumber');
+    if (!input) {
+        return;
+    }
+
+    fetch('/api/list-catalogs/commerce-settings', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken(),
+        },
+        body: JSON.stringify({
+            whatsapp_order_number: input.value.trim(),
+        }),
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                showError(data.message || 'Could not save checkout settings');
+                return;
+            }
+
+            displayCommerceSettings(data.commerce_settings);
+            showSuccess(data.message || 'Catalog checkout settings saved.');
+        })
+        .catch(() => showError('Could not save checkout settings'));
 }
 
 function displayCatalogs(catalogs) {

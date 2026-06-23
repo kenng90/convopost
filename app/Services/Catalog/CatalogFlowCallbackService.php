@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Crypt;
 
 class CatalogFlowCallbackService
 {
+    public const CHECKOUT_COMPLETE_EXTRA = 'catalog_checkout_complete';
+
     /**
      * @return array{flow_id: int, contact_id: int, node_id: string, catalog_id: int}
      */

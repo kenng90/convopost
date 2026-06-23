@@ -4,6 +4,7 @@ namespace Modules\Flowmaker\Models;
 
 use App\Models\Company;
 use App\Scopes\CompanyScope;
+use App\Services\Catalog\CatalogFlowCallbackService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -359,7 +360,11 @@ class Flow extends Model
             $contact->setContactState($this->id, 'catalog_cart', json_encode($cartItems));
         }
 
-        $this->resumeWaitingNode($contact, $productId);
+        $extra = $cartItems !== []
+            ? CatalogFlowCallbackService::CHECKOUT_COMPLETE_EXTRA
+            : $productId;
+
+        $this->resumeWaitingNode($contact, $extra);
     }
 
     private function resumeWaitingNode(Contact $contact, ?string $extra): void

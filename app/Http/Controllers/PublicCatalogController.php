@@ -13,6 +13,7 @@ use App\Services\Catalog\CatalogFlowCallbackService;
 use App\Services\Catalog\CatalogInventoryService;
 use App\Services\Catalog\CatalogItemRepository;
 use App\Services\Catalog\CatalogUrlService;
+use App\Services\Catalog\CatalogWhatsAppOrderService;
 use App\Services\CatalogItemFilterService;
 use App\Services\InvoiceWhatsAppService;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ class PublicCatalogController extends Controller
         protected CatalogInventoryService $catalogInventoryService,
         protected CatalogItemRepository $catalogItemRepository,
         protected CatalogExperimentService $catalogExperimentService,
+        protected CatalogWhatsAppOrderService $catalogWhatsAppOrderService,
     ) {
     }
 
@@ -222,7 +224,7 @@ class PublicCatalogController extends Controller
                     ['item_count' => count($validated['items']), 'total' => $totalPrice]
                 );
 
-                $this->maybeResumeFlow($validated['flow_token'] ?? null, $catalog->id, $validated['items']);
+                $this->maybeResumeFlowAfterWhatsAppCheckout($validated['flow_token'] ?? null, $catalog->id, $validated['items']);
 
                 $this->commitCheckoutReservations($reservations);
 
@@ -267,9 +269,8 @@ class PublicCatalogController extends Controller
         try {
             $validated = $request->validate([
                 'items' => 'required|array',
-                'customerName' => 'nullable|string|max:255',
                 'customerPhone' => 'required|string|max:20',
-                'customerEmail' => 'nullable|email',
+                'deliveryAddress' => 'required|string|max:1000',
                 'amount' => 'required|numeric|min:1',
                 'notes' => 'nullable|string',
                 'flow_token' => 'nullable|string',
@@ -315,9 +316,10 @@ class PublicCatalogController extends Controller
                     'company_id' => $catalog->company_id,
                     'catalog_id' => $catalog->id,
                     'invoice_number' => Invoice::generateInvoiceNumber($catalog->company),
-                    'customer_name' => $validated['customerName'] ?? 'Guest Customer',
+                    'customer_name' => 'Customer',
                     'customer_phone' => $validated['customerPhone'],
-                    'customer_email' => $validated['customerEmail'] ?? null,
+                    'customer_email' => null,
+                    'delivery_address' => trim($validated['deliveryAddress']),
                     'amount' => $totalAmount,
                     'currency' => $currency,
                     'status' => 'draft',
@@ -350,8 +352,6 @@ class PublicCatalogController extends Controller
                     'checkout_invoice',
                     ['item_count' => count($validated['items']), 'total' => $totalAmount, 'invoice_id' => $invoice->id]
                 );
-
-                $this->maybeResumeFlow($validated['flow_token'] ?? null, $catalog->id, $validated['items']);
 
                 return response()->json([
                     'success' => true,
@@ -503,13 +503,14 @@ class PublicCatalogController extends Controller
             'currencyCode' => $currencyCode,
             'currencySymbol' => $currencySymbol,
             'flowToken' => is_string($flowToken) ? $flowToken : null,
+            'whatsappOrderNumber' => $this->catalogWhatsAppOrderService->resolveNumber($company),
         ]);
     }
 
     /**
      * @param  list<array<string, mixed>>  $cartItems
      */
-    private function maybeResumeFlow(?string $flowToken, int $catalogId, array $cartItems): void
+    private function maybeResumeFlowAfterWhatsAppCheckout(?string $flowToken, int $catalogId, array $cartItems): void
     {
         if (! $flowToken) {
             return;
@@ -520,17 +521,16 @@ class PublicCatalogController extends Controller
             return;
         }
 
-        $firstItemId = (string) ($cartItems[0]['id'] ?? '');
-        if ($firstItemId === '') {
+        if ($cartItems === []) {
             return;
         }
 
         ResumeFlowFromCatalogCheckout::dispatch(
             $context['flow_id'],
             $context['contact_id'],
-            $firstItemId,
+            CatalogFlowCallbackService::CHECKOUT_COMPLETE_EXTRA,
             $cartItems
-        );
+        )->onQueue('flows');
     }
 
     private function findProductInCatalog($items, $productId)

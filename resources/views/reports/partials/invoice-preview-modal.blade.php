@@ -25,16 +25,11 @@
                 </div>
 
                 <dl class="row mb-4">
-                    <dt class="col-sm-4">Customer</dt>
-                    <dd class="col-sm-8">{{ $payment['customer_name'] ?? '—' }}</dd>
-
                     <dt class="col-sm-4">Phone</dt>
                     <dd class="col-sm-8">{{ $payment['customer_phone'] }}</dd>
 
-                    @if($payment['customer_email'])
-                        <dt class="col-sm-4">Email</dt>
-                        <dd class="col-sm-8">{{ $payment['customer_email'] }}</dd>
-                    @endif
+                    <dt class="col-sm-4">Delivery address</dt>
+                    <dd class="col-sm-8">{{ $payment['delivery_address'] ?? '—' }}</dd>
 
                     <dt class="col-sm-4">Created</dt>
                     <dd class="col-sm-8">{{ $payment['created_at'] }}</dd>

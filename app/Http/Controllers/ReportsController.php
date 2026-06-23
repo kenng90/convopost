@@ -308,8 +308,8 @@ class ReportsController extends Controller
             // Write headers
             fputcsv($file, [
                 'Invoice Number',
-                'Customer Name',
                 'Customer Phone',
+                'Delivery Address',
                 'Invoice Amount',
                 'Total Paid',
                 'Remaining',
@@ -326,8 +326,8 @@ class ReportsController extends Controller
             foreach ($report['payments'] as $payment) {
                 fputcsv($file, [
                     $payment['invoice_number'],
-                    $payment['customer_name'],
                     $payment['customer_phone'],
+                    $payment['delivery_address'] ?? '',
                     $payment['invoice_amount'],
                     $payment['total_paid'],
                     $payment['remaining'],

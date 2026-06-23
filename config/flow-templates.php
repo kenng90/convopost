@@ -659,7 +659,7 @@ return [
                 ['id' => 'e-kw2', 'source' => 'keyword_trigger-1', 'target' => 'message-1', 'sourceHandle' => 'kw2'],
                 ['id' => 'e-kw3', 'source' => 'keyword_trigger-1', 'target' => 'message-1', 'sourceHandle' => 'kw3'],
                 ['id' => 'e-intro-catalog', 'source' => 'message-1', 'target' => 'whatsapp_catalog-1'],
-                ['id' => 'e-catalog-menu', 'source' => 'whatsapp_catalog-1', 'target' => 'quick_replies-1'],
+                ['id' => 'e-catalog-menu', 'source' => 'whatsapp_catalog-1', 'target' => 'quick_replies-1', 'sourceHandle' => 'onProductSelected'],
                 ['id' => 'e-menu-checkout', 'source' => 'quick_replies-1', 'target' => 'question-1', 'sourceHandle' => 'button-1'],
                 ['id' => 'e-menu-faq', 'source' => 'quick_replies-1', 'target' => 'openai-1', 'sourceHandle' => 'button-2'],
                 ['id' => 'e-menu-sales', 'source' => 'quick_replies-1', 'target' => 'assign_agent-1', 'sourceHandle' => 'button-3'],

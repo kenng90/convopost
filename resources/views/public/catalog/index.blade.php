@@ -769,7 +769,7 @@
         function proceedToCheckout() {
             if (cart.length === 0) return;
 
-            const whatsappNumber = "{{ $company->getConfig('whatsapp_phone_number', '') }}";
+            const whatsappNumber = @json($whatsappOrderNumber);
             if (!whatsappNumber) {
                 alert('WhatsApp number not configured for this seller. Please contact the seller directly.');
                 return;
@@ -805,16 +805,20 @@
         function generateInvoice() {
             if (cart.length === 0) return;
 
-            // Collect customer info
-            const customerName = prompt('Enter your name (optional):', '');
-            const customerPhone = prompt('Enter your phone number (required):', '');
+            // Collect customer info for M-Pesa STK
+            const customerPhone = prompt('Enter your phone number for M-Pesa payment (required):', '');
 
             if (!customerPhone) {
                 alert('Phone number is required');
                 return;
             }
 
-            const customerEmail = prompt('Enter your email (optional):', '');
+            const deliveryAddress = prompt('Enter your delivery address (required):', '');
+
+            if (!deliveryAddress || !deliveryAddress.trim()) {
+                alert('Delivery address is required');
+                return;
+            }
 
             // Calculate total
             let total = 0;
@@ -841,9 +845,8 @@
                 },
                 body: JSON.stringify({
                     items: cart,
-                    customerName: customerName || 'Guest Customer',
                     customerPhone: customerPhone,
-                    customerEmail: customerEmail || null,
+                    deliveryAddress: deliveryAddress.trim(),
                     amount: total.toFixed(2),
                     flow_token: flowToken,
                 })
