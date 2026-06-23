@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $source->name }} — Book appointment</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    @include('reminders::booking.partials.phone-input-head')
 </head>
 <body class="bg-gradient-to-b from-slate-100 to-slate-50 min-h-screen text-slate-900">
 <div
@@ -18,6 +19,7 @@
         durationOptions: @js($source->durationOptions()),
         timezone: @js($source->timezone),
         showServicePicker: @js($showServicePicker ?? count($services ?? []) > 1),
+        initialPhoneCountry: @js($bookingPhoneCountry ?? 'ke'),
     })"
     x-cloak
 >
@@ -176,19 +178,22 @@
                 :disabled="loadingBook"
                 class="w-full rounded-xl border-slate-300 disabled:opacity-60"
             >
-            <input
-                type="tel"
-                x-model="phone"
-                placeholder="Phone number (e.g. +254712345678)"
-                :disabled="loadingBook"
-                class="w-full rounded-xl border-slate-300 disabled:opacity-60"
-            >
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Phone') }}</label>
+                <input
+                    type="tel"
+                    id="booking-phone-input"
+                    :disabled="loadingBook"
+                    class="w-full rounded-xl border-slate-300 disabled:opacity-60"
+                >
+                <p class="text-xs text-slate-500 mt-1">{{ __('Select your country code, then enter your number without the leading 0.') }}</p>
+            </div>
         </div>
 
         <button
             type="button"
             @click="book()"
-            :disabled="loadingBook || loadingDates || loadingSlots || !selectedSlot || !name.trim() || !phone.trim() || !source"
+            :disabled="loadingBook || loadingDates || loadingSlots || !selectedSlot || !name.trim() || !source"
             class="w-full rounded-xl bg-violet-600 text-white py-3.5 font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-violet-700 transition inline-flex items-center justify-center gap-2"
         >
             <svg x-show="loadingBook" class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -207,6 +212,7 @@
 </style>
 
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+@include('reminders::booking.partials.phone-input-script')
 <script>
 function bookingWidget(config) {
     return {
@@ -219,6 +225,7 @@ function bookingWidget(config) {
         durationMinutes: config.durationOptions[0] || 30,
         showServicePicker: config.showServicePicker,
         timezone: config.timezone,
+        initialPhoneCountry: config.initialPhoneCountry || 'ke',
         view: 'form',
         dates: [],
         slots: [],
@@ -226,7 +233,7 @@ function bookingWidget(config) {
         selectedSlot: '',
         selectedSlotMeta: null,
         name: '',
-        phone: '',
+        iti: null,
         loadingDates: false,
         loadingSlots: false,
         loadingBook: false,
@@ -246,6 +253,9 @@ function bookingWidget(config) {
                 this.durationOptions = this.services[0].duration_options;
                 this.durationMinutes = this.durationOptions[0] || 30;
             }
+            this.$nextTick(() => {
+                this.iti = window.BookingPhone.init('booking-phone-input', this.initialPhoneCountry);
+            });
             this.loadDates();
         },
 
@@ -351,6 +361,13 @@ function bookingWidget(config) {
             this.loadingBook = true;
             this.errorMessage = '';
 
+            const phone = window.BookingPhone.digits(this.iti);
+            if (! phone || ! window.BookingPhone.isValid(this.iti)) {
+                this.errorMessage = '{{ __('Please enter a valid phone number.') }}';
+                this.loadingBook = false;
+                return;
+            }
+
             try {
                 const response = await fetch('/api/reminders/reservation/makeReservation', {
                     method: 'POST',
@@ -363,7 +380,7 @@ function bookingWidget(config) {
                         source: this.source,
                         slot_id: this.selectedSlot,
                         name: this.name.trim(),
-                        phone: this.phone.trim(),
+                        phone: phone,
                     }),
                 });
 
@@ -398,7 +415,9 @@ function bookingWidget(config) {
         startOver() {
             this.view = 'form';
             this.name = '';
-            this.phone = '';
+            if (this.iti) {
+                this.iti.setNumber('');
+            }
             this.selectedDate = '';
             this.selectedSlot = '';
             this.selectedSlotMeta = null;

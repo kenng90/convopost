@@ -10,6 +10,7 @@ use Modules\Reminders\Services\BookingCatalogService;
 use Modules\Reminders\Services\BookingPublicKeyService;
 use Modules\Reminders\Services\EventCatalogService;
 use Modules\Reminders\Services\GoogleCalendarService;
+use Modules\Wpbox\Support\PhoneNormalizer;
 
 class BookingSettingsController extends Controller
 {
@@ -127,6 +128,7 @@ class BookingSettingsController extends Controller
             'services' => $this->catalogService->bookableServicesForCompany($company),
             'bookingKey' => $this->bookingPublicKeyService->ensureKey($company),
             'showServicePicker' => false,
+            'bookingPhoneCountry' => app(PhoneNormalizer::class)->isoForCompany($company),
         ]);
     }
 
@@ -160,6 +162,7 @@ class BookingSettingsController extends Controller
             'event' => $event,
             'occurrence' => $formattedOccurrence,
             'bookingKey' => $this->bookingPublicKeyService->ensureKey($company),
+            'bookingPhoneCountry' => app(PhoneNormalizer::class)->isoForCompany($company),
         ]);
     }
 }

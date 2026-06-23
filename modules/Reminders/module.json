@@ -47,6 +47,23 @@
             "ftype":"bool",
             "icon":"🎟️",
             "value":true
+        },
+        {
+            "separator":"Bookings",
+            "title":"Default phone country on booking forms",
+            "key":"BOOKING_DEFAULT_PHONE_COUNTRY",
+            "ftype":"select",
+            "icon":"📱",
+            "value":"ke",
+            "data":{
+                "ke":"Kenya (+254)",
+                "ug":"Uganda (+256)",
+                "tz":"Tanzania (+255)",
+                "ng":"Nigeria (+234)",
+                "za":"South Africa (+27)",
+                "gb":"United Kingdom (+44)",
+                "us":"United States (+1)"
+            }
         }
     ],
     "ownermenus":[

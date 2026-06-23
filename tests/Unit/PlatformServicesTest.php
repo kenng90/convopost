@@ -23,7 +23,10 @@ class PlatformServicesTest extends TestCase
 
         $this->assertArrayHasKey('lead_capture', $templates);
         $this->assertArrayHasKey('payment_collection', $templates);
-        $this->assertArrayHasKey('support_deflection', $templates);
+        $this->assertArrayHasKey('spa_wellness_booking', $templates);
+        $this->assertArrayHasKey('whatsapp_shop_checkout', $templates);
+        $this->assertArrayHasKey('lead_intake_routing', $templates);
+        $this->assertArrayHasKey('support_ai_escalation', $templates);
     }
 
     public function test_managed_ai_config_defines_tiers(): void

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $company->name }} — {{ $occurrence['starts_at_label'] ?? __('Event') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    @include('reminders::booking.partials.phone-input-head')
 </head>
 <body class="bg-slate-50 min-h-screen">
 <div
@@ -15,6 +16,7 @@
         eventTitle: @js($event['title']),
         startsAtLabel: @js($occurrence['starts_at_label']),
         seatsRemaining: @js($occurrence['seats_remaining']),
+        initialPhoneCountry: @js($bookingPhoneCountry ?? 'ke'),
     })"
 >
     <div class="bg-white rounded-2xl shadow-lg p-6 space-y-6" x-show="view === 'form'">
@@ -32,7 +34,8 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Phone') }}</label>
-                <input type="tel" x-model="phone" required class="w-full rounded-xl border border-slate-200 px-4 py-2.5">
+                <input type="tel" id="event-booking-phone-input" required class="w-full rounded-xl border border-slate-200 px-4 py-2.5">
+                <p class="text-xs text-slate-500 mt-1">{{ __('Select your country code, then enter your number without the leading 0.') }}</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">{{ __('Party size') }}</label>
@@ -54,6 +57,7 @@
     </div>
 </div>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+@include('reminders::booking.partials.phone-input-script')
 <script>
 function eventRegister(config) {
     return {
@@ -62,16 +66,30 @@ function eventRegister(config) {
         eventTitle: config.eventTitle,
         startsAtLabel: config.startsAtLabel,
         seatsRemaining: config.seatsRemaining,
+        initialPhoneCountry: config.initialPhoneCountry || 'ke',
         name: '',
-        phone: '',
+        iti: null,
         partySize: 1,
         view: 'form',
         loading: false,
         errorMessage: '',
         confirmationLine: '',
+        init() {
+            this.$nextTick(() => {
+                this.iti = window.BookingPhone.init('event-booking-phone-input', this.initialPhoneCountry);
+            });
+        },
         async register() {
             this.loading = true;
             this.errorMessage = '';
+
+            const phone = window.BookingPhone.digits(this.iti);
+            if (! phone || ! window.BookingPhone.isValid(this.iti)) {
+                this.errorMessage = '{{ __('Please enter a valid phone number.') }}';
+                this.loading = false;
+                return;
+            }
+
             try {
                 const response = await fetch('/api/reminders/events/register', {
                     method: 'POST',
@@ -80,7 +98,7 @@ function eventRegister(config) {
                         booking_key: this.bookingKey,
                         occurrence_id: this.occurrenceId,
                         name: this.name.trim(),
-                        phone: this.phone.trim(),
+                        phone: phone,
                         party_size: this.partySize,
                     }),
                 });
