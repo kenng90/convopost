@@ -6,6 +6,8 @@ use App\Scopes\CompanyScope;
 use App\Services\Catalog\CatalogCategoryNormalizer;
 use App\Services\Catalog\CatalogFlowUsageService;
 use App\Services\Catalog\CatalogItemRepository;
+use App\Services\Catalog\CatalogMode;
+use App\Services\Catalog\CatalogTemplateRegistry;
 use App\Services\Catalog\CatalogUrlService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -175,6 +177,8 @@ class ListCatalog extends Model
             'slug' => app(CatalogUrlService::class)->assignSlug($this, $this->name.'-v'.($maxVersion + 1)),
             'version' => $maxVersion + 1,
             'parent_id' => $root->id,
+            'catalog_mode' => $newData['catalog_mode'] ?? $this->catalog_mode,
+            'vertical' => $newData['vertical'] ?? $this->vertical,
             'description' => $newData['description'] ?? $this->description,
             'items' => $newData['items'] ?? $this->items,
             'columns' => $newData['columns'] ?? $this->columns,
@@ -203,5 +207,51 @@ class ListCatalog extends Model
     public function flowsInUse(): array
     {
         return app(CatalogFlowUsageService::class)->flowsUsingCatalog($this->id, $this->company_id);
+    }
+
+    public function resolvedCatalogMode(): string
+    {
+        $mode = $this->catalog_mode ?? CatalogMode::COMMERCE;
+
+        return in_array($mode, CatalogMode::all(), true) ? $mode : CatalogMode::COMMERCE;
+    }
+
+    public function resolvedVertical(): string
+    {
+        $registry = app(CatalogTemplateRegistry::class);
+        $vertical = $this->vertical ?? $registry->defaultVerticalForMode($this->resolvedCatalogMode());
+
+        if (! $registry->verticalExists($vertical)) {
+            return $registry->defaultVerticalForMode($this->resolvedCatalogMode());
+        }
+
+        if (! $registry->verticalMatchesMode($vertical, $this->resolvedCatalogMode())) {
+            return $registry->defaultVerticalForMode($this->resolvedCatalogMode());
+        }
+
+        return $vertical;
+    }
+
+    public function isCommerce(): bool
+    {
+        return $this->resolvedCatalogMode() === CatalogMode::COMMERCE;
+    }
+
+    public function isListing(): bool
+    {
+        return $this->resolvedCatalogMode() === CatalogMode::LISTING;
+    }
+
+    public function isService(): bool
+    {
+        return $this->resolvedCatalogMode() === CatalogMode::SERVICE;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function presentation(): array
+    {
+        return app(CatalogTemplateRegistry::class)->presentationForCatalog($this);
     }
 }

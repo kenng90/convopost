@@ -8,8 +8,21 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
+                    <label>{{ __('What are you showcasing?') }}</label>
+                    <select id="emptyCatalogMode" class="form-control" onchange="updateCatalogVerticalOptions()">
+                        <option value="commerce">{{ __('Sell products') }}</option>
+                        <option value="listing">{{ __('Show listings (property, vehicles, etc.)') }}</option>
+                        <option value="service">{{ __('Offer services') }}</option>
+                    </select>
+                    <small class="form-text text-muted" id="emptyCatalogModeHelp">{{ __('WhatsApp shop with cart and checkout.') }}</small>
+                </div>
+                <div class="form-group" id="emptyCatalogVerticalGroup" style="display: none;">
+                    <label>{{ __('Template') }}</label>
+                    <select id="emptyCatalogVertical" class="form-control"></select>
+                </div>
+                <div class="form-group">
                     <label>{{ __('Catalog Name') }}</label>
-                    <input type="text" id="emptyCatalogName" class="form-control" placeholder="e.g., Summer Collection" required>
+                    <input type="text" id="emptyCatalogName" class="form-control" placeholder="e.g., Westlands Apartments" required>
                 </div>
                 <div class="form-group mb-0">
                     <label>{{ __('Description') }} <small class="text-muted">(optional)</small></label>
@@ -39,13 +52,23 @@
                         <input type="text" id="catalogName" class="form-control" placeholder="e.g., Summer Products" required>
                     </div>
                     <div class="form-group">
+                        <label>{{ __('Catalog type') }}</label>
+                        <select id="importCatalogMode" class="form-control" onchange="updateImportVerticalOptions()">
+                            <option value="commerce">{{ __('Sell products') }}</option>
+                            <option value="listing">{{ __('Show listings') }}</option>
+                            <option value="service">{{ __('Offer services') }}</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="importCatalogVerticalGroup" style="display:none;">
                         <label>{{ __('Template') }}</label>
-                        <p class="text-sm text-muted mb-2">
-                            {{ __('Row 1 headers:') }}
-                            <strong>Item ID, Title, Description, Price, Category, Image URL, Stock Status, Variants, Tags</strong>.
-                            {{ __('Item ID and Title are required.') }}
+                        <select id="importCatalogVertical" class="form-control" onchange="updateImportTemplateHelp()"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>{{ __('Excel template') }}</label>
+                        <p class="text-sm text-muted mb-2" id="importTemplateHelp">
+                            {{ __('Select a catalog type and template above. The download includes the correct headers plus 5 sample items.') }}
                         </p>
-                        <a href="{{ route('catalogs.import-template') }}" class="btn btn-sm btn-outline-primary" download>
+                        <a href="{{ route('catalogs.import-template', ['catalog_mode' => 'commerce', 'vertical' => 'retail']) }}" id="importTemplateDownload" class="btn btn-sm btn-outline-primary" download="catalog-import-commerce-retail.xlsx">
                             <i class="ni ni-cloud-download-95 mr-1"></i>{{ __('Download template') }}
                         </a>
                     </div>

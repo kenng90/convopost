@@ -12,6 +12,7 @@ use App\Services\Catalog\CatalogExperimentService;
 use App\Services\Catalog\CatalogFlowCallbackService;
 use App\Services\Catalog\CatalogInventoryService;
 use App\Services\Catalog\CatalogItemRepository;
+use App\Services\Catalog\CatalogListingInquiryService;
 use App\Services\Catalog\CatalogUrlService;
 use App\Services\Catalog\CatalogWhatsAppOrderService;
 use App\Services\CatalogItemFilterService;
@@ -19,6 +20,7 @@ use App\Services\InvoiceWhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Modules\Flowmaker\Jobs\ResumeFlowFromCatalogCheckout;
+use Modules\Flowmaker\Jobs\ResumeFlowFromListingInquiry;
 use Modules\Invoice\Models\Invoice;
 use RuntimeException;
 
@@ -34,6 +36,7 @@ class PublicCatalogController extends Controller
         protected CatalogItemRepository $catalogItemRepository,
         protected CatalogExperimentService $catalogExperimentService,
         protected CatalogWhatsAppOrderService $catalogWhatsAppOrderService,
+        protected CatalogListingInquiryService $catalogListingInquiryService,
     ) {
     }
 
@@ -100,7 +103,8 @@ class PublicCatalogController extends Controller
         $browse = $this->catalogItemFilter->browse(
             $this->catalogItemRepository->getItemsArray($catalog),
             $request->filters(),
-            $this->catalogUrlService->publicUrl($catalog)
+            $this->catalogUrlService->publicUrl($catalog),
+            $catalog->presentation()
         );
 
         $paginator = $browse['items'];
@@ -111,6 +115,9 @@ class PublicCatalogController extends Controller
                 'id' => $catalog->id,
                 'name' => $catalog->name,
                 'description' => $catalog->description,
+                'catalog_mode' => $catalog->resolvedCatalogMode(),
+                'vertical' => $catalog->resolvedVertical(),
+                'presentation' => $catalog->presentation(),
             ],
             'items' => $paginator->items(),
             'filter_options' => $browse['filterOptions'],
@@ -136,7 +143,7 @@ class PublicCatalogController extends Controller
         }
 
         $validated = $request->validate([
-            'event' => 'required|string|in:view,cart_add,checkout_whatsapp,checkout_invoice',
+            'event' => 'required|string|in:view,cart_add,checkout_whatsapp,checkout_invoice,listing_inquiry',
             'metadata' => 'nullable|array',
         ]);
 
@@ -248,6 +255,84 @@ class PublicCatalogController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error generating order: '.$e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Build a WhatsApp inquiry for a listing or service item.
+     */
+    public function generateInquiry(Request $request, $catalogId)
+    {
+        $catalog = ListCatalog::withoutGlobalScopes()->find($catalogId);
+
+        if (! $catalog) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Catalog not found',
+            ], 404);
+        }
+
+        if ($catalog->isCommerce()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Inquiry is only available for listing and service catalogs.',
+            ], 422);
+        }
+
+        try {
+            $validated = $request->validate([
+                'item_id' => 'required|string',
+                'customerName' => 'nullable|string|max:255',
+                'notes' => 'nullable|string|max:1000',
+                'flow_token' => 'nullable|string',
+            ]);
+
+            $item = $this->findProductInCatalog($catalog->items, $validated['item_id']);
+            if (! $item) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Item not found in catalog.',
+                ], 404);
+            }
+
+            $message = $this->catalogListingInquiryService->buildMessage(
+                $catalog,
+                $item,
+                $validated['customerName'] ?? null,
+                $validated['notes'] ?? null
+            );
+
+            $whatsappUrl = $this->catalogListingInquiryService->buildWhatsAppUrl(
+                $catalog->company,
+                $catalog,
+                $item,
+                $validated['customerName'] ?? null,
+                $validated['notes'] ?? null
+            );
+
+            $this->catalogAnalyticsService->record(
+                $catalog->company_id,
+                $catalog->id,
+                'listing_inquiry',
+                ['item_id' => $validated['item_id']]
+            );
+
+            $this->maybeResumeFlowAfterListingInquiry(
+                $validated['flow_token'] ?? null,
+                $catalog->id,
+                $validated['item_id']
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'whatsapp_url' => $whatsappUrl,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generating inquiry: '.$e->getMessage(),
             ], 400);
         }
     }
@@ -483,7 +568,8 @@ class PublicCatalogController extends Controller
         $browse = $this->catalogItemFilter->browse(
             $catalogItems,
             $request->filters(),
-            $publicUrl
+            $publicUrl,
+            $catalog->presentation()
         );
 
         $this->catalogAnalyticsService->record($catalog->company_id, $catalog->id, 'view');
@@ -491,6 +577,7 @@ class PublicCatalogController extends Controller
         $currencyCode = $this->catalogCurrencyService->codeForCompany($company);
         $currencySymbol = $this->catalogCurrencyService->symbolForCode($currencyCode);
         $flowToken = $request->query('flow_token');
+        $presentation = $catalog->presentation();
 
         return view('public.catalog.index', [
             'catalog' => $catalog,
@@ -504,7 +591,27 @@ class PublicCatalogController extends Controller
             'currencySymbol' => $currencySymbol,
             'flowToken' => is_string($flowToken) ? $flowToken : null,
             'whatsappOrderNumber' => $this->catalogWhatsAppOrderService->resolveNumber($company),
+            'presentation' => $presentation,
+            'mapMarkers' => $browse['mapMarkers'],
         ]);
+    }
+
+    private function maybeResumeFlowAfterListingInquiry(?string $flowToken, int $catalogId, string $itemId): void
+    {
+        if (! $flowToken || $itemId === '') {
+            return;
+        }
+
+        $context = $this->catalogFlowCallbackService->decodeToken($flowToken);
+        if (! $context || (int) $context['catalog_id'] !== $catalogId) {
+            return;
+        }
+
+        ResumeFlowFromListingInquiry::dispatch(
+            $context['flow_id'],
+            $context['contact_id'],
+            $itemId
+        )->onQueue('flows');
     }
 
     /**

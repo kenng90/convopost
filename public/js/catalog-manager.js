@@ -1,5 +1,6 @@
 let catalogUsage = null;
 let catalogListCache = [];
+let catalogTemplatesCache = [];
 let hasShopify = false;
 let hasWooCommerce = false;
 
@@ -26,10 +27,39 @@ function csrfToken() {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    loadCatalogTemplates().then(() => {
+        const importMode = document.getElementById('importCatalogMode');
+        if (importMode) {
+            updateImportVerticalOptions();
+        }
+    });
     loadCatalogs();
     setupFileInputHandlers();
     setupReimportHandlers();
+    setupImportModalHandlers();
 });
+
+function setupImportModalHandlers() {
+    const modal = document.getElementById('catalogImportModal');
+    if (!modal || !window.jQuery) {
+        return;
+    }
+
+    window.jQuery(modal).on('show.bs.modal', () => {
+        updateImportVerticalOptions();
+    });
+}
+
+function loadCatalogTemplates() {
+    return fetch('/api/list-catalogs/templates')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                catalogTemplatesCache = data.modes || [];
+            }
+        })
+        .catch(() => {});
+}
 
 function setupFileInputHandlers() {
     const fileInput = document.getElementById('catalogFile');
@@ -195,6 +225,11 @@ function displayCatalogs(catalogs) {
     catalogsList.innerHTML = catalogs.map(catalog => {
         const escapedName = escapeHtml(catalog.name);
         const sourceLabel = catalog.store_source || catalog.source || 'manual';
+        const typeLabel = catalog.presentation?.mode_label || catalog.catalog_mode || 'commerce';
+        const verticalLabel = catalog.presentation?.vertical_label || '';
+        const typeBadge = verticalLabel && verticalLabel !== typeLabel
+            ? `${typeLabel} · ${verticalLabel}`
+            : typeLabel;
         const flowsBadge = catalog.flows_count > 0
             ? `<span class="badge badge-info ml-1" title="Used in flows">${catalog.flows_count} flow(s)</span>`
             : '';
@@ -205,6 +240,7 @@ function displayCatalogs(catalogs) {
                     <strong>${escapedName}</strong>${flowsBadge}
                     ${catalog.description ? `<br><small class="text-muted">${escapeHtml(catalog.description)}</small>` : ''}
                 </td>
+                <td><span class="badge badge-light text-dark">${escapeHtml(typeBadge)}</span></td>
                 <td><span class="badge badge-primary">${catalog.item_count || 0}</span></td>
                 <td><span class="badge badge-secondary text-uppercase">${escapeHtml(sourceLabel)}</span></td>
                 <td><small class="text-muted">${catalog.created_at ? new Date(catalog.created_at).toLocaleDateString() : 'N/A'}</small></td>
@@ -268,10 +304,105 @@ function saveAiCatalogAttachments() {
         .catch(err => showError(err.message));
 }
 
+function updateImportVerticalOptions() {
+    const modeSelect = document.getElementById('importCatalogMode');
+    const verticalGroup = document.getElementById('importCatalogVerticalGroup');
+    const verticalSelect = document.getElementById('importCatalogVertical');
+
+    if (!modeSelect || !verticalGroup || !verticalSelect) {
+        return;
+    }
+
+    const selectedMode = catalogTemplatesCache.find(mode => mode.key === modeSelect.value) || { verticals: [] };
+    const verticals = selectedMode.verticals || [];
+
+    if (verticals.length <= 1) {
+        verticalGroup.style.display = 'none';
+        verticalSelect.innerHTML = verticals[0]
+            ? `<option value="${verticals[0].key}">${escapeHtml(verticals[0].label)}</option>`
+            : '';
+    } else {
+        verticalGroup.style.display = '';
+        verticalSelect.innerHTML = verticals.map(vertical => (
+            `<option value="${vertical.key}">${escapeHtml(vertical.label)}</option>`
+        )).join('');
+    }
+
+    updateImportTemplateHelp();
+}
+
+function importTemplateFilename(mode, vertical) {
+    const modeSlug = String(mode || 'commerce').replace(/_/g, '-');
+    const verticalSlug = String(vertical || 'retail').replace(/_/g, '-');
+
+    return `catalog-import-${modeSlug}-${verticalSlug}.xlsx`;
+}
+
+function updateImportTemplateHelp() {
+    const mode = document.getElementById('importCatalogMode')?.value || 'commerce';
+    const vertical = document.getElementById('importCatalogVertical')?.value
+        || (mode === 'commerce' ? 'retail' : (mode === 'listing' ? 'general_listing' : 'general_service'));
+    const help = document.getElementById('importTemplateHelp');
+    const download = document.getElementById('importTemplateDownload');
+    const filename = importTemplateFilename(mode, vertical);
+
+    const selectedMode = catalogTemplatesCache.find(item => item.key === mode);
+    const selectedVertical = selectedMode?.verticals?.find(item => item.key === vertical);
+    const headers = selectedVertical?.excel_headers
+        || (mode === 'commerce'
+            ? ['Item ID', 'Title', 'Description', 'Price', 'Category', 'Image URL', 'Stock Status', 'Variants', 'Tags']
+            : ['Item ID', 'Title', 'Description', 'Price', 'Category', 'Image URL', 'Image URLs', 'Tags']);
+
+    if (help) {
+        help.innerHTML = `Row 1 headers: <strong>${headers.join(', ')}</strong>. Rows 2–6 are sample items for this template. Item ID and Title are required.`;
+    }
+
+    if (download) {
+        const query = `?catalog_mode=${encodeURIComponent(mode)}&vertical=${encodeURIComponent(vertical)}`;
+        download.href = `/api/list-catalogs/import-template${query}`;
+        download.setAttribute('download', filename);
+    }
+}
+
 function openCreateEmptyModal() {
     document.getElementById('emptyCatalogName').value = '';
     document.getElementById('emptyCatalogDescription').value = '';
+    document.getElementById('emptyCatalogMode').value = 'commerce';
+    updateCatalogVerticalOptions();
     $('#createEmptyCatalogModal').modal('show');
+}
+
+function updateCatalogVerticalOptions() {
+    const modeSelect = document.getElementById('emptyCatalogMode');
+    const verticalGroup = document.getElementById('emptyCatalogVerticalGroup');
+    const verticalSelect = document.getElementById('emptyCatalogVertical');
+    const help = document.getElementById('emptyCatalogModeHelp');
+
+    if (!modeSelect || !verticalGroup || !verticalSelect) {
+        return;
+    }
+
+    const selectedMode = catalogTemplatesCache.find(mode => mode.key === modeSelect.value)
+        || { verticals: [], description: '' };
+
+    if (help) {
+        help.textContent = selectedMode.description || '';
+    }
+
+    const verticals = selectedMode.verticals || [];
+    if (verticals.length <= 1) {
+        verticalGroup.style.display = 'none';
+        verticalSelect.innerHTML = '';
+        if (verticals[0]) {
+            verticalSelect.innerHTML = `<option value="${verticals[0].key}">${escapeHtml(verticals[0].label)}</option>`;
+        }
+        return;
+    }
+
+    verticalGroup.style.display = '';
+    verticalSelect.innerHTML = verticals.map(vertical => (
+        `<option value="${vertical.key}">${escapeHtml(vertical.label)}</option>`
+    )).join('');
 }
 
 function submitCreateEmptyCatalog() {
@@ -280,6 +411,10 @@ function submitCreateEmptyCatalog() {
         showError('Catalog name is required');
         return;
     }
+
+    const mode = document.getElementById('emptyCatalogMode')?.value || 'commerce';
+    const verticalSelect = document.getElementById('emptyCatalogVertical');
+    const vertical = verticalSelect?.value || null;
 
     fetch('/api/list-catalogs/create-empty', {
         method: 'POST',
@@ -290,6 +425,8 @@ function submitCreateEmptyCatalog() {
         body: JSON.stringify({
             name,
             description: document.getElementById('emptyCatalogDescription').value.trim() || null,
+            catalog_mode: mode,
+            vertical,
         }),
     })
         .then(r => r.json())
@@ -443,6 +580,8 @@ function submitImportForm() {
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
     formData.append('catalogName', catalogName.value.trim());
+    formData.append('catalog_mode', document.getElementById('importCatalogMode')?.value || 'commerce');
+    formData.append('vertical', document.getElementById('importCatalogVertical')?.value || 'retail');
 
     const btn = document.querySelector('[onclick="submitImportForm()"]');
     const originalText = btn ? btn.textContent : 'Import';
@@ -602,14 +741,25 @@ function showCatalogAnalytics(catalogId) {
             }
 
             const a = data.analytics;
-            document.getElementById('analyticsBody').innerHTML = `
-                <p class="text-muted">Last ${a.period_days} days</p>
-                <div class="row text-center">
+            const presentation = data.presentation || {};
+            const isListing = !presentation.supports_cart;
+
+            const metrics = isListing
+                ? `
+                    <div class="col-4"><div class="h4 mb-0">${a.views}</div><small class="text-muted">Views</small></div>
+                    <div class="col-4"><div class="h4 mb-0">${a.listing_inquiries || 0}</div><small class="text-muted">Inquiries</small></div>
+                    <div class="col-4"><div class="h4 mb-0">${presentation.vertical_label || presentation.mode_label || ''}</div><small class="text-muted">Type</small></div>
+                `
+                : `
                     <div class="col-3"><div class="h4 mb-0">${a.views}</div><small class="text-muted">Views</small></div>
                     <div class="col-3"><div class="h4 mb-0">${a.cart_adds}</div><small class="text-muted">Cart adds</small></div>
                     <div class="col-3"><div class="h4 mb-0">${a.whatsapp_checkouts}</div><small class="text-muted">WhatsApp</small></div>
                     <div class="col-3"><div class="h4 mb-0">${a.invoice_checkouts}</div><small class="text-muted">Invoices</small></div>
-                </div>
+                `;
+
+            document.getElementById('analyticsBody').innerHTML = `
+                <p class="text-muted">Last ${a.period_days} days</p>
+                <div class="row text-center">${metrics}</div>
                 ${data.flows?.length ? `<hr><p class="mb-1"><strong>Used in flows:</strong></p><ul class="mb-0">${data.flows.map(f => `<li>${escapeHtml(f.name)}</li>`).join('')}</ul>` : '<hr><p class="text-muted mb-0">Not connected to any flows yet.</p>'}
             `;
             $('#catalogAnalyticsModal').modal('show');

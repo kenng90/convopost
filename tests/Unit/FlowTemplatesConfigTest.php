@@ -42,6 +42,10 @@ class FlowTemplatesConfigTest extends TestCase
             'whatsapp_shop_checkout',
             'lead_intake_routing',
             'support_ai_escalation',
+            'healthcare_clinic_bot',
+            'real_estate_agency_bot',
+            'microfinance_banking_bot',
+            'hotel_tour_concierge_bot',
         ] as $key) {
             $this->assertArrayHasKey($key, $templates, "Missing template: {$key}");
         }
@@ -54,6 +58,10 @@ class FlowTemplatesConfigTest extends TestCase
             'whatsapp_shop_checkout',
             'lead_intake_routing',
             'support_ai_escalation',
+            'healthcare_clinic_bot',
+            'real_estate_agency_bot',
+            'microfinance_banking_bot',
+            'hotel_tour_concierge_bot',
         ];
 
         foreach ($keys as $key) {
@@ -77,6 +85,10 @@ class FlowTemplatesConfigTest extends TestCase
             'whatsapp_shop_checkout',
             'lead_intake_routing',
             'support_ai_escalation',
+            'healthcare_clinic_bot',
+            'real_estate_agency_bot',
+            'microfinance_banking_bot',
+            'hotel_tour_concierge_bot',
         ];
 
         foreach ($keys as $key) {

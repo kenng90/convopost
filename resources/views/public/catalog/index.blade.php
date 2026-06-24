@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $catalog->name }} - Shop</title>
+    <title>{{ $catalog->name }} - {{ $presentation['public_title_suffix'] ?? 'Shop' }}</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -72,9 +72,89 @@
             color: white;
         }
         
-        .stock-low {
+        .stock-reserved,
+        .stock-underoffer {
             background-color: #ffc107;
             color: #333;
+        }
+
+        .stock-sold,
+        .stock-leased {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .listing-highlight {
+            font-size: 12px;
+            color: #495057;
+        }
+
+        .listing-image-gallery {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .listing-gallery-track,
+        .listing-gallery-slide {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .listing-gallery-slide {
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .listing-gallery-slide.active {
+            opacity: 1;
+        }
+
+        .gallery-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: rgba(0, 0, 0, 0.45);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+        .gallery-prev { left: 8px; }
+        .gallery-next { right: 8px; }
+
+        .gallery-dots {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            z-index: 2;
+        }
+
+        .gallery-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.55);
+            cursor: pointer;
+        }
+
+        .gallery-dot.active {
+            background: #fff;
+        }
+
+        #listingMap {
+            height: 320px;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #dee2e6;
         }
         
         .product-body {
@@ -443,7 +523,10 @@
     <!-- Main Content -->
     <div class="container grid-container">
         @if($totalInCatalog > 0)
-            <form method="GET" action="{{ route('catalog.public', $catalog->id) }}" class="catalog-filters">
+            <form method="GET" action="{{ route('catalog.public', $catalog->id) }}" class="catalog-filters" id="catalogFiltersForm">
+                @if($flowToken)
+                    <input type="hidden" name="flow_token" value="{{ $flowToken }}">
+                @endif
                 <div class="form-row">
                     <div class="form-group col-md-4 col-12">
                         <label for="filter-q" class="sr-only">Search</label>
@@ -451,7 +534,7 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text"><i class="fas fa-search"></i></span>
                             </div>
-                            <input type="search" id="filter-q" name="q" class="form-control" placeholder="Search products..." value="{{ $filters['q'] }}">
+                            <input type="search" id="filter-q" name="q" class="form-control" placeholder="{{ $presentation['search_placeholder'] ?? 'Search...' }}" value="{{ $filters['q'] }}">
                         </div>
                     </div>
                     <div class="form-group col-md-2 col-6">
@@ -463,6 +546,7 @@
                             @endforeach
                         </select>
                     </div>
+                    @if($presentation['supports_inventory'] ?? true)
                     <div class="form-group col-md-2 col-6">
                         <label for="filter-stock" class="sr-only">Stock</label>
                         <select id="filter-stock" name="stock" class="custom-select">
@@ -472,6 +556,47 @@
                             <option value="Out of Stock" @selected($filters['stock'] === 'Out of Stock')>Out of Stock</option>
                         </select>
                     </div>
+                    @else
+                    <div class="form-group col-md-2 col-6">
+                        <label for="filter-status" class="sr-only">Status</label>
+                        <select id="filter-status" name="status" class="custom-select">
+                            <option value="">All statuses</option>
+                            @foreach($filterOptions['statuses'] as $status)
+                                <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ $status }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+                    @if(in_array('location', $presentation['filter_facets'] ?? [], true))
+                    <div class="form-group col-md-2 col-6">
+                        <label for="filter-location" class="sr-only">Location</label>
+                        <select id="filter-location" name="location" class="custom-select">
+                            <option value="">All locations</option>
+                            @foreach($filterOptions['locations'] as $location)
+                                <option value="{{ $location }}" @selected($filters['location'] === $location)>{{ $location }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+                    @if(($presentation['supports_geo_map'] ?? false) && in_array('geo', $presentation['filter_facets'] ?? [], true))
+                    <div class="form-group col-md-3 col-12">
+                        <div class="d-flex flex-wrap align-items-center" style="gap: 8px;">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="useMyLocationForFilter()">
+                                <i class="fas fa-location-arrow mr-1"></i>Near me
+                            </button>
+                            <select id="filter-radius" name="radius_km" class="custom-select" style="max-width: 140px;">
+                                @foreach([5, 10, 25, 50, 100] as $radius)
+                                    <option value="{{ $radius }}" @selected((float) ($filters['radius_km'] ?? 25) === (float) $radius)>{{ $radius }} km</option>
+                                @endforeach
+                            </select>
+                            <input type="hidden" id="filter-near-lat" name="near_lat" value="{{ $filters['near_lat'] ?? '' }}">
+                            <input type="hidden" id="filter-near-lng" name="near_lng" value="{{ $filters['near_lng'] ?? '' }}">
+                            @if(!empty($filters['near_lat']) && !empty($filters['near_lng']))
+                                <a href="{{ route('catalog.public', $catalog->id) }}" class="btn btn-sm btn-link">Clear map filter</a>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
                     <div class="form-group col-md-2 col-6">
                         <label for="filter-tag" class="sr-only">Tag</label>
                         <select id="filter-tag" name="tag" class="custom-select">
@@ -511,25 +636,33 @@
             </form>
 
             <div class="catalog-results-meta">
+                @php $itemNoun = $presentation['item_noun'] ?? 'item'; $itemNounPlural = $presentation['item_noun_plural'] ?? 'items'; @endphp
                 @if($filteredTotal > 0)
-                    Showing {{ $items->firstItem() }}–{{ $items->lastItem() }} of {{ $filteredTotal }} product{{ $filteredTotal === 1 ? '' : 's' }}
+                    Showing {{ $items->firstItem() }}–{{ $items->lastItem() }} of {{ $filteredTotal }} {{ $filteredTotal === 1 ? $itemNoun : $itemNounPlural }}
                     @if($filteredTotal < $totalInCatalog)
                         ({{ $totalInCatalog }} total in catalog)
                     @endif
                 @else
-                    No products match your filters ({{ $totalInCatalog }} in catalog)
+                    No {{ $itemNounPlural }} match your filters ({{ $totalInCatalog }} in catalog)
                 @endif
             </div>
         @endif
 
         @if($totalInCatalog === 0)
             <div class="alert alert-info" role="alert">
-                <i class="fas fa-info-circle mr-2"></i>No products available in this catalog yet.
+                <i class="fas fa-info-circle mr-2"></i>No {{ $itemNounPlural }} available in this catalog yet.
             </div>
         @elseif($items->count() > 0)
+            @if(($presentation['supports_geo_map'] ?? false) && count($mapMarkers ?? []) > 0)
+                <div id="listingMap"></div>
+            @endif
             <div class="row">
                 @foreach($items as $item)
-                    @include('public.catalog.partials.product-card', ['item' => $item])
+                    @if($presentation['supports_cart'] ?? true)
+                        @include('public.catalog.partials.product-card', ['item' => $item])
+                    @else
+                        @include('public.catalog.partials.listing-card', ['item' => $item, 'presentation' => $presentation])
+                    @endif
                 @endforeach
             </div>
 
@@ -540,12 +673,13 @@
             @endif
         @else
             <div class="alert alert-warning" role="alert">
-                <i class="fas fa-search mr-2"></i>No products match your search or filters.
+                <i class="fas fa-search mr-2"></i>No {{ $presentation['item_noun_plural'] ?? 'items' }} match your search or filters.
                 <a href="{{ route('catalog.public', $catalog->id) }}" class="alert-link ml-1">Clear filters</a>
             </div>
         @endif
     </div>
 
+    @if($presentation['supports_cart'] ?? true)
     <!-- Cart Sidebar -->
     <div class="cart-sidebar" id="cartSidebar">
         <div class="cart-header">
@@ -582,6 +716,11 @@
 
     <!-- Overlay -->
     <div class="overlay" id="overlay" onclick="toggleCart()"></div>
+    @endif
+
+    @if(($presentation['supports_geo_map'] ?? false) && count($mapMarkers ?? []) > 0)
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    @endif
 
     <!-- Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -618,6 +757,7 @@
 
         trackCatalogEvent('view');
 
+        @if($presentation['supports_cart'] ?? true)
         // Cart state with selected variants
         let cart = JSON.parse(localStorage.getItem('catalog_{{ $catalog->id }}_cart')) || [];
         let selectedVariants = {};
@@ -896,6 +1036,116 @@
                 alert('Error creating invoice: ' + error.message);
             });
         }
+        @else
+        function inquireOnWhatsApp(itemId) {
+            const customerName = window.prompt('Your name (optional)') || '';
+            const notes = window.prompt('Message or viewing request (optional)') || '';
+
+            fetch(`/catalog/${catalogId}/generate-inquiry`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    item_id: itemId,
+                    customerName: customerName || null,
+                    notes: notes || null,
+                    flow_token: flowToken,
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.message || 'Could not start WhatsApp inquiry.');
+                    return;
+                }
+
+                trackCatalogEvent('listing_inquiry', { item_id: itemId });
+
+                if (data.whatsapp_url) {
+                    window.open(data.whatsapp_url, '_blank');
+                    return;
+                }
+
+                alert(data.message || 'WhatsApp number is not configured for this business.');
+            })
+            .catch(() => alert('Could not start WhatsApp inquiry.'));
+        }
+
+        function listingGalleryGo(cardId, index) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            const slides = card.querySelectorAll('.listing-gallery-slide');
+            const dots = card.querySelectorAll('.gallery-dot');
+            slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+            dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+        }
+
+        function listingGalleryPrev(cardId) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            const slides = card.querySelectorAll('.listing-gallery-slide');
+            const current = [...slides].findIndex(slide => slide.classList.contains('active'));
+            const next = current <= 0 ? slides.length - 1 : current - 1;
+            listingGalleryGo(cardId, next);
+        }
+
+        function listingGalleryNext(cardId) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            const slides = card.querySelectorAll('.listing-gallery-slide');
+            const current = [...slides].findIndex(slide => slide.classList.contains('active'));
+            const next = current >= slides.length - 1 ? 0 : current + 1;
+            listingGalleryGo(cardId, next);
+        }
+
+        function useMyLocationForFilter() {
+            if (!navigator.geolocation) {
+                alert('Location is not supported in this browser.');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition((position) => {
+                document.getElementById('filter-near-lat').value = position.coords.latitude;
+                document.getElementById('filter-near-lng').value = position.coords.longitude;
+                document.getElementById('catalogFiltersForm').submit();
+            }, () => alert('Could not access your location.'));
+        }
+
+        @if(($presentation['supports_geo_map'] ?? false) && count($mapMarkers ?? []) > 0)
+        const listingMapMarkers = @json($mapMarkers);
+        @endif
+        @endif
     </script>
+    @if(($presentation['supports_geo_map'] ?? false) && count($mapMarkers ?? []) > 0)
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!window.L || !listingMapMarkers || listingMapMarkers.length === 0) {
+                return;
+            }
+
+            const map = L.map('listingMap');
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors',
+            }).addTo(map);
+
+            const bounds = [];
+            listingMapMarkers.forEach((marker) => {
+                const popup = `<strong>${marker.title}</strong>`;
+                L.marker([marker.lat, marker.lng]).addTo(map).bindPopup(popup);
+                bounds.push([marker.lat, marker.lng]);
+            });
+
+            if (bounds.length === 1) {
+                map.setView(bounds[0], 13);
+            } else {
+                map.fitBounds(bounds, { padding: [24, 24] });
+            }
+        });
+    </script>
+    @endif
 </body>
 </html>

@@ -43,13 +43,25 @@ class CatalogAnalyticsService
             ->pluck('total', 'day')
             ->all();
 
+        $dailyInquiries = CatalogAnalyticsEvent::query()
+            ->where('catalog_id', $catalogId)
+            ->where('event_type', CatalogAnalyticsEvent::TYPE_LISTING_INQUIRY)
+            ->where('created_at', '>=', $since)
+            ->select(DB::raw('DATE(created_at) as day'), DB::raw('count(*) as total'))
+            ->groupBy('day')
+            ->orderBy('day')
+            ->pluck('total', 'day')
+            ->all();
+
         return [
             'period_days' => $days,
             'views' => (int) ($counts[CatalogAnalyticsEvent::TYPE_VIEW] ?? 0),
             'cart_adds' => (int) ($counts[CatalogAnalyticsEvent::TYPE_CART_ADD] ?? 0),
             'whatsapp_checkouts' => (int) ($counts[CatalogAnalyticsEvent::TYPE_CHECKOUT_WHATSAPP] ?? 0),
             'invoice_checkouts' => (int) ($counts[CatalogAnalyticsEvent::TYPE_CHECKOUT_INVOICE] ?? 0),
+            'listing_inquiries' => (int) ($counts[CatalogAnalyticsEvent::TYPE_LISTING_INQUIRY] ?? 0),
             'daily_views' => $dailyViews,
+            'daily_inquiries' => $dailyInquiries,
         ];
     }
 }

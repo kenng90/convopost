@@ -47,7 +47,7 @@ class CatalogFlowUsageService
         }
 
         foreach ($decoded['nodes'] ?? [] as $node) {
-            if (($node['type'] ?? '') !== 'whatsapp_catalog') {
+            if (! in_array($node['type'] ?? '', ['whatsapp_catalog', 'listing_inquiry'], true)) {
                 continue;
             }
 

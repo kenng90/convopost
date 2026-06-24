@@ -54,6 +54,7 @@ Route::controller(PublicCatalogController::class)->group(function () {
         Route::get('/{catalogId}/items', 'getItems')->name('catalog.items');
         Route::post('/{catalogId}/events', 'trackEvent')->name('catalog.track-event');
         Route::post('/{catalogId}/generate-order', 'generateOrder')->name('catalog.generate-order');
+        Route::post('/{catalogId}/generate-inquiry', 'generateInquiry')->name('catalog.generate-inquiry');
         Route::post('/{catalogId}/create-invoice', 'createInvoice')->name('catalog.create-invoice');
 
         Route::get('/{catalogId}', 'show')->name('catalog.public');
@@ -171,6 +172,7 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject', 'org.route']
             Route::post('/api/list-catalogs/preview-excel', 'previewExcel')->name('catalogs.preview-excel');
             Route::post('/api/list-catalogs/import-excel', 'importExcel')->name('catalogs.import-excel');
             Route::post('/api/list-catalogs/create-empty', 'createEmpty')->name('catalogs.create-empty');
+            Route::get('/api/list-catalogs/templates', 'listTemplates')->name('catalogs.templates');
             Route::post('/api/list-catalogs/import-shopify', 'importShopify')->name('catalogs.import-shopify');
             Route::post('/api/list-catalogs/import-woocommerce', 'importWooCommerce')->name('catalogs.import-woocommerce');
             Route::post('/api/list-catalogs/{id}/reimport-excel', 'reimportExcel')->name('catalogs.reimport-excel');

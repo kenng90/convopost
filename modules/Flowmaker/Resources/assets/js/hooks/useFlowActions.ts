@@ -59,6 +59,7 @@ export const useFlowActions = () => {
             type === 'quick_replies' ? 'quick_replies' :
             type === 'list_message' ? 'list_message' :
             type === 'whatsapp_catalog' ? 'whatsapp_catalog' :
+            type === 'listing_inquiry' ? 'listing_inquiry' :
             type === 'whatsapp_flow' ? 'whatsapp_flow' :
             type === 'openai' ? 'openai' :
             type === 'datastore' ? 'datastore' :
@@ -83,6 +84,7 @@ export const useFlowActions = () => {
                type === 'quick_replies' ? 'Quick Replies Message' :
                type === 'list_message' ? 'List Message' :
                type === 'whatsapp_catalog' ? 'WhatsApp Catalog' :
+               type === 'listing_inquiry' ? 'Listing Inquiry' :
                type === 'openai' ? 'OpenAI' :
                type === 'datastore' ? 'Data Store' :
                type === 'assign_agent' ? 'Assign to Agent' :

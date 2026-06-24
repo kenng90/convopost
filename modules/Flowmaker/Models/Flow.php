@@ -20,6 +20,7 @@ use Modules\Flowmaker\Models\Nodes\End;
 use Modules\Flowmaker\Models\Nodes\Every;
 use Modules\Flowmaker\Models\Nodes\FlowHTTPNode;
 use Modules\Flowmaker\Models\Nodes\Keyword;
+use Modules\Flowmaker\Models\Nodes\ListingInquiry;
 use Modules\Flowmaker\Models\Nodes\ListMessage;
 use Modules\Flowmaker\Models\Nodes\LLM;
 use Modules\Flowmaker\Models\Nodes\Media;
@@ -222,6 +223,8 @@ class Flow extends Model
                 $theNewNode = new MpesaStkPush($nodeArray, []);
             } elseif ($nodeArray['type'] === 'whatsapp_catalog') {
                 $theNewNode = new WhatsAppCatalog($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'listing_inquiry') {
+                $theNewNode = new ListingInquiry($nodeArray, []);
             } elseif ($nodeArray['type'] === 'whatsapp_flow') {
                 $theNewNode = new WhatsAppFlow($nodeArray, []);
             } elseif ($nodeArray['type'] === 'booking_events_list') {
@@ -364,6 +367,15 @@ class Flow extends Model
             ? CatalogFlowCallbackService::CHECKOUT_COMPLETE_EXTRA
             : $productId;
 
+        $this->resumeWaitingNode($contact, $extra);
+    }
+
+    /**
+     * Resume a flow after a listing catalog web inquiry is submitted.
+     */
+    public function resumeFromListingInquiry(Contact $contact, string $itemId): void
+    {
+        $extra = app(CatalogFlowCallbackService::class)->listingInquiryExtra($itemId);
         $this->resumeWaitingNode($contact, $extra);
     }
 

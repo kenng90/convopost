@@ -9,8 +9,8 @@
     <div class="row">
         <div class="col-12">
             <div class="mb-4">
-                <h1 class="h3 mb-1">{{ __('Product Catalogs') }}</h1>
-                <p class="text-muted mb-1">{{ __('Build a WhatsApp shop, share branded links, and connect catalogs to flows and Voice AI.') }}</p>
+                <h1 class="h3 mb-1">{{ __('Catalogs & Listings') }}</h1>
+                <p class="text-muted mb-1">{{ __('Build a WhatsApp shop, showcase property and vehicle listings, share branded links, and connect catalogs to flows and Voice AI.') }}</p>
                 <p id="catalog-item-usage" class="text-muted small mb-0" style="display: none;"></p>
             </div>
 
@@ -56,6 +56,7 @@
                         <thead class="thead-light">
                             <tr>
                                 <th>{{ __('Name') }}</th>
+                                <th>{{ __('Type') }}</th>
                                 <th>{{ __('Items') }}</th>
                                 <th>{{ __('Source') }}</th>
                                 <th>{{ __('Created') }}</th>
@@ -64,7 +65,7 @@
                         </thead>
                         <tbody id="catalogs-list">
                             <tr>
-                                <td colspan="5" class="text-center py-4">
+                                <td colspan="6" class="text-center py-4">
                                     <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                                     <p class="text-muted mt-2 mb-0">{{ __('Loading catalogs') }}...</p>
                                 </td>

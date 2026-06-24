@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CreateEmptyCatalogRequest;
 use App\Http\Requests\ManageCatalogItemsRequest;
 use App\Http\Requests\UpdateCatalogCommerceSettingsRequest;
 use App\Models\CatalogCollection;
@@ -13,9 +14,12 @@ use App\Services\Catalog\CatalogAnalyticsService;
 use App\Services\Catalog\CatalogCategoryNormalizer;
 use App\Services\Catalog\CatalogExperimentService;
 use App\Services\Catalog\CatalogFlowUsageService;
+use App\Services\Catalog\CatalogItemPayloadService;
 use App\Services\Catalog\CatalogItemRepository;
+use App\Services\Catalog\CatalogMode;
 use App\Services\Catalog\CatalogReimportService;
 use App\Services\Catalog\CatalogStoreSyncService;
+use App\Services\Catalog\CatalogTemplateRegistry;
 use App\Services\Catalog\CatalogUrlService;
 use App\Services\Catalog\CatalogWhatsAppOrderService;
 use App\Services\Catalog\StoreCatalogImportService;
@@ -47,6 +51,8 @@ class ListCatalogController extends Controller
         protected ApiCatalogImportService $apiCatalogImportService,
         protected CatalogExperimentService $catalogExperimentService,
         protected CatalogWhatsAppOrderService $catalogWhatsAppOrderService,
+        protected CatalogTemplateRegistry $catalogTemplateRegistry,
+        protected CatalogItemPayloadService $catalogItemPayloadService,
     ) {
     }
 
@@ -65,7 +71,10 @@ class ListCatalogController extends Controller
         try {
             $request->validate([
                 'file' => 'required|file|mimes:xlsx,xls,csv',
+                'vertical' => 'nullable|string|max:64',
             ]);
+
+            $vertical = $request->input('vertical');
 
             $file = $request->file('file');
             $path = $file->store('temp');
@@ -77,18 +86,25 @@ class ListCatalogController extends Controller
             // Clean up temp file
             unlink($fullPath);
 
-            $columnMapping = $parseResult['column_mapping'];
+            $columnMapping = $vertical
+                ? $this->excelService->buildColumnMappingFromHeaders($parseResult['headers'], $vertical)
+                : $parseResult['column_mapping'];
             $previewItems = $this->excelService->transformItems(
                 array_slice($parseResult['items'], 0, 5),
-                $columnMapping
+                $columnMapping,
+                $vertical
             );
+
+            $templateHeaders = $vertical
+                ? $this->catalogTemplateRegistry->excelHeadersForVertical($vertical)
+                : ExcelImportService::TEMPLATE_HEADERS;
 
             return response()->json([
                 'success' => true,
                 'items' => $this->excelService->previewItems($previewItems),
                 'columns' => $parseResult['columns'],
                 'column_mapping' => $columnMapping,
-                'template_headers' => ExcelImportService::TEMPLATE_HEADERS,
+                'template_headers' => $templateHeaders,
                 'total_count' => $parseResult['total_count'],
                 'headers' => $parseResult['headers'],
             ]);
@@ -120,10 +136,18 @@ class ListCatalogController extends Controller
                 'file' => 'required|file|mimes:xlsx,xls,csv',
                 'catalogName' => 'required|string|max:255',
                 'columnMapping' => 'nullable|json',
+                'catalog_mode' => 'nullable|string|in:'.implode(',', CatalogMode::all()),
+                'vertical' => 'nullable|string|max:64',
             ]);
 
             $file = $request->file('file');
             $catalogName = $request->input('catalogName');
+            $catalogMode = $request->input('catalog_mode', CatalogMode::COMMERCE);
+            $vertical = $request->input('vertical', $this->catalogTemplateRegistry->defaultVerticalForMode($catalogMode));
+
+            if (! $this->catalogTemplateRegistry->verticalMatchesMode($vertical, $catalogMode)) {
+                $vertical = $this->catalogTemplateRegistry->defaultVerticalForMode($catalogMode);
+            }
 
             $path = $file->store('catalogs');
             $fullPath = storage_path('app/'.$path);
@@ -132,11 +156,12 @@ class ListCatalogController extends Controller
 
             $columnMapping = $request->filled('columnMapping')
                 ? json_decode($request->input('columnMapping'), true)
-                : $parseResult['column_mapping'];
+                : $this->excelService->buildColumnMappingFromHeaders($parseResult['headers'], $vertical);
 
             $transformedItems = $this->excelService->transformItems(
                 $parseResult['items'],
-                $columnMapping
+                $columnMapping,
+                $vertical
             );
 
             // Validate items
@@ -157,15 +182,19 @@ class ListCatalogController extends Controller
             $catalogData = [
                 'company_id' => $this->activeCompanyId(),
                 'name' => $catalogName,
+                'catalog_mode' => $catalogMode,
+                'vertical' => $vertical,
                 'version' => 1,
                 'items' => $transformedItems,
-                'columns' => $this->excelService->getColumnsFromItems($transformedItems),
+                'columns' => $this->catalogTemplateRegistry->columnsForVertical($vertical),
                 'source' => 'excel',
                 'original_file_name' => $file->getClientOriginalName(),
                 'metadata' => [
                     'column_mapping' => $columnMapping,
                     'imported_count' => count($transformedItems),
                     'imported_at' => now(),
+                    'catalog_mode' => $catalogMode,
+                    'vertical' => $vertical,
                 ],
             ];
 
@@ -211,15 +240,29 @@ class ListCatalogController extends Controller
     /**
      * Download standardized catalog import template (.xlsx)
      */
-    public function downloadImportTemplate(): StreamedResponse
+    public function downloadImportTemplate(Request $request): StreamedResponse
     {
         if (! auth()->check()) {
             abort(401);
         }
 
-        return response()->streamDownload(function () {
-            $this->excelService->writeTemplateToPath('php://output');
-        }, 'catalog-import-template.xlsx', [
+        $catalogMode = $request->query('catalog_mode', CatalogMode::COMMERCE);
+        if (! in_array($catalogMode, CatalogMode::all(), true)) {
+            $catalogMode = CatalogMode::COMMERCE;
+        }
+
+        $vertical = $request->query('vertical')
+            ?: $this->catalogTemplateRegistry->defaultVerticalForMode($catalogMode);
+
+        if (! $this->catalogTemplateRegistry->verticalMatchesMode($vertical, $catalogMode)) {
+            $vertical = $this->catalogTemplateRegistry->defaultVerticalForMode($catalogMode);
+        }
+
+        $filename = $this->catalogTemplateRegistry->importTemplateFilename($catalogMode, $vertical);
+
+        return response()->streamDownload(function () use ($vertical) {
+            $this->excelService->writeTemplateToPath('php://output', $vertical);
+        }, $filename, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
@@ -505,6 +548,7 @@ class ListCatalogController extends Controller
 
         return view('settings.catalog-items', [
             'catalog' => $catalog,
+            'presentation' => $catalog->presentation(),
         ]);
     }
 
@@ -537,6 +581,7 @@ class ListCatalogController extends Controller
             return response()->json([
                 'success' => true,
                 'items' => $paginator->items(),
+                'presentation' => $catalog->presentation(),
                 'pagination' => [
                     'current_page' => $paginator->currentPage(),
                     'last_page' => $paginator->lastPage(),
@@ -619,18 +664,7 @@ class ListCatalogController extends Controller
                 ->where('company_id', $companyId)
                 ->firstOrFail();
 
-            $validated = $request->validate([
-                'id' => 'required|string|max:100',
-                'title' => 'required|string|max:255',
-                'description' => 'nullable|string|max:1000',
-                'price' => 'nullable|numeric|min:0',
-                'category' => 'nullable|string|max:255',
-                'imageUrl' => 'nullable|url|max:2048',
-                'stockStatus' => 'nullable|string|in:In Stock,Out of Stock,Low Stock',
-                'quantityAvailable' => 'nullable|integer|min:0',
-                'variants' => 'nullable|array',
-                'tags' => 'nullable|array',
-            ]);
+            $validated = $request->validate($this->catalogItemPayloadService->rulesForAdd($catalog));
 
             $items = $this->catalogItemRepository->getItemsArray($catalog);
 
@@ -653,18 +687,7 @@ class ListCatalogController extends Controller
                 ], 403);
             }
 
-            $newItem = [
-                'id' => $validated['id'],
-                'title' => $validated['title'],
-                'description' => $validated['description'] ?? '',
-                'price' => $validated['price'] ?? 0,
-                'category' => $validated['category'] ?? '',
-                'imageUrl' => $validated['imageUrl'] ?? '',
-                'stockStatus' => $validated['stockStatus'] ?? 'In Stock',
-                'quantityAvailable' => $validated['quantityAvailable'] ?? null,
-                'variants' => $validated['variants'] ?? [],
-                'tags' => $validated['tags'] ?? [],
-            ];
+            $newItem = $this->catalogItemPayloadService->buildPayload($validated, $catalog);
 
             $this->catalogItemRepository->upsertFromArray($catalog, $newItem);
             $items = $this->catalogItemRepository->getItemsArray($catalog->fresh());
@@ -707,17 +730,7 @@ class ListCatalogController extends Controller
                 ->where('company_id', $companyId)
                 ->firstOrFail();
 
-            $validated = $request->validate([
-                'title' => 'required|string|max:255',
-                'description' => 'nullable|string|max:1000',
-                'price' => 'nullable|numeric|min:0',
-                'category' => 'nullable|string|max:255',
-                'imageUrl' => 'nullable|url|max:2048',
-                'stockStatus' => 'nullable|string|in:In Stock,Out of Stock,Low Stock',
-                'quantityAvailable' => 'nullable|integer|min:0',
-                'variants' => 'nullable|array',
-                'tags' => 'nullable|array',
-            ]);
+            $validated = $request->validate($this->catalogItemPayloadService->rulesForUpdate($catalog));
 
             $items = $this->catalogItemRepository->getItemsArray($catalog);
             $existing = null;
@@ -736,20 +749,11 @@ class ListCatalogController extends Controller
                 ], 404);
             }
 
-            $updatedItem = array_merge($existing, [
-                'id' => $itemId,
-                'title' => $validated['title'],
-                'description' => $validated['description'] ?? '',
-                'price' => $validated['price'] ?? 0,
-                'category' => $validated['category'] ?? '',
-                'imageUrl' => $validated['imageUrl'] ?? '',
-                'stockStatus' => $validated['stockStatus'] ?? 'In Stock',
-                'quantityAvailable' => array_key_exists('quantityAvailable', $validated)
-                    ? $validated['quantityAvailable']
-                    : ($existing['quantityAvailable'] ?? null),
-                'variants' => $validated['variants'] ?? [],
-                'tags' => $validated['tags'] ?? [],
-            ]);
+            $updatedItem = $this->catalogItemPayloadService->buildPayload(
+                array_merge($validated, ['id' => $itemId]),
+                $catalog,
+                $existing
+            );
 
             $this->catalogItemRepository->upsertFromArray($catalog, $updatedItem);
             $items = $this->catalogItemRepository->getItemsArray($catalog->fresh());
@@ -848,26 +852,27 @@ class ListCatalogController extends Controller
         return null;
     }
 
-    public function createEmpty(Request $request)
+    public function createEmpty(CreateEmptyCatalogRequest $request)
     {
-        if (! auth()->check()) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
-        }
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-        ]);
+        $validated = $request->validated();
+        $mode = $validated['catalog_mode'] ?? CatalogMode::COMMERCE;
+        $vertical = $validated['vertical'] ?? $this->catalogTemplateRegistry->defaultVerticalForMode($mode);
 
         $catalog = ListCatalog::create([
             'company_id' => $this->activeCompanyId(),
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
+            'catalog_mode' => $mode,
+            'vertical' => $vertical,
             'version' => 1,
             'items' => [],
-            'columns' => [],
+            'columns' => $this->catalogTemplateRegistry->columnsForVertical($vertical),
             'source' => 'manual',
-            'metadata' => ['created_via' => 'empty'],
+            'metadata' => [
+                'created_via' => 'empty',
+                'catalog_mode' => $mode,
+                'vertical' => $vertical,
+            ],
         ]);
 
         return response()->json([
@@ -875,6 +880,18 @@ class ListCatalogController extends Controller
             'message' => "Catalog '{$catalog->name}' created.",
             'catalogId' => $catalog->id,
             'catalog' => $this->formatCatalogSummary($catalog),
+        ]);
+    }
+
+    public function listTemplates()
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        return response()->json([
+            'success' => true,
+            'modes' => $this->catalogTemplateRegistry->modesForApi(),
         ]);
     }
 
@@ -903,9 +920,16 @@ class ListCatalogController extends Controller
             $parseResult = $this->excelService->parseExcel($fullPath);
             $columnMapping = $request->filled('columnMapping')
                 ? json_decode($request->input('columnMapping'), true)
-                : $parseResult['column_mapping'];
+                : $this->excelService->buildColumnMappingFromHeaders(
+                    $parseResult['headers'],
+                    $catalog->resolvedVertical()
+                );
 
-            $importedItems = $this->excelService->transformItems($parseResult['items'], $columnMapping);
+            $importedItems = $this->excelService->transformItems(
+                $parseResult['items'],
+                $columnMapping,
+                $catalog->resolvedVertical()
+            );
             $this->excelService->validateItems($importedItems);
 
             $preview = $this->catalogReimportService->previewMerge(
@@ -989,6 +1013,7 @@ class ListCatalogController extends Controller
         return response()->json([
             'success' => true,
             'analytics' => $this->catalogAnalyticsService->summary($catalog->id),
+            'presentation' => $catalog->presentation(),
             'flows' => $this->catalogFlowUsageService->flowsUsingCatalog($catalog->id, $companyId),
         ]);
     }
@@ -1494,6 +1519,9 @@ class ListCatalogController extends Controller
             'name' => $catalog->name,
             'slug' => $catalog->slug,
             'description' => $catalog->description,
+            'catalog_mode' => $catalog->resolvedCatalogMode(),
+            'vertical' => $catalog->resolvedVertical(),
+            'presentation' => $catalog->presentation(),
             'version' => $catalog->version,
             'source' => $catalog->source,
             'item_count' => count($catalog->items ?? []),

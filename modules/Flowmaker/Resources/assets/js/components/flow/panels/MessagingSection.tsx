@@ -160,6 +160,26 @@ const messagingActions = [
     }
   },
   {
+    type: 'listing_inquiry',
+    icon: Database,
+    label: "Send listings link",
+    bgColor: "bg-emerald-100",
+    textColor: "text-emerald-600",
+    onClick: (actions: ReturnType<typeof useFlowActions>) => {
+      const position = { x: 250, y: 100 };
+      const data: NodeData = {
+        label: "Send Listings Link",
+        type: "listing_inquiry",
+        settings: {
+          catalogId: undefined,
+          header: "Browse our listings",
+          footer: "Tap the link to view listings and inquire on WhatsApp."
+        }
+      };
+      return actions.createNodeBase('listing_inquiry', position, data);
+    }
+  },
+  {
     type: 'whatsapp_flow',
     icon: Database,
     label: "Send WhatsApp Flow",
@@ -199,6 +219,9 @@ export const MessagingSection = ({ searchQuery }: MessagingSectionProps) => {
 
   const filteredActions = messagingActions.filter(action => {
     if (action.type === 'whatsapp_catalog' && !planPlugins.whatsappcatalog) {
+      return false;
+    }
+    if (action.type === 'listing_inquiry' && !planPlugins.whatsappcatalog) {
       return false;
     }
     if (action.type === 'whatsapp_flow' && !planPlugins.whatsappflows) {

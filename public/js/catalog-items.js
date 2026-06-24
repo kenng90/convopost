@@ -18,6 +18,68 @@ function formatCatalogPrice(amount) {
 
 let currentPage = 1;
 let currentSearch = '';
+const catalogPresentation = window.catalogPresentation || { supports_inventory: true, status_field: 'stockStatus' };
+
+function supportsInventory() {
+    return !!catalogPresentation.supports_inventory;
+}
+
+function itemFieldValue(item, key) {
+    if (item[key] !== undefined && item[key] !== null && item[key] !== '') {
+        return item[key];
+    }
+
+    if (item.metadata && item.metadata[key] !== undefined && item.metadata[key] !== null && item.metadata[key] !== '') {
+        return item.metadata[key];
+    }
+
+    return '';
+}
+
+function collectVerticalFieldValues(scope) {
+    const values = {};
+    const selector = scope === 'edit' ? '#editItemModal .catalog-vertical-field' : '#addItemForm .catalog-vertical-field';
+
+    document.querySelectorAll(selector).forEach((field) => {
+        const key = field.dataset.fieldKey;
+        if (!key) {
+            return;
+        }
+
+        values[key] = field.value.trim();
+    });
+
+    return values;
+}
+
+function fillVerticalFieldValues(item, scope) {
+    const selector = scope === 'edit' ? '#editItemModal .catalog-vertical-field' : '#addItemForm .catalog-vertical-field';
+
+    document.querySelectorAll(selector).forEach((field) => {
+        const key = field.dataset.fieldKey;
+        if (!key) {
+            return;
+        }
+
+        field.value = itemFieldValue(item, key);
+    });
+}
+
+function buildItemPayload(base, scope = 'new') {
+    const payload = { ...base };
+    const imagesTextEl = document.getElementById(scope === 'edit' ? 'editItemImagesText' : 'newItemImagesText');
+    if (imagesTextEl && imagesTextEl.value.trim() !== '') {
+        payload.imagesText = imagesTextEl.value.trim();
+    }
+
+    if (!supportsInventory()) {
+        Object.assign(payload, collectVerticalFieldValues(scope));
+        payload.stockStatus = undefined;
+        payload.variants = [];
+    }
+
+    return payload;
+}
 
 document.addEventListener('DOMContentLoaded', function () {
     const catalogIdEl = document.getElementById('currentCatalogId');
@@ -61,7 +123,7 @@ function loadItems(catalogId, page = 1) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                displayItems(data.items, data.pagination, data.total_in_catalog, data.filtered_total);
+                displayItems(data.items, data.pagination, data.total_in_catalog, data.filtered_total, data.presentation || catalogPresentation);
             } else {
                 showError('Failed to load items');
             }
@@ -72,10 +134,12 @@ function loadItems(catalogId, page = 1) {
         });
 }
 
-function displayItems(items, pagination, totalInCatalog, filteredTotal) {
+function displayItems(items, pagination, totalInCatalog, filteredTotal, presentation = catalogPresentation) {
     const itemsList = document.getElementById('itemsList');
     const itemsCount = document.getElementById('itemsCount');
     const meta = document.getElementById('itemsPaginationMeta');
+    const statusField = presentation.status_field || 'stockStatus';
+    const isCommerce = !!presentation.supports_inventory;
 
     if (itemsCount) {
         itemsCount.textContent = totalInCatalog ?? filteredTotal ?? 0;
@@ -110,6 +174,12 @@ function displayItems(items, pagination, totalInCatalog, filteredTotal) {
             'Low Stock': 'badge-warning',
         };
         const badgeClass = stockStatusBadge[item.stockStatus] || 'badge-secondary';
+        const statusValue = itemFieldValue(item, statusField) || item.stockStatus || 'Available';
+        const highlights = (presentation.card_highlights || [])
+            .filter((key) => key !== statusField)
+            .map((key) => itemFieldValue(item, key))
+            .filter((value) => value !== '')
+            .join(' · ');
         const tagsHtml = Array.isArray(item.tags) && item.tags.length > 0
             ? item.tags.map(tag => `<span class="badge badge-info mr-1">${tag}</span>`).join('')
             : '';
@@ -121,6 +191,7 @@ function displayItems(items, pagination, totalInCatalog, filteredTotal) {
                 <td>
                     ${item.title}
                     ${item.imageUrl ? '<br><small class="text-muted">Image attached</small>' : ''}
+                    ${Array.isArray(item.images) && item.images.length > 1 ? `<br><small class="text-muted">${item.images.length} photos</small>` : ''}
                 </td>
                 <td>
                     ${item.category || '-'}
@@ -128,11 +199,12 @@ function displayItems(items, pagination, totalInCatalog, filteredTotal) {
                 </td>
                 <td>
                     ${formatCatalogPrice(item.price)}
-                    <br><span class="badge ${badgeClass}">${item.stockStatus || 'In Stock'}</span>
+                    <br><span class="badge ${isCommerce ? badgeClass : 'badge-info'}">${statusValue}</span>
                 </td>
                 <td>
                     ${tagsHtml}
-                    ${Array.isArray(item.variants) && item.variants.length > 0 ? '<br><small class="text-muted">' + item.variants.length + ' variants</small>' : ''}
+                    ${highlights ? '<br><small class="text-muted">' + highlights + '</small>' : ''}
+                    ${isCommerce && Array.isArray(item.variants) && item.variants.length > 0 ? '<br><small class="text-muted">' + item.variants.length + ' variants</small>' : ''}
                 </td>
                 <td class="text-right catalog-item-actions">
                     <a type="button" onclick="editItemModal('${escapedId}')" class="btn btn-sm btn-warning mr-2" title="Edit">
@@ -222,10 +294,23 @@ function addNewItem() {
         btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Adding...';
     }
 
-    const variantsArray = document.getElementById('newItemVariants').value
-        .split(',').map(v => v.trim()).filter(v => v);
+    const variantsArray = document.getElementById('newItemVariants')
+        ? document.getElementById('newItemVariants').value.split(',').map(v => v.trim()).filter(v => v)
+        : [];
     const tagsArray = document.getElementById('newItemTags').value
         .split(',').map(t => t.trim()).filter(t => t);
+
+    const payload = buildItemPayload({
+        id: itemId,
+        title: itemTitle,
+        description: document.getElementById('newItemDescription').value,
+        price: document.getElementById('newItemPrice').value || 0,
+        category: document.getElementById('newItemCategory').value || '',
+        imageUrl: document.getElementById('newItemImageUrl').value || '',
+        stockStatus: document.getElementById('newItemStockStatus')?.value || 'In Stock',
+        variants: variantsArray,
+        tags: tagsArray,
+    }, 'new');
 
     fetch(`/api/list-catalogs/${catalogId}/manage/items`, {
         method: 'POST',
@@ -233,17 +318,7 @@ function addNewItem() {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
         },
-        body: JSON.stringify({
-            id: itemId,
-            title: itemTitle,
-            description: document.getElementById('newItemDescription').value,
-            price: document.getElementById('newItemPrice').value || 0,
-            category: document.getElementById('newItemCategory').value || '',
-            imageUrl: document.getElementById('newItemImageUrl').value || '',
-            stockStatus: document.getElementById('newItemStockStatus').value || 'In Stock',
-            variants: variantsArray,
-            tags: tagsArray,
-        }),
+        body: JSON.stringify(payload),
     })
         .then(response => response.json())
         .then(data => {
@@ -290,9 +365,22 @@ function editItemModal(itemId) {
             document.getElementById('editItemPrice').value = fullItem.price || 0;
             document.getElementById('editItemCategory').value = fullItem.category || '';
             document.getElementById('editItemImageUrl').value = fullItem.imageUrl || '';
-            document.getElementById('editItemStockStatus').value = fullItem.stockStatus || 'In Stock';
-            document.getElementById('editItemVariants').value = Array.isArray(fullItem.variants) ? fullItem.variants.join(', ') : '';
+            const editImagesText = document.getElementById('editItemImagesText');
+            if (editImagesText) {
+                const galleryImages = Array.isArray(fullItem.images)
+                    ? fullItem.images
+                    : (fullItem.metadata && Array.isArray(fullItem.metadata.images) ? fullItem.metadata.images : []);
+                const cover = fullItem.imageUrl || '';
+                editImagesText.value = galleryImages.filter((url) => url && url !== cover).join('\n');
+            }
+            if (document.getElementById('editItemStockStatus')) {
+                document.getElementById('editItemStockStatus').value = fullItem.stockStatus || 'In Stock';
+            }
+            if (document.getElementById('editItemVariants')) {
+                document.getElementById('editItemVariants').value = Array.isArray(fullItem.variants) ? fullItem.variants.join(', ') : '';
+            }
             document.getElementById('editItemTags').value = Array.isArray(fullItem.tags) ? fullItem.tags.join(', ') : '';
+            fillVerticalFieldValues(fullItem, 'edit');
 
             if (window.$ && window.$.fn.modal) {
                 window.jQuery('#editItemModal').modal('show');
@@ -320,10 +408,22 @@ function saveEditedItem() {
         btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Saving...';
     }
 
-    const variantsArray = document.getElementById('editItemVariants').value
-        .split(',').map(v => v.trim()).filter(v => v);
+    const variantsArray = document.getElementById('editItemVariants')
+        ? document.getElementById('editItemVariants').value.split(',').map(v => v.trim()).filter(v => v)
+        : [];
     const tagsArray = document.getElementById('editItemTags').value
         .split(',').map(t => t.trim()).filter(t => t);
+
+    const payload = buildItemPayload({
+        title: itemTitle,
+        description: document.getElementById('editItemDescription').value,
+        price: document.getElementById('editItemPrice').value || 0,
+        category: document.getElementById('editItemCategory').value || '',
+        imageUrl: document.getElementById('editItemImageUrl').value || '',
+        stockStatus: document.getElementById('editItemStockStatus')?.value || 'In Stock',
+        variants: variantsArray,
+        tags: tagsArray,
+    }, 'edit');
 
     fetch(`/api/list-catalogs/${catalogId}/manage/items/${encodeURIComponent(itemId)}`, {
         method: 'PUT',
@@ -331,16 +431,7 @@ function saveEditedItem() {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
         },
-        body: JSON.stringify({
-            title: itemTitle,
-            description: document.getElementById('editItemDescription').value,
-            price: document.getElementById('editItemPrice').value || 0,
-            category: document.getElementById('editItemCategory').value || '',
-            imageUrl: document.getElementById('editItemImageUrl').value || '',
-            stockStatus: document.getElementById('editItemStockStatus').value || 'In Stock',
-            variants: variantsArray,
-            tags: tagsArray,
-        }),
+        body: JSON.stringify(payload),
     })
         .then(response => response.json())
         .then(data => {
@@ -400,6 +491,44 @@ function deleteItemFromCatalog(itemId) {
 
 function showError(message) {
     showAlert(message, 'danger');
+}
+
+function syncListingFeed(replaceMissing) {
+    const catalogId = document.getElementById('currentCatalogId').value;
+    const url = document.getElementById('listingFeedUrl')?.value?.trim();
+    const dataPath = document.getElementById('listingFeedDataPath')?.value?.trim() || 'data';
+
+    if (!url) {
+        showError('Feed URL is required');
+        return;
+    }
+
+    fetch(`/api/list-catalogs/${catalogId}/import-api`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        },
+        body: JSON.stringify({
+            replace_missing: !!replaceMissing,
+            api_config: {
+                url,
+                data_path: dataPath,
+                method: 'GET',
+            },
+        }),
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            if (!data.success) {
+                showError(data.message || 'Feed sync failed');
+                return;
+            }
+
+            showSuccess(data.message || 'Listing feed synced');
+            loadItems(catalogId, 1);
+        })
+        .catch((error) => showError('Feed sync error: ' + error.message));
 }
 
 function showSuccess(message) {

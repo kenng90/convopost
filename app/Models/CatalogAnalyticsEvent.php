@@ -15,6 +15,8 @@ class CatalogAnalyticsEvent extends Model
 
     public const TYPE_CHECKOUT_INVOICE = 'checkout_invoice';
 
+    public const TYPE_LISTING_INQUIRY = 'listing_inquiry';
+
     public $timestamps = false;
 
     protected $fillable = [
