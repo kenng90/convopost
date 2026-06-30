@@ -78,6 +78,11 @@ function buildItemPayload(base, scope = 'new') {
         payload.variants = [];
     }
 
+    const bookingSourceEl = document.getElementById(scope === 'edit' ? 'editItemBookingSource' : 'newItemBookingSource');
+    if (bookingSourceEl && bookingSourceEl.value) {
+        payload.booking_source_id = parseInt(bookingSourceEl.value, 10);
+    }
+
     return payload;
 }
 

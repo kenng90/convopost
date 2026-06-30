@@ -10,6 +10,7 @@ use App\Services\Catalog\CatalogFlowNodeSettingsService;
 use App\Services\Catalog\CatalogListingBookingReservationService;
 use App\Services\Catalog\CatalogListingBookingService;
 use App\Services\Catalog\CatalogUrlService;
+use App\Services\Flowmaker\FlowRunLogger;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Flowmaker\Models\Flow;
@@ -225,7 +226,10 @@ class ListingInquiry extends Node
         $contact->setContactState($this->flow_id, self::INQUIRY_RESUMED_STATE, '1');
         $contact->clearContactState($this->flow_id, 'current_node');
 
-        $nextNode = $this->resolveInquiryNextNode();
+        $completionType = (string) ($payload['completionType'] ?? $settings['completionType'] ?? 'booking');
+        FlowRunLogger::log($this->flow_id, $contact->id, 'listing_inquiry_completed', $this->id, $completionType);
+
+        $nextNode = $this->resolveInquiryNextNode($completionType);
         if ($nextNode) {
             $nextNode->process($message, $data);
         }
@@ -236,9 +240,18 @@ class ListingInquiry extends Node
         return $contact->getContactStateValue($this->flow_id, self::INQUIRY_RESUMED_STATE) === '1';
     }
 
-    protected function resolveInquiryNextNode(): ?Node
+    protected function resolveInquiryNextNode(?string $completionType = null): ?Node
     {
-        foreach (['onListingInquiry', 'onBooking', 'onInquiry'] as $handle) {
+        $settings = $this->getDataAsArray()['settings'] ?? [];
+        $type = $completionType ?? (string) ($settings['completionType'] ?? 'booking');
+
+        $preferredHandles = match ($type) {
+            'inquiry' => ['onInquiry', 'onListingInquiry', 'onBooking'],
+            'booking' => ['onBooking', 'onListingInquiry', 'onInquiry'],
+            default => ['onListingInquiry', 'onBooking', 'onInquiry'],
+        };
+
+        foreach ($preferredHandles as $handle) {
             foreach ($this->outgoingEdges as $edge) {
                 if ($edge->getSourceHandle() === $handle && $edge->getTarget()) {
                     return $edge->getTarget();

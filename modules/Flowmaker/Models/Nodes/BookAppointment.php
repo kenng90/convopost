@@ -6,6 +6,8 @@ use App\Models\Company;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Services\Flowmaker\BookingWebhookService;
+use App\Services\Flowmaker\FlowRunLogger;
 use Modules\Flowmaker\Jobs\ResumeFlowFromMpesa;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Reminders\Models\Reservation;
@@ -32,10 +34,30 @@ class BookAppointment extends Node
         $paymentOutcome = $contact->getContactStateValue($this->flow_id, $this->stateKey('payment_outcome'));
 
         if ($paymentOutcome !== null && $paymentOutcome !== '') {
+            $settings = $this->getDataAsArray()['settings'] ?? [];
+            $retryCount = (int) $this->getState($contact, 'payment_retries');
+
+            if ($paymentOutcome !== 'success'
+                && ! empty($settings['allow_payment_retry'])
+                && $retryCount < 2) {
+                $this->setState($contact, 'payment_retries', (string) ($retryCount + 1));
+                $contact->clearContactState($this->flow_id, $this->stateKey('payment_outcome'));
+                FlowRunLogger::log($this->flow_id, $contact->id, 'booking_payment_retry', $this->id);
+                $contact->sendMessage(__('Payment did not complete. We will send the M-Pesa prompt again — enter your PIN to confirm.'), false, false, 'TEXT');
+                $contact->setContactState($this->flow_id, 'current_node', $this->id);
+                $this->retryPayment($contact);
+
+                return;
+            }
+
             $contact->clearContactState($this->flow_id, $this->stateKey('payment_outcome'));
             $contact->clearContactState($this->flow_id, 'current_node');
 
             $handle = $paymentOutcome === 'success' ? 'success' : 'error';
+            if ($paymentOutcome !== 'success') {
+                FlowRunLogger::log($this->flow_id, $contact->id, 'booking_error', $this->id, 'payment_failed');
+            }
+
             $next = $this->getNextNodeId($handle);
 
             if ($next) {
@@ -57,7 +79,16 @@ class BookAppointment extends Node
             return;
         }
 
+        if ($selection['step'] === 'more') {
+            $this->incrementOffset($contact, $selection['value']);
+            $contact->clearContactState($this->flow_id, 'current_node');
+            $this->advanceWizard($contact, $message, $data);
+
+            return;
+        }
+
         $this->storeSelection($contact, $selection['step'], $selection['value']);
+        $this->logStepSelection($contact, $selection['step']);
         $contact->clearContactState($this->flow_id, 'current_node');
         $this->advanceWizard($contact, $message, $data);
     }
@@ -86,6 +117,7 @@ class BookAppointment extends Node
         $this->clearWizardState($contact);
         $this->seedFixedSettings($contact, $company);
         $contact->setContactState($this->flow_id, 'current_node', $this->id);
+        FlowRunLogger::log($this->flow_id, $contact->id, 'booking_wizard_started', $this->id);
 
         return $this->advanceWizard($contact, $message, $data);
     }
@@ -146,14 +178,26 @@ class BookAppointment extends Node
             'source' => $source->name,
             'slot_id' => $this->getState($contact, 'slot_id'),
             'duration_minutes' => (int) $this->getState($contact, 'duration_minutes'),
+            'flow_id' => $this->flow_id,
+            'flow_node_id' => $this->id,
         ];
 
+        $settings = $this->getDataAsArray()['settings'] ?? [];
         $paymentConfig = BookingPaymentConfig::fromSource($source);
 
         try {
             if ($paymentConfig['payment_required']) {
                 if (! app(BookingPaymentService::class)->mpesaConfigured($company)) {
+                    if (! empty($settings['allow_pay_at_venue'])) {
+                        $reservation = app(ReservationBookingService::class)->book($company, $payload);
+                        $reservation->update(['payment_status' => BookingPaymentConfig::STATUS_NOT_REQUIRED]);
+                        $this->completeSuccess($contact, $reservation, $message, $data, __('Pay at your appointment.'));
+
+                        return ['success' => true];
+                    }
+
                     $contact->sendMessage(__('Online payment is not available right now. Please contact us for help.'), false, false, 'TEXT');
+                    FlowRunLogger::log($this->flow_id, $contact->id, 'booking_error', $this->id, 'mpesa_not_configured');
                     $this->routeToHandle($contact, 'error', $message, $data);
 
                     return ['success' => false];
@@ -166,6 +210,7 @@ class BookAppointment extends Node
                 ];
 
                 app(BookingPaymentService::class)->initiateAppointmentPaymentForFlow($company, $payload);
+                FlowRunLogger::log($this->flow_id, $contact->id, 'booking_payment_initiated', $this->id);
                 $contact->sendMessage(__('Check your phone and enter your M-Pesa PIN to complete payment and confirm your booking.'), false, false, 'TEXT');
                 $contact->setContactState($this->flow_id, 'current_node', $this->id);
 
@@ -182,6 +227,7 @@ class BookAppointment extends Node
                 'error' => $exception->getMessage(),
             ]);
 
+            FlowRunLogger::log($this->flow_id, $contact->id, 'booking_error', $this->id, $exception->getMessage());
             $contact->sendMessage($exception->getMessage(), false, false, 'TEXT');
             $this->routeToHandle($contact, 'error', $message, $data);
         }
@@ -189,7 +235,7 @@ class BookAppointment extends Node
         return ['success' => true];
     }
 
-    public function completeSuccess(Contact $contact, Reservation $reservation, $message, $data): void
+    public function completeSuccess(Contact $contact, Reservation $reservation, $message, $data, ?string $extraNote = null): void
     {
         $reservation->loadMissing(['source', 'appointmentStaffMember']);
         $this->storeReservationVariables($contact, $reservation);
@@ -201,7 +247,18 @@ class BookAppointment extends Node
             'time' => $reservation->start_date?->timezone($reservation->source?->timezone ?: 'UTC')->format('g:i A'),
         ]);
 
+        if ($extraNote) {
+            $successMessage .= ' '.$extraNote;
+        }
+
         $contact->sendMessage($contact->changeVariables($successMessage, $this->flow_id), false, false, 'TEXT');
+        FlowRunLogger::log($this->flow_id, $contact->id, 'booking_confirmed', $this->id, (string) $reservation->id);
+
+        $company = Company::find($contact->company_id);
+        if ($company) {
+            app(BookingWebhookService::class)->dispatchAppointmentConfirmed($company, $reservation, $this->flow_id, $this->id, $settings);
+        }
+
         $this->clearWizardState($contact);
         $contact->clearContactState($this->flow_id, 'current_node');
         $this->routeToHandle($contact, 'success', $message, $data);
@@ -227,23 +284,27 @@ class BookAppointment extends Node
             $settings['footer'] ?? '',
             $settings['buttonText'] ?? __('View services'),
             __('Services'),
-            collect($services)->take(self::LIST_LIMIT)->map(fn (array $service) => [
-                'id' => $this->listItemId('service', $service['name']),
-                'title' => $service['name'],
-                'description' => $service['payment_required']
-                    ? ($service['payment_upfront_percent'] < 100
-                        ? __(':amount :currency now (:percent% of :total)', [
-                            'amount' => number_format((float) $service['payment_amount']),
-                            'currency' => $service['payment_currency'],
-                            'percent' => $service['payment_upfront_percent'],
-                            'total' => number_format((float) $service['payment_total_amount']).' '.$service['payment_currency'],
-                        ])
-                        : __(':amount :currency', [
-                            'amount' => number_format((float) $service['payment_amount']),
-                            'currency' => $service['payment_currency'],
-                        ]))
-                    : __(':minutes min', ['minutes' => $service['default_duration_minutes']]),
-            ])->all()
+            $this->paginatedRows(
+                collect($services)->map(fn (array $service) => [
+                    'id' => $this->listItemId('service', $service['name']),
+                    'title' => $service['name'],
+                    'description' => $service['payment_required']
+                        ? ($service['payment_upfront_percent'] < 100
+                            ? __(':amount :currency now (:percent% of :total)', [
+                                'amount' => number_format((float) $service['payment_amount']),
+                                'currency' => $service['payment_currency'],
+                                'percent' => $service['payment_upfront_percent'],
+                                'total' => number_format((float) $service['payment_total_amount']).' '.$service['payment_currency'],
+                            ])
+                            : __(':amount :currency', [
+                                'amount' => number_format((float) $service['payment_amount']),
+                                'currency' => $service['payment_currency'],
+                            ]))
+                        : __(':minutes min', ['minutes' => $service['default_duration_minutes']]),
+                ])->all(),
+                (int) $this->getState($contact, 'service_offset'),
+                'service'
+            )
         );
     }
 
@@ -276,6 +337,7 @@ class BookAppointment extends Node
 
         if ($dates === []) {
             $contact->sendMessage(__('No available dates right now. Please try again later.'), false, false, 'TEXT');
+            FlowRunLogger::log($this->flow_id, $contact->id, 'booking_unavailable', $this->id);
             $this->routeToHandle($contact, 'unavailable', '', new \stdClass());
 
             return ['success' => false];
@@ -291,15 +353,19 @@ class BookAppointment extends Node
             '',
             $settings['buttonText'] ?? __('Choose date'),
             __('Dates'),
-            collect($dates)->take(self::LIST_LIMIT)->map(function (string $date) use ($timezone) {
-                $label = Carbon::parse($date, $timezone)->format('D, M j, Y');
+            $this->paginatedRows(
+                collect($dates)->map(function (string $date) use ($timezone) {
+                    $label = Carbon::parse($date, $timezone)->format('D, M j, Y');
 
-                return [
-                    'id' => $this->listItemId('date', $date),
-                    'title' => $label,
-                    'description' => $date,
-                ];
-            })->all()
+                    return [
+                        'id' => $this->listItemId('date', $date),
+                        'title' => $label,
+                        'description' => $date,
+                    ];
+                })->all(),
+                (int) $this->getState($contact, 'date_offset'),
+                'date'
+            )
         );
     }
 
@@ -326,11 +392,15 @@ class BookAppointment extends Node
             '',
             $settings['buttonText'] ?? __('Choose time'),
             __('Times'),
-            collect($slots)->take(self::LIST_LIMIT)->map(fn (array $slot) => [
-                'id' => $this->listItemId('slot', $slot['id']),
-                'title' => $slot['title'],
-                'description' => '',
-            ])->all()
+            $this->paginatedRows(
+                collect($slots)->map(fn (array $slot) => [
+                    'id' => $this->listItemId('slot', $slot['id']),
+                    'title' => $slot['title'],
+                    'description' => '',
+                ])->all(),
+                (int) $this->getState($contact, 'slot_offset'),
+                'slot'
+            )
         );
     }
 
@@ -477,8 +547,88 @@ class BookAppointment extends Node
 
     private function clearWizardState(Contact $contact): void
     {
-        foreach (['source_name', 'duration_minutes', 'selected_date', 'slot_id', 'payment_outcome'] as $suffix) {
+        foreach (['source_name', 'duration_minutes', 'selected_date', 'slot_id', 'payment_outcome', 'service_offset', 'date_offset', 'slot_offset', 'payment_retries'] as $suffix) {
             $contact->clearContactState($this->flow_id, $this->stateKey($suffix));
+        }
+    }
+
+    /**
+     * @param  array<int, array{id: string, title: string, description: string}>  $rows
+     * @return array<int, array{id: string, title: string, description: string}>
+     */
+    private function paginatedRows(array $rows, int $offset, string $type): array
+    {
+        $page = array_slice($rows, $offset, self::LIST_LIMIT);
+
+        if ($offset + count($page) < count($rows)) {
+            $page[] = [
+                'id' => $this->listItemId('more', $type),
+                'title' => __('More…'),
+                'description' => '',
+            ];
+        }
+
+        return $page;
+    }
+
+    private function incrementOffset(Contact $contact, string $type): void
+    {
+        $key = match ($type) {
+            'service' => 'service_offset',
+            'date' => 'date_offset',
+            'slot' => 'slot_offset',
+            default => null,
+        };
+
+        if ($key === null) {
+            return;
+        }
+
+        $current = (int) $this->getState($contact, $key);
+        $this->setState($contact, $key, (string) ($current + self::LIST_LIMIT));
+    }
+
+    private function logStepSelection(Contact $contact, string $step): void
+    {
+        $event = match ($step) {
+            'service' => 'booking_service_selected',
+            'duration' => 'booking_duration_selected',
+            'date' => 'booking_date_selected',
+            'slot' => 'booking_slot_selected',
+            default => null,
+        };
+
+        if ($event) {
+            FlowRunLogger::log($this->flow_id, $contact->id, $event, $this->id);
+        }
+    }
+
+    private function retryPayment(Contact $contact): void
+    {
+        $company = Company::find($contact->company_id);
+        $source = $this->resolveSelectedSource($company, $contact);
+
+        if (! $company || ! $source) {
+            return;
+        }
+
+        $payload = [
+            'phone' => $contact->phone,
+            'name' => $contact->name ?: $contact->phone,
+            'source' => $source->name,
+            'slot_id' => $this->getState($contact, 'slot_id'),
+            'duration_minutes' => (int) $this->getState($contact, 'duration_minutes'),
+            'flow_context' => [
+                'flow_id' => $this->flow_id,
+                'flow_node_id' => $this->id,
+                'contact_id' => $contact->id,
+            ],
+        ];
+
+        try {
+            app(BookingPaymentService::class)->initiateAppointmentPaymentForFlow($company, $payload);
+        } catch (\Throwable $exception) {
+            Log::warning('Book appointment payment retry failed', ['error' => $exception->getMessage()]);
         }
     }
 
@@ -494,8 +644,14 @@ class BookAppointment extends Node
      */
     private function parseListItemId(string $extraData): ?array
     {
-        if (! preg_match('/^ba-(service|duration|date|slot)-([^_]+)_id'.preg_quote($this->id, '/').'_flow'.preg_quote((string) $this->flow_id, '/').'$/', $extraData, $matches)) {
+        if (! preg_match('/^ba-(service|duration|date|slot|more)-([^_]+)_id'.preg_quote($this->id, '/').'_flow'.preg_quote((string) $this->flow_id, '/').'$/', $extraData, $matches)) {
             return null;
+        }
+
+        if ($matches[1] === 'more') {
+            $decoded = base64_decode(strtr($matches[2], '-_', '+/'), true);
+
+            return ['step' => 'more', 'value' => $decoded !== false ? $decoded : $matches[2]];
         }
 
         $decoded = base64_decode(strtr($matches[2], '-_', '+/'), true);

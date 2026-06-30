@@ -3,7 +3,8 @@
 namespace Modules\Flowmaker\Models\Nodes;
 
 use App\Models\Company;
-use Illuminate\Support\Facades\Log;
+use App\Services\Flowmaker\BookingWebhookService;
+use App\Services\Flowmaker\FlowRunLogger;
 use Modules\Flowmaker\Jobs\ResumeFlowFromMpesa;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Reminders\Models\EventRegistration;
@@ -85,6 +86,8 @@ class BookingEventRegister extends Node
             'phone' => $contact->phone,
             'name' => $contact->name ?: $contact->phone,
             'party_size' => $partySize,
+            'flow_id' => $this->flow_id,
+            'flow_node_id' => $this->id,
         ];
 
         $occurrence = app(EventCatalogService::class)->findRegisterableOccurrence($company, $occurrenceId);
@@ -153,6 +156,13 @@ class BookingEventRegister extends Node
         ]);
 
         $contact->sendMessage($contact->changeVariables($successMessage, $this->flow_id), false, false, 'TEXT');
+        FlowRunLogger::log($this->flow_id, $contact->id, 'booking_event_registered', $this->id, (string) $registration->id);
+
+        $company = Company::find($contact->company_id);
+        if ($company) {
+            app(BookingWebhookService::class)->dispatchEventRegistrationConfirmed($company, $registration, $this->flow_id, $this->id, $settings);
+        }
+
         $contact->clearContactState($this->flow_id, 'selected_occurrence_id');
         $contact->clearContactState($this->flow_id, 'current_node');
         $this->routeToHandle($contact, 'success', $message, $data);

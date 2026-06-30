@@ -6,6 +6,7 @@ use App\Models\ListCatalog;
 use App\Scopes\CompanyScope;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Flowmaker\Models\Flow;
+use Modules\Flowmaker\Jobs\ResumeFlowFromListingInquiry;
 
 class CatalogBookingPendingService
 {
@@ -71,6 +72,36 @@ class CatalogBookingPendingService
         $contact->setContactState($flowId, self::PENDING_CATALOG_ID, (string) $catalog->id);
         $contact->setContactState($flowId, self::PENDING_NODE_ID, $nodeId);
         $contact->setContactState($flowId, self::PENDING_PAYLOAD, json_encode($details, JSON_THROW_ON_ERROR));
+
+        $this->maybeAutoResumeFlow($contact, $flowId, $nodeId, (string) ($item['id'] ?? ''));
+    }
+
+    private function maybeAutoResumeFlow(Contact $contact, int $flowId, string $nodeId, string $itemId): void
+    {
+        if ($itemId === '') {
+            return;
+        }
+
+        $flow = Flow::withoutGlobalScopes()->find($flowId);
+        if (! $flow) {
+            return;
+        }
+
+        $flowData = json_decode($flow->flow_data ?: $flow->draft_flow_data ?: '{}', true);
+        $nodes = $flowData['nodes'] ?? [];
+
+        foreach ($nodes as $node) {
+            if (($node['id'] ?? '') !== $nodeId) {
+                continue;
+            }
+
+            $autoResume = ! empty($node['data']['settings']['autoResumeFlow']);
+            if ($autoResume) {
+                ResumeFlowFromListingInquiry::dispatch($flowId, $contact->id, $itemId)->onQueue('flows');
+            }
+
+            return;
+        }
     }
 
     /**

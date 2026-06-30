@@ -31,6 +31,8 @@ import MpesaStkPushNode from '@/components/flow/MpesaStkPushNode';
 import BookAppointmentNode from '@/components/flow/BookAppointmentNode';
 import BookingEventsListNode from '@/components/flow/BookingEventsListNode';
 import BookingEventRegisterNode from '@/components/flow/BookingEventRegisterNode';
+import SendBookingLinkNode from '@/components/flow/SendBookingLinkNode';
+import ManageBookingNode from '@/components/flow/ManageBookingNode';
 
 export const nodeTypes = {
   trigger: TriggerNode,
@@ -66,4 +68,6 @@ export const nodeTypes = {
   book_appointment: BookAppointmentNode,
   booking_events_list: BookingEventsListNode,
   booking_event_register: BookingEventRegisterNode,
+  send_booking_link: SendBookingLinkNode,
+  manage_booking: ManageBookingNode,
 };

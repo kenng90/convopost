@@ -63,6 +63,32 @@ export function useFlowVariables() {
         });
       }
 
+      if (node.type === 'book_appointment') {
+        const label = nodeData.label || 'Book appointment';
+        dynamicVariables.push(
+          { label: `${label} — service`, value: 'booking_service', category: 'Flow Variables' },
+          { label: `${label} — date`, value: 'booking_date', category: 'Flow Variables' },
+          { label: `${label} — time`, value: 'booking_time', category: 'Flow Variables' },
+          { label: `${label} — reference`, value: 'booking_reference', category: 'Flow Variables' },
+        );
+      }
+
+      if (node.type === 'booking_event_register') {
+        const label = nodeData.label || 'Register for event';
+        dynamicVariables.push(
+          { label: `${label} — event title`, value: 'booking_event_title', category: 'Flow Variables' },
+          { label: `${label} — event date`, value: 'booking_event_date', category: 'Flow Variables' },
+          { label: `${label} — event time`, value: 'booking_event_time', category: 'Flow Variables' },
+          { label: `${label} — reference`, value: 'booking_event_reference', category: 'Flow Variables' },
+        );
+      }
+
+      if (node.type === 'send_booking_link') {
+        dynamicVariables.push(
+          { label: 'Booking share URL', value: 'booking_share_url', category: 'Flow Variables' },
+        );
+      }
+
       if (node.type === 'listing_inquiry') {
         const prefix = (settings.bookingVariablePrefix || 'listing_booking').replace(/[^a-zA-Z0-9_]/g, '') || 'listing_booking';
         const label = nodeData.label || 'Send Listings Link';

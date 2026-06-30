@@ -56,6 +56,8 @@ class ReservationBookingService
                 'duration_minutes' => $durationMinutes,
                 'status' => 1,
                 'external_id' => $payload['external_id'] ?? null,
+                'flow_id' => $payload['flow_id'] ?? null,
+                'flow_node_id' => $payload['flow_node_id'] ?? null,
             ]);
 
             $this->syncCalendarEvent($reservation->fresh(['contact', 'source', 'appointmentStaffMember']));

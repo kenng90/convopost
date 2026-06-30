@@ -57,6 +57,10 @@ class CatalogItemPayloadService
             }
         }
 
+        if (! empty($input['booking_source_id'])) {
+            $metadata['booking_source_id'] = (int) $input['booking_source_id'];
+        }
+
         $payload = [
             'id' => (string) ($input['id'] ?? $existing['id'] ?? ''),
             'title' => (string) ($input['title'] ?? $existing['title'] ?? ''),
@@ -121,6 +125,7 @@ class CatalogItemPayloadService
             'images.*' => 'nullable|string|max:2048',
             'imagesText' => 'nullable|string|max:12000',
             'tags' => 'nullable|array',
+            'booking_source_id' => 'nullable|integer',
             'metadata' => 'nullable|array',
         ];
 

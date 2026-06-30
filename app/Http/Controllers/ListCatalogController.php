@@ -549,6 +549,10 @@ class ListCatalogController extends Controller
         return view('settings.catalog-items', [
             'catalog' => $catalog,
             'presentation' => $catalog->presentation(),
+            'bookingServices' => $catalog->isCommerce()
+                ? []
+                : app(\Modules\Reminders\Services\BookingCatalogService::class)
+                    ->bookableServicesForCompany(\App\Models\Company::findOrFail($companyId)),
         ]);
     }
 

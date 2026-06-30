@@ -154,27 +154,18 @@ const BookingEventsListNode = ({ id, data }: BookingEventsListNodeProps) => {
             </p>
           </div>
 
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="selected"
-            style={{ top: '55%', right: -6 }}
-            className="!bg-green-500 !w-3 !h-3 !rounded-full !border-2 !border-white"
-          />
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="empty"
-            style={{ top: '72%', right: -6 }}
-            className="!bg-amber-400 !w-3 !h-3 !rounded-full !border-2 !border-white"
-          />
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="else"
-            style={{ top: '89%', right: -6 }}
-            className="!bg-gray-400 !w-3 !h-3 !rounded-full !border-2 !border-white"
-          />
+          <div className="border-t px-4 py-2 flex justify-end items-center relative">
+            <span className="text-xs text-green-700 absolute left-4">Selected</span>
+            <Handle type="source" position={Position.Right} id="selected" className="!bg-green-500 !w-3 !h-3 !border-2 !border-white" />
+          </div>
+          <div className="border-t px-4 py-2 flex justify-end items-center relative">
+            <span className="text-xs text-amber-700 absolute left-4">Empty</span>
+            <Handle type="source" position={Position.Right} id="empty" className="!bg-amber-400 !w-3 !h-3 !border-2 !border-white" />
+          </div>
+          <div className="border-t px-4 py-2 flex justify-end items-center relative">
+            <span className="text-xs text-gray-500 absolute left-4">Else</span>
+            <Handle type="source" position={Position.Right} id="else" className="!bg-gray-400 !w-3 !h-3 !border-2 !border-white" />
+          </div>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>

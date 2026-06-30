@@ -31,6 +31,18 @@
                     <dt class="col-sm-4">{{ __('Reference') }}</dt>
                     <dd class="col-sm-8">{{ $reservation->external_id ?: '—' }}</dd>
 
+                    @if ($reservation->flow_id)
+                        <dt class="col-sm-4">{{ __('Source flow') }}</dt>
+                        <dd class="col-sm-8">
+                            <a href="{{ route('flowmaker.edit', ['flow' => $reservation->flow_id]) }}">
+                                {{ __('Flow') }} #{{ $reservation->flow_id }}
+                            </a>
+                            @if ($reservation->flow_node_id)
+                                <span class="text-muted small"> · {{ __('Node') }} {{ $reservation->flow_node_id }}</span>
+                            @endif
+                        </dd>
+                    @endif
+
                     <dt class="col-sm-4">{{ __('Booked on') }}</dt>
                     <dd class="col-sm-8">{{ $reservation->created_at?->format('M j, Y g:i A') ?? '—' }}</dd>
 

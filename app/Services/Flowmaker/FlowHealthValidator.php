@@ -11,7 +11,7 @@ class FlowHealthValidator
         'template', 'quick_replies', 'list_message', 'branch', 'openai', 'question', 'http',
         'whatsapp_catalog', 'listing_inquiry', 'whatsapp_flow', 'counter', 'check_pricing',
         'assign_agent', 'assign_group', 'assign_journey_stage', 'mpesa_stk_push', 'set_variable',
-        'book_appointment', 'booking_events_list', 'booking_event_register', 'opening_hours', 'webhook', 'wait',
+        'book_appointment', 'booking_events_list', 'booking_event_register', 'send_booking_link', 'manage_booking', 'opening_hours', 'webhook', 'wait',
     ];
 
     /**
@@ -103,6 +103,48 @@ class FlowHealthValidator
                 $catalogId = $node['data']['settings']['catalogId'] ?? '';
                 if ($catalogId === '' || $catalogId === '1') {
                     $warnings[] = "Listing inquiry node [{$id}] needs a listing-mode catalog ID before publish.";
+                }
+
+                $bookingBackend = (string) ($node['data']['settings']['bookingBackend'] ?? 'whatsapp_only');
+                if ($bookingBackend === 'reminders') {
+                    $warnings[] = "Listing inquiry node [{$id}] uses Reminders backend — link each listing item to a bookable service in Catalog settings.";
+                }
+            }
+
+            if ($type === 'book_appointment') {
+                if (! $this->handleConnected($edges, $id, 'error')) {
+                    $warnings[] = "Book appointment node [{$id}] should wire the Error output for failures.";
+                }
+                if (! $this->handleConnected($edges, $id, 'unavailable')) {
+                    $warnings[] = "Book appointment node [{$id}] should wire the Unavailable output when no dates exist.";
+                }
+            }
+
+            if ($type === 'booking_events_list') {
+                if (! $this->handleConnected($edges, $id, 'selected')) {
+                    $warnings[] = "List events node [{$id}] should wire the Selected output to a Register for event node.";
+                }
+                if (! $this->handleConnected($edges, $id, 'empty')) {
+                    $warnings[] = "List events node [{$id}] should wire the Empty output when no events are published.";
+                }
+            }
+
+            if ($type === 'booking_event_register') {
+                if (! $this->handleConnected($edges, $id, 'error')) {
+                    $warnings[] = "Register for event node [{$id}] should wire the Error output.";
+                }
+            }
+
+            if ($type === 'manage_booking') {
+                if (! $this->handleConnected($edges, $id, 'not_found')) {
+                    $warnings[] = "Manage booking node [{$id}] should wire the Not found output.";
+                }
+            }
+
+            if ($type === 'send_booking_link') {
+                $linkType = trim((string) ($node['data']['settings']['link_type'] ?? ''));
+                if ($linkType === '') {
+                    $warnings[] = "Send booking link node [{$id}] needs a link type before publish.";
                 }
             }
 
@@ -221,5 +263,17 @@ class FlowHealthValidator
         }
 
         return $visited;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $edges
+     */
+    private function handleConnected(array $edges, string $nodeId, string $handle): bool
+    {
+        return collect($edges)->contains(function ($edge) use ($nodeId, $handle) {
+            return ($edge['source'] ?? '') === $nodeId
+                && ($edge['sourceHandle'] ?? '') === $handle
+                && ! empty($edge['target']);
+        });
     }
 }

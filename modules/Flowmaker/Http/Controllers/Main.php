@@ -2,6 +2,9 @@
 
 namespace Modules\Flowmaker\Http\Controllers;
 
+use App\Models\Company;
+use App\Services\Flowmaker\BookingFlowAnalyticsService;
+use App\Services\Flowmaker\BookingFlowHealthService;
 use App\Services\Flowmaker\FlowHealthValidator;
 use App\Services\Flowmaker\FlowTemplateService;
 use Illuminate\Http\Request;
@@ -81,6 +84,13 @@ class Main extends Controller
             'planPlugins' => [
                 'whatsappflows' => $company ? $company->hasPlanPlugin('whatsappflows') : false,
                 'whatsappcatalog' => $company ? $company->hasPlanPlugin('whatsappcatalog') : false,
+                'reminders' => $company ? $company->hasPlanPlugin('reminders') : false,
+            ],
+            'bookingSetupUrls' => [
+                'overview' => route('reminders.overview.index'),
+                'services' => route('reminders.sources.index'),
+                'events' => route('reminders.events.index'),
+                'settings' => route('reminders.booking-settings.index'),
             ],
         ]);
     }
@@ -156,8 +166,7 @@ class Main extends Controller
     public function updateFlow(Request $request, Flow $flow)
     {
         $payload = $request->all();
-        $validator = new FlowHealthValidator;
-        $health = $validator->validate($payload);
+        $health = $this->validateFlowHealth($payload, $flow);
 
         $flow->draft_flow_data = json_encode($payload);
         $flow->has_unpublished_changes = true;
@@ -182,8 +191,7 @@ class Main extends Controller
         }
 
         $payload = is_string($draft) ? json_decode($draft, true) : $draft;
-        $validator = new FlowHealthValidator;
-        $health = $validator->validate($payload ?? []);
+        $health = $this->validateFlowHealth($payload ?? [], $flow);
 
         if (! $health['valid']) {
             return response()->json([
@@ -212,9 +220,37 @@ class Main extends Controller
             $payload = json_decode($editorData ?? '{}', true) ?? [];
         }
 
-        $health = (new FlowHealthValidator)->validate($payload);
+        $health = $this->validateFlowHealth($payload, $flow);
 
         return response()->json(['health' => $health]);
+    }
+
+    public function bookingAnalytics(Flow $flow)
+    {
+        $days = (int) request('days', 30);
+
+        return response()->json([
+            'success' => true,
+            'analytics' => app(BookingFlowAnalyticsService::class)->summaryForFlow($flow->id, max(1, min($days, 90))),
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array{valid: bool, errors: array<int, string>, warnings: array<int, string>}
+     */
+    private function validateFlowHealth(array $payload, Flow $flow): array
+    {
+        $health = (new FlowHealthValidator)->validate($payload);
+
+        $company = auth()->user()?->currentCompany() ?? Company::find($flow->company_id);
+
+        if ($company) {
+            $bookingWarnings = app(BookingFlowHealthService::class)->validateForCompany($company, $payload);
+            $health['warnings'] = array_values(array_unique(array_merge($health['warnings'], $bookingWarnings)));
+        }
+
+        return $health;
     }
 
     public function simulateFlow(Request $request, Flow $flow)

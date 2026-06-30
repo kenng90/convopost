@@ -50,6 +50,7 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
   const [bookingBackend, setBookingBackend] = useState<BookingBackend>(
     (data.settings?.bookingBackend as BookingBackend) || 'whatsapp_only'
   );
+  const [autoResumeFlow, setAutoResumeFlow] = useState<boolean>(!!data.settings?.autoResumeFlow);
 
   useEffect(() => {
     const loadCatalogs = async () => {
@@ -79,6 +80,7 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
       data.settings.bookingVariablePrefix = bookingVariablePrefix;
       data.settings.requirePreferredDateTime = requirePreferredDateTime;
       data.settings.bookingBackend = bookingBackend;
+      data.settings.autoResumeFlow = autoResumeFlow;
     }
   }, [
     selectedTemplateId,
@@ -88,6 +90,7 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
     bookingVariablePrefix,
     requirePreferredDateTime,
     bookingBackend,
+    autoResumeFlow,
     data,
   ]);
 
@@ -235,6 +238,14 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
                       <code className="bg-gray-100 px-1 rounded">booking_source_id</code>.
                     </p>
                   </div>
+                  <label className="flex items-center gap-2 text-xs text-gray-700 mt-2">
+                    <input
+                      type="checkbox"
+                      checked={autoResumeFlow}
+                      onChange={(e) => setAutoResumeFlow(e.target.checked)}
+                    />
+                    Auto-continue flow after web form (no manual WhatsApp message)
+                  </label>
                 </>
               )}
 
@@ -248,7 +259,17 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
           </div>
 
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-            <span className="text-xs text-gray-500">After booking / inquiry</span>
+            <span className="text-xs text-gray-500">After booking</span>
+            <Handle type="source" position={Position.Right} id="onBooking" className="!bg-green-600 !w-3 !h-3 !border-2 !border-white" />
+          </div>
+
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-white">
+            <span className="text-xs text-gray-500">After inquiry</span>
+            <Handle type="source" position={Position.Right} id="onInquiry" className="!bg-sky-500 !w-3 !h-3 !border-2 !border-white" />
+          </div>
+
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+            <span className="text-xs text-gray-500">After booking / inquiry (any)</span>
             <Handle
               type="source"
               position={Position.Right}

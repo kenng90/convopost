@@ -140,6 +140,20 @@
                         </div>
                         <div class="row">
                             @include('settings.partials.catalog-item-extra-fields', ['presentation' => $presentation, 'prefix' => 'new'])
+                            @if(!($presentation['supports_inventory'] ?? true) && !empty($bookingServices))
+                                <div class="col-md-4 col-lg-3">
+                                    <div class="form-group">
+                                        <label for="newItemBookingSource">{{ __('Bookable service (Reminders)') }}</label>
+                                        <select id="newItemBookingSource" class="form-control">
+                                            <option value="">{{ __('None') }}</option>
+                                            @foreach($bookingServices as $service)
+                                                <option value="{{ $service['id'] }}">{{ $service['name'] }}</option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted">{{ __('Links listing bookings to calendar availability') }}</small>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                         @endif
                         <div class="row align-items-end">

@@ -25,6 +25,8 @@ use Modules\Flowmaker\Models\Nodes\Every;
 use Modules\Flowmaker\Models\Nodes\FlowHTTPNode;
 use Modules\Flowmaker\Models\Nodes\Keyword;
 use Modules\Flowmaker\Models\Nodes\ListingInquiry;
+use Modules\Flowmaker\Models\Nodes\ManageBooking;
+use Modules\Flowmaker\Models\Nodes\SendBookingLink;
 use Modules\Flowmaker\Models\Nodes\ListMessage;
 use Modules\Flowmaker\Models\Nodes\LLM;
 use Modules\Flowmaker\Models\Nodes\Media;
@@ -241,6 +243,10 @@ class Flow extends Model
                 $theNewNode = new BookingEventRegister($nodeArray, []);
             } elseif ($nodeArray['type'] === 'book_appointment') {
                 $theNewNode = new BookAppointment($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'send_booking_link') {
+                $theNewNode = new SendBookingLink($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'manage_booking') {
+                $theNewNode = new ManageBooking($nodeArray, []);
             } elseif ($nodeArray['type'] === 'counter') {
                 $theNewNode = new Counter($nodeArray, []);
             } elseif ($nodeArray['type'] === 'check_pricing') {

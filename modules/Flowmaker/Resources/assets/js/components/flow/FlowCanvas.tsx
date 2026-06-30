@@ -54,6 +54,14 @@ function normalizeFlowNodes(nodes: Node[]): Node[] {
       return { ...node, type: 'booking_event_register' };
     }
 
+    if (node.type === 'action' && dataType === 'send_booking_link') {
+      return { ...node, type: 'send_booking_link' };
+    }
+
+    if (node.type === 'action' && dataType === 'manage_booking') {
+      return { ...node, type: 'manage_booking' };
+    }
+
     return node;
   });
 }

@@ -3,7 +3,7 @@ import { Node, useReactFlow } from '@xyflow/react';
 // import { ActionType, NodeData, WebhookVariable } from '@/types/flow';
 
 export const useFlowActions = () => {
-  const { addNodes, deleteElements, getNodes, setViewport, getViewport, setNodes } = useReactFlow();
+  const { addNodes, deleteElements, getNodes, setViewport, getViewport, setNodes, addEdges } = useReactFlow();
 
   const getRightmostPosition = () => {
     const nodes = getNodes();
@@ -72,6 +72,8 @@ export const useFlowActions = () => {
             type === 'book_appointment' ? 'book_appointment' :
             type === 'booking_events_list' ? 'booking_events_list' :
             type === 'booking_event_register' ? 'booking_event_register' :
+            type === 'send_booking_link' ? 'send_booking_link' :
+            type === 'manage_booking' ? 'manage_booking' :
             type === 'branch' ? 'branch' : 'action',
       position: newPosition,
       data: data || {
@@ -99,6 +101,8 @@ export const useFlowActions = () => {
                type === 'book_appointment' ? 'Book appointment' :
                type === 'booking_events_list' ? 'List events' :
                type === 'booking_event_register' ? 'Register for event' :
+               type === 'send_booking_link' ? 'Send booking link' :
+               type === 'manage_booking' ? 'Manage booking' :
                type.charAt(0).toUpperCase() + type.slice(1),
         type,
         settings: type === 'branch' 
@@ -176,6 +180,23 @@ export const useFlowActions = () => {
               bookingVariablePrefix: 'listing_booking',
               requirePreferredDateTime: false,
               bookingBackend: 'whatsapp_only',
+              autoResumeFlow: false,
+            }
+          : type === 'send_booking_link'
+          ? {
+              link_type: 'appointments',
+              message: 'Book online: {{booking_link}}',
+              header: '',
+              footer: '',
+            }
+          : type === 'manage_booking'
+          ? {
+              header: 'Manage your booking',
+              body: 'What would you like to do?',
+              buttonText: 'Choose',
+              reference_variable: 'booking_reference',
+              allow_reschedule: true,
+              default_action: 'menu',
             }
           : {},
       },
@@ -364,8 +385,48 @@ export const useFlowActions = () => {
     });
   }, [createNodeBase]);
 
+  const createEventRegistrationPreset = useCallback(() => {
+    const basePosition = getRightmostPosition();
+    const listNode = createNodeBase('booking_events_list', basePosition, {
+      label: 'List events',
+      type: 'booking_events_list',
+      settings: {
+        header: 'Upcoming events',
+        body: 'Choose an event session to register.',
+        footer: '',
+        buttonText: 'View events',
+        limit: '10',
+      },
+    });
+
+    const registerNode = createNodeBase('booking_event_register', {
+      x: basePosition.x,
+      y: basePosition.y + 220,
+    }, {
+      label: 'Register for event',
+      type: 'booking_event_register',
+      settings: {
+        occurrence_id: '',
+        party_size: '1',
+        success_message: 'You are registered for {{booking_event_title}} on {{booking_event_date}} at {{booking_event_time}}.',
+      },
+    });
+
+    addEdges([
+      {
+        id: `e-${listNode.id}-${registerNode.id}`,
+        source: listNode.id,
+        target: registerNode.id,
+        sourceHandle: 'selected',
+      },
+    ]);
+
+    return { listNode, registerNode };
+  }, [createNodeBase, addEdges, getRightmostPosition]);
+
   return {
     createNodeBase,
+    createEventRegistrationPreset,
     createNodeKeyword,
     createNodeQuickReply,
     createNodeListMessage,

@@ -32,7 +32,16 @@ interface NodeSettings {
   body?: string;
   footer?: string;
   buttonText?: string;
+  duration_header?: string;
+  duration_body?: string;
+  date_header?: string;
+  date_body?: string;
+  slot_header?: string;
+  slot_body?: string;
   success_message?: string;
+  allow_payment_retry?: boolean;
+  allow_pay_at_venue?: boolean;
+  booking_webhook_url?: string;
 }
 
 const defaultSettings: NodeSettings = {
@@ -118,19 +127,31 @@ const BookAppointmentNode = ({ id, data }: BookAppointmentNodeProps) => {
           <div className="p-4 space-y-3 max-h-[420px] overflow-y-auto">
             <div>
               <Label className="text-xs">Fixed service (optional)</Label>
-              <select
-                className="w-full mt-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-                value={settings.source_name || ''}
-                onChange={e => update({ source_name: e.target.value })}
-              >
-                <option value="">Let customer choose</option>
-                {services.map(service => (
-                  <option key={service.id} value={service.name}>
-                    {service.name}
-                    {service.payment_required ? ` — ${service.payment_currency} ${service.payment_amount}` : ''}
-                  </option>
-                ))}
-              </select>
+              {services.length === 0 ? (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded p-2 mt-1">
+                  No bookable services yet.{' '}
+                  <a href={window.data?.bookingSetupUrls?.services || '#'} className="underline" target="_blank" rel="noreferrer">
+                    Add services in Bookings
+                  </a>
+                </p>
+              ) : (
+                <select
+                  className="w-full mt-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                  value={settings.source_name || ''}
+                  onChange={e => update({ source_name: e.target.value })}
+                >
+                  <option value="">Let customer choose</option>
+                  {services.map(service => (
+                    <option key={service.id} value={service.name}>
+                      {service.name}
+                      {service.payment_required ? ` — ${service.payment_currency} ${service.payment_amount}` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {services.length > 10 && (
+                <p className="text-xs text-amber-600 mt-1">More than 10 services — customers can page through lists in WhatsApp.</p>
+              )}
             </div>
 
             <div>
@@ -155,6 +176,34 @@ const BookAppointmentNode = ({ id, data }: BookAppointmentNodeProps) => {
             </div>
 
             <div>
+              <Label className="text-xs">Date step header / body</Label>
+              <Input className="mb-1" placeholder="Date header" value={settings.date_header || ''} onChange={e => update({ date_header: e.target.value })} />
+              <Textarea rows={2} placeholder="Date body" value={settings.date_body || ''} onChange={e => update({ date_body: e.target.value })} />
+            </div>
+
+            <div>
+              <Label className="text-xs">Time step header / body</Label>
+              <Input className="mb-1" placeholder="Time header" value={settings.slot_header || ''} onChange={e => update({ slot_header: e.target.value })} />
+              <Textarea rows={2} placeholder="Time body" value={settings.slot_body || ''} onChange={e => update({ slot_body: e.target.value })} />
+            </div>
+
+            <div className="space-y-2 border-t border-gray-100 pt-2">
+              <label className="flex items-center gap-2 text-xs">
+                <input type="checkbox" checked={!!settings.allow_payment_retry} onChange={e => update({ allow_payment_retry: e.target.checked })} />
+                Retry M-Pesa payment up to 2 times on failure
+              </label>
+              <label className="flex items-center gap-2 text-xs">
+                <input type="checkbox" checked={!!settings.allow_pay_at_venue} onChange={e => update({ allow_pay_at_venue: e.target.checked })} />
+                Allow pay-at-venue when M-Pesa is unavailable
+              </label>
+            </div>
+
+            <div>
+              <Label className="text-xs">Webhook URL (optional)</Label>
+              <Input value={settings.booking_webhook_url || ''} onChange={e => update({ booking_webhook_url: e.target.value })} placeholder="https://hooks.example.com/bookings" />
+            </div>
+
+            <div>
               <Label className="text-xs">Success message</Label>
               <Textarea
                 rows={3}
@@ -172,27 +221,18 @@ const BookAppointmentNode = ({ id, data }: BookAppointmentNodeProps) => {
             </div>
           </div>
 
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="success"
-            style={{ top: '58%', right: -6 }}
-            className="!bg-green-500 !w-3 !h-3 !rounded-full !border-2 !border-white"
-          />
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="unavailable"
-            style={{ top: '72%', right: -6 }}
-            className="!bg-amber-400 !w-3 !h-3 !rounded-full !border-2 !border-white"
-          />
-          <Handle
-            type="source"
-            position={Position.Right}
-            id="error"
-            style={{ top: '86%', right: -6 }}
-            className="!bg-red-400 !w-3 !h-3 !rounded-full !border-2 !border-white"
-          />
+          <div className="relative border-t px-4 py-2 flex items-center justify-end">
+            <span className="text-xs text-green-700 mr-2 absolute left-4">Confirmed</span>
+            <Handle type="source" position={Position.Right} id="success" className="!bg-green-500 !w-3 !h-3 !border-2 !border-white" />
+          </div>
+          <div className="relative border-t px-4 py-2 flex items-center justify-end">
+            <span className="text-xs text-amber-700 mr-2 absolute left-4">Unavailable</span>
+            <Handle type="source" position={Position.Right} id="unavailable" className="!bg-amber-400 !w-3 !h-3 !border-2 !border-white" />
+          </div>
+          <div className="relative border-t px-4 py-2 flex items-center justify-end">
+            <span className="text-xs text-red-600 mr-2 absolute left-4">Error</span>
+            <Handle type="source" position={Position.Right} id="error" className="!bg-red-400 !w-3 !h-3 !border-2 !border-white" />
+          </div>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>
