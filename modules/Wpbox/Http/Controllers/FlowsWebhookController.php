@@ -320,7 +320,31 @@ class FlowsWebhookController extends Controller
      */
     protected function initDataForScreen(?WhatsappFlow $flow, string $screenId): array
     {
-        return [];
+        if (! $flow) {
+            return [];
+        }
+
+        $screens = $flow->flow_json['screens'] ?? [];
+        $screen = collect($screens)->firstWhere('id', $screenId) ?? ($screens[0] ?? null);
+
+        if (! is_array($screen)) {
+            return [];
+        }
+
+        $dynamicEntries = $screen['dynamic_data'] ?? [];
+        if ($dynamicEntries === []) {
+            return [];
+        }
+
+        $builder = app(\App\Services\WhatsappFlowDynamicDataBuilder::class);
+        $schema = $builder->entriesToMetaSchema($dynamicEntries);
+        $initData = [];
+
+        foreach ($schema as $key => $definition) {
+            $initData[$key] = $definition['__example__'] ?? '';
+        }
+
+        return $initData;
     }
 
     /**
@@ -329,6 +353,32 @@ class FlowsWebhookController extends Controller
      */
     protected function resolveTemplateDataExchange(?WhatsappFlow $flow, ?string $screen, array $data): ?array
     {
+        if (! $flow || ! $screen) {
+            return null;
+        }
+
+        $screens = $flow->flow_json['screens'] ?? [];
+        $screenData = collect($screens)->firstWhere('id', $screen);
+
+        if (! is_array($screenData)) {
+            return null;
+        }
+
+        $endpointTemplate = $screenData['endpoint_template'] ?? null;
+        if (empty($endpointTemplate)) {
+            return null;
+        }
+
+        // Built-in template: pass dynamic option lists from screen schema examples
+        if ($endpointTemplate === 'dynamic_options') {
+            $initData = $this->initDataForScreen($flow, $screen);
+
+            return [
+                'screen' => $screen,
+                'data' => (object) $initData,
+            ];
+        }
+
         return null;
     }
 

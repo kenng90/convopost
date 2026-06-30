@@ -25,14 +25,14 @@ use Modules\Flowmaker\Models\Nodes\Every;
 use Modules\Flowmaker\Models\Nodes\FlowHTTPNode;
 use Modules\Flowmaker\Models\Nodes\Keyword;
 use Modules\Flowmaker\Models\Nodes\ListingInquiry;
-use Modules\Flowmaker\Models\Nodes\ManageBooking;
-use Modules\Flowmaker\Models\Nodes\SendBookingLink;
 use Modules\Flowmaker\Models\Nodes\ListMessage;
 use Modules\Flowmaker\Models\Nodes\LLM;
+use Modules\Flowmaker\Models\Nodes\ManageBooking;
 use Modules\Flowmaker\Models\Nodes\Media;
 use Modules\Flowmaker\Models\Nodes\Message;
 use Modules\Flowmaker\Models\Nodes\MpesaStkPush;
 use Modules\Flowmaker\Models\Nodes\Node;
+use Modules\Flowmaker\Models\Nodes\SendBookingLink;
 use Modules\Flowmaker\Models\Nodes\SetVariable;
 use Modules\Flowmaker\Models\Nodes\Template;
 use Modules\Flowmaker\Models\Nodes\UserReply;
@@ -479,6 +479,66 @@ class Flow extends Model
     {
         $extra = app(CatalogFlowCallbackService::class)->listingInquiryExtra($itemId);
         $this->resumeWaitingNode($contact, $extra);
+    }
+
+    /**
+     * Resume automation from the else handle when a WhatsApp Form was abandoned.
+     */
+    public function resumeFromFormAbandonment(Contact $contact, string $whatsappFlowNodeId): bool
+    {
+        try {
+            $flowData = $this->getDecodedFlowData();
+            if (! $flowData || ! isset($flowData->edges)) {
+                return false;
+            }
+
+            $elseTargetId = null;
+            foreach ($flowData->edges as $edge) {
+                $edgeArray = is_array($edge) ? $edge : (array) $edge;
+                $source = $edgeArray['source'] ?? null;
+                if ($source !== $whatsappFlowNodeId) {
+                    continue;
+                }
+
+                $handle = (string) ($edgeArray['sourceHandle'] ?? '');
+                if ($handle === 'else' || str_contains($handle, 'else')) {
+                    $elseTargetId = $edgeArray['target'] ?? null;
+                    break;
+                }
+            }
+
+            if (! $elseTargetId) {
+                return false;
+            }
+
+            $contact->clearContactState($this->id, 'current_node');
+            $contact->primeFlowStateCache($this->id);
+
+            $nodes = $this->getWiredNodes($flowData->nodes, $flowData->edges);
+            if (! isset($nodes[$elseTargetId])) {
+                return false;
+            }
+
+            $nodes[$elseTargetId]->isStartNode = true;
+
+            $mockData = new \stdClass();
+            $mockData->contact_id = $contact->id;
+            $mockData->company_id = $contact->company_id;
+            $mockData->value = '';
+            $mockData->extra = json_encode(['abandoned' => true]);
+
+            $nodes[$elseTargetId]->process('', $mockData);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Flow form abandonment resume: exception', [
+                'error' => $e->getMessage(),
+                'flowId' => $this->id,
+                'nodeId' => $whatsappFlowNodeId,
+            ]);
+
+            return false;
+        }
     }
 
     private function resumeWaitingNode(Contact $contact, ?string $extra): void

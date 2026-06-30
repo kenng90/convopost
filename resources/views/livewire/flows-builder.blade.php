@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Flow Builder</title>
+    <title>WhatsApp Form Builder</title>
     @vite(['resources/css/app.css'])
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
@@ -42,8 +42,8 @@
                 </svg>
             </a>
             <div>
-                <h1 class="text-lg font-bold text-gray-900 dark:text-white" x-text="flowId ? 'Edit Flow' : 'Create Flow'"></h1>
-                <p class="text-xs text-gray-500 dark:text-gray-400">WhatsApp Flow Builder</p>
+                <h1 class="text-lg font-bold text-gray-900 dark:text-white" x-text="flowId ? 'Edit Form' : 'Create Form'"></h1>
+                <p class="text-xs text-gray-500 dark:text-gray-400">WhatsApp Form Builder</p>
             </div>
             {{-- Dirty indicator --}}
             <span
@@ -56,6 +56,12 @@
         </div>
 
         <div class="flex items-center gap-4">
+            {{-- Templates --}}
+            <button
+                @click="openTemplatesModal()"
+                class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition text-sm"
+            >📋 Templates</button>
+
             {{-- Import --}}
             <button
                 @click="showImportModal = true"
@@ -118,6 +124,18 @@
                 <span x-text="flowId ? (saving ? 'Saving...' : 'Save') : (saving ? 'Creating...' : 'Create Flow')"></span>
             </button>
         </div>
+    </div>
+
+    {{-- ── Submission Webhook Bar ─────────────────────────────────────────── --}}
+    <div class="bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-200 dark:border-emerald-800 px-4 py-2 flex flex-wrap items-center gap-3 text-xs">
+        <span class="text-emerald-800 dark:text-emerald-200 font-medium">Submission webhook:</span>
+        <label class="inline-flex items-center gap-1.5 text-emerald-900 dark:text-emerald-100">
+            <input type="checkbox" x-model="webhookEnabled" @change="isDirty = true" class="rounded">
+            Enabled
+        </label>
+        <input type="url" x-model="webhookUrl" @input="isDirty = true" placeholder="https://hooks.example.com/form-submissions"
+            class="flex-1 min-w-[16rem] px-2 py-1 border border-emerald-300 dark:border-emerald-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"/>
+        <span class="text-emerald-700 dark:text-emerald-300" x-show="lastAutosavedAt">Auto-saved <span x-text="lastAutosavedAt?.toLocaleTimeString?.() || ''"></span></span>
     </div>
 
     {{-- ── Endpoint URI Bar ────────────────────────────────────────────────── --}}
@@ -988,6 +1006,28 @@
             </div>
         </div>
         </template>
+
+        {{-- Templates Modal --}}
+        <template x-if="showTemplatesModal">
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-gray-900 dark:text-white">Form templates</h2>
+                    <button @click="showTemplatesModal = false" class="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+                <div class="p-6 overflow-y-auto grid gap-3 sm:grid-cols-2">
+                    <template x-for="tpl in formTemplates" :key="tpl.key">
+                        <button @click="applyTemplate(tpl.key)"
+                            class="text-left p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition">
+                            <div class="font-semibold text-gray-900 dark:text-white" x-text="tpl.name"></div>
+                            <div class="text-xs text-gray-500 mt-1" x-text="tpl.description"></div>
+                            <div class="text-xs text-blue-600 mt-2" x-text="`${tpl.screen_count} screen(s)`"></div>
+                        </button>
+                    </template>
+                </div>
+            </div>
+        </div>
+        </template>
 </div>
 
 <script>
@@ -1000,6 +1040,12 @@ function flowBuilder(initialFlowId) {
         flowDescription: '',
         flowCategory: 'OTHER',
         metaFlowId: null,
+        webhookUrl: '',
+        webhookEnabled: false,
+        showTemplatesModal: false,
+        formTemplates: [],
+        autosaveTimer: null,
+        lastAutosavedAt: null,
         screens: [],
         selectedScreenId: null,
         selectedFieldId: null,
@@ -1111,6 +1157,8 @@ function flowBuilder(initialFlowId) {
                     this.flowDescription = f.description || '';
                     this.flowCategory = f.category || 'OTHER';
                     this.metaFlowId = f.meta_flow_id || null;
+                    this.webhookUrl = f.webhook_url || '';
+                    this.webhookEnabled = !!f.webhook_enabled;
                     this.screens = Array.isArray(f.screens) ? f.screens : [];
                     this.normalizeScreensOnLoad();
                     this.hydrateImportedFieldMetadata();
@@ -1131,7 +1179,43 @@ function flowBuilder(initialFlowId) {
             }
 
             this.loading = false;
+            this.startAutosave();
             console.log('🏁 init() COMPLETED - loading = false');
+        },
+
+        startAutosave() {
+            if (this.autosaveTimer) clearInterval(this.autosaveTimer);
+            this.autosaveTimer = setInterval(() => {
+                if (this.isDirty && this.flowName.trim() && !this.saving) {
+                    this.save(true);
+                }
+            }, 45000);
+        },
+
+        async openTemplatesModal() {
+            this.showTemplatesModal = true;
+            if (!this.formTemplates.length) {
+                try {
+                    const r = await this.api('GET', '/api/whatsapp-flows/templates');
+                    this.formTemplates = r.templates || [];
+                } catch (e) {
+                    this.notify('Could not load templates.', 'error');
+                }
+            }
+        },
+
+        async applyTemplate(key) {
+            try {
+                const r = await this.api('POST', `/api/whatsapp-flows/from-bundle/${key}`);
+                if (r.redirect) {
+                    window.location.href = r.redirect;
+                    return;
+                }
+                this.showTemplatesModal = false;
+                this.notify('Template applied.', 'success');
+            } catch (e) {
+                this.notify(e.message || 'Failed to apply template.', 'error');
+            }
         },
 
         async loadFlow() {
@@ -1753,8 +1837,8 @@ function flowBuilder(initialFlowId) {
         typeIcon(type) { return this.typeIcons[type] || '·'; },
 
         // ── Save / Publish ────────────────────────────────────────────────────
-        async save() {
-            if (!this.flowName.trim()) { this.notify('Flow name is required.', 'error'); return; }
+        async save(silent = false) {
+            if (!this.flowName.trim()) { if (!silent) this.notify('Form name is required.', 'error'); return; }
             this.saving = true;
             try {
                 const payload = {
@@ -1762,6 +1846,8 @@ function flowBuilder(initialFlowId) {
                     description: this.flowDescription,
                     category:    this.flowCategory,
                     screens:     this.screens,
+                    webhook_url: this.webhookUrl || null,
+                    webhook_enabled: this.webhookEnabled,
                 };
 
                 if (this.flowId) {
@@ -1769,14 +1855,14 @@ function flowBuilder(initialFlowId) {
                 } else {
                     const r = await this.api('POST', '/api/flow-builder', payload);
                     this.flowId = r.flow_id;
-                    // Update URL without page reload
                     window.history.replaceState({}, '', `/whatsapp-flows/${this.flowId}/edit`);
                 }
 
                 this.isDirty = false;
-                this.notify('Flow saved successfully.', 'success');
+                this.lastAutosavedAt = new Date();
+                if (!silent) this.notify('Form saved successfully.', 'success');
             } catch(e) {
-                this.notify(e.message || 'Save failed.', 'error');
+                if (!silent) this.notify(e.message || 'Save failed.', 'error');
             } finally {
                 this.saving = false;
             }

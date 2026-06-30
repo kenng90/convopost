@@ -182,13 +182,13 @@ const messagingActions = [
   {
     type: 'whatsapp_flow',
     icon: Database,
-    label: "Send WhatsApp Flow",
+    label: "Send WhatsApp Form",
     bgColor: "bg-blue-100",
     textColor: "text-blue-600",
     onClick: (actions: ReturnType<typeof useFlowActions>) => {
       const position = { x: 250, y: 100 };
       const data: NodeData = {
-        label: "Send WhatsApp Flow",
+        label: "Send WhatsApp Form",
         type: "whatsapp_flow",
         settings: {
           whatsappFlowId: undefined,

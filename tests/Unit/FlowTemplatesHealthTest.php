@@ -31,7 +31,12 @@ class FlowTemplatesHealthTest extends TestCase
             $flowData = config("flow-templates.{$key}.flow_data");
             $this->assertNotEmpty($flowData, "Missing template: {$key}");
 
-            $result = $validator->validate($flowData);
+            $options = [];
+            if (! empty(config("flow-templates.{$key}.form_bundle"))) {
+                $options['pending_form_bundle'] = true;
+            }
+
+            $result = $validator->validate($flowData, $options);
             $this->assertTrue(
                 $result['valid'],
                 "Template {$key} failed health check: ".implode('; ', $result['errors'])

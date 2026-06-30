@@ -5,9 +5,9 @@
         <div class="col-md-8">
             <h1 class="h2 d-flex align-items-center">
                 <i class="ni ni-chat-left-3 text-primary mr-2"></i>
-                WhatsApp Flows
+                WhatsApp Forms
             </h1>
-            <p class="text-muted small">Create and manage interactive WhatsApp flows</p>
+            <p class="text-muted small">Create, publish, and manage interactive WhatsApp forms</p>
         </div>
         <div class="col-md-4 text-right d-flex justify-content-end align-items-center" style="gap: 0.5rem;">
             <button
@@ -90,9 +90,10 @@
                         <table class="table table-hover table-sm mb-0">
                             <thead class="thead-light">
                                 <tr>
-                                    <th>Flow</th>
+                                    <th>Form</th>
                                     <th>Status</th>
                                     <th>Screens</th>
+                                    <th>Submissions</th>
                                     <th>Meta ID</th>
                                     <th>Updated</th>
                                     <th class="text-right">Actions</th>
@@ -126,6 +127,14 @@
                                             {{ (int) $flow->screens_count }}
                                         </td>
                                         <td>
+                                            <a href="{{ route('whatsapp-flows.responses', ['flowId' => $flow->id]) }}" class="badge badge-primary">
+                                                {{ (int) ($flow->submissions_count ?? 0) }}
+                                            </a>
+                                            @if (($flow->pending_count ?? 0) > 0)
+                                                <small class="text-muted d-block">{{ (int) $flow->pending_count }} pending</small>
+                                            @endif
+                                        </td>
+                                        <td>
                                             @if ($flow->meta_flow_id)
                                                 <small class="text-muted font-weight-500">{{ $flow->meta_flow_id }}</small>
                                             @else
@@ -136,6 +145,26 @@
                                             <small class="text-muted">{{ $flow->updated_at->diffForHumans() }}</small>
                                         </td>
                                         <td class="text-right">
+                                            @if ($flow->meta_flow_id)
+                                                <button
+                                                    wire:click="openTestSend({{ $flow->id }})"
+                                                    title="Send test"
+                                                    class="btn btn-success btn-sm"
+                                                    style="margin-right: 3px;"
+                                                >
+                                                    <i class="ni ni-send"></i> Test
+                                                </button>
+                                            @endif
+
+                                            <a
+                                                href="{{ route('whatsapp-flows.use-in-automation', $flow->id) }}"
+                                                title="Use in automation"
+                                                class="btn btn-warning btn-sm"
+                                                style="margin-right: 3px;"
+                                            >
+                                                <i class="ni ni-settings"></i> Automate
+                                            </a>
+
                                             {{-- Preview --}}
                                             <button
                                                 wire:click="openPreview({{ $flow->id }})"
@@ -281,6 +310,35 @@
                            class="btn btn-primary btn-sm">
                             Open in Builder
                         </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Test Send Modal --}}
+    @if ($testSendFlowId)
+        <div class="modal d-block" style="background: rgba(0,0,0,0.5);" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Send test form</h5>
+                        <button type="button" class="close" wire:click="cancelTestSend"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted small">Send this published form to a WhatsApp number for testing.</p>
+                        <label class="small font-weight-600">Phone number (with country code)</label>
+                        <input type="text" wire:model="testSendPhone" class="form-control" placeholder="e.g. 254712345678" />
+                        @if ($testSendMessage)
+                            <p class="small mt-2 mb-0">{{ $testSendMessage }}</p>
+                        @endif
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" wire:click="cancelTestSend">Cancel</button>
+                        <button type="button" class="btn btn-success btn-sm" wire:click="sendTest" wire:loading.attr="disabled">
+                            <span wire:loading.remove wire:target="sendTest">Send test</span>
+                            <span wire:loading wire:target="sendTest">Sending...</span>
+                        </button>
                     </div>
                 </div>
             </div>

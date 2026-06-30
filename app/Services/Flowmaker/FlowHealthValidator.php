@@ -16,9 +16,10 @@ class FlowHealthValidator
 
     /**
      * @param  array<string, mixed>  $flowData
+     * @param  array{pending_form_bundle?: bool}  $options
      * @return array{valid: bool, errors: array<int, string>, warnings: array<int, string>}
      */
-    public function validate(array $flowData): array
+    public function validate(array $flowData, array $options = []): array
     {
         $errors = [];
         $warnings = [];
@@ -152,6 +153,24 @@ class FlowHealthValidator
                 $url = $node['data']['settings']['http']['url'] ?? '';
                 if (is_string($url) && str_contains($url, 'example.com')) {
                     $warnings[] = "HTTP node [{$id}] still uses a placeholder API URL.";
+                }
+            }
+
+            if ($type === 'whatsapp_flow') {
+                $whatsappFlowId = $node['data']['settings']['whatsappFlowId'] ?? '';
+                $pendingFormBundle = (bool) ($options['pending_form_bundle'] ?? false);
+                if ($whatsappFlowId === '' || $whatsappFlowId === null) {
+                    if ($pendingFormBundle) {
+                        $warnings[] = "WhatsApp Form node [{$id}] will be linked from the bundled form on install.";
+                    } else {
+                        $errors[] = "WhatsApp Form node [{$id}] has no form selected.";
+                    }
+                }
+                if (! $this->handleConnected($edges, $id, 'onFlowCompleted')) {
+                    $warnings[] = "WhatsApp Form node [{$id}] should wire the Completed output.";
+                }
+                if (! $this->handleConnected($edges, $id, 'else')) {
+                    $warnings[] = "WhatsApp Form node [{$id}] should wire the Abandoned/No match output for follow-ups.";
                 }
             }
 

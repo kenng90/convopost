@@ -400,19 +400,24 @@ trait Whatsapp
                                     $responseId = $parts[1] ?? null;
 
                                     if ($responseId) {
-                                        $flowResponse = \App\Models\WhatsappFlowResponse::find($responseId);
-                                        if ($flowResponse) {
-                                            // Always update — nfm_reply is authoritative for form data
-                                            // (flows webhook may have stored empty data if it ran first)
-                                            if (! empty($formData) || $flowResponse->status === 'pending') {
-                                                $flowResponse->markCompleted(! empty($formData) ? $formData : $responseJson);
+                                        $flowResponse = \App\Models\WhatsappFlowResponse::with('whatsappFlow')->find($responseId);
+                                        if ($flowResponse && (! empty($formData) || $flowResponse->status === 'pending')) {
+                                            $submissionService = app(\App\Services\WhatsappFlowSubmissionService::class);
+                                            $contactModel = \Modules\Flowmaker\Models\Contact::find($contact->id);
+                                            $automationFlowId = $flowResponse->flow_id;
 
-                                                \Illuminate\Support\Facades\Log::info('WhatsApp Flow response marked completed via nfm_reply', [
-                                                    'response_id' => $responseId,
-                                                    'field_count' => count($formData),
-                                                    'fields' => array_keys($formData),
-                                                ]);
-                                            }
+                                            $submissionService->handleCompleted(
+                                                $flowResponse,
+                                                ! empty($formData) ? $formData : $responseJson,
+                                                $contactModel,
+                                                $automationFlowId
+                                            );
+
+                                            \Illuminate\Support\Facades\Log::info('WhatsApp Flow response marked completed via nfm_reply', [
+                                                'response_id' => $responseId,
+                                                'field_count' => count($formData),
+                                                'fields' => array_keys($formData),
+                                            ]);
                                         }
                                     }
                                 }

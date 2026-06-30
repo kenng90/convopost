@@ -20,17 +20,20 @@ class WhatsappFlowResponse extends Model
         'contact_id',
         'contact_phone',
         'contact_name',
+        'flow_token',
         'responses',
         'status',
         'notes',
         'sent_at',
         'completed_at',
+        'webhook_dispatched_at',
     ];
 
     protected $casts = [
         'responses' => 'array',
         'sent_at' => 'datetime',
         'completed_at' => 'datetime',
+        'webhook_dispatched_at' => 'datetime',
     ];
 
     /**
