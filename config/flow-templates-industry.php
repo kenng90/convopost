@@ -319,8 +319,8 @@ return [
                 ],
             ],
             'edges' => [
-                ['id' => 'e-hello-list', 'source' => 'keyword_trigger-1', 'target' => 'list_message-1', 'sourceHandle' => 'kw1'],
-                ['id' => 'e-appt-qr', 'source' => 'keyword_trigger-1', 'target' => 'quick_replies-1', 'sourceHandle' => 'kw2'],
+                ['id' => 'e-hello-list', 'source' => 'keyword_trigger-1', 'target' => 'list_message-1', 'sourceHandle' => 'keyword-kw1'],
+                ['id' => 'e-appt-qr', 'source' => 'keyword_trigger-1', 'target' => 'quick_replies-1', 'sourceHandle' => 'keyword-kw2'],
                 ['id' => 'e-list-end', 'source' => 'list_message-1', 'target' => 'end-1'],
                 ['id' => 'e-book-flow', 'source' => 'quick_replies-1', 'target' => 'whatsapp_flow-1', 'sourceHandle' => 'button-1'],
                 ['id' => 'e-talk-incoming', 'source' => 'quick_replies-1', 'target' => 'incomingMessage-1', 'sourceHandle' => 'button-2'],
@@ -635,8 +635,8 @@ return [
                 ],
             ],
             'edges' => [
-                ['id' => 'e-buy-list', 'source' => 'keyword_trigger-1', 'target' => 'list_message-1', 'sourceHandle' => 'kw1'],
-                ['id' => 'e-rent-list', 'source' => 'keyword_trigger-1', 'target' => 'list_message-1', 'sourceHandle' => 'kw2'],
+                ['id' => 'e-buy-list', 'source' => 'keyword_trigger-1', 'target' => 'list_message-1', 'sourceHandle' => 'keyword-kw1'],
+                ['id' => 'e-rent-list', 'source' => 'keyword_trigger-1', 'target' => 'list_message-1', 'sourceHandle' => 'keyword-kw2'],
                 ['id' => 'e-apt-ai', 'source' => 'list_message-1', 'target' => 'openai-1', 'sourceHandle' => 'section1-row1'],
                 ['id' => 'e-commercial-flow', 'source' => 'list_message-1', 'target' => 'whatsapp_flow-1', 'sourceHandle' => 'section1-row3'],
                 ['id' => 'e-studio-catalog', 'source' => 'list_message-1', 'target' => 'whatsapp_catalog-1', 'sourceHandle' => 'section2-row1'],
@@ -1019,8 +1019,8 @@ return [
                 ],
             ],
             'edges' => [
-                ['id' => 'e-balance-incoming', 'source' => 'keyword_trigger-1', 'target' => 'incomingMessage-1', 'sourceHandle' => 'kw1'],
-                ['id' => 'e-loan-qr', 'source' => 'keyword_trigger-1', 'target' => 'quick_replies-1', 'sourceHandle' => 'kw2'],
+                ['id' => 'e-balance-incoming', 'source' => 'keyword_trigger-1', 'target' => 'incomingMessage-1', 'sourceHandle' => 'keyword-kw1'],
+                ['id' => 'e-loan-qr', 'source' => 'keyword_trigger-1', 'target' => 'quick_replies-1', 'sourceHandle' => 'keyword-kw2'],
                 ['id' => 'e-incoming-branch', 'source' => 'incomingMessage-1', 'target' => 'branch-1'],
                 ['id' => 'e-verified-counter', 'source' => 'branch-1', 'target' => 'counter-1', 'sourceHandle' => 'condition-cond-verified-true'],
                 ['id' => 'e-branch-false-end', 'source' => 'branch-1', 'target' => 'end-1', 'sourceHandle' => 'condition-cond-verified-false'],
@@ -1441,8 +1441,8 @@ return [
                 ],
             ],
             'edges' => [
-                ['id' => 'e-book-list', 'source' => 'keyword_trigger-1', 'target' => 'list_message-1', 'sourceHandle' => 'kw1'],
-                ['id' => 'e-tour-qr', 'source' => 'keyword_trigger-1', 'target' => 'quick_replies-1', 'sourceHandle' => 'kw2'],
+                ['id' => 'e-book-list', 'source' => 'keyword_trigger-1', 'target' => 'list_message-1', 'sourceHandle' => 'keyword-kw1'],
+                ['id' => 'e-tour-qr', 'source' => 'keyword_trigger-1', 'target' => 'quick_replies-1', 'sourceHandle' => 'keyword-kw2'],
                 ['id' => 'e-suite-flow', 'source' => 'list_message-1', 'target' => 'whatsapp_flow-1', 'sourceHandle' => 'section1-row3'],
                 ['id' => 'e-honeymoon-ai', 'source' => 'list_message-1', 'target' => 'openai-1', 'sourceHandle' => 'section2-row1'],
                 ['id' => 'e-flow-image', 'source' => 'whatsapp_flow-1', 'target' => 'image-1', 'sourceHandle' => 'condition_2'],

@@ -2,6 +2,7 @@
 
 namespace Modules\Flowmaker\Http\Controllers;
 
+use App\Services\Flowmaker\FlowHealthValidator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -9,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Modules\Contacts\Models\Field;
 use Modules\Flowmaker\Models\Flow;
+use Modules\Flowmaker\Models\FlowRunLog;
 use Modules\Wpbox\Models\Template;
 
 class Main extends Controller
@@ -39,7 +41,7 @@ class Main extends Controller
         }
 
         $data = [
-            'flow' => $flow->only(['id', 'name', 'flow_data', 'company_id', 'updated_at']),
+            'flow' => $flow->only(['id', 'name', 'flow_data', 'draft_flow_data', 'has_unpublished_changes', 'company_id', 'updated_at']),
             'variables' => $variables,
         ];
 
@@ -148,13 +150,115 @@ class Main extends Controller
 
     public function updateFlow(Request $request, Flow $flow)
     {
-        //Set the flow data
-        $flow->flow_data = $request->all();
+        $payload = $request->all();
+        $validator = new FlowHealthValidator;
+        $health = $validator->validate($payload);
 
-        //Respond ok
+        $flow->draft_flow_data = json_encode($payload);
+        $flow->has_unpublished_changes = true;
         $flow->save();
 
-        return response()->json(['status' => 'ok']);
+        return response()->json([
+            'status' => 'ok',
+            'health' => $health,
+            'has_unpublished_changes' => true,
+        ]);
+    }
+
+    public function publishFlow(Request $request, Flow $flow)
+    {
+        if ($request->has('nodes')) {
+            $flow->draft_flow_data = json_encode($request->all());
+        }
+
+        $draft = $flow->draft_flow_data ?: $flow->flow_data;
+        if (! $draft) {
+            return response()->json(['status' => 'error', 'message' => 'No draft to publish.'], 422);
+        }
+
+        $payload = is_string($draft) ? json_decode($draft, true) : $draft;
+        $validator = new FlowHealthValidator;
+        $health = $validator->validate($payload ?? []);
+
+        if (! $health['valid']) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Fix flow errors before publishing.',
+                'health' => $health,
+            ], 422);
+        }
+
+        $flow->flow_data = is_string($draft) ? $draft : json_encode($draft);
+        $flow->has_unpublished_changes = false;
+        $flow->save();
+
+        return response()->json([
+            'status' => 'ok',
+            'health' => $health,
+            'has_unpublished_changes' => false,
+        ]);
+    }
+
+    public function validateFlow(Request $request, Flow $flow)
+    {
+        $payload = $request->all();
+        if (empty($payload['nodes'])) {
+            $editorData = $flow->draft_flow_data ?: $flow->flow_data;
+            $payload = json_decode($editorData ?? '{}', true) ?? [];
+        }
+
+        $health = (new FlowHealthValidator)->validate($payload);
+
+        return response()->json(['health' => $health]);
+    }
+
+    public function simulateFlow(Request $request, Flow $flow)
+    {
+        $message = (string) $request->input('message', '');
+        $editorData = $flow->draft_flow_data ?: $flow->flow_data;
+        $payload = json_decode($editorData ?? '{}', true) ?? [];
+        $health = (new FlowHealthValidator)->validate($payload);
+
+        $matchedKeywords = [];
+        foreach ($payload['nodes'] ?? [] as $node) {
+            if (($node['type'] ?? '') !== 'keyword_trigger') {
+                continue;
+            }
+
+            foreach ($node['data']['settings']['keywords'] ?? [] as $keyword) {
+                $value = strtolower((string) ($keyword['value'] ?? ''));
+                $matchType = $keyword['matchType'] ?? 'contains';
+                $haystack = strtolower($message);
+
+                $matches = $matchType === 'exact'
+                    ? $haystack === $value
+                    : str_contains($haystack, $value);
+
+                if ($matches && $value !== '') {
+                    $matchedKeywords[] = $keyword['value'];
+                }
+            }
+        }
+
+        return response()->json([
+            'health' => $health,
+            'simulation' => [
+                'message' => $message,
+                'matched_keywords' => array_values(array_unique($matchedKeywords)),
+                'would_start' => ! empty($matchedKeywords) || collect($payload['nodes'] ?? [])->contains(fn ($n) => in_array($n['type'] ?? '', ['incomingMessage', 'incoming_message'], true)),
+            ],
+        ]);
+    }
+
+    public function flowRunLogs(Flow $flow)
+    {
+        $logs = FlowRunLog::query()
+            ->where('flow_id', $flow->id)
+            ->latest()
+            ->limit(100)
+            ->get(['id', 'contact_id', 'node_id', 'event', 'detail', 'created_at']);
+
+        return response()->json(['logs' => $logs]);
     }
 
     /**

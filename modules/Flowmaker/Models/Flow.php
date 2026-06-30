@@ -5,6 +5,7 @@ namespace Modules\Flowmaker\Models;
 use App\Models\Company;
 use App\Scopes\CompanyScope;
 use App\Services\Catalog\CatalogFlowCallbackService;
+use App\Services\Flowmaker\FlowRunLogger;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,8 @@ use Modules\Flowmaker\Models\Nodes\BookingEventRegister;
 use Modules\Flowmaker\Models\Nodes\BookingEventsList;
 use Modules\Flowmaker\Models\Nodes\Branch;
 use Modules\Flowmaker\Models\Nodes\Buttons;
+use Modules\Flowmaker\Models\Nodes\CheckPricing;
+use Modules\Flowmaker\Models\Nodes\Counter;
 use Modules\Flowmaker\Models\Nodes\Edge;
 use Modules\Flowmaker\Models\Nodes\End;
 use Modules\Flowmaker\Models\Nodes\Every;
@@ -64,6 +67,8 @@ class Flow extends Model
     {
         try {
             $message = $data->value;
+
+            FlowRunLogger::log($this->id, $data->contact_id ?? null, 'message_received', null, mb_substr((string) $message, 0, 500));
 
             $flowData = $this->getDecodedFlowData();
             if (! $flowData || ! isset($flowData->nodes) || ! isset($flowData->edges)) {
@@ -236,6 +241,10 @@ class Flow extends Model
                 $theNewNode = new BookingEventRegister($nodeArray, []);
             } elseif ($nodeArray['type'] === 'book_appointment') {
                 $theNewNode = new BookAppointment($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'counter') {
+                $theNewNode = new Counter($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'check_pricing') {
+                $theNewNode = new CheckPricing($nodeArray, []);
             } else {
                 $theNewNode = new Node($nodeArray, []);
             }

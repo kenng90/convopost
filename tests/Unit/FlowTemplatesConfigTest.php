@@ -105,6 +105,10 @@ class FlowTemplatesConfigTest extends TestCase
             foreach ($flowData['edges'] as $edge) {
                 $this->assertContains($edge['source'], $nodeIds, "Invalid edge source in {$key}");
                 $this->assertContains($edge['target'], $nodeIds, "Invalid edge target in {$key}");
+
+                if (isset($edge['sourceHandle']) && preg_match('/^kw\d+$/', (string) $edge['sourceHandle'])) {
+                    $this->fail("Template {$key} uses legacy keyword handle [{$edge['sourceHandle']}]; expected keyword-{$edge['sourceHandle']}");
+                }
             }
         }
     }

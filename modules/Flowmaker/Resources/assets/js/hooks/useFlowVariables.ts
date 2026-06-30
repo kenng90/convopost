@@ -20,20 +20,23 @@ export function useFlowVariables() {
       const nodeData = node.data as any;
       const settings = nodeData?.settings || {};
       
-      if (node.type === 'openai' && settings.llm?.variableName) {
-        dynamicVariables.push({
-          label: `Full AI Response for ${settings.llm.variableName}`,
-          value: settings.llm.variableName,
-          category: 'Flow Variables'
-        },{
-          label: `AI Response  for ${settings.llm.variableName}`,
-          value: settings.llm.variableName + '_message',
-          category: 'Flow Variables'
-        },{
-          label: `Detected Intent for ${settings.llm.variableName}`,
-          value: settings.llm.variableName + '_intent',
-          category: 'Flow Variables'
-        });
+      if (node.type === 'openai') {
+        const llmSettings = settings.llm || settings.openai;
+        if (llmSettings?.variableName) {
+          dynamicVariables.push({
+            label: `Full AI Response for ${llmSettings.variableName}`,
+            value: llmSettings.variableName,
+            category: 'Flow Variables'
+          },{
+            label: `AI Response  for ${llmSettings.variableName}`,
+            value: llmSettings.variableName + '_message',
+            category: 'Flow Variables'
+          },{
+            label: `Detected Intent for ${llmSettings.variableName}`,
+            value: llmSettings.variableName + '_intent',
+            category: 'Flow Variables'
+          });
+        }
       }
       
       if (node.type === 'question' && settings.variableName) {

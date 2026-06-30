@@ -128,7 +128,7 @@ export const useFlowActions = () => {
               ]
             }
           : type === 'openai'
-          ? { openai: { model: 'gpt-4o-mini', prompt: '', systemPrompt: '', temperature: 0.7, maxTokens: 1000, responseHandling: 'reply' as const } }
+          ? { llm: { model: 'openai/gpt-4o-mini', prompt: '', systemPrompt: '', temperature: 0.7, maxTokens: 1000, variableName: 'ai_response', autoSendMessage: true, intentions: [] } }
           : type === 'datastore'
           ? { dataSource: '' }
           : type === 'assign_agent'
@@ -276,14 +276,15 @@ export const useFlowActions = () => {
       label: "OpenAI",
       type: "openai",
       settings: {
-        openai: {
-          model: 'gpt-4o-mini',
+        llm: {
+          model: 'openai/gpt-4o-mini',
           prompt: '',
           systemPrompt: '',
           temperature: 0.7,
           maxTokens: 1000,
-          responseHandling: 'reply' as const,
-          variableName: ''
+          variableName: 'ai_response',
+          autoSendMessage: true,
+          intentions: [],
         }
       }
     });

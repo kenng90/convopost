@@ -45,9 +45,15 @@ class LLM extends Node
     {
         Log::info('Processing message in LLM node', ['message' => $message, 'data' => $data]);
 
+        $contact = null;
+        $variableName = 'ai_response';
+        $autoSendMessage = true;
+
         try {
             // Get LLM settings from node data
-            $settings = $this->getDataAsArray()['settings']['llm'] ?? [];
+            $settings = $this->getDataAsArray()['settings']['llm']
+                ?? $this->getDataAsArray()['settings']['openai']
+                ?? [];
 
             // Default settings if not provided
             $model = $settings['model'] ?? 'openai/gpt-4o-mini';
@@ -56,6 +62,7 @@ class LLM extends Node
             $temperature = $settings['temperature'] ?? 0.7;
             $maxTokens = $settings['maxTokens'] ?? 1000;
             $variableName = $settings['variableName'] ?? 'ai_response';
+            $autoSendMessage = $settings['autoSendMessage'] ?? true;
 
             // Vector search settings
             $enableVectorSearch = $settings['enableVectorSearch'] ?? true;
@@ -369,8 +376,25 @@ class LLM extends Node
             Log::error('Error processing LLM node', ['error' => $e->getMessage()]);
         }
 
+        if ($contact && $autoSendMessage) {
+            $replyText = $contact->getContactStateValue($this->flow_id, $variableName.'_message');
+
+            if (! is_string($replyText) || $replyText === '') {
+                $stored = $contact->getContactStateValue($this->flow_id, $variableName);
+                if (is_string($stored)) {
+                    $decoded = json_decode($stored, true);
+                    $replyText = is_array($decoded) ? ($decoded['message'] ?? $stored) : $stored;
+                }
+            }
+
+            if (is_string($replyText) && $replyText !== '') {
+                $replyText = $contact->changeVariables($replyText, $this->flow_id);
+                $contact->sendMessage($replyText, false, false, 'TEXT', null, null, null, true);
+            }
+        }
+
         // Continue flow to next node if one exists
-        $nextNode = $this->getNextNodeId();
+        $nextNode = $this->getNextNodeId($contact);
         if ($nextNode) {
             $nextNode->process($message, $data);
         }
@@ -380,9 +404,37 @@ class LLM extends Node
         ];
     }
 
-    protected function getNextNodeId($data = null)
+    protected function getNextNodeId($contact = null)
     {
-        // Get the first outgoing edge's target
+        $settings = $this->getDataAsArray()['settings']['llm']
+            ?? $this->getDataAsArray()['settings']['openai']
+            ?? [];
+        $intentions = $settings['intentions'] ?? [];
+        $variableName = $settings['variableName'] ?? 'ai_response';
+
+        if ($contact && ! empty($intentions)) {
+            $intent = $contact->getContactStateValue($this->flow_id, $variableName.'_intent');
+
+            if (is_string($intent) && $intent !== '') {
+                foreach ($intentions as $intention) {
+                    if (($intention['name'] ?? '') === $intent) {
+                        foreach ($this->outgoingEdges as $edge) {
+                            if ($edge->getSourceHandle() === 'intent-'.($intention['id'] ?? '')) {
+                                return $edge->getTarget();
+                            }
+                        }
+                    }
+                }
+            }
+
+            foreach ($this->outgoingEdges as $edge) {
+                $handle = $edge->getSourceHandle();
+                if ($handle === 'default' || $handle === null || $handle === '') {
+                    return $edge->getTarget();
+                }
+            }
+        }
+
         if (! empty($this->outgoingEdges)) {
             return $this->outgoingEdges[0]->getTarget();
         }

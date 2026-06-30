@@ -1,6 +1,7 @@
 import React from 'react';
 import { memo } from 'react';
 import { Brain, Plus, Trash2 } from 'lucide-react';
+import { Handle, Position } from '@xyflow/react';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,13 +19,14 @@ interface Intention {
 
 const LLMNode = memo(({ id, data }: { id: string; data: NodeData }) => {
   const { updateNode } = useFlowActions();
-  const settings = data.settings?.llm || {
+  const settings = data.settings?.llm || data.settings?.openai || {
     model: 'openai/gpt-4o-mini',
     systemPrompt: 'You are a helpful AI assistant. Be concise and professional in your responses.',
     prompt: '',
     temperature: 0.7,
     maxTokens: 1000,
-    variableName: '',
+    variableName: 'ai_response',
+    autoSendMessage: true,
     intentions: [] as Intention[]
   };
 
@@ -135,6 +137,20 @@ const LLMNode = memo(({ id, data }: { id: string; data: NodeData }) => {
             placeholder="Enter your prompt here..."
           />
         </div>
+
+        {/* Auto-send reply */}
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="autoSendMessage">Auto-send reply on WhatsApp</Label>
+          <input
+            id="autoSendMessage"
+            type="checkbox"
+            checked={settings.autoSendMessage !== false}
+            onChange={(e) => handleSettingChange('autoSendMessage', e.target.checked)}
+          />
+        </div>
+        <p className="text-xs text-gray-500">
+          When enabled, the AI message is sent automatically. Disable to route the response through a Message node instead.
+        </p>
 
         {/* Intentions Section */}
         <div className="space-y-2">
@@ -250,6 +266,25 @@ const LLMNode = memo(({ id, data }: { id: string; data: NodeData }) => {
           </p>
         </div>
       </div>
+
+      {(settings.intentions || []).map((intention: Intention, index: number) => (
+        <Handle
+          key={intention.id}
+          type="source"
+          position={Position.Right}
+          id={`intent-${intention.id}`}
+          className="!bg-purple-500 !w-3 !h-3 !rounded-full"
+          style={{ top: 120 + index * 28 }}
+        />
+      ))}
+
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="default"
+        className="!bg-gray-400 !w-3 !h-3 !rounded-full"
+        style={{ bottom: 24 }}
+      />
     </BaseNodeLayout>
   );
 });

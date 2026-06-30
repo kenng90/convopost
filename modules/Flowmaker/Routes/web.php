@@ -40,6 +40,17 @@ Route::group([
         Route::post('flowmaker/update/{flow}', 'Main@updateFlow')
             ->name('flowmaker.update')
             ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        Route::post('flowmaker/publish/{flow}', 'Main@publishFlow')
+            ->name('flowmaker.publish')
+            ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        Route::post('flowmaker/validate/{flow}', 'Main@validateFlow')
+            ->name('flowmaker.validate')
+            ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        Route::post('flowmaker/simulate/{flow}', 'Main@simulateFlow')
+            ->name('flowmaker.simulate')
+            ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        Route::get('flowmaker/logs/{flow}', 'Main@flowRunLogs')
+            ->name('flowmaker.logs');
         Route::get('flows/templates', 'FlowTemplatesController@index')->name('flow-templates.index');
         Route::post('flows/templates/{key}/install', 'FlowTemplatesController@install')->name('flow-templates.install');
         Route::post('flows/templates/ai/generate', 'FlowTemplatesController@generate')

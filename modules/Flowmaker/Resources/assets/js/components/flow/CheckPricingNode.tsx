@@ -2,8 +2,9 @@ import React, { useState, useCallback } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CreditCard, Settings } from "lucide-react";
+import { CreditCard, Settings, Trash2 } from "lucide-react";
 import { NodeData } from '@/types/flow';
+import { useFlowActions } from '@/hooks/useFlowActions';
 
 interface CheckPricingNodeProps {
   data: NodeData;
@@ -16,6 +17,7 @@ interface PricingSettings {
 
 const CheckPricingNode = ({ data, id }: CheckPricingNodeProps) => {
   const { setNodes } = useReactFlow();
+  const { deleteNode } = useFlowActions();
   const [settings, setSettings] = useState<PricingSettings>(
     data.settings?.pricing || { freeExecutions: 0 }
   );
@@ -55,9 +57,14 @@ const CheckPricingNode = ({ data, id }: CheckPricingNodeProps) => {
         className="!bg-gray-300 !w-3 !h-3 !rounded-full"
       />
       
-      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 px-4 pt-3 bg-green-50">
-        <CreditCard className="h-4 w-4 text-green-600" />
-        <div className="font-medium">Check User Pricing</div>
+      <div className="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-gray-100 px-4 pt-3 bg-green-50">
+        <div className="flex items-center gap-2">
+          <CreditCard className="h-4 w-4 text-green-600" />
+          <div className="font-medium">Check User Pricing</div>
+        </div>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600" onClick={() => deleteNode(id)}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="p-4">
