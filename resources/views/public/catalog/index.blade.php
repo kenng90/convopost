@@ -842,6 +842,55 @@
     <div class="overlay" id="overlay" onclick="toggleCart()"></div>
     @endif
 
+    @if(!($presentation['supports_cart'] ?? true))
+    <div class="cart-sidebar" id="bookingSidebar">
+        <div class="cart-header">
+            <i class="fas fa-calendar-check mr-2"></i><span id="bookingPanelTitle">Book</span>
+            <button type="button" onclick="closeBookingPanel()" style="position: absolute; right: 15px; top: 15px; background: none; border: none; font-size: 20px; cursor: pointer;">×</button>
+        </div>
+        <div class="cart-items" style="padding: 20px;">
+            <div id="bookingSuccessBanner" class="cart-success-banner" style="display: none;" role="status"></div>
+            <div id="bookingErrorBanner" class="cart-error-banner" style="display: none;" role="alert"></div>
+
+            <div class="delivery-details-section" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+                <div class="delivery-details-title">Booking details</div>
+                <p class="delivery-details-hint" id="bookingDetailsHint">Required to send your booking request on WhatsApp.</p>
+
+                <div class="delivery-field" id="fieldBookingCustomerName">
+                    <label for="bookingCustomerName">Full name <span class="optional">(recommended)</span></label>
+                    <input type="text" id="bookingCustomerName" autocomplete="name" placeholder="Your name">
+                    <div class="delivery-field-error" id="errorBookingCustomerName"></div>
+                </div>
+
+                <div class="delivery-field" id="fieldBookingCustomerPhone">
+                    <label for="bookingCustomerPhone">Phone</label>
+                    <input type="tel" id="bookingCustomerPhone" autocomplete="tel" placeholder="e.g. 254712345678">
+                    <div class="delivery-field-error" id="errorBookingCustomerPhone"></div>
+                </div>
+
+                <div class="delivery-field" id="fieldBookingPreferredDateTime">
+                    <label for="bookingPreferredDateTime">Preferred date / time <span class="optional" id="bookingDateOptional">(optional)</span></label>
+                    <input type="text" id="bookingPreferredDateTime" placeholder="e.g. Saturday 10am or 2026-06-28 14:00">
+                    <div class="delivery-field-error" id="errorBookingPreferredDateTime"></div>
+                </div>
+
+                <div class="delivery-field" id="fieldBookingNotes">
+                    <label for="bookingNotes">Notes <span class="optional">(optional)</span></label>
+                    <textarea id="bookingNotes" rows="2" placeholder="Viewing request, questions, or special requests"></textarea>
+                    <div class="delivery-field-error" id="errorBookingNotes"></div>
+                </div>
+            </div>
+        </div>
+        <div class="cart-footer">
+            <button class="checkout-btn" id="bookingSubmitBtn" onclick="submitBookingRequest()" style="background-color: #25D366; width: 100%;">
+                <i class="fab fa-whatsapp mr-2"></i><span id="bookingSubmitLabel">Book on WhatsApp</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="overlay" id="bookingOverlay" onclick="closeBookingPanel()"></div>
+    @endif
+
     @if(($presentation['supports_geo_map'] ?? false) && count($mapMarkers ?? []) > 0)
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     @endif
@@ -867,6 +916,7 @@
 
         const flowToken = @json($flowToken);
         const catalogId = {{ $catalog->id }};
+        const flowNodeSettings = @json($flowNodeSettings ?? []);
 
         function trackCatalogEvent(event, metadata = {}) {
             fetch(`/catalog/${catalogId}/events`, {
@@ -1286,41 +1336,223 @@
             });
         }
         @else
-        function inquireOnWhatsApp(itemId) {
-            const customerName = window.prompt('Your name (optional)') || '';
-            const notes = window.prompt('Message or viewing request (optional)') || '';
+        let selectedBookingItemId = null;
+        let selectedBookingItemTitle = '';
+        const bookingStorageKey = 'catalog_{{ $catalog->id }}_booking';
+        const completionType = flowNodeSettings.completionType || 'booking';
+        const requirePreferredDateTime = !!flowNodeSettings.requirePreferredDateTime;
 
-            fetch(`/catalog/${catalogId}/generate-inquiry`, {
+        function loadBookingDetails() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(bookingStorageKey) || '{}');
+                document.getElementById('bookingCustomerName').value = saved.customerName || '';
+                document.getElementById('bookingCustomerPhone').value = saved.customerPhone || '';
+                document.getElementById('bookingPreferredDateTime').value = saved.preferredDateTime || '';
+                document.getElementById('bookingNotes').value = saved.notes || '';
+            } catch (e) {
+                // Ignore invalid saved data
+            }
+        }
+
+        function saveBookingDetails() {
+            localStorage.setItem(bookingStorageKey, JSON.stringify(getBookingFormValues()));
+        }
+
+        function getBookingFormValues() {
+            return {
+                customerName: document.getElementById('bookingCustomerName').value.trim(),
+                customerPhone: document.getElementById('bookingCustomerPhone').value.trim(),
+                preferredDateTime: document.getElementById('bookingPreferredDateTime').value.trim(),
+                notes: document.getElementById('bookingNotes').value.trim(),
+            };
+        }
+
+        function clearBookingFieldErrors() {
+            ['fieldBookingCustomerName', 'fieldBookingCustomerPhone', 'fieldBookingPreferredDateTime', 'fieldBookingNotes'].forEach((id) => {
+                const field = document.getElementById(id);
+                if (field) {
+                    field.classList.remove('has-error');
+                }
+            });
+            ['errorBookingCustomerName', 'errorBookingCustomerPhone', 'errorBookingPreferredDateTime', 'errorBookingNotes'].forEach((id) => {
+                const error = document.getElementById(id);
+                if (error) {
+                    error.textContent = '';
+                }
+            });
+            hideBookingBanners();
+        }
+
+        function setBookingFieldError(fieldId, errorId, message) {
+            document.getElementById(fieldId).classList.add('has-error');
+            document.getElementById(errorId).textContent = message;
+        }
+
+        function hideBookingBanners() {
+            document.getElementById('bookingSuccessBanner').style.display = 'none';
+            document.getElementById('bookingErrorBanner').style.display = 'none';
+        }
+
+        function showBookingErrorBanner(message) {
+            hideBookingBanners();
+            const banner = document.getElementById('bookingErrorBanner');
+            banner.textContent = message;
+            banner.style.display = 'block';
+        }
+
+        function showBookingSuccessBanner(message) {
+            hideBookingBanners();
+            const banner = document.getElementById('bookingSuccessBanner');
+            banner.textContent = message;
+            banner.style.display = 'block';
+        }
+
+        function validateBookingDetails() {
+            clearBookingFieldErrors();
+            const details = getBookingFormValues();
+            let valid = true;
+
+            if (completionType !== 'inquiry' && !details.customerPhone) {
+                setBookingFieldError('fieldBookingCustomerPhone', 'errorBookingCustomerPhone', 'Phone is required.');
+                valid = false;
+            }
+
+            if (requirePreferredDateTime && !details.preferredDateTime) {
+                setBookingFieldError('fieldBookingPreferredDateTime', 'errorBookingPreferredDateTime', 'Preferred date and time is required.');
+                valid = false;
+            }
+
+            if (!valid) {
+                const firstError = document.querySelector('#bookingSidebar .delivery-field.has-error input, #bookingSidebar .delivery-field.has-error textarea');
+                if (firstError) {
+                    firstError.focus();
+                }
+            }
+
+            return valid ? details : null;
+        }
+
+        function openBookingPanel(itemId, itemTitle) {
+            selectedBookingItemId = itemId;
+            selectedBookingItemTitle = itemTitle || 'Listing';
+            document.getElementById('bookingPanelTitle').textContent = completionType === 'inquiry'
+                ? 'Inquire: ' + selectedBookingItemTitle
+                : 'Book: ' + selectedBookingItemTitle;
+
+            const submitLabel = document.getElementById('bookingSubmitLabel');
+            submitLabel.textContent = completionType === 'inquiry' ? 'Inquire on WhatsApp' : @json($presentation['cta_label'] ?? 'Book on WhatsApp');
+
+            const dateOptional = document.getElementById('bookingDateOptional');
+            if (dateOptional) {
+                dateOptional.textContent = requirePreferredDateTime ? '' : '(optional)';
+            }
+
+            const phoneField = document.getElementById('fieldBookingCustomerPhone');
+            const dateField = document.getElementById('fieldBookingPreferredDateTime');
+            if (phoneField) {
+                phoneField.style.display = completionType === 'inquiry' ? 'none' : 'block';
+            }
+            if (dateField) {
+                dateField.style.display = completionType === 'inquiry' ? 'none' : 'block';
+            }
+
+            loadBookingDetails();
+            hideBookingBanners();
+            document.getElementById('bookingSidebar').classList.add('open');
+            document.getElementById('bookingOverlay').classList.add('visible');
+        }
+
+        function closeBookingPanel() {
+            document.getElementById('bookingSidebar').classList.remove('open');
+            document.getElementById('bookingOverlay').classList.remove('visible');
+        }
+
+        function submitBookingRequest() {
+            if (!selectedBookingItemId) {
+                return;
+            }
+
+            const details = validateBookingDetails();
+            if (!details) {
+                showBookingErrorBanner('Please complete the required booking details.');
+                return;
+            }
+
+            saveBookingDetails();
+
+            const endpoint = completionType === 'inquiry'
+                ? `/catalog/${catalogId}/generate-inquiry`
+                : `/catalog/${catalogId}/generate-booking`;
+
+            const payload = {
+                item_id: selectedBookingItemId,
+                customerName: details.customerName || null,
+                notes: details.notes || null,
+                flow_token: flowToken,
+            };
+
+            if (completionType !== 'inquiry') {
+                payload.customerPhone = details.customerPhone;
+                payload.preferredDateTime = details.preferredDateTime || null;
+            }
+
+            const button = document.getElementById('bookingSubmitBtn');
+            const originalHtml = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Sending...';
+
+            fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
-                body: JSON.stringify({
-                    item_id: itemId,
-                    customerName: customerName || null,
-                    notes: notes || null,
-                    flow_token: flowToken,
-                }),
+                body: JSON.stringify(payload),
             })
             .then(response => response.json())
             .then(data => {
+                button.disabled = false;
+                button.innerHTML = originalHtml;
+
                 if (!data.success) {
-                    alert(data.message || 'Could not start WhatsApp inquiry.');
+                    showBookingErrorBanner(data.message || 'Could not start WhatsApp booking.');
                     return;
                 }
 
-                trackCatalogEvent('listing_inquiry', { item_id: itemId });
+                trackCatalogEvent(completionType === 'inquiry' ? 'listing_inquiry' : 'listing_booking', {
+                    item_id: selectedBookingItemId,
+                });
 
                 if (data.whatsapp_url) {
                     window.open(data.whatsapp_url, '_blank');
+                    showBookingSuccessBanner('Open WhatsApp and send the message to continue in chat.');
                     return;
                 }
 
-                alert(data.message || 'WhatsApp number is not configured for this business.');
+                showBookingErrorBanner('WhatsApp number is not configured for this business.');
             })
-            .catch(() => alert('Could not start WhatsApp inquiry.'));
+            .catch(() => {
+                button.disabled = false;
+                button.innerHTML = originalHtml;
+                showBookingErrorBanner('Could not start WhatsApp booking. Please try again.');
+            });
         }
+
+        ['bookingCustomerName', 'bookingCustomerPhone', 'bookingPreferredDateTime', 'bookingNotes'].forEach((id) => {
+            const input = document.getElementById(id);
+            if (!input) {
+                return;
+            }
+            input.addEventListener('input', () => {
+                saveBookingDetails();
+                const field = input.closest('.delivery-field');
+                if (field) {
+                    field.classList.remove('has-error');
+                }
+            });
+        });
+
+        loadBookingDetails();
 
         function listingGalleryGo(cardId, index) {
             const card = document.getElementById(cardId);

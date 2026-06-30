@@ -167,6 +167,16 @@ export const useFlowActions = () => {
               party_size: '1',
               success_message: 'You are registered for {{booking_event_title}} on {{booking_event_date}} at {{booking_event_time}}.',
             }
+          : type === 'listing_inquiry'
+          ? {
+              catalogId: '',
+              header: 'Browse our listings',
+              footer: 'Tap the link to view listings and book on WhatsApp.',
+              completionType: 'booking',
+              bookingVariablePrefix: 'listing_booking',
+              requirePreferredDateTime: false,
+              bookingBackend: 'whatsapp_only',
+            }
           : {},
       },
     };

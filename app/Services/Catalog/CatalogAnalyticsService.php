@@ -60,6 +60,7 @@ class CatalogAnalyticsService
             'whatsapp_checkouts' => (int) ($counts[CatalogAnalyticsEvent::TYPE_CHECKOUT_WHATSAPP] ?? 0),
             'invoice_checkouts' => (int) ($counts[CatalogAnalyticsEvent::TYPE_CHECKOUT_INVOICE] ?? 0),
             'listing_inquiries' => (int) ($counts[CatalogAnalyticsEvent::TYPE_LISTING_INQUIRY] ?? 0),
+            'listing_bookings' => (int) ($counts[CatalogAnalyticsEvent::TYPE_LISTING_BOOKING] ?? 0),
             'daily_views' => $dailyViews,
             'daily_inquiries' => $dailyInquiries,
         ];

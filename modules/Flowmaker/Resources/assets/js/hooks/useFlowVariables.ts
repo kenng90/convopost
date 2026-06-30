@@ -60,6 +60,54 @@ export function useFlowVariables() {
         });
       }
 
+      if (node.type === 'listing_inquiry') {
+        const prefix = (settings.bookingVariablePrefix || 'listing_booking').replace(/[^a-zA-Z0-9_]/g, '') || 'listing_booking';
+        const label = nodeData.label || 'Send Listings Link';
+
+        dynamicVariables.push(
+          {
+            label: `${label} — item title`,
+            value: `${prefix}_item_title`,
+            category: 'Flow Variables'
+          },
+          {
+            label: `${label} — customer name`,
+            value: `${prefix}_customer_name`,
+            category: 'Flow Variables'
+          },
+          {
+            label: `${label} — customer phone`,
+            value: `${prefix}_customer_phone`,
+            category: 'Flow Variables'
+          },
+          {
+            label: `${label} — preferred date/time`,
+            value: `${prefix}_preferred_datetime`,
+            category: 'Flow Variables'
+          },
+          {
+            label: `${label} — notes`,
+            value: `${prefix}_notes`,
+            category: 'Flow Variables'
+          },
+          {
+            label: `${label} — booking message`,
+            value: `${prefix}_message`,
+            category: 'Flow Variables'
+          },
+          {
+            label: `${label} — reservation id`,
+            value: `${prefix}_reservation_id`,
+            category: 'Flow Variables'
+          },
+          {
+            label: `${label} — selected listing (legacy)`,
+            value: 'selected_listing',
+            category: 'Flow Variables'
+          }
+        );
+      }
+
       if (node.type === 'whatsapp_catalog') {
         const prefix = (settings.checkoutVariablePrefix || 'catalog_order').replace(/[^a-zA-Z0-9_]/g, '') || 'catalog_order';
         const label = nodeData.label || 'Send Catalog Link';

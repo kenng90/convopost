@@ -55,6 +55,7 @@ Route::controller(PublicCatalogController::class)->group(function () {
         Route::post('/{catalogId}/events', 'trackEvent')->name('catalog.track-event');
         Route::post('/{catalogId}/generate-order', 'generateOrder')->name('catalog.generate-order');
         Route::post('/{catalogId}/generate-inquiry', 'generateInquiry')->name('catalog.generate-inquiry');
+        Route::post('/{catalogId}/generate-booking', 'generateBooking')->name('catalog.generate-booking');
         Route::post('/{catalogId}/create-invoice', 'createInvoice')->name('catalog.create-invoice');
 
         Route::get('/{catalogId}', 'show')->name('catalog.public');

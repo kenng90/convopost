@@ -17,6 +17,8 @@ class CatalogAnalyticsEvent extends Model
 
     public const TYPE_LISTING_INQUIRY = 'listing_inquiry';
 
+    public const TYPE_LISTING_BOOKING = 'listing_booking';
+
     public $timestamps = false;
 
     protected $fillable = [

@@ -3,10 +3,16 @@
 namespace Modules\Flowmaker\Models\Nodes;
 
 use App\Models\ListCatalog;
+use App\Services\Catalog\CatalogBookingPendingService;
+use App\Services\Catalog\CatalogBookingVariableService;
 use App\Services\Catalog\CatalogFlowCallbackService;
+use App\Services\Catalog\CatalogFlowNodeSettingsService;
+use App\Services\Catalog\CatalogListingBookingReservationService;
+use App\Services\Catalog\CatalogListingBookingService;
 use App\Services\Catalog\CatalogUrlService;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
+use Modules\Flowmaker\Models\Flow;
 use Modules\Wpbox\Models\Message;
 
 class ListingInquiry extends Node
@@ -24,20 +30,25 @@ class ListingInquiry extends Node
             return;
         }
 
-        if ($this->messageLooksLikeListingInquiry($messageText)) {
+        $pendingService = app(CatalogBookingPendingService::class);
+        $bookingService = app(CatalogListingBookingService::class);
+
+        if ($pendingService->isConfirmationMessage($contact, $this->flow_id, $messageText)
+            || $bookingService->messageLooksLikeBookingRequest($messageText)
+            || $bookingService->messageLooksLikeInquiry($messageText)) {
             if ($this->hasInquiryAlreadyResumed($contact)) {
-                Log::info('Listing Inquiry: inquiry already resumed', ['nodeId' => $this->id]);
+                Log::info('Listing Inquiry: completion already resumed', ['nodeId' => $this->id]);
 
                 return;
             }
 
-            $this->advanceAfterInquiry($message, $data, $contact);
+            $this->advanceAfterCompletion($message, $data, $contact);
 
             return;
         }
 
         if ($extraData === null || $extraData === '') {
-            Log::info('Listing Inquiry: waiting for customer inquiry');
+            Log::info('Listing Inquiry: waiting for customer booking or inquiry');
 
             return;
         }
@@ -65,9 +76,12 @@ class ListingInquiry extends Node
                 $nextNode->process($message, $data);
             }
         } else {
-            $elseNode = $this->getNextNodeId('else');
-            if ($elseNode) {
-                $elseNode->process($message, $data);
+            foreach ($this->outgoingEdges as $edge) {
+                if ($edge->getSourceHandle() === 'else' && $edge->getTarget()) {
+                    $edge->getTarget()->process($message, $data);
+
+                    return;
+                }
             }
         }
     }
@@ -76,8 +90,16 @@ class ListingInquiry extends Node
     {
         if ($this->isStartNode) {
             $messageText = is_object($data) ? ($data->value ?? '') : ($data['value'] ?? '');
+            $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+            $contact = Contact::find($contactId);
+            $pendingService = app(CatalogBookingPendingService::class);
+            $bookingService = app(CatalogListingBookingService::class);
 
-            if ($this->messageLooksLikeListingInquiry($messageText)) {
+            if ($contact && (
+                $pendingService->isConfirmationMessage($contact, $this->flow_id, $messageText)
+                || $bookingService->messageLooksLikeBookingRequest($messageText)
+                || $bookingService->messageLooksLikeInquiry($messageText)
+            )) {
                 $this->listenForReply($message, $data);
 
                 return ['success' => true];
@@ -108,12 +130,13 @@ class ListingInquiry extends Node
         }
 
         $contact->clearContactState($this->flow_id, self::INQUIRY_RESUMED_STATE);
+        app(CatalogBookingPendingService::class)->clearPending($contact, $this->flow_id);
         $contact->setContactState($this->flow_id, 'catalog_id', $catalogId);
 
         try {
             $header = $contact->changeVariables($settings['header'] ?? 'Browse our listings', $this->flow_id);
             $footer = $contact->changeVariables(
-                $settings['footer'] ?? 'Tap the link to view listings and inquire on WhatsApp.',
+                $settings['footer'] ?? 'Tap the link to view listings and book on WhatsApp.',
                 $this->flow_id
             );
 
@@ -147,8 +170,58 @@ class ListingInquiry extends Node
         return ['success' => true];
     }
 
-    private function advanceAfterInquiry($message, $data, Contact $contact): void
+    private function advanceAfterCompletion($message, $data, Contact $contact): void
     {
+        $settings = $this->getDataAsArray()['settings'] ?? [];
+        $catalogId = $settings['catalogId'] ?? null;
+        $catalog = $catalogId ? ListCatalog::withoutGlobalScopes()->find($catalogId) : null;
+        $pendingService = app(CatalogBookingPendingService::class);
+        $payload = $pendingService->pendingPayload($contact, $this->flow_id) ?? [];
+        $itemId = $pendingService->hasPending($contact, $this->flow_id)
+            ? $contact->getContactStateValue($this->flow_id, CatalogBookingPendingService::PENDING_ITEM_ID)
+            : '';
+
+        if ($itemId === '' && $catalog) {
+            $messageText = is_object($data) ? ($data->value ?? '') : ($data['value'] ?? '');
+            $itemId = $this->guessItemIdFromMessage($catalog, $messageText) ?? '';
+        }
+
+        $selectedItem = $catalog && $itemId !== ''
+            ? $this->findItemInCatalog($catalog->items ?? [], $itemId)
+            : null;
+
+        if ($selectedItem && $catalog) {
+            $bookingBackend = $settings['bookingBackend']
+                ?? app(CatalogFlowNodeSettingsService::class)->DEFAULT_BOOKING_BACKEND;
+
+            $reservationId = app(CatalogListingBookingReservationService::class)->tryCreateReservation(
+                $catalog->company,
+                $selectedItem,
+                $payload,
+                (string) $bookingBackend
+            );
+
+            if ($reservationId) {
+                $flow = Flow::withoutGlobalScopes()->find($this->flow_id);
+                $prefix = $flow
+                    ? app(CatalogBookingVariableService::class)->resolvePrefixFromFlowNode($flow, (string) $this->id)
+                    : CatalogBookingVariableService::DEFAULT_PREFIX;
+
+                $payload['reservationId'] = $reservationId;
+                app(CatalogBookingVariableService::class)->storeOnContact(
+                    $contact,
+                    $this->flow_id,
+                    $prefix,
+                    $selectedItem,
+                    $payload,
+                    $contact->getContactStateValue($this->flow_id, CatalogBookingPendingService::PENDING_MESSAGE)
+                );
+            }
+
+            $contact->setContactState($this->flow_id, 'selected_listing', json_encode($selectedItem));
+        }
+
+        $pendingService->clearPending($contact, $this->flow_id);
         $contact->setContactState($this->flow_id, self::INQUIRY_RESUMED_STATE, '1');
         $contact->clearContactState($this->flow_id, 'current_node');
 
@@ -163,21 +236,13 @@ class ListingInquiry extends Node
         return $contact->getContactStateValue($this->flow_id, self::INQUIRY_RESUMED_STATE) === '1';
     }
 
-    private function messageLooksLikeListingInquiry(?string $message): bool
-    {
-        if ($message === null || $message === '') {
-            return false;
-        }
-
-        return str_contains($message, 'Inquiry from');
-    }
-
     protected function resolveInquiryNextNode(): ?Node
     {
-        foreach (['onListingInquiry', 'onInquiry'] as $handle) {
-            $nextNode = $this->getNextNodeId($handle);
-            if ($nextNode) {
-                return $nextNode;
+        foreach (['onListingInquiry', 'onBooking', 'onInquiry'] as $handle) {
+            foreach ($this->outgoingEdges as $edge) {
+                if ($edge->getSourceHandle() === $handle && $edge->getTarget()) {
+                    return $edge->getTarget();
+                }
             }
         }
 
@@ -188,7 +253,13 @@ class ListingInquiry extends Node
             }
         }
 
-        return $this->getNextNodeId('else');
+        foreach ($this->outgoingEdges as $edge) {
+            if ($edge->getSourceHandle() === 'else' && $edge->getTarget()) {
+                return $edge->getTarget();
+            }
+        }
+
+        return null;
     }
 
     private function resolveItemIdFromExtra(string $extra): string
@@ -216,5 +287,20 @@ class ListingInquiry extends Node
         }
 
         return null;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $items
+     */
+    private function guessItemIdFromMessage(ListCatalog $catalog, string $message): ?string
+    {
+        if (! preg_match('/Ref:\s*(\S+)/u', $message, $matches)) {
+            return null;
+        }
+
+        $ref = trim($matches[1]);
+        $item = $this->findItemInCatalog($catalog->items ?? [], $ref);
+
+        return $item ? $ref : null;
     }
 }

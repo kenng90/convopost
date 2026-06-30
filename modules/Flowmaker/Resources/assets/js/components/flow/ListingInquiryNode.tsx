@@ -26,6 +26,9 @@ interface Catalog {
   };
 }
 
+type CompletionType = 'booking' | 'inquiry';
+type BookingBackend = 'whatsapp_only' | 'reminders';
+
 const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
   const { deleteNode } = useFlowActions();
 
@@ -33,7 +36,19 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
   const [catalogs, setCatalogs] = useState<Catalog[]>([]);
   const [header, setHeader] = useState<string>(data.settings?.header || 'Browse our listings');
   const [footer, setFooter] = useState<string>(
-    data.settings?.footer || 'Tap the link to view listings and inquire on WhatsApp.'
+    data.settings?.footer || 'Tap the link to view listings and book on WhatsApp.'
+  );
+  const [completionType, setCompletionType] = useState<CompletionType>(
+    (data.settings?.completionType as CompletionType) || 'booking'
+  );
+  const [bookingVariablePrefix, setBookingVariablePrefix] = useState<string>(
+    data.settings?.bookingVariablePrefix || 'listing_booking'
+  );
+  const [requirePreferredDateTime, setRequirePreferredDateTime] = useState<boolean>(
+    !!data.settings?.requirePreferredDateTime
+  );
+  const [bookingBackend, setBookingBackend] = useState<BookingBackend>(
+    (data.settings?.bookingBackend as BookingBackend) || 'whatsapp_only'
   );
 
   useEffect(() => {
@@ -60,10 +75,38 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
       data.settings.catalogId = selectedTemplateId;
       data.settings.header = header;
       data.settings.footer = footer;
+      data.settings.completionType = completionType;
+      data.settings.bookingVariablePrefix = bookingVariablePrefix;
+      data.settings.requirePreferredDateTime = requirePreferredDateTime;
+      data.settings.bookingBackend = bookingBackend;
     }
-  }, [selectedTemplateId, header, footer, data]);
+  }, [
+    selectedTemplateId,
+    header,
+    footer,
+    completionType,
+    bookingVariablePrefix,
+    requirePreferredDateTime,
+    bookingBackend,
+    data,
+  ]);
+
+  const handlePrefixChange = (value: string) => {
+    const sanitized = value.replace(/[^a-zA-Z0-9_]/g, '') || 'listing_booking';
+    setBookingVariablePrefix(sanitized);
+  };
 
   const selectedCatalog = catalogs.find(c => c.id.toString() === selectedTemplateId);
+  const variablePrefix = (bookingVariablePrefix || 'listing_booking').replace(/[^a-zA-Z0-9_]/g, '') || 'listing_booking';
+  const bookingVariables = [
+    `${variablePrefix}_item_title`,
+    `${variablePrefix}_customer_name`,
+    `${variablePrefix}_customer_phone`,
+    `${variablePrefix}_preferred_datetime`,
+    `${variablePrefix}_notes`,
+    `${variablePrefix}_message`,
+    `${variablePrefix}_reservation_id`,
+  ];
 
   return (
     <ContextMenu>
@@ -83,7 +126,7 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
           <div className="p-4">
             <div className="space-y-4">
               <p className="text-xs text-gray-500 leading-relaxed">
-                Sends a branded listings page. When the customer inquires on WhatsApp, the flow can continue.
+                Sends a branded listings page. Customers complete booking details on the web, then send the WhatsApp message to continue the flow.
               </p>
 
               <div className="space-y-2">
@@ -131,6 +174,70 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
                 )}
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="completion-type">Completion type</Label>
+                <select
+                  id="completion-type"
+                  value={completionType}
+                  onChange={(e) => setCompletionType(e.target.value as CompletionType)}
+                  className="w-full px-2 py-2 text-xs border rounded bg-white"
+                >
+                  <option value="booking">Booking (form + variables)</option>
+                  <option value="inquiry">Inquiry (lightweight)</option>
+                </select>
+              </div>
+
+              {completionType === 'booking' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="booking-variable-prefix">Booking variable prefix</Label>
+                    <input
+                      id="booking-variable-prefix"
+                      type="text"
+                      value={bookingVariablePrefix}
+                      onChange={(e) => handlePrefixChange(e.target.value)}
+                      placeholder="listing_booking"
+                      className="w-full px-2 py-1 text-xs border rounded font-mono"
+                    />
+                    <p className="text-[10px] text-gray-500 leading-relaxed">
+                      After the customer sends the booking message in WhatsApp, use:{' '}
+                      {bookingVariables.map((name, index) => (
+                        <span key={name}>
+                          {index > 0 ? ', ' : ''}
+                          <code className="text-[10px] bg-gray-100 px-1 rounded">{`{{${name}}}`}</code>
+                        </span>
+                      ))}
+                    </p>
+                  </div>
+
+                  <label className="flex items-center gap-2 text-xs text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={requirePreferredDateTime}
+                      onChange={(e) => setRequirePreferredDateTime(e.target.checked)}
+                    />
+                    Require preferred date/time on the web form
+                  </label>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="booking-backend">Booking backend</Label>
+                    <select
+                      id="booking-backend"
+                      value={bookingBackend}
+                      onChange={(e) => setBookingBackend(e.target.value as BookingBackend)}
+                      className="w-full px-2 py-2 text-xs border rounded bg-white"
+                    >
+                      <option value="whatsapp_only">WhatsApp only (message + variables)</option>
+                      <option value="reminders">Reminders (create reservation when possible)</option>
+                    </select>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">
+                      For Reminders, link each listing item to a bookable service via metadata{' '}
+                      <code className="bg-gray-100 px-1 rounded">booking_source_id</code>.
+                    </p>
+                  </div>
+                </>
+              )}
+
               {selectedCatalog && (
                 <div className="bg-emerald-50 border border-emerald-200 p-2 rounded text-xs">
                   <div className="font-medium text-emerald-900">{selectedCatalog.name}</div>
@@ -141,7 +248,7 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
           </div>
 
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-            <span className="text-xs text-gray-500">After inquiry</span>
+            <span className="text-xs text-gray-500">After booking / inquiry</span>
             <Handle
               type="source"
               position={Position.Right}
@@ -151,7 +258,7 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
           </div>
 
           <div className="flex items-center justify-center px-4 py-2 border-t border-gray-100 bg-white">
-            <span className="text-xs text-gray-500 mr-2">No inquiry</span>
+            <span className="text-xs text-gray-500 mr-2">No booking</span>
             <Handle
               type="source"
               position={Position.Bottom}

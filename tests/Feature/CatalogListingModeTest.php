@@ -227,7 +227,7 @@ class CatalogListingModeTest extends TestCase
         $this->assertSame(1, $summary['listing_inquiries']);
     }
 
-    public function test_generate_inquiry_resumes_flow_when_flow_token_present(): void
+    public function test_generate_inquiry_with_flow_token_stores_pending_instead_of_resuming_immediately(): void
     {
         [, $company] = $this->actingOwner();
 
@@ -257,7 +257,7 @@ class CatalogListingModeTest extends TestCase
         ]);
 
         $response->assertOk();
-        \Illuminate\Support\Facades\Queue::assertPushed(\Modules\Flowmaker\Jobs\ResumeFlowFromListingInquiry::class);
+        \Illuminate\Support\Facades\Queue::assertNotPushed(\Modules\Flowmaker\Jobs\ResumeFlowFromListingInquiry::class);
     }
 
     public function test_owner_can_add_listing_with_gallery_images(): void
