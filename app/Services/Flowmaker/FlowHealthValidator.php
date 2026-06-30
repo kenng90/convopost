@@ -65,10 +65,58 @@ class FlowHealthValidator
                 if (empty($variableName)) {
                     $warnings[] = "LLM node [{$id}] has no variable name configured.";
                 }
+
+                if ($autoSend) {
+                    foreach ($edges as $edge) {
+                        if (($edge['source'] ?? '') !== $id) {
+                            continue;
+                        }
+
+                        $targetId = $edge['target'] ?? '';
+                        $targetType = $nodeTypes[$targetId] ?? null;
+                        if ($targetType !== 'message') {
+                            continue;
+                        }
+
+                        $targetNode = collect($nodes)->firstWhere('id', $targetId);
+                        $messageText = $targetNode['data']['settings']['message'] ?? '';
+                        $echoPatterns = [
+                            '{{'.$variableName.'}}',
+                            '{{'.$variableName.'_message}}',
+                        ];
+
+                        if (in_array(trim($messageText), $echoPatterns, true)) {
+                            $warnings[] = "LLM node [{$id}] auto-sends and is followed by Message [{$targetId}] echoing the same variable — customers may get duplicate replies.";
+                        }
+                    }
+                }
+            }
+
+            if ($type === 'whatsapp_catalog') {
+                $catalogId = $node['data']['settings']['catalogId'] ?? '';
+                if ($catalogId === '' || $catalogId === '1') {
+                    $warnings[] = "Catalog node [{$id}] needs a real catalog ID before publish.";
+                }
+            }
+
+            if ($type === 'listing_inquiry') {
+                $catalogId = $node['data']['settings']['catalogId'] ?? '';
+                if ($catalogId === '' || $catalogId === '1') {
+                    $warnings[] = "Listing inquiry node [{$id}] needs a listing-mode catalog ID before publish.";
+                }
+            }
+
+            if ($type === 'http') {
+                $url = $node['data']['settings']['http']['url'] ?? '';
+                if (is_string($url) && str_contains($url, 'example.com')) {
+                    $warnings[] = "HTTP node [{$id}] still uses a placeholder API URL.";
+                }
             }
 
             if ($type === 'keyword_trigger') {
-                $keywords = $node['data']['settings']['keywords'] ?? [];
+                $keywords = $node['data']['keywords']
+                    ?? $node['data']['settings']['keywords']
+                    ?? [];
                 foreach ($keywords as $keyword) {
                     $keywordId = $keyword['id'] ?? null;
                     if (! $keywordId) {

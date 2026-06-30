@@ -31,7 +31,11 @@ class FlowTemplateService
             'company_id' => session('company_id') ?? auth()->user()?->currentCompany()?->id,
         ]);
 
-        $flow->flow_data = json_encode($template['flow_data']);
+        $encoded = json_encode($template['flow_data']);
+        $flow->flow_data = $encoded;
+        $flow->draft_flow_data = $encoded;
+        $flow->has_unpublished_changes = false;
+        $flow->source_template = $key;
         $flow->save();
 
         $company = $flow->company ?? auth()->user()?->currentCompany();

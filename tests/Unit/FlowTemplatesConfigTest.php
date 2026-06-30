@@ -8,6 +8,8 @@ class FlowTemplatesConfigTest extends TestCase
 {
     /** @var array<int, string> */
     private array $allowedNodeTypes = [
+        'listing_inquiry',
+        'book_appointment',
         'incomingMessage',
         'keyword_trigger',
         'whatsapp_flow',
@@ -46,6 +48,10 @@ class FlowTemplatesConfigTest extends TestCase
             'real_estate_agency_bot',
             'microfinance_banking_bot',
             'hotel_tour_concierge_bot',
+            'ai_faq_minimal',
+            'services_listing_booking',
+            'catalog_listings_showcase',
+            'whatsapp_voice_ai_agent',
         ] as $key) {
             $this->assertArrayHasKey($key, $templates, "Missing template: {$key}");
         }

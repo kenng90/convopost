@@ -124,7 +124,14 @@
                     <h5 class="mb-2">{{ $template['name'] }}</h5>
                     <p class="text-muted small flex-grow-1">{{ $template['description'] }}</p>
                     @if(!empty($template['setup_hint']))
-                        <p class="small text-info mb-0">{{ $template['setup_hint'] }}</p>
+                        <p class="small text-info mb-2">{{ $template['setup_hint'] }}</p>
+                    @endif
+                    @if(!empty($template['post_install_checklist']))
+                        <ul class="small text-muted mb-0 ps-3">
+                            @foreach($template['post_install_checklist'] as $item)
+                                <li>{{ $item }}</li>
+                            @endforeach
+                        </ul>
                     @endif
                     <a href="{{ route('flows.create-from-template', $key) }}" class="btn btn-sm btn-outline-primary mt-2">
                         {{ __('Use template') }}

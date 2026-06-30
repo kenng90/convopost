@@ -12,7 +12,13 @@ $flowTemplates = [
         'description' => 'Full appointment intake: service menu, date/time, guest name, team routing, and optional couples deposit.',
         'category' => 'services',
         'video_url' => null,
-        'setup_hint' => 'Set the Bookings group, journey stage (e.g. Registered), and M-Pesa deposit amount on the couples package node.',
+        'setup_hint' => 'Before Publish: set Bookings group & journey stage, M-Pesa deposit on couples package, and Reminders bookable service on Book Appointment node. Save draft → Publish when IDs are set.',
+        'post_install_checklist' => [
+            'Bookings group & journey stage IDs',
+            'M-Pesa deposit amount (couples package)',
+            'Reminders service linked on Book Appointment',
+            'Publish flow',
+        ],
         'flow_data' => [
             'nodes' => [
                 [
@@ -110,41 +116,32 @@ $flowTemplates = [
                     ],
                 ],
                 [
-                    'id' => 'question-1',
-                    'type' => 'question',
+                    'id' => 'book_appointment-1',
+                    'type' => 'book_appointment',
                     'position' => ['x' => 1140, 'y' => 200],
                     'data' => [
-                        'label' => 'Preferred date',
-                        'type' => 'question',
+                        'label' => 'Book treatment',
+                        'type' => 'book_appointment',
                         'settings' => [
-                            'question' => 'What date would you like to visit? (e.g. Friday 28 June)',
-                            'variableName' => 'booking_date',
+                            'source_name' => 'Spa Treatment',
+                            'duration_minutes' => '60',
+                            'header' => 'Book your visit',
+                            'body' => 'Choose a date and time for your spa appointment.',
+                            'footer' => '',
+                            'buttonText' => 'Choose slot',
+                            'success_message' => 'Thank you! Your {{booking_service}} appointment on {{booking_date}} at {{booking_time}} is confirmed.',
                         ],
                     ],
                 ],
                 [
-                    'id' => 'question-2',
-                    'type' => 'question',
-                    'position' => ['x' => 1520, 'y' => 200],
+                    'id' => 'counter-1',
+                    'type' => 'counter',
+                    'position' => ['x' => 1520, 'y' => 520],
                     'data' => [
-                        'label' => 'Preferred time',
-                        'type' => 'question',
+                        'label' => 'Deposit limit',
+                        'type' => 'counter',
                         'settings' => [
-                            'question' => 'What time works best for you? (e.g. 2:30 PM)',
-                            'variableName' => 'booking_time',
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'question-3',
-                    'type' => 'question',
-                    'position' => ['x' => 1900, 'y' => 200],
-                    'data' => [
-                        'label' => 'Guest name',
-                        'type' => 'question',
-                        'settings' => [
-                            'question' => 'Please share the full name for the booking.',
-                            'variableName' => 'guest_name',
+                            'counter' => ['maxExecutions' => 2, 'period' => 'last_30_days'],
                         ],
                     ],
                 ],
@@ -156,7 +153,7 @@ $flowTemplates = [
                         'label' => 'Booking received',
                         'type' => 'message',
                         'settings' => [
-                            'message' => "Thank you {{guest_name}}! ✅\n\nWe received your request for {{booking_date}} at {{booking_time}}.\n\nOur bookings team will confirm within 2 hours.",
+                            'message' => "Thank you! ✅\n\nWe received your spa booking request.\n\nOur bookings team will confirm within 2 hours.",
                         ],
                     ],
                 ],
@@ -210,17 +207,17 @@ $flowTemplates = [
                 ['id' => 'e-kw2', 'source' => 'keyword_trigger-1', 'target' => 'message-1', 'sourceHandle' => 'keyword-kw2'],
                 ['id' => 'e-kw3', 'source' => 'keyword_trigger-1', 'target' => 'message-1', 'sourceHandle' => 'keyword-kw3'],
                 ['id' => 'e-welcome-list', 'source' => 'message-1', 'target' => 'list_message-1'],
-                ['id' => 'e-list-massage', 'source' => 'list_message-1', 'target' => 'question-1', 'sourceHandle' => 'section1-row1'],
-                ['id' => 'e-list-facial', 'source' => 'list_message-1', 'target' => 'question-1', 'sourceHandle' => 'section1-row2'],
-                ['id' => 'e-list-manicure', 'source' => 'list_message-1', 'target' => 'question-1', 'sourceHandle' => 'section1-row3'],
+                ['id' => 'e-list-massage', 'source' => 'list_message-1', 'target' => 'book_appointment-1', 'sourceHandle' => 'section1-row1'],
+                ['id' => 'e-list-facial', 'source' => 'list_message-1', 'target' => 'book_appointment-1', 'sourceHandle' => 'section1-row2'],
+                ['id' => 'e-list-manicure', 'source' => 'list_message-1', 'target' => 'book_appointment-1', 'sourceHandle' => 'section1-row3'],
                 ['id' => 'e-list-couples', 'source' => 'list_message-1', 'target' => 'message-2', 'sourceHandle' => 'section1-row4'],
-                ['id' => 'e-deposit-mpesa', 'source' => 'message-2', 'target' => 'mpesa_stk_push-1'],
-                ['id' => 'e-mpesa-success', 'source' => 'mpesa_stk_push-1', 'target' => 'question-1', 'sourceHandle' => 'mpesa-success'],
+                ['id' => 'e-deposit-counter', 'source' => 'message-2', 'target' => 'counter-1'],
+                ['id' => 'e-counter-true-mpesa', 'source' => 'counter-1', 'target' => 'mpesa_stk_push-1', 'sourceHandle' => 'true'],
+                ['id' => 'e-counter-false-end', 'source' => 'counter-1', 'target' => 'end-1', 'sourceHandle' => 'false'],
+                ['id' => 'e-mpesa-success', 'source' => 'mpesa_stk_push-1', 'target' => 'book_appointment-1', 'sourceHandle' => 'mpesa-success'],
                 ['id' => 'e-mpesa-failed', 'source' => 'mpesa_stk_push-1', 'target' => 'message-3', 'sourceHandle' => 'mpesa-failed'],
                 ['id' => 'e-fail-end', 'source' => 'message-3', 'target' => 'end-1'],
-                ['id' => 'e-q1-q2', 'source' => 'question-1', 'target' => 'question-2'],
-                ['id' => 'e-q2-q3', 'source' => 'question-2', 'target' => 'question-3'],
-                ['id' => 'e-q3-confirm', 'source' => 'question-3', 'target' => 'message-4'],
+                ['id' => 'e-book-confirm', 'source' => 'book_appointment-1', 'target' => 'message-4'],
                 ['id' => 'e-confirm-group', 'source' => 'message-4', 'target' => 'assign_group-1'],
                 ['id' => 'e-group-journey', 'source' => 'assign_group-1', 'target' => 'assign_journey_stage-1'],
                 ['id' => 'e-journey-goodbye', 'source' => 'assign_journey_stage-1', 'target' => 'message-5'],
@@ -234,7 +231,8 @@ $flowTemplates = [
         'description' => 'Browse catalog, checkout with M-Pesa, route to fulfillment, or escalate to sales / AI FAQ.',
         'category' => 'commerce',
         'video_url' => null,
-        'setup_hint' => 'Set your catalog ID, M-Pesa credentials, Fulfillment group, Sales agent, and journey Paid stage.',
+        'setup_hint' => 'Set catalog ID, M-Pesa, Fulfillment group & journey stage. Delivery address/notes are for agent follow-up until checkout supports them. Save draft → Publish.',
+        'post_install_checklist' => ['Catalog ID', 'M-Pesa credentials', 'Fulfillment group', 'OpenRouter key for FAQ', 'Publish'],
         'flow_data' => [
             'nodes' => [
                 [
@@ -531,7 +529,8 @@ $flowTemplates = [
         'description' => 'Qualify leads by service type, collect details, and route to sales, intake, or support teams.',
         'category' => 'sales',
         'video_url' => null,
-        'setup_hint' => 'Configure groups (Sales, Intake, Accounts, Support), assign agents on the Enterprise path, and link journey stages.',
+        'setup_hint' => 'Configure team groups, agents, journey stages. Save draft → Publish before going live.',
+        'post_install_checklist' => ['Sales/Intake/Support group IDs', 'Enterprise agent assignment', 'Publish'],
         'flow_data' => [
             'nodes' => [
                 [
@@ -763,6 +762,7 @@ $flowTemplates = [
                                 'temperature' => 0.7,
                                 'maxTokens' => 500,
                                 'variableName' => 'general_faq_reply',
+                                'autoSendMessage' => true,
                                 'enableVectorSearch' => true,
                                 'vectorSearchLimit' => 5,
                                 'similarityThreshold' => 0.3,
@@ -883,7 +883,8 @@ $flowTemplates = [
         'description' => 'Category-based support with LLM first response, then agent and journey escalation.',
         'category' => 'support',
         'video_url' => null,
-        'setup_hint' => 'Add OpenRouter API key, train FAQ docs on the flow, and set Support group, agent, and journey In Progress stage.',
+        'setup_hint' => 'Train FAQ docs, set Support group/agent/journey. LLM uses category intentions. Save draft → Publish.',
+        'post_install_checklist' => ['OpenRouter key', 'Knowledge base trained', 'Support group & agent', 'Publish'],
         'flow_data' => [
             'nodes' => [
                 [
@@ -955,10 +956,17 @@ $flowTemplates = [
                                 'temperature' => 0.6,
                                 'maxTokens' => 600,
                                 'variableName' => 'support_ai_reply',
+                                'autoSendMessage' => true,
                                 'enableVectorSearch' => true,
                                 'vectorSearchLimit' => 5,
                                 'similarityThreshold' => 0.3,
-                                'intentions' => [],
+                                'intentions' => [
+                                    ['id' => 'int-orders', 'name' => 'orders', 'description' => 'Orders, delivery, returns, wrong items'],
+                                    ['id' => 'int-billing', 'name' => 'billing', 'description' => 'Invoices, refunds, payments, M-Pesa'],
+                                    ['id' => 'int-technical', 'name' => 'technical', 'description' => 'App, login, or product technical problems'],
+                                    ['id' => 'int-account', 'name' => 'account', 'description' => 'Profile, access, credentials'],
+                                    ['id' => 'int-general', 'name' => 'general', 'description' => 'General enquiries'],
+                                ],
                             ],
                         ],
                     ],
@@ -1036,6 +1044,7 @@ $flowTemplates = [
                                 'temperature' => 0.6,
                                 'maxTokens' => 500,
                                 'variableName' => 'support_followup_reply',
+                                'autoSendMessage' => true,
                                 'enableVectorSearch' => true,
                                 'vectorSearchLimit' => 3,
                                 'similarityThreshold' => 0.3,
@@ -1143,4 +1152,8 @@ $flowTemplates = [
 
 ];
 
-return array_merge($flowTemplates, require __DIR__.'/flow-templates-industry.php');
+return \App\Services\Flowmaker\FlowTemplateEnricher::enrich(array_merge(
+    $flowTemplates,
+    require __DIR__.'/flow-templates-industry.php',
+    require __DIR__.'/flow-templates-starter.php'
+));

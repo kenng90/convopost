@@ -3,6 +3,7 @@
 namespace Modules\Flowmaker\Http\Controllers;
 
 use App\Services\Flowmaker\FlowHealthValidator;
+use App\Services\Flowmaker\FlowTemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -40,9 +41,13 @@ class Main extends Controller
             ];
         }
 
+        $template = app(FlowTemplateService::class)->get($flow->source_template ?? '');
+        $checklist = $template['post_install_checklist'] ?? [];
+
         $data = [
-            'flow' => $flow->only(['id', 'name', 'flow_data', 'draft_flow_data', 'has_unpublished_changes', 'company_id', 'updated_at']),
+            'flow' => $flow->only(['id', 'name', 'flow_data', 'draft_flow_data', 'has_unpublished_changes', 'company_id', 'updated_at', 'source_template']),
             'variables' => $variables,
+            'post_install_checklist' => $checklist,
         ];
 
         return view('flowmaker::index')->with('data', json_encode($data));
@@ -225,7 +230,7 @@ class Main extends Controller
                 continue;
             }
 
-            foreach ($node['data']['settings']['keywords'] ?? [] as $keyword) {
+            foreach ($node['data']['keywords'] ?? $node['data']['settings']['keywords'] ?? [] as $keyword) {
                 $value = strtolower((string) ($keyword['value'] ?? ''));
                 $matchType = $keyword['matchType'] ?? 'contains';
                 $haystack = strtolower($message);
