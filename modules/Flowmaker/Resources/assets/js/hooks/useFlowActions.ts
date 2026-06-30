@@ -69,6 +69,9 @@ export const useFlowActions = () => {
             type === 'counter' ? 'counter' :
             type === 'check_pricing' ? 'check_pricing' :
             type === 'mpesa_stk_push' ? 'mpesa_stk_push' :
+            type === 'book_appointment' ? 'book_appointment' :
+            type === 'booking_events_list' ? 'booking_events_list' :
+            type === 'booking_event_register' ? 'booking_event_register' :
             type === 'branch' ? 'branch' : 'action',
       position: newPosition,
       data: data || {
@@ -93,6 +96,9 @@ export const useFlowActions = () => {
                type === 'counter' ? 'Counter' :
                type === 'check_pricing' ? 'Check User Pricing' :
                type === 'mpesa_stk_push' ? 'MPesa STK Push' :
+               type === 'book_appointment' ? 'Book appointment' :
+               type === 'booking_events_list' ? 'List events' :
+               type === 'booking_event_register' ? 'Register for event' :
                type.charAt(0).toUpperCase() + type.slice(1),
         type,
         settings: type === 'branch' 
@@ -137,6 +143,30 @@ export const useFlowActions = () => {
           ? { pricing: { freeExecutions: 0 } }
           : type === 'mpesa_stk_push'
           ? { mpesa: { amount: '', accountReference: 'Payment', transactionDesc: 'Payment', responseVar: 'mpesa_result' } }
+          : type === 'book_appointment'
+          ? {
+              source_name: '',
+              duration_minutes: '',
+              header: 'Book appointment',
+              body: 'Let us find a time that works for you.',
+              footer: '',
+              buttonText: 'Choose option',
+              success_message: 'Your appointment for {{booking_service}} on {{booking_date}} at {{booking_time}} is confirmed.',
+            }
+          : type === 'booking_events_list'
+          ? {
+              header: 'Upcoming events',
+              body: 'Choose an event session to register.',
+              footer: '',
+              buttonText: 'View events',
+              limit: '10',
+            }
+          : type === 'booking_event_register'
+          ? {
+              occurrence_id: '',
+              party_size: '1',
+              success_message: 'You are registered for {{booking_event_title}} on {{booking_event_date}} at {{booking_event_time}}.',
+            }
           : {},
       },
     };

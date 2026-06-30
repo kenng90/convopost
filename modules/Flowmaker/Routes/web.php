@@ -33,6 +33,8 @@ Route::group([
         //Flow maker
         Route::get('flowmaker/edit/{flow}', 'Main@edit')->name('flowmaker.edit');
         Route::get('flowmaker/editor-metadata/{flow}', 'Main@editorMetadata')->name('flowmaker.editor.metadata');
+        Route::get('api/flowmaker/booking-services', 'Main@bookingServices')->name('flowmaker.booking.services');
+        Route::get('api/flowmaker/booking-events', 'Main@bookingEvents')->name('flowmaker.booking.events');
         Route::get('flowmaker/script', 'Main@script')->name('flowmaker.script');
         Route::get('flowmaker/css', 'Main@css')->name('flowmaker.css');
         Route::post('flowmaker/update/{flow}', 'Main@updateFlow')

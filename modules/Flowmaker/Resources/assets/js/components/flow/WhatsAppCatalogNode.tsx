@@ -20,6 +20,7 @@ interface NodeSettings {
   catalogId?: number;
   header?: string;
   displayMode?: 'link' | 'interactive_list';
+  checkoutVariablePrefix?: string;
 }
 
 interface Catalog {
@@ -37,6 +38,9 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
   const [header, setHeader] = useState<string>(data.settings?.header || 'Browse our products');
   const [displayMode, setDisplayMode] = useState<'link' | 'interactive_list'>(
     data.settings?.displayMode || 'link'
+  );
+  const [checkoutVariablePrefix, setCheckoutVariablePrefix] = useState<string>(
+    data.settings?.checkoutVariablePrefix || 'catalog_order'
   );
 
   useEffect(() => {
@@ -61,8 +65,9 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
       data.settings.catalogId = selectedTemplateId;
       data.settings.header = header;
       data.settings.displayMode = displayMode;
+      data.settings.checkoutVariablePrefix = checkoutVariablePrefix;
     }
-  }, [selectedTemplateId, header, displayMode, data]);
+  }, [selectedTemplateId, header, displayMode, checkoutVariablePrefix, data]);
 
   const handleCatalogSelect = (value: string) => {
     setSelectedTemplateId(value);
@@ -78,7 +83,24 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
     }
   };
 
+  const handleCheckoutPrefixChange = (value: string) => {
+    const sanitized = value.replace(/[^a-zA-Z0-9_]/g, '');
+    setCheckoutVariablePrefix(sanitized || 'catalog_order');
+    if (data && data.settings) {
+      data.settings.checkoutVariablePrefix = sanitized || 'catalog_order';
+    }
+  };
+
   const selectedCatalog = catalogs.find(c => c.id.toString() === selectedTemplateId);
+  const variablePrefix = (checkoutVariablePrefix || 'catalog_order').replace(/[^a-zA-Z0-9_]/g, '') || 'catalog_order';
+  const checkoutVariables = [
+    `${variablePrefix}_items`,
+    `${variablePrefix}_total`,
+    `${variablePrefix}_item_count`,
+    `${variablePrefix}_message`,
+    `${variablePrefix}_json`,
+    'catalog_cart',
+  ];
   const canUseInteractiveList = selectedCatalog ? selectedCatalog.item_count > 0 && selectedCatalog.item_count <= 10 : false;
 
   return (
@@ -151,6 +173,30 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
                       In-chat product list (≤10 items){!canUseInteractiveList ? ' — unavailable' : ''}
                     </option>
                   </select>
+                </div>
+              )}
+
+              {selectedCatalog && (
+                <div className="space-y-2">
+                  <Label htmlFor="checkout-variable-prefix">Checkout variable prefix</Label>
+                  <input
+                    id="checkout-variable-prefix"
+                    type="text"
+                    value={checkoutVariablePrefix}
+                    onChange={(e) => handleCheckoutPrefixChange(e.target.value)}
+                    placeholder="catalog_order"
+                    className="w-full px-2 py-1 text-xs border rounded font-mono"
+                  />
+                  <p className="text-[10px] text-gray-500 leading-relaxed">
+                    After WhatsApp checkout (when the user sends the order message), use these in downstream nodes:{' '}
+                    {checkoutVariables.map((name, index) => (
+                      <span key={name}>
+                        {index > 0 ? ', ' : ''}
+                        <code className="text-[10px] bg-gray-100 px-1 rounded">{`{{${name}}}`}</code>
+                      </span>
+                    ))}
+                    .
+                  </p>
                 </div>
               )}
 

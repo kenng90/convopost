@@ -28,6 +28,9 @@ import AssignJourneyStageNode from '@/components/flow/AssignJourneyStageNode';
 import CounterNode from '@/components/flow/CounterNode';
 import CheckPricingNode from '@/components/flow/CheckPricingNode';
 import MpesaStkPushNode from '@/components/flow/MpesaStkPushNode';
+import BookAppointmentNode from '@/components/flow/BookAppointmentNode';
+import BookingEventsListNode from '@/components/flow/BookingEventsListNode';
+import BookingEventRegisterNode from '@/components/flow/BookingEventRegisterNode';
 
 export const nodeTypes = {
   trigger: TriggerNode,
@@ -60,4 +63,7 @@ export const nodeTypes = {
   counter: CounterNode,
   check_pricing: CheckPricingNode,
   mpesa_stk_push: MpesaStkPushNode,
+  book_appointment: BookAppointmentNode,
+  booking_events_list: BookingEventsListNode,
+  booking_event_register: BookingEventRegisterNode,
 };

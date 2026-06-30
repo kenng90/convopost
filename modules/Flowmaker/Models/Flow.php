@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Nodes\AssignAgent;
 use Modules\Flowmaker\Models\Nodes\AssignGroup;
 use Modules\Flowmaker\Models\Nodes\AssignJourneyStage;
+use Modules\Flowmaker\Models\Nodes\BookAppointment;
 use Modules\Flowmaker\Models\Nodes\BookingEventRegister;
 use Modules\Flowmaker\Models\Nodes\BookingEventsList;
 use Modules\Flowmaker\Models\Nodes\Branch;
@@ -32,6 +33,8 @@ use Modules\Flowmaker\Models\Nodes\Template;
 use Modules\Flowmaker\Models\Nodes\UserReply;
 use Modules\Flowmaker\Models\Nodes\WhatsAppCatalog;
 use Modules\Flowmaker\Models\Nodes\WhatsAppFlow;
+use Modules\Reminders\Models\EventRegistration;
+use Modules\Reminders\Models\Reservation;
 
 class Flow extends Model
 {
@@ -231,6 +234,8 @@ class Flow extends Model
                 $theNewNode = new BookingEventsList($nodeArray, []);
             } elseif ($nodeArray['type'] === 'booking_event_register') {
                 $theNewNode = new BookingEventRegister($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'book_appointment') {
+                $theNewNode = new BookAppointment($nodeArray, []);
             } else {
                 $theNewNode = new Node($nodeArray, []);
             }
@@ -352,6 +357,92 @@ class Flow extends Model
         $this->resumeWaitingNode($contact, null);
     }
 
+    public function resumeBookingPaymentSuccess(Contact $contact, string $nodeId, int $reservationId): void
+    {
+        try {
+            $reservation = Reservation::withoutGlobalScopes()->find($reservationId);
+
+            if (! $reservation) {
+                Log::error('Flow booking resume: reservation not found', ['reservationId' => $reservationId]);
+
+                return;
+            }
+
+            $flowData = $this->getDecodedFlowData();
+
+            if (! $flowData || ! isset($flowData->nodes, $flowData->edges)) {
+                return;
+            }
+
+            $nodes = $this->buildWiredNodes($flowData->nodes, $flowData->edges);
+            $node = $nodes[$nodeId] ?? null;
+
+            if (! $node instanceof BookAppointment) {
+                BookAppointment::notifyPaymentOutcome($this->id, $contact->id, $nodeId, 'success');
+
+                return;
+            }
+
+            $node->isStartNode = true;
+            $mockData = new \stdClass();
+            $mockData->contact_id = $contact->id;
+            $mockData->company_id = $contact->company_id;
+            $mockData->value = '';
+            $mockData->extra = null;
+
+            $node->completeSuccess($contact, $reservation, '', $mockData);
+        } catch (\Exception $e) {
+            Log::error('Flow booking resume: exception', [
+                'error' => $e->getMessage(),
+                'flowId' => $this->id,
+                'nodeId' => $nodeId,
+            ]);
+        }
+    }
+
+    public function resumeEventRegistrationPaymentSuccess(Contact $contact, string $nodeId, int $registrationId): void
+    {
+        try {
+            $registration = EventRegistration::withoutGlobalScopes()->find($registrationId);
+
+            if (! $registration) {
+                Log::error('Flow event registration resume: registration not found', ['registrationId' => $registrationId]);
+
+                return;
+            }
+
+            $flowData = $this->getDecodedFlowData();
+
+            if (! $flowData || ! isset($flowData->nodes, $flowData->edges)) {
+                return;
+            }
+
+            $nodes = $this->buildWiredNodes($flowData->nodes, $flowData->edges);
+            $node = $nodes[$nodeId] ?? null;
+
+            if (! $node instanceof BookingEventRegister) {
+                BookingEventRegister::notifyPaymentOutcome($this->id, $contact->id, $nodeId, 'success');
+
+                return;
+            }
+
+            $node->isStartNode = true;
+            $mockData = new \stdClass();
+            $mockData->contact_id = $contact->id;
+            $mockData->company_id = $contact->company_id;
+            $mockData->value = '';
+            $mockData->extra = null;
+
+            $node->completeSuccess($contact, $registration, '', $mockData);
+        } catch (\Exception $e) {
+            Log::error('Flow event registration resume: exception', [
+                'error' => $e->getMessage(),
+                'flowId' => $this->id,
+                'nodeId' => $nodeId,
+            ]);
+        }
+    }
+
     /**
      * Resume a flow after a catalog web checkout completes.
      *
@@ -359,10 +450,6 @@ class Flow extends Model
      */
     public function resumeFromCatalogCheckout(Contact $contact, string $productId, array $cartItems = [])
     {
-        if ($cartItems !== []) {
-            $contact->setContactState($this->id, 'catalog_cart', json_encode($cartItems));
-        }
-
         $extra = $cartItems !== []
             ? CatalogFlowCallbackService::CHECKOUT_COMPLETE_EXTRA
             : $productId;

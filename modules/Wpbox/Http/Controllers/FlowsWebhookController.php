@@ -7,8 +7,6 @@ use App\Models\Company;
 use App\Models\User;
 use App\Models\WhatsappFlow;
 use App\Models\WhatsappFlowResponse;
-use App\Services\WhatsappFlowEndpointHandlers\BookingServicesHandler;
-use App\Services\WhatsappFlowEndpointHandlers\BookingSlotsHandler;
 use App\Traits\EnsuresOpenSsl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -21,12 +19,6 @@ class FlowsWebhookController extends Controller
 {
     use Contacts;
     use EnsuresOpenSsl;
-
-    public function __construct(
-        private readonly BookingSlotsHandler $bookingSlotsHandler,
-        private readonly BookingServicesHandler $bookingServicesHandler,
-    ) {
-    }
 
     /**
      * Handle GET — Meta webhook verification (hub challenge).
@@ -328,18 +320,6 @@ class FlowsWebhookController extends Controller
      */
     protected function initDataForScreen(?WhatsappFlow $flow, string $screenId): array
     {
-        if ($this->bookingServicesHandler->supportsScreen($flow, $screenId)) {
-            return $this->bookingServicesHandler->initData($flow);
-        }
-
-        if ($this->bookingSlotsHandler->supportsScreen($flow, $screenId)) {
-            if ($flow?->company_id) {
-                session(['company_id' => $flow->company_id]);
-            }
-
-            return $this->bookingSlotsHandler->initData();
-        }
-
         return [];
     }
 
@@ -349,22 +329,6 @@ class FlowsWebhookController extends Controller
      */
     protected function resolveTemplateDataExchange(?WhatsappFlow $flow, ?string $screen, array $data): ?array
     {
-        if (! $screen || ! $flow) {
-            return null;
-        }
-
-        if ($this->bookingServicesHandler->supportsScreen($flow, $screen)) {
-            return $this->bookingServicesHandler->handleDataExchange($screen, $data, $flow);
-        }
-
-        if ($this->bookingSlotsHandler->supportsScreen($flow, $screen)) {
-            if ($flow->company_id) {
-                session(['company_id' => $flow->company_id]);
-            }
-
-            return $this->bookingSlotsHandler->handleDataExchange($screen, $data, $flow);
-        }
-
         return null;
     }
 

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Company;
 use App\Models\ListCatalog;
 use App\Scopes\CompanyScope;
+use App\Services\Catalog\CatalogCheckoutPendingService;
 use App\Services\Catalog\CatalogFlowCallbackService;
 use App\Services\Catalog\CatalogItemRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,7 +27,7 @@ class CatalogWhatsAppCheckoutFlowTest extends TestCase
         Role::firstOrCreate(['name' => 'owner']);
     }
 
-    public function test_generate_order_dispatches_flow_resume_when_flow_token_present(): void
+    public function test_generate_order_stores_pending_checkout_without_resuming_flow(): void
     {
         Queue::fake();
 
@@ -39,6 +40,8 @@ class CatalogWhatsAppCheckoutFlowTest extends TestCase
             'quantityAvailable' => 5,
         ]]);
 
+        $contact->setContactState($flow->id, 'current_node', 'catalog-1');
+
         $response = $this->postJson(route('catalog.generate-order', $catalog->id), [
             'items' => [['id' => 'iphone-15', 'quantity' => 1]],
             'flow_token' => $flowToken,
@@ -46,11 +49,53 @@ class CatalogWhatsAppCheckoutFlowTest extends TestCase
 
         $response->assertOk();
 
-        Queue::assertPushed(ResumeFlowFromCatalogCheckout::class, function (ResumeFlowFromCatalogCheckout $job) use ($flow, $contact) {
-            return $job->flowId === $flow->id
-                && $job->contactId === $contact->id
-                && $job->productId === CatalogFlowCallbackService::CHECKOUT_COMPLETE_EXTRA;
-        });
+        Queue::assertNotPushed(ResumeFlowFromCatalogCheckout::class);
+
+        $contact->refresh();
+
+        $this->assertSame('1', $contact->getContactStateValue($flow->id, CatalogCheckoutPendingService::PENDING_FLAG));
+        $this->assertSame('catalog-1', $contact->getContactStateValue($flow->id, 'current_node'));
+        $this->assertNotSame('1', $contact->getContactStateValue($flow->id, 'catalog_checkout_resumed'));
+        $this->assertStringContainsString('Apple iPhone 15 Pro Max', $contact->getContactStateValue($flow->id, 'catalog_order_items'));
+    }
+
+    public function test_whatsapp_checkout_advances_flow_only_after_inbound_order_message(): void
+    {
+        [$company, $catalog, $contact, $flow, $flowToken] = $this->catalogFlowContext();
+
+        app(CatalogItemRepository::class)->replaceAllFromArray($catalog, [[
+            'id' => 'iphone-15',
+            'title' => 'Apple iPhone 15 Pro Max',
+            'price' => 1,
+            'quantityAvailable' => 5,
+        ]]);
+
+        $catalog->refresh();
+        $contact->setContactState($flow->id, 'current_node', 'catalog-1');
+
+        $this->postJson(route('catalog.generate-order', $catalog->id), [
+            'items' => [['id' => 'iphone-15', 'quantity' => 1]],
+            'flow_token' => $flowToken,
+        ])->assertOk();
+
+        $contact->refresh();
+
+        $this->assertSame('catalog-1', $contact->getContactStateValue($flow->id, 'current_node'));
+        $this->assertNotSame('1', $contact->getContactStateValue($flow->id, 'catalog_checkout_resumed'));
+
+        $orderText = "📦 *New Order from Catalog: {$catalog->name}*\n\n📋 *Items:*\n• Apple iPhone 15 Pro Max (x1) - KSh 1.00\n\n💰 *Total:* KSh 1.00";
+
+        $message = new \stdClass();
+        $message->contact_id = $contact->id;
+        $message->company_id = $company->id;
+        $message->value = $orderText;
+        $message->extra = '';
+
+        $flow->processMessage($message);
+
+        $this->assertSame('quick-1', $contact->getContactStateValue($flow->id, 'current_node'));
+        $this->assertSame('1', $contact->getContactStateValue($flow->id, 'catalog_checkout_resumed'));
+        $this->assertNotSame('1', $contact->getContactStateValue($flow->id, CatalogCheckoutPendingService::PENDING_FLAG));
     }
 
     public function test_create_invoice_does_not_dispatch_flow_resume(): void
@@ -80,21 +125,6 @@ class CatalogWhatsAppCheckoutFlowTest extends TestCase
         Queue::assertNotPushed(ResumeFlowFromCatalogCheckout::class);
     }
 
-    public function test_whatsapp_checkout_resume_advances_catalog_node(): void
-    {
-        [$company, $catalog, $contact, $flow] = $this->catalogFlowContext();
-
-        $contact->setContactState($flow->id, 'current_node', 'catalog-1');
-
-        $flow->resumeFromCatalogCheckout($contact, CatalogFlowCallbackService::CHECKOUT_COMPLETE_EXTRA, [
-            ['id' => 'iphone-15', 'quantity' => 1],
-        ]);
-
-        $this->assertNull($contact->getContactStateValue($flow->id, 'current_node'));
-        $this->assertSame('1', $contact->getContactStateValue($flow->id, 'catalog_checkout_resumed'));
-        $this->assertNotNull($contact->getContactStateValue($flow->id, 'catalog_cart'));
-    }
-
     public function test_inbound_order_message_advances_catalog_node_once(): void
     {
         [$company, $catalog, $contact, $flow] = $this->catalogFlowContext();
@@ -111,7 +141,7 @@ class CatalogWhatsAppCheckoutFlowTest extends TestCase
 
         $flow->processMessage($message);
 
-        $this->assertNull($contact->getContactStateValue($flow->id, 'current_node'));
+        $this->assertSame('quick-1', $contact->getContactStateValue($flow->id, 'current_node'));
         $this->assertSame('1', $contact->getContactStateValue($flow->id, 'catalog_checkout_resumed'));
 
         $contact->setContactState($flow->id, 'current_node', 'catalog-1');

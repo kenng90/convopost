@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { GitFork, Plus, X } from "lucide-react";
+import { GitFork, Plus, Trash2, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -10,19 +10,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BranchCondition, WebhookVariable, NodeData } from '@/types/flow';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { BranchCondition, NodeData } from '@/types/flow';
 import { useFlowVariables } from '@/hooks/useFlowVariables';
+import { useFlowActions } from '@/hooks/useFlowActions';
 
 interface BranchNodeProps {
   data: NodeData;
   id: string;
-}
-
-interface NodeChangeEvent {
-    element: Element;
-    parents: Node[];
-    selectionChange?: boolean;
-    initial?: boolean;
 }
 
 const operators = [
@@ -36,6 +36,7 @@ const operators = [
 
 const BranchNode = ({ data, id }: BranchNodeProps) => {
   const { getNodes, setNodes } = useReactFlow();
+  const { deleteNode } = useFlowActions();
   const { groupedVariables } = useFlowVariables();
   const [conditions, setConditions] = useState<BranchCondition[]>(
     data.settings?.conditions || []
@@ -90,17 +91,30 @@ const BranchNode = ({ data, id }: BranchNodeProps) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg">
-      <Handle 
-        type="target" 
-        position={Position.Left}
-        className="!bg-gray-300 !w-3 !h-3 !rounded-full"
-      />
-      
-      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 px-4 pt-3 bg-gray-50">
-        <GitFork className="h-4 w-4 text-purple-600" />
-        <div className="font-medium">Branch</div>
-      </div>
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <div className="bg-white rounded-lg shadow-lg">
+          <Handle 
+            type="target" 
+            position={Position.Left}
+            className="!bg-gray-300 !w-3 !h-3 !rounded-full"
+          />
+          
+          <div className="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-gray-100 px-4 pt-3 bg-gray-50">
+            <div className="flex items-center gap-2">
+              <GitFork className="h-4 w-4 text-purple-600" />
+              <div className="font-medium">Branch</div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-gray-400 hover:text-red-600"
+              onClick={() => deleteNode(id)}
+              title="Delete node"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
 
       <div className="p-4">
         <div className="space-y-4">
@@ -208,7 +222,18 @@ const BranchNode = ({ data, id }: BranchNodeProps) => {
           </div>
         </div>
       </div>
-    </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem
+          className="text-red-600 focus:text-red-600 focus:bg-red-100"
+          onClick={() => deleteNode(id)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 };
 

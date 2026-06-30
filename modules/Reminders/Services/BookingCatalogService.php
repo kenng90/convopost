@@ -4,6 +4,7 @@ namespace Modules\Reminders\Services;
 
 use App\Models\Company;
 use Modules\Reminders\Models\Source;
+use Modules\Reminders\Support\BookingPaymentConfig;
 
 class BookingCatalogService
 {
@@ -18,13 +19,13 @@ class BookingCatalogService
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get()
-            ->map(fn (Source $source) => [
+            ->map(fn (Source $source) => array_merge([
                 'id' => $source->id,
                 'name' => $source->name,
                 'duration_options' => $source->durationOptions(),
                 'default_duration_minutes' => (int) ($source->default_duration_minutes ?: 30),
                 'timezone' => $source->timezone ?: config('app.timezone', 'UTC'),
-            ])
+            ], BookingPaymentConfig::fromSource($source)))
             ->values()
             ->all();
     }

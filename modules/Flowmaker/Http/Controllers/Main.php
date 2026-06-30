@@ -78,6 +78,38 @@ class Main extends Controller
         ]);
     }
 
+    public function bookingServices()
+    {
+        $company = auth()->user()?->currentCompany();
+
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'Company not found'], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'services' => app(\Modules\Reminders\Services\BookingCatalogService::class)
+                ->bookableServicesForCompany($company),
+        ]);
+    }
+
+    public function bookingEvents()
+    {
+        $company = auth()->user()?->currentCompany();
+
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'Company not found'], 403);
+        }
+
+        $catalog = app(\Modules\Reminders\Services\EventCatalogService::class);
+
+        return response()->json([
+            'success' => true,
+            'events_enabled' => $catalog->eventsEnabled($company),
+            'occurrences' => $catalog->upcomingOccurrencesForCompany($company),
+        ]);
+    }
+
     public function script()
     {
         // Find the first .js file in the public/build/assets directory

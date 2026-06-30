@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use Modules\Flowmaker\Models\Nodes\BookAppointment;
 use Modules\Flowmaker\Models\Nodes\ListMessage;
 use Modules\Flowmaker\Models\Nodes\Node;
 use PHPUnit\Framework\TestCase;
@@ -46,5 +47,31 @@ class FlowNodeInstantiationTest extends TestCase
 
         $this->assertSame('fallback-1', $node->id);
         $this->assertFalse($node->isStartNode);
+    }
+
+    public function test_book_appointment_node_can_be_constructed_and_serialized(): void
+    {
+        $nodeData = [
+            'id' => 'book-1',
+            'type' => 'book_appointment',
+            'data' => [
+                'settings' => [
+                    'source_name' => 'Consultation',
+                    'duration_minutes' => 30,
+                ],
+            ],
+        ];
+
+        $node = new BookAppointment($nodeData, []);
+        $node->flow_id = 12;
+
+        $this->assertSame('book-1', $node->id);
+        $this->assertSame('book_appointment', $node->type);
+        $this->assertSame(12, $node->flow_id);
+
+        $restored = unserialize(serialize($node));
+
+        $this->assertInstanceOf(BookAppointment::class, $restored);
+        $this->assertSame('book-1', $restored->id);
     }
 }

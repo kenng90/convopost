@@ -22,8 +22,29 @@ interface FlowCanvasProps {
 }
 
 const flow_data = window.data?.flow?.flow_data || "{}";
-const initialNodes: Node[] = JSON.parse(flow_data)?.nodes || [
-];
+
+function normalizeFlowNodes(nodes: Node[]): Node[] {
+  return nodes.map(node => {
+    const dataType = (node.data as { type?: string })?.type;
+
+    if (node.type === 'action' && dataType === 'book_appointment') {
+      return { ...node, type: 'book_appointment' };
+    }
+
+    if (node.type === 'action' && dataType === 'booking_events_list') {
+      return { ...node, type: 'booking_events_list' };
+    }
+
+    if (node.type === 'action' && dataType === 'booking_event_register') {
+      return { ...node, type: 'booking_event_register' };
+    }
+
+    return node;
+  });
+}
+
+const initialNodes: Node[] = normalizeFlowNodes(JSON.parse(flow_data)?.nodes || [
+]);
 
 const initialEdges: Edge[] = JSON.parse(flow_data)?.edges || [];
 

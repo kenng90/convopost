@@ -20,6 +20,12 @@
         timezone: @js($source->timezone),
         showServicePicker: @js($showServicePicker ?? count($services ?? []) > 1),
         initialPhoneCountry: @js($bookingPhoneCountry ?? 'ke'),
+        paymentRequired: @js($paymentConfig['payment_required'] ?? false),
+        paymentAmount: @js($paymentConfig['payment_amount']),
+        paymentTotalAmount: @js($paymentConfig['payment_total_amount']),
+        paymentUpfrontPercent: @js($paymentConfig['payment_upfront_percent'] ?? 100),
+        paymentCurrency: @js($paymentConfig['payment_currency'] ?? 'KES'),
+        mpesaConfigured: @js($mpesaConfigured ?? false),
     })"
     x-cloak
 >
@@ -200,10 +206,29 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
             </svg>
-            <span x-text="loadingBook ? 'Confirming your booking…' : 'Confirm booking'"></span>
+            <span x-text="loadingBook ? '{{ __('Processing...') }}' : confirmButtonLabel()"></span>
         </button>
 
         <div x-show="errorMessage" class="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700" x-text="errorMessage"></div>
+
+        <div x-show="paymentRequired" class="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-sm text-amber-900">
+            <p class="font-medium">{{ __('Payment required') }}</p>
+            <p class="mt-1" x-text="paymentSummary()"></p>
+            <p x-show="!mpesaConfigured" class="mt-2 text-red-700">{{ __('Online payment is not available right now. Please contact the business.') }}</p>
+        </div>
+    </div>
+
+    <div x-show="view === 'paying'" class="bg-white rounded-2xl shadow-lg border border-slate-100 p-6 space-y-6 text-center">
+        <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+            <svg class="h-8 w-8 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+        </div>
+        <div>
+            <h2 class="text-xl font-semibold text-slate-900">{{ __('Complete payment on your phone') }}</h2>
+            <p class="text-sm text-slate-600 mt-2">{{ __('We sent an M-Pesa prompt to your phone. Enter your PIN to confirm.') }}</p>
+        </div>
+        <p class="text-sm text-slate-500">{{ __('Waiting for payment confirmation...') }}</p>
     </div>
 </div>
 
@@ -213,6 +238,7 @@
 
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 @include('reminders::booking.partials.phone-input-script')
+@include('reminders::booking.partials.payment-summary-script')
 <script>
 function bookingWidget(config) {
     return {
@@ -226,6 +252,12 @@ function bookingWidget(config) {
         showServicePicker: config.showServicePicker,
         timezone: config.timezone,
         initialPhoneCountry: config.initialPhoneCountry || 'ke',
+        paymentRequired: config.paymentRequired || false,
+        paymentAmount: config.paymentAmount,
+        paymentTotalAmount: config.paymentTotalAmount,
+        paymentUpfrontPercent: config.paymentUpfrontPercent || 100,
+        paymentCurrency: config.paymentCurrency || 'KES',
+        mpesaConfigured: config.mpesaConfigured !== false,
         view: 'form',
         dates: [],
         slots: [],
@@ -264,8 +296,88 @@ function bookingWidget(config) {
             if (selected) {
                 this.durationOptions = selected.duration_options;
                 this.durationMinutes = this.durationOptions[0] || 30;
+                this.paymentRequired = !!selected.payment_required;
+                this.paymentAmount = selected.payment_amount;
+                this.paymentTotalAmount = selected.payment_total_amount;
+                this.paymentUpfrontPercent = selected.payment_upfront_percent || 100;
+                this.paymentCurrency = selected.payment_currency || 'KES';
             }
             this.loadDates();
+        },
+
+        paymentSummary() {
+            if (!this.paymentRequired || !this.paymentAmount) {
+                return '';
+            }
+
+            return window.BookingPayment.summary(
+                this.paymentCurrency,
+                this.paymentAmount,
+                this.paymentTotalAmount,
+                this.paymentUpfrontPercent
+            );
+        },
+
+        formatAmount(amount) {
+            return window.BookingPayment.formatAmount(amount);
+        },
+
+        confirmButtonLabel() {
+            if (this.paymentRequired && this.paymentAmount) {
+                return window.BookingPayment.buttonLabel(
+                    this.paymentCurrency,
+                    this.paymentAmount,
+                    '{{ __('book') }}'
+                );
+            }
+
+            return '{{ __('Confirm booking') }}';
+        },
+
+        showConfirmation(reservation) {
+            const start = reservation?.start_date ? new Date(reservation.start_date) : null;
+
+            this.confirmation = {
+                service: this.source,
+                dateLabel: start
+                    ? start.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                    : this.formatDateLabel(this.selectedDate),
+                timeLabel: this.selectedSlotMeta?.title || (start ? start.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : ''),
+                durationLabel: `${this.durationMinutes} minutes`,
+                name: this.name.trim(),
+                reference: reservation?.external_id || (reservation?.id ? `#${reservation.id}` : ''),
+            };
+
+            this.view = 'success';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+
+        async pollPayment(invoicePublicUuid) {
+            const maxAttempts = 45;
+
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                const params = new URLSearchParams({ booking_key: this.bookingKey });
+                const response = await fetch(`/api/reminders/booking/payment/${invoicePublicUuid}?` + params.toString());
+                const data = await response.json();
+
+                if (!response.ok) {
+                    continue;
+                }
+
+                const payment = data.payment || {};
+                if (payment.status === 'success' && payment.fulfilled && payment.reservation) {
+                    this.showConfirmation(payment.reservation);
+                    return;
+                }
+
+                if (payment.status === 'failed') {
+                    throw new Error('{{ __('Payment failed or was cancelled. Please try again.') }}');
+                }
+            }
+
+            throw new Error('{{ __('Payment is taking longer than expected. If you completed M-Pesa, contact the business with your receipt.') }}');
         },
 
         formatDateLabel(isoDate) {
@@ -361,6 +473,12 @@ function bookingWidget(config) {
             this.loadingBook = true;
             this.errorMessage = '';
 
+            if (this.paymentRequired && !this.mpesaConfigured) {
+                this.errorMessage = '{{ __('Online payment is not available right now.') }}';
+                this.loadingBook = false;
+                return;
+            }
+
             const phone = window.BookingPhone.digits(this.iti);
             if (! phone || ! window.BookingPhone.isValid(this.iti)) {
                 this.errorMessage = '{{ __('Please enter a valid phone number.') }}';
@@ -369,7 +487,7 @@ function bookingWidget(config) {
             }
 
             try {
-                const response = await fetch('/api/reminders/reservation/makeReservation', {
+                const response = await fetch('/api/reminders/booking/pay/appointment', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -379,6 +497,7 @@ function bookingWidget(config) {
                         booking_key: this.bookingKey,
                         source: this.source,
                         slot_id: this.selectedSlot,
+                        duration_minutes: this.durationMinutes,
                         name: this.name.trim(),
                         phone: phone,
                     }),
@@ -389,24 +508,19 @@ function bookingWidget(config) {
                     throw new Error(data.message || 'Booking failed. Please try again.');
                 }
 
-                const reservation = data.reservation || {};
-                const start = reservation.start_date ? new Date(reservation.start_date) : null;
+                if (!data.requires_action) {
+                    this.showConfirmation(data.reservation);
+                    return;
+                }
 
-                this.confirmation = {
-                    service: this.source,
-                    dateLabel: start
-                        ? start.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-                        : this.formatDateLabel(this.selectedDate),
-                    timeLabel: this.selectedSlotMeta?.title || (start ? start.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : ''),
-                    durationLabel: `${this.durationMinutes} minutes`,
-                    name: this.name.trim(),
-                    reference: reservation.external_id || (reservation.id ? `#${reservation.id}` : ''),
-                };
-
-                this.view = 'success';
+                this.view = 'paying';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                await this.pollPayment(data.invoice_public_uuid);
             } catch (error) {
                 this.errorMessage = error.message || 'Booking failed. Please try again.';
+                if (this.view === 'paying') {
+                    this.view = 'form';
+                }
             } finally {
                 this.loadingBook = false;
             }

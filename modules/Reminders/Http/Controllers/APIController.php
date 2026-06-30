@@ -16,6 +16,7 @@ use Modules\Reminders\Models\Source;
 use Modules\Reminders\Services\AvailabilityService;
 use Modules\Reminders\Services\BookingCatalogService;
 use Modules\Reminders\Services\BookingChatPanelService;
+use Modules\Reminders\Services\BookingPaymentService;
 use Modules\Reminders\Services\BookingPublicKeyService;
 use Modules\Reminders\Services\EventCatalogService;
 use Modules\Reminders\Services\EventRegistrationService;
@@ -33,7 +34,8 @@ class APIController extends Controller
         private readonly BookingChatPanelService $chatPanelService,
         private readonly BookingPublicKeyService $bookingPublicKeyService,
         private readonly EventCatalogService $eventCatalogService,
-        private readonly EventRegistrationService $eventRegistrationService
+        private readonly EventRegistrationService $eventRegistrationService,
+        private readonly BookingPaymentService $bookingPaymentService
     ) {
     }
 
@@ -228,6 +230,25 @@ class APIController extends Controller
                 ], 403);
             }
 
+            $occurrence = $this->eventCatalogService->findRegisterableOccurrence($company, (int) $request->occurrence_id);
+
+            if (! $occurrence) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'This event session is not available.',
+                ], 404);
+            }
+
+            $event = $occurrence->event;
+
+            if (\Modules\Reminders\Support\BookingPaymentConfig::fromEvent($event)['payment_required']) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Payment is required for this event. Use the booking payment endpoint.',
+                    'payment_required' => true,
+                ], 402);
+            }
+
             try {
                 $registration = $this->eventRegistrationService->register($company, $request->only([
                     'occurrence_id',
@@ -247,6 +268,10 @@ class APIController extends Controller
                     'message' => $exception->getMessage(),
                 ], 409);
             }
+
+            $registration->update([
+                'payment_status' => \Modules\Reminders\Support\BookingPaymentConfig::STATUS_NOT_REQUIRED,
+            ]);
 
             return response()->json(['status' => 'success', 'registration' => $registration->load(['event', 'occurrence', 'contact'])], 201);
         }, [
@@ -366,6 +391,15 @@ class APIController extends Controller
     {
         return $this->authenticatePublicBooking($request, function ($request) {
             $company = $this->resolveBookingCompany($request);
+            $source = $this->resolveSource($company, $request->input('source'));
+
+            if (\Modules\Reminders\Support\BookingPaymentConfig::fromSource($source)['payment_required']) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Payment is required for this service. Use the booking payment endpoint.',
+                    'payment_required' => true,
+                ], 402);
+            }
 
             try {
                 $reservation = $this->bookingService->book($company, $request->only([
@@ -390,6 +424,10 @@ class APIController extends Controller
                     'message' => $exception->getMessage(),
                 ], 409);
             }
+
+            $reservation->update([
+                'payment_status' => \Modules\Reminders\Support\BookingPaymentConfig::STATUS_NOT_REQUIRED,
+            ]);
 
             return response()->json(['status' => 'success', 'reservation' => $reservation], 201);
         }, [
@@ -457,6 +495,108 @@ class APIController extends Controller
             'staff_user_id' => 'nullable|integer',
             'duration_minutes' => 'nullable|integer|min:5|max:480',
         ]);
+    }
+
+    public function payForAppointment(Request $request)
+    {
+        return $this->authenticatePublicBooking($request, function ($request) {
+            $company = $this->resolveBookingCompany($request);
+
+            try {
+                $result = $this->bookingPaymentService->initiateAppointmentPayment($company, $request->only([
+                    'phone',
+                    'name',
+                    'source',
+                    'slot_id',
+                    'start_date',
+                    'end_date',
+                    'duration_minutes',
+                    'staff_user_id',
+                    'external_id',
+                ]));
+            } catch (\InvalidArgumentException $exception) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $exception->getMessage(),
+                ], 422);
+            } catch (\RuntimeException $exception) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $exception->getMessage(),
+                ], 409);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'requires_action' => $result['requires_action'],
+                'message' => $result['message'] ?? null,
+                'invoice_public_uuid' => $result['invoice']?->public_uuid,
+                'payment' => $result['payment'],
+                'reservation' => $result['reservation'] ?? null,
+            ], $result['requires_action'] ? 202 : 201);
+        }, [
+            'phone' => 'required',
+            'name' => 'required',
+            'source' => 'required',
+            'slot_id' => 'required_without_all:start_date,end_date',
+            'start_date' => 'required_without:slot_id|required_with:end_date|date',
+            'end_date' => 'required_without:slot_id|required_with:start_date|date|after:start_date',
+            'staff_user_id' => 'required_without:slot_id|integer',
+            'duration_minutes' => 'nullable|integer|min:5|max:480',
+        ]);
+    }
+
+    public function payForEvent(Request $request)
+    {
+        return $this->authenticatePublicBooking($request, function ($request) {
+            $company = $this->resolveBookingCompany($request);
+
+            try {
+                $result = $this->bookingPaymentService->initiateEventPayment($company, $request->only([
+                    'occurrence_id',
+                    'phone',
+                    'name',
+                    'party_size',
+                    'external_id',
+                ]));
+            } catch (\InvalidArgumentException $exception) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $exception->getMessage(),
+                ], 422);
+            } catch (\RuntimeException $exception) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $exception->getMessage(),
+                ], 409);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'requires_action' => $result['requires_action'],
+                'message' => $result['message'] ?? null,
+                'invoice_public_uuid' => $result['invoice']?->public_uuid,
+                'payment' => $result['payment'],
+                'registration' => $result['registration'] ?? null,
+            ], $result['requires_action'] ? 202 : 201);
+        }, [
+            'occurrence_id' => 'required|integer',
+            'phone' => 'required',
+            'name' => 'required',
+            'party_size' => 'nullable|integer|min:1|max:100',
+        ]);
+    }
+
+    public function bookingPaymentStatus(Request $request, string $invoicePublicUuid)
+    {
+        return $this->authenticatePublicBooking($request, function ($request) use ($invoicePublicUuid) {
+            $company = $this->resolveBookingCompany($request);
+
+            return response()->json([
+                'status' => 'success',
+                'payment' => $this->bookingPaymentService->paymentStatus($company, $invoicePublicUuid),
+            ]);
+        });
     }
 
     private function resolveSource(Company $company, string $sourceRef): Source

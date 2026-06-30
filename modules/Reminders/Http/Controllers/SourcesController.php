@@ -9,6 +9,7 @@ use Modules\Reminders\Models\Department;
 use Modules\Reminders\Models\Source;
 use Modules\Reminders\Models\SourceStaff;
 use Modules\Reminders\Services\SourceReminderSyncService;
+use Modules\Reminders\Support\BookingPaymentConfig;
 use Modules\Reminders\Support\WorkingHours;
 use Modules\Wpbox\Models\Campaign;
 
@@ -45,6 +46,10 @@ class SourcesController extends Controller
 
         $fields[] = ['class' => $class, 'ftype' => 'input', 'name' => __('Service name'), 'id' => 'name', 'placeholder' => 'Consultation', 'required' => true, 'value' => $source?->name];
         $fields[] = ['class' => $class, 'ftype' => 'bool', 'name' => __('Bookable online'), 'id' => 'is_bookable', 'required' => false, 'value' => $source?->is_bookable ?? true];
+        $fields[] = ['class' => $class, 'ftype' => 'bool', 'name' => __('Require payment'), 'id' => 'payment_required', 'required' => false, 'value' => $source?->payment_required ?? false, 'additionalInfo' => __('When enabled, customers must pay via M-Pesa before the appointment is confirmed.')];
+        $fields[] = ['class' => $class, 'ftype' => 'input', 'type' => 'number', 'name' => __('Total amount'), 'id' => 'payment_amount', 'placeholder' => '1500', 'required' => false, 'value' => $source?->payment_amount, 'additionalInfo' => __('Full service price in the selected currency.')];
+        $fields[] = ['class' => $class, 'ftype' => 'input', 'type' => 'number', 'name' => __('Upfront payment (%)'), 'id' => 'payment_upfront_percent', 'placeholder' => '100', 'required' => false, 'value' => $source?->payment_upfront_percent ?? 100, 'additionalInfo' => __('Percentage of the total collected via M-Pesa to confirm the booking. Use 100 for full payment.')];
+        $fields[] = ['class' => $class, 'ftype' => 'input', 'name' => __('Payment currency'), 'id' => 'payment_currency', 'placeholder' => 'KES', 'required' => false, 'value' => $source?->payment_currency ?? 'KES'];
 
         $fields[] = [
             'class' => $class,
@@ -380,6 +385,12 @@ class SourcesController extends Controller
         return [
             'name' => $request->name,
             'is_bookable' => $request->boolean('is_bookable'),
+            'payment_required' => $request->boolean('payment_required'),
+            'payment_amount' => $request->filled('payment_amount') ? $request->input('payment_amount') : null,
+            'payment_upfront_percent' => $request->boolean('payment_required')
+                ? BookingPaymentConfig::normalizeUpfrontPercent($request->input('payment_upfront_percent'))
+                : null,
+            'payment_currency' => strtoupper((string) $request->input('payment_currency', 'KES')),
             'department_id' => $request->input('department_id') ?: null,
             'default_duration_minutes' => (int) $request->input('default_duration_minutes', 30),
             'duration_options' => $durationOptions ?: [(int) $request->input('default_duration_minutes', 30)],

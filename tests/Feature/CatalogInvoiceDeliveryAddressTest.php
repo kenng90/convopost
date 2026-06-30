@@ -78,4 +78,41 @@ class CatalogInvoiceDeliveryAddressTest extends TestCase
             'delivery_address' => 'Kilimani, Nairobi',
         ]);
     }
+
+    public function test_create_invoice_stores_customer_name_when_provided(): void
+    {
+        $company = Company::factory()->create();
+        $catalog = ListCatalog::withoutGlobalScope(CompanyScope::class)->create([
+            'company_id' => $company->id,
+            'name' => 'Shop',
+            'slug' => 'shop-named',
+            'version' => 1,
+            'items' => [],
+            'columns' => [],
+            'source' => 'manual',
+        ]);
+
+        app(CatalogItemRepository::class)->replaceAllFromArray($catalog, [[
+            'id' => 'sku-1',
+            'title' => 'Product',
+            'price' => 10,
+            'quantityAvailable' => 5,
+        ]]);
+
+        $response = $this->postJson(route('catalog.create-invoice', $catalog->id), [
+            'items' => [['id' => 'sku-1', 'quantity' => 1]],
+            'customerName' => 'Jane Doe',
+            'customerPhone' => '254712345678',
+            'deliveryAddress' => 'Westlands, Nairobi',
+            'amount' => 10,
+        ]);
+
+        $response->assertOk();
+
+        $this->assertDatabaseHas('invoices', [
+            'catalog_id' => $catalog->id,
+            'customer_name' => 'Jane Doe',
+            'delivery_address' => 'Westlands, Nairobi',
+        ]);
+    }
 }

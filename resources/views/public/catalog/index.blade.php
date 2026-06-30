@@ -376,6 +376,98 @@
             padding: 20px;
             border-top: 1px solid #dee2e6;
         }
+
+        .delivery-details-section {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .delivery-details-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #212529;
+        }
+
+        .delivery-details-hint {
+            font-size: 11px;
+            color: #6c757d;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .delivery-field {
+            margin-bottom: 10px;
+        }
+
+        .delivery-field label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 4px;
+        }
+
+        .delivery-field label .optional {
+            font-weight: 400;
+            color: #6c757d;
+        }
+
+        .delivery-field input,
+        .delivery-field textarea {
+            width: 100%;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 8px 10px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .delivery-field input:focus,
+        .delivery-field textarea:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+        }
+
+        .delivery-field.has-error input,
+        .delivery-field.has-error textarea {
+            border-color: #dc3545;
+        }
+
+        .delivery-field-error {
+            display: none;
+            font-size: 11px;
+            color: #dc3545;
+            margin-top: 4px;
+        }
+
+        .delivery-field.has-error .delivery-field-error {
+            display: block;
+        }
+
+        .cart-success-banner {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.45;
+            margin-bottom: 14px;
+        }
+
+        .cart-error-banner {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.45;
+            margin-bottom: 14px;
+        }
         
         .cart-total {
             font-size: 18px;
@@ -693,6 +785,37 @@
             </div>
         </div>
         <div class="cart-footer">
+            <div id="cartSuccessBanner" class="cart-success-banner" style="display: none;" role="status"></div>
+            <div id="cartErrorBanner" class="cart-error-banner" style="display: none;" role="alert"></div>
+
+            <div id="deliveryDetailsSection" class="delivery-details-section" style="display: none;">
+                <div class="delivery-details-title">Delivery details</div>
+                <p class="delivery-details-hint">Required for Pay. Optional for WhatsApp — helps us fulfil your order faster.</p>
+
+                <div class="delivery-field" id="fieldCustomerName">
+                    <label for="customerName">Full name <span class="optional">(recommended)</span></label>
+                    <input type="text" id="customerName" name="customerName" autocomplete="name" placeholder="Your name">
+                    <div class="delivery-field-error" id="errorCustomerName"></div>
+                </div>
+
+                <div class="delivery-field" id="fieldCustomerPhone">
+                    <label for="customerPhone">Phone (M-Pesa / WhatsApp)</label>
+                    <input type="tel" id="customerPhone" name="customerPhone" autocomplete="tel" placeholder="e.g. 254712345678">
+                    <div class="delivery-field-error" id="errorCustomerPhone"></div>
+                </div>
+
+                <div class="delivery-field" id="fieldDeliveryAddress">
+                    <label for="deliveryAddress">Delivery address</label>
+                    <textarea id="deliveryAddress" name="deliveryAddress" rows="2" autocomplete="street-address" placeholder="Street, building, area, city"></textarea>
+                    <div class="delivery-field-error" id="errorDeliveryAddress"></div>
+                </div>
+
+                <div class="delivery-field" id="fieldOrderNotes">
+                    <label for="orderNotes">Order notes <span class="optional">(optional)</span></label>
+                    <textarea id="orderNotes" name="orderNotes" rows="2" placeholder="Delivery instructions, gate code, etc."></textarea>
+                </div>
+            </div>
+
             <div class="cart-total">
                 <span>Total:</span>
                 <span id="cartTotal">{{ $currencySymbol }} 0.00</span>
@@ -702,9 +825,10 @@
                     <i class="fab fa-whatsapp mr-2"></i>WhatsApp
                 </button>
                 <button class="checkout-btn" id="invoiceBtn" onclick="generateInvoice()" disabled style="background-color: #007bff;">
-                    <i class="fas fa-file-invoice mr-2"></i>Invoice
+                    <i class="fas fa-credit-card mr-2"></i>Pay
                 </button>
             </div>
+            <p class="delivery-details-hint" id="payHelperText" style="display: none; margin-top: 10px; margin-bottom: 0;">Invoice will be sent to your WhatsApp — open the link there when ready to pay.</p>
         </div>
     </div>
 
@@ -761,6 +885,123 @@
         // Cart state with selected variants
         let cart = JSON.parse(localStorage.getItem('catalog_{{ $catalog->id }}_cart')) || [];
         let selectedVariants = {};
+        const deliveryStorageKey = 'catalog_{{ $catalog->id }}_delivery';
+
+        function loadDeliveryDetails() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(deliveryStorageKey) || '{}');
+                document.getElementById('customerName').value = saved.customerName || '';
+                document.getElementById('customerPhone').value = saved.customerPhone || '';
+                document.getElementById('deliveryAddress').value = saved.deliveryAddress || '';
+                document.getElementById('orderNotes').value = saved.orderNotes || '';
+            } catch (e) {
+                // Ignore invalid saved data
+            }
+        }
+
+        function saveDeliveryDetails() {
+            const details = getDeliveryFormValues();
+            localStorage.setItem(deliveryStorageKey, JSON.stringify(details));
+        }
+
+        function getDeliveryFormValues() {
+            return {
+                customerName: document.getElementById('customerName').value.trim(),
+                customerPhone: document.getElementById('customerPhone').value.trim(),
+                deliveryAddress: document.getElementById('deliveryAddress').value.trim(),
+                orderNotes: document.getElementById('orderNotes').value.trim(),
+            };
+        }
+
+        function clearDeliveryFieldErrors() {
+            ['fieldCustomerName', 'fieldCustomerPhone', 'fieldDeliveryAddress'].forEach((id) => {
+                const field = document.getElementById(id);
+                if (field) {
+                    field.classList.remove('has-error');
+                }
+            });
+            ['errorCustomerName', 'errorCustomerPhone', 'errorDeliveryAddress'].forEach((id) => {
+                const error = document.getElementById(id);
+                if (error) {
+                    error.textContent = '';
+                }
+            });
+            hideCartBanners();
+        }
+
+        function setDeliveryFieldError(fieldId, errorId, message) {
+            document.getElementById(fieldId).classList.add('has-error');
+            document.getElementById(errorId).textContent = message;
+        }
+
+        function hideCartBanners() {
+            document.getElementById('cartSuccessBanner').style.display = 'none';
+            document.getElementById('cartErrorBanner').style.display = 'none';
+        }
+
+        function showCartSuccessBanner(message) {
+            const banner = document.getElementById('cartSuccessBanner');
+            banner.textContent = message;
+            banner.style.display = 'block';
+            document.getElementById('cartErrorBanner').style.display = 'none';
+        }
+
+        function showCartErrorBanner(message) {
+            const banner = document.getElementById('cartErrorBanner');
+            banner.textContent = message;
+            banner.style.display = 'block';
+            document.getElementById('cartSuccessBanner').style.display = 'none';
+        }
+
+        function validateDeliveryDetails(requireAddress = true) {
+            clearDeliveryFieldErrors();
+            const details = getDeliveryFormValues();
+            let valid = true;
+
+            if (!details.customerPhone) {
+                setDeliveryFieldError('fieldCustomerPhone', 'errorCustomerPhone', 'Phone number is required.');
+                valid = false;
+            } else if (details.customerPhone.replace(/\D/g, '').length < 9) {
+                setDeliveryFieldError('fieldCustomerPhone', 'errorCustomerPhone', 'Enter a valid phone number (e.g. 254712345678).');
+                valid = false;
+            }
+
+            if (requireAddress && !details.deliveryAddress) {
+                setDeliveryFieldError('fieldDeliveryAddress', 'errorDeliveryAddress', 'Delivery address is required for Pay.');
+                valid = false;
+            }
+
+            if (!valid) {
+                const firstError = document.querySelector('.delivery-field.has-error input, .delivery-field.has-error textarea');
+                if (firstError) {
+                    firstError.focus();
+                }
+            }
+
+            return valid ? details : null;
+        }
+
+        function updateDeliverySectionVisibility() {
+            const hasItems = cart.length > 0;
+            document.getElementById('deliveryDetailsSection').style.display = hasItems ? 'block' : 'none';
+            document.getElementById('payHelperText').style.display = hasItems ? 'block' : 'none';
+        }
+
+        ['customerName', 'customerPhone', 'deliveryAddress', 'orderNotes'].forEach((id) => {
+            const input = document.getElementById(id);
+            if (!input) {
+                return;
+            }
+            input.addEventListener('input', () => {
+                saveDeliveryDetails();
+                const field = input.closest('.delivery-field');
+                if (field) {
+                    field.classList.remove('has-error');
+                }
+            });
+        });
+
+        loadDeliveryDetails();
         
         // Initialize cart display
         updateCartDisplay();
@@ -812,6 +1053,7 @@
 
             saveCart();
             updateCartDisplay();
+            hideCartBanners();
             trackCatalogEvent('cart_add', { product_id: productId, quantity });
             
             // Reset quantity and variant
@@ -862,6 +1104,8 @@
                 cartBadge.style.display = 'none';
                 cartTotal.textContent = formatPrice(0);
                 checkoutBtn.disabled = true;
+                document.getElementById('invoiceBtn').disabled = true;
+                updateDeliverySectionVisibility();
                 return;
             }
 
@@ -896,6 +1140,7 @@
             cartTotal.textContent = formatPrice(total);
             checkoutBtn.disabled = false;
             document.getElementById('invoiceBtn').disabled = false;
+            updateDeliverySectionVisibility();
         }
 
         // Remove from cart
@@ -911,14 +1156,27 @@
 
             const whatsappNumber = @json($whatsappOrderNumber);
             if (!whatsappNumber) {
-                alert('WhatsApp number not configured for this seller. Please contact the seller directly.');
+                showCartErrorBanner('WhatsApp number not configured for this seller. Please contact the seller directly.');
                 return;
             }
+
+            const details = getDeliveryFormValues();
+            saveDeliveryDetails();
 
             const payload = {
                 items: cart.map(item => ({ id: item.id, quantity: item.quantity })),
                 flow_token: flowToken,
             };
+
+            if (details.customerName) {
+                payload.customerName = details.customerName;
+            }
+            if (details.customerPhone) {
+                payload.customerPhone = details.customerPhone;
+            }
+            if (details.orderNotes) {
+                payload.notes = details.orderNotes;
+            }
 
             fetch(`/catalog/${catalogId}/generate-order`, {
                 method: 'POST',
@@ -931,51 +1189,57 @@
             .then(r => r.json())
             .then(data => {
                 if (!data.success) {
-                    alert(data.message || 'Could not generate order');
+                    showCartErrorBanner(data.message || 'Could not generate order');
                     return;
                 }
 
+                hideCartBanners();
                 const encodedMessage = encodeURIComponent(data.message);
                 window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank');
             })
-            .catch(() => alert('Could not start WhatsApp checkout. Please try again.'));
+            .catch(() => showCartErrorBanner('Could not start WhatsApp checkout. Please try again.'));
         }
 
-        // Generate invoice and redirect to payment
+        // Generate invoice and send payment link via WhatsApp
         function generateInvoice() {
             if (cart.length === 0) return;
 
-            // Collect customer info for M-Pesa STK
-            const customerPhone = prompt('Enter your phone number for M-Pesa payment (required):', '');
-
-            if (!customerPhone) {
-                alert('Phone number is required');
+            const details = validateDeliveryDetails(true);
+            if (!details) {
+                showCartErrorBanner('Please complete the required delivery details below.');
                 return;
             }
 
-            const deliveryAddress = prompt('Enter your delivery address (required):', '');
+            saveDeliveryDetails();
 
-            if (!deliveryAddress || !deliveryAddress.trim()) {
-                alert('Delivery address is required');
-                return;
-            }
-
-            // Calculate total
             let total = 0;
             cart.forEach(item => {
                 const price = parseFloat(item.price) || 0;
                 total += price * item.quantity;
             });
 
-            // Show loading
             const button = document.getElementById('invoiceBtn');
-            const originalText = button.textContent;
+            const originalHtml = button.innerHTML;
             button.disabled = true;
             button.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Creating...';
 
-            // Create invoice
             const csrfToken = document.querySelector('meta[name="csrf-token"]');
             const token = csrfToken ? csrfToken.getAttribute('content') : '';
+
+            const requestBody = {
+                items: cart,
+                customerPhone: details.customerPhone,
+                deliveryAddress: details.deliveryAddress,
+                amount: total.toFixed(2),
+                flow_token: flowToken,
+            };
+
+            if (details.customerName) {
+                requestBody.customerName = details.customerName;
+            }
+            if (details.orderNotes) {
+                requestBody.notes = details.orderNotes;
+            }
 
             fetch('/catalog/{{ $catalog->id }}/create-invoice', {
                 method: 'POST',
@@ -983,57 +1247,42 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': token,
                 },
-                body: JSON.stringify({
-                    items: cart,
-                    customerPhone: customerPhone,
-                    deliveryAddress: deliveryAddress.trim(),
-                    amount: total.toFixed(2),
-                    flow_token: flowToken,
-                })
+                body: JSON.stringify(requestBody)
             })
             .then(response => {
-                // Check if response is actually JSON
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
-                    return response.text().then(text => {
-                        throw new Error('Server returned HTML instead of JSON. Status: ' + response.status);
+                    return response.text().then(() => {
+                        throw new Error('Server returned an unexpected response. Status: ' + response.status);
                     });
                 }
                 return response.json();
             })
             .then(data => {
                 button.disabled = false;
-                button.textContent = originalText;
+                button.innerHTML = originalHtml;
 
                 if (data.success) {
-                    // Show success message
-                    let successMsg = '✅ Invoice created successfully!';
+                    let successMsg = 'Invoice created successfully!';
                     if (data.invoice.whatsapp_sent) {
-                        successMsg += '\n📱 Invoice sent to WhatsApp';
+                        successMsg += ' It has been sent to your WhatsApp — open the link there when you are ready to pay.';
                     } else {
-                        successMsg += '\n⚠️ Invoice created but WhatsApp not configured';
+                        successMsg += ' WhatsApp delivery is not configured for this seller.';
                     }
 
-                    // Clear cart and close sidebar
                     cart = [];
                     saveCart();
                     updateCartDisplay();
-                    toggleCart();
-
-                    // Show message and redirect
-                    console.log(successMsg);
-                    setTimeout(() => {
-                        window.location.href = '/catalog/pay/' + data.invoice.id;
-                    }, 1500);
+                    showCartSuccessBanner(successMsg);
                 } else {
-                    alert('Error: ' + (data.message || 'Failed to create invoice'));
+                    showCartErrorBanner(data.message || 'Failed to create invoice');
                 }
             })
             .catch(error => {
                 button.disabled = false;
-                button.textContent = originalText;
+                button.innerHTML = originalHtml;
                 console.error('Invoice creation error:', error);
-                alert('Error creating invoice: ' + error.message);
+                showCartErrorBanner('Error creating invoice: ' + error.message);
             });
         }
         @else

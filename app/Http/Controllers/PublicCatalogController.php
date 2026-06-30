@@ -7,6 +7,7 @@ use App\Models\CatalogCollection;
 use App\Models\Company;
 use App\Models\ListCatalog;
 use App\Services\Catalog\CatalogAnalyticsService;
+use App\Services\Catalog\CatalogCheckoutPendingService;
 use App\Services\Catalog\CatalogCurrencyService;
 use App\Services\Catalog\CatalogExperimentService;
 use App\Services\Catalog\CatalogFlowCallbackService;
@@ -19,7 +20,6 @@ use App\Services\CatalogItemFilterService;
 use App\Services\InvoiceWhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Modules\Flowmaker\Jobs\ResumeFlowFromCatalogCheckout;
 use Modules\Flowmaker\Jobs\ResumeFlowFromListingInquiry;
 use Modules\Invoice\Models\Invoice;
 use RuntimeException;
@@ -37,6 +37,7 @@ class PublicCatalogController extends Controller
         protected CatalogExperimentService $catalogExperimentService,
         protected CatalogWhatsAppOrderService $catalogWhatsAppOrderService,
         protected CatalogListingInquiryService $catalogListingInquiryService,
+        protected CatalogCheckoutPendingService $catalogCheckoutPendingService,
     ) {
     }
 
@@ -231,7 +232,12 @@ class PublicCatalogController extends Controller
                     ['item_count' => count($validated['items']), 'total' => $totalPrice]
                 );
 
-                $this->maybeResumeFlowAfterWhatsAppCheckout($validated['flow_token'] ?? null, $catalog->id, $validated['items']);
+                $this->catalogCheckoutPendingService->storePendingFromFlowToken(
+                    $validated['flow_token'] ?? null,
+                    $catalog->id,
+                    $validated['items'],
+                    $orderMessage
+                );
 
                 $this->commitCheckoutReservations($reservations);
 
@@ -354,6 +360,7 @@ class PublicCatalogController extends Controller
         try {
             $validated = $request->validate([
                 'items' => 'required|array',
+                'customerName' => 'nullable|string|max:255',
                 'customerPhone' => 'required|string|max:20',
                 'deliveryAddress' => 'required|string|max:1000',
                 'amount' => 'required|numeric|min:1',
@@ -401,7 +408,9 @@ class PublicCatalogController extends Controller
                     'company_id' => $catalog->company_id,
                     'catalog_id' => $catalog->id,
                     'invoice_number' => Invoice::generateInvoiceNumber($catalog->company),
-                    'customer_name' => 'Customer',
+                    'customer_name' => trim((string) ($validated['customerName'] ?? '')) !== ''
+                        ? trim((string) $validated['customerName'])
+                        : 'Customer',
                     'customer_phone' => $validated['customerPhone'],
                     'customer_email' => null,
                     'delivery_address' => trim($validated['deliveryAddress']),
@@ -460,6 +469,8 @@ class PublicCatalogController extends Controller
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 409);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -611,32 +622,6 @@ class PublicCatalogController extends Controller
             $context['flow_id'],
             $context['contact_id'],
             $itemId
-        )->onQueue('flows');
-    }
-
-    /**
-     * @param  list<array<string, mixed>>  $cartItems
-     */
-    private function maybeResumeFlowAfterWhatsAppCheckout(?string $flowToken, int $catalogId, array $cartItems): void
-    {
-        if (! $flowToken) {
-            return;
-        }
-
-        $context = $this->catalogFlowCallbackService->decodeToken($flowToken);
-        if (! $context || (int) $context['catalog_id'] !== $catalogId) {
-            return;
-        }
-
-        if ($cartItems === []) {
-            return;
-        }
-
-        ResumeFlowFromCatalogCheckout::dispatch(
-            $context['flow_id'],
-            $context['contact_id'],
-            CatalogFlowCallbackService::CHECKOUT_COMPLETE_EXTRA,
-            $cartItems
         )->onQueue('flows');
     }
 

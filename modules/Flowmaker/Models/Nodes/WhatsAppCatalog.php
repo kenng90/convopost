@@ -4,6 +4,7 @@ namespace Modules\Flowmaker\Models\Nodes;
 
 use App\Models\Company;
 use App\Models\ListCatalog;
+use App\Services\Catalog\CatalogCheckoutPendingService;
 use App\Services\Catalog\CatalogFlowCallbackService;
 use App\Services\Catalog\CatalogUrlService;
 use Illuminate\Support\Facades\Http;
@@ -34,7 +35,7 @@ class WhatsAppCatalog extends Node
             return;
         }
 
-        if (($extraData === null || $extraData === '') && $this->messageLooksLikeCatalogOrder($messageText)) {
+        if (($extraData === null || $extraData === '') && app(CatalogCheckoutPendingService::class)->isOrderConfirmationMessage($contact, $this->flow_id, $messageText)) {
             if ($this->hasCheckoutAlreadyResumed($contact)) {
                 Log::info('WhatsApp Catalog: order message ignored, checkout already resumed', ['nodeId' => $this->id]);
 
@@ -108,10 +109,13 @@ class WhatsAppCatalog extends Node
         if ($this->isStartNode) {
             $extraData = is_object($data) ? ($data->extra ?? null) : ($data['extra'] ?? null);
             $messageText = is_object($data) ? ($data->value ?? '') : ($data['value'] ?? '');
+            $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+            $contact = Contact::find($contactId);
+            $pendingService = app(CatalogCheckoutPendingService::class);
 
             if ($this->isCheckoutCompleteSignal((string) $extraData)
                 || (! empty($extraData))
-                || $this->messageLooksLikeCatalogOrder($messageText)) {
+                || ($contact && $pendingService->isOrderConfirmationMessage($contact, $this->flow_id, $messageText))) {
                 Log::info('WhatsApp Catalog: resuming after selection or checkout', ['extraData' => $extraData]);
                 $this->listenForReply($message, $data);
             } else {
@@ -136,6 +140,7 @@ class WhatsAppCatalog extends Node
 
         Log::info('WhatsApp Catalog: advancing after checkout', ['nodeId' => $this->id]);
 
+        app(CatalogCheckoutPendingService::class)->clearPending($contact, $this->flow_id);
         $contact->setContactState($this->flow_id, self::CHECKOUT_RESUMED_STATE, '1');
         $contact->clearContactState($this->flow_id, 'current_node');
 
@@ -155,19 +160,6 @@ class WhatsAppCatalog extends Node
     private function isCheckoutCompleteSignal(string $extraData): bool
     {
         return $extraData === CatalogFlowCallbackService::CHECKOUT_COMPLETE_EXTRA;
-    }
-
-    private function messageLooksLikeCatalogOrder(?string $message): bool
-    {
-        if ($message === null || $message === '') {
-            return false;
-        }
-
-        if (str_contains($message, 'New Order from Catalog:')) {
-            return true;
-        }
-
-        return str_contains($message, '*Items:*') && str_contains($message, '*Total:*');
     }
 
     /**
@@ -220,6 +212,7 @@ class WhatsAppCatalog extends Node
         }
 
         $contact->clearContactState($this->flow_id, self::CHECKOUT_RESUMED_STATE);
+        app(CatalogCheckoutPendingService::class)->clearPending($contact, $this->flow_id);
         $contact->setContactState($this->flow_id, 'catalog_id', $catalogId);
         $contact->setContactState($this->flow_id, 'catalog_items', json_encode($catalog->items ?? []));
 

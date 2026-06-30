@@ -6,6 +6,7 @@ use App\Models\Company;
 use Carbon\Carbon;
 use Modules\Reminders\Models\Event;
 use Modules\Reminders\Models\EventOccurrence;
+use Modules\Reminders\Support\BookingPaymentConfig;
 
 class EventCatalogService
 {
@@ -43,19 +44,56 @@ class EventCatalogService
     }
 
     /**
-     * @return array<int, array{id: int, title: string, description: string}>
+     * @return array<int, array{id: string, title: string, description: string, date_label: string, time_label: string, event_title: string, starts_at_label: string}>
      */
     public function upcomingOccurrencesAsFlowOptions(Company $company, int $limit = 10): array
     {
         return collect($this->publishedEventsForCompany($company))
-            ->flatMap(fn (array $event) => collect($event['occurrences'])->map(fn (array $occurrence) => [
-                'id' => (string) $occurrence['id'],
-                'title' => $event['title'].' — '.$occurrence['starts_at_label'],
-                'description' => $occurrence['seats_remaining'].' '.__('seats left'),
-            ]))
+            ->flatMap(fn (array $event) => collect($event['occurrences'])->map(function (array $occurrence) use ($event) {
+                $payment = [
+                    'payment_required' => $event['payment_required'] ?? false,
+                    'payment_amount' => $event['payment_amount'] ?? null,
+                    'payment_total_amount' => $event['payment_total_amount'] ?? null,
+                    'payment_upfront_percent' => $event['payment_upfront_percent'] ?? 100,
+                    'payment_currency' => $event['payment_currency'] ?? 'KES',
+                ];
+
+                $description = $occurrence['date_label'].' · '.$occurrence['time_label'];
+
+                if (($occurrence['seats_remaining'] ?? null) !== null) {
+                    $description .= ' · '.$occurrence['seats_remaining'].' '.__('seats left');
+                }
+
+                if ($payment['payment_required'] && $payment['payment_amount']) {
+                    $description .= ' · '.__(':amount :currency', [
+                        'amount' => number_format((float) $payment['payment_amount']),
+                        'currency' => $payment['payment_currency'],
+                    ]);
+                }
+
+                return [
+                    'id' => (string) $occurrence['id'],
+                    'event_id' => (string) $event['id'],
+                    'title' => (string) $event['title'],
+                    'description' => $description,
+                    'date_label' => $occurrence['date_label'],
+                    'time_label' => $occurrence['time_label'],
+                    'event_title' => (string) $event['title'],
+                    'starts_at_label' => $occurrence['starts_at_label'],
+                    ...$payment,
+                ];
+            }))
             ->take($limit)
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function upcomingOccurrencesForCompany(Company $company, int $limit = 25): array
+    {
+        return $this->upcomingOccurrencesAsFlowOptions($company, $limit);
     }
 
     /**
@@ -73,6 +111,7 @@ class EventCatalogService
             'virtual_url' => $event->virtual_url,
             'timezone' => $timezone,
             'host_name' => $event->host?->name,
+            ...BookingPaymentConfig::fromEvent($event),
             'occurrences' => $event->occurrences
                 ->map(fn (EventOccurrence $occurrence) => $this->formatOccurrence($occurrence, $timezone))
                 ->values()
@@ -87,13 +126,16 @@ class EventCatalogService
     {
         $timezone = $timezone ?: $occurrence->event?->timezone ?: 'UTC';
         $startsAt = $occurrence->starts_at->timezone($timezone);
+        $endsAt = $occurrence->ends_at->timezone($timezone);
 
         return [
             'id' => $occurrence->id,
             'event_id' => $occurrence->event_id,
             'starts_at' => $occurrence->starts_at->toIso8601String(),
             'ends_at' => $occurrence->ends_at->toIso8601String(),
-            'starts_at_label' => $startsAt->format('D j M Y, H:i'),
+            'starts_at_label' => $startsAt->format('D j M Y, g:i A'),
+            'date_label' => $startsAt->format('D, M j, Y'),
+            'time_label' => $startsAt->format('g:i A').' – '.$endsAt->format('g:i A'),
             'capacity' => $occurrence->capacity,
             'seats_remaining' => $occurrence->seatsRemaining(),
             'is_registerable' => $occurrence->isRegisterable(),

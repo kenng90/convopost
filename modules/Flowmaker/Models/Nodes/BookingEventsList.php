@@ -95,23 +95,45 @@ class BookingEventsList extends Node
         foreach ($options as $option) {
             $rows[] = [
                 'id' => 'occurrence-'.$option['id'].'_id'.$this->id.'_flow'.$this->flow_id,
-                'title' => $option['title'],
-                'description' => $option['description'] ?? '',
+                'title' => (string) $option['title'],
+                'description' => (string) ($option['description'] ?? ''),
             ];
         }
 
-        $token = $company->getConfig('plain_token', '');
+        return $this->sendList($contact, $header, $body, $footer, $buttonText, $rows, $message, $data);
+    }
+
+    /**
+     * @param  array<int, array{id: string, title: string, description: string}>  $rows
+     */
+    private function sendList(
+        Contact $contact,
+        string $header,
+        string $body,
+        string $footer,
+        string $buttonText,
+        array $rows,
+        $message,
+        $data
+    ): array {
+        $company = Company::find($contact->company_id);
+        $token = $company?->getConfig('plain_token', '') ?? '';
+
         $payload = [
             'token' => $token,
             'phone' => $contact->phone,
-            'message' => $body,
-            'header' => $header,
-            'footer' => $footer,
+            'message' => (string) $body,
+            'header' => (string) $header,
+            'footer' => (string) $footer,
             'action' => [
-                'button' => $buttonText,
+                'button' => (string) $buttonText,
                 'sections' => [[
-                    'title' => 'Events',
-                    'rows' => $rows,
+                    'title' => __('Events'),
+                    'rows' => collect($rows)->map(fn (array $row) => [
+                        'id' => $row['id'],
+                        'title' => (string) ($row['title'] ?? ''),
+                        'description' => (string) ($row['description'] ?? ''),
+                    ])->all(),
                 ]],
             ],
         ];

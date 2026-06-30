@@ -59,6 +59,44 @@ export function useFlowVariables() {
           category: 'Flow Variables'
         });
       }
+
+      if (node.type === 'whatsapp_catalog') {
+        const prefix = (settings.checkoutVariablePrefix || 'catalog_order').replace(/[^a-zA-Z0-9_]/g, '') || 'catalog_order';
+        const label = nodeData.label || 'Send Catalog Link';
+
+        dynamicVariables.push(
+          {
+            label: `${label} — items`,
+            value: `${prefix}_items`,
+            category: 'Flow Variables'
+          },
+          {
+            label: `${label} — total`,
+            value: `${prefix}_total`,
+            category: 'Flow Variables'
+          },
+          {
+            label: `${label} — item count`,
+            value: `${prefix}_item_count`,
+            category: 'Flow Variables'
+          },
+          {
+            label: `${label} — order message`,
+            value: `${prefix}_message`,
+            category: 'Flow Variables'
+          },
+          {
+            label: `${label} — JSON`,
+            value: `${prefix}_json`,
+            category: 'Flow Variables'
+          },
+          {
+            label: `${label} — cart (legacy)`,
+            value: 'catalog_cart',
+            category: 'Flow Variables'
+          }
+        );
+      }
     });
 
     return dynamicVariables;
