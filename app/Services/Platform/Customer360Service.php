@@ -42,7 +42,10 @@ class Customer360Service
             return [];
         }
 
-        $journeys = Journey::with('stages')->get();
+        $journeys = Journey::withoutGlobalScopes()
+            ->with('stages')
+            ->where('company_id', $contact->company_id)
+            ->get();
 
         $contactStageIds = DB::table('journey_stage_contacts')
             ->where('contact_id', $contact->id)
@@ -113,15 +116,34 @@ class Customer360Service
 
     private function campaignHistory(Company $company, Contact $contact): array
     {
-        return Campaign::where('company_id', $company->id)
+        $directCampaignIds = Campaign::withoutGlobalScopes()
+            ->where('company_id', $company->id)
             ->where('contact_id', $contact->id)
+            ->pluck('id');
+
+        $messageCampaignIds = Message::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->where('contact_id', $contact->id)
+            ->whereNotNull('campaign_id')
+            ->distinct()
+            ->pluck('campaign_id');
+
+        $campaignIds = $directCampaignIds->merge($messageCampaignIds)->unique()->values();
+
+        if ($campaignIds->isEmpty()) {
+            return [];
+        }
+
+        return Campaign::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->whereIn('id', $campaignIds)
             ->orderByDesc('created_at')
             ->limit(5)
-            ->get(['id', 'name', 'is_active', 'created_at', 'delivered_to', 'read_by', 'send_to', 'sended_to'])
+            ->get(['id', 'name', 'created_at', 'delivered_to', 'read_by', 'sended_to', 'send_to'])
             ->map(fn (Campaign $c) => [
                 'id' => $c->id,
                 'name' => $c->name,
-                'status' => $this->campaignStatusLabel($c),
+                'status' => $this->campaignDeliveryStatus($c),
                 'delivered' => $c->delivered_to,
                 'read' => $c->read_by,
                 'created_at' => $c->created_at?->toDateTimeString(),
@@ -129,29 +151,24 @@ class Customer360Service
             ->all();
     }
 
-    private function campaignStatusLabel(Campaign $campaign): string
+    private function campaignDeliveryStatus(Campaign $campaign): string
     {
-        if (! $campaign->is_active) {
-            return __('Paused');
+        if ($campaign->send_to > 0 && $campaign->sended_to >= $campaign->send_to) {
+            return __('Completed');
         }
 
-        $sendTo = (int) $campaign->send_to;
-        $sendedTo = (int) $campaign->sended_to;
-
-        if ($sendTo > 0 && $sendedTo >= $sendTo) {
-            return __('Sent');
+        if ($campaign->sended_to > 0) {
+            return __('In progress');
         }
 
-        if ($sendedTo > 0) {
-            return __('Sending');
-        }
-
-        return __('Scheduled');
+        return __('Pending');
     }
 
     private function summarizeRecentMessages(Contact $contact): string
     {
-        $messages = Message::where('contact_id', $contact->id)
+        $messages = Message::withoutGlobalScopes()
+            ->where('contact_id', $contact->id)
+            ->where('company_id', $contact->company_id)
             ->orderByDesc('id')
             ->limit(5)
             ->get()

@@ -2,6 +2,9 @@
 
 namespace Modules\Flowmaker\Jobs;
 
+use App\Models\ListCatalog;
+use App\Scopes\CompanyScope;
+use App\Services\Catalog\CatalogCheckoutVariableService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -26,16 +29,40 @@ class ResumeFlowFromCatalogCheckout implements ShouldQueue
         public int $contactId,
         public string $productId,
         public array $cartItems = [],
+        public ?string $nodeId = null,
+        public ?string $orderMessage = null,
+        public int $catalogId = 0,
     ) {
     }
 
-    public function handle(): void
+    public function handle(CatalogCheckoutVariableService $checkoutVariableService): void
     {
         $flow = Flow::withoutGlobalScopes()->find($this->flowId);
         $contact = Contact::withoutGlobalScopes()->find($this->contactId);
 
-        if ($flow && $contact) {
-            $flow->resumeFromCatalogCheckout($contact, $this->productId, $this->cartItems);
+        if (! $flow || ! $contact) {
+            return;
         }
+
+        if ($this->cartItems !== [] && $this->catalogId > 0) {
+            $catalog = ListCatalog::withoutGlobalScope(CompanyScope::class)->find($this->catalogId);
+
+            if ($catalog) {
+                $prefix = $this->nodeId
+                    ? $checkoutVariableService->resolvePrefixFromFlowNode($flow, $this->nodeId)
+                    : CatalogCheckoutVariableService::DEFAULT_PREFIX;
+
+                $checkoutVariableService->storeOnContact(
+                    $contact,
+                    $flow->id,
+                    $prefix,
+                    $catalog,
+                    $this->cartItems,
+                    $this->orderMessage
+                );
+            }
+        }
+
+        $flow->resumeFromCatalogCheckout($contact, $this->productId, $this->cartItems);
     }
 }

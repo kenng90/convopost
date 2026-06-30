@@ -120,6 +120,9 @@ export interface NodeData {
     pricing?: {
       freeExecutions: number;
     };
+    catalogId?: number | string;
+    displayMode?: 'link' | 'interactive_list';
+    checkoutVariablePrefix?: string;
   };
   [key: string]: any;
 }

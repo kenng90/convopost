@@ -41,11 +41,11 @@ return [
                 'agents',
                 'flowmaker',
             ],
+            'managed_ai_monthly_credits' => 50,
             'capabilities' => [
                 'inbox',
                 'contacts',
                 'flows',
-                'inbox_instagram',
             ],
         ],
 
@@ -75,6 +75,7 @@ return [
                 'woolist',
                 'embedwhatsapp',
             ],
+            'managed_ai_monthly_credits' => 250,
             'capabilities' => [
                 'inbox',
                 'contacts',
@@ -82,7 +83,6 @@ return [
                 'campaigns',
                 'catalog',
                 'integrations',
-                'inbox_instagram',
             ],
         ],
 
@@ -118,6 +118,7 @@ return [
                 'knowledge',
                 'reports',
             ],
+            'managed_ai_monthly_credits' => 1000,
             'capabilities' => [
                 'inbox',
                 'contacts',
@@ -132,8 +133,7 @@ return [
                 'reminders',
                 'knowledge',
                 'api_access',
-                'inbox_instagram',
-                'inbox_messenger',
+                'ai_flow_assistant',
             ],
         ],
 
@@ -154,6 +154,7 @@ return [
             'included_companies' => 0,
             'company_seat_price' => 0,
             'plugins' => null,
+            'managed_ai_monthly_credits' => 5000,
             'capabilities' => null,
         ],
     ],
@@ -162,8 +163,8 @@ return [
     | Human-readable labels for usage meters on the billing page.
     */
     'limit_labels' => [
-        'campaigns' => 'Campaigns this period',
-        'messages' => 'Messages this period',
+        'campaigns' => 'Campaigns this billing period',
+        'messages' => 'Messages this billing period',
         'contacts' => 'Contacts stored',
     ],
 
@@ -188,11 +189,10 @@ return [
         'voice' => 'WhatsApp voice calling',
         'journeys' => 'Journey pipelines',
         'payments' => 'In-chat payments',
-        'reminders' => 'Bookings & appointments',
+        'reminders' => 'Bookings (appointments & events)',
         'knowledge' => 'Knowledge base',
         'api_access' => 'REST API access',
-        'inbox_instagram' => 'Instagram DMs inbox',
-        'inbox_messenger' => 'Facebook Messenger inbox',
+        'ai_flow_assistant' => 'AI Flow Assistant',
     ],
 
 ];

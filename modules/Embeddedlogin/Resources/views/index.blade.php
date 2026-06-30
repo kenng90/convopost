@@ -17,10 +17,7 @@
     </div>  
     <div class="row">
         <div class="col-lg-8 col-md-7">
-            @include('embeddedlogin::connect', [
-                'setupDone' => $setupDone,
-                'signupOptions' => $signupOptions ?? [],
-            ])
+            @include('embeddedlogin::connect')
         </div>
         <div class="col-lg-4 col-md-5">
             @include('wpbox::setup.verified')

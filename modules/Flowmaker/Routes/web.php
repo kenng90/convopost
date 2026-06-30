@@ -20,6 +20,7 @@ Route::group([
 
         //Flows
         Route::get('flows', 'FlowsController@index')->name('flows.index');
+        Route::get('flows/template/{template}', 'FlowsController@createFromTemplate')->name('flows.create-from-template');
         Route::get('flows/{flow}/edit', 'FlowsController@edit')->name('flows.edit');
         Route::get('flows/create', 'FlowsController@create')->name('flows.create');
         Route::post('flows', 'FlowsController@store')->name('flows.store');
@@ -32,14 +33,30 @@ Route::group([
         //Flow maker
         Route::get('flowmaker/edit/{flow}', 'Main@edit')->name('flowmaker.edit');
         Route::get('flowmaker/editor-metadata/{flow}', 'Main@editorMetadata')->name('flowmaker.editor.metadata');
+        Route::get('api/flowmaker/booking-services', 'Main@bookingServices')->name('flowmaker.booking.services');
+        Route::get('api/flowmaker/booking-events', 'Main@bookingEvents')->name('flowmaker.booking.events');
+        Route::get('api/flowmaker/booking-analytics/{flow}', 'Main@bookingAnalytics')->name('flowmaker.booking.analytics');
         Route::get('flowmaker/script', 'Main@script')->name('flowmaker.script');
         Route::get('flowmaker/css', 'Main@css')->name('flowmaker.css');
         Route::post('flowmaker/update/{flow}', 'Main@updateFlow')
             ->name('flowmaker.update')
             ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        Route::post('flowmaker/publish/{flow}', 'Main@publishFlow')
+            ->name('flowmaker.publish')
+            ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        Route::post('flowmaker/validate/{flow}', 'Main@validateFlow')
+            ->name('flowmaker.validate')
+            ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        Route::post('flowmaker/simulate/{flow}', 'Main@simulateFlow')
+            ->name('flowmaker.simulate')
+            ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        Route::get('flowmaker/logs/{flow}', 'Main@flowRunLogs')
+            ->name('flowmaker.logs');
         Route::get('flows/templates', 'FlowTemplatesController@index')->name('flow-templates.index');
         Route::post('flows/templates/{key}/install', 'FlowTemplatesController@install')->name('flow-templates.install');
-        Route::post('flows/templates/ai/generate', 'FlowTemplatesController@generate')->name('flow-templates.generate');
+        Route::post('flows/templates/ai/generate', 'FlowTemplatesController@generate')
+            ->middleware('plan.capability:ai_flow_assistant')
+            ->name('flow-templates.generate');
         Route::post('flowmakermedia', 'Main@uploadMedia')
             ->name('flowmaker.media.upload')
             ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);

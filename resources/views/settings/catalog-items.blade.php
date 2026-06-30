@@ -27,6 +27,10 @@
         line-height: 1;
     }
 </style>
+@php
+    $supportsInventory = (bool) ($presentation['supports_inventory'] ?? true);
+    $itemNoun = $presentation['item_noun_plural'] ?? 'items';
+@endphp
 <div class="container-fluid mt-5">
     <div class="row">
         <div class="col-12">
@@ -40,7 +44,9 @@
                     <span class="mx-1">·</span>
                     {{ __('Version') }} {{ $catalog->version ?? 1 }}
                     <span class="mx-1">·</span>
-                    <span id="itemsCount" class="badge badge-primary">{{ count($catalog->items ?? []) }}</span> {{ __('items') }}
+                    <span id="itemsCount" class="badge badge-primary">{{ count($catalog->items ?? []) }}</span> {{ __($itemNoun) }}
+                    <span class="mx-1">·</span>
+                    <span class="badge badge-light text-dark">{{ $presentation['vertical_label'] ?? '' }}</span>
                 </p>
             </div>
 
@@ -79,6 +85,7 @@
                                 </div>
                             </div>
                         </div>
+                        @if($supportsInventory)
                         <div class="row">
                             <div class="col-lg-6">
                                 <div class="form-group">
@@ -113,11 +120,47 @@
                                 </div>
                             </div>
                         </div>
+                        @else
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="form-group">
+                                    <label>{{ __('Description') }}</label>
+                                    <textarea id="newItemDescription" class="form-control" rows="2" placeholder="Listing description"></textarea>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="form-group mb-0">
+                                    <label>{{ __('Cover image URL') }}</label>
+                                    <input type="url" id="newItemImageUrl" class="form-control mb-2" placeholder="https://example.com/image.jpg">
+                                    <label class="small text-muted">{{ __('Gallery image URLs (one per line)') }}</label>
+                                    <textarea id="newItemImagesText" class="form-control mb-2" rows="3" placeholder="https://example.com/photo-1.jpg&#10;https://example.com/photo-2.jpg"></textarea>
+                                    <input type="file" id="newItemImageFile" class="form-control-file" accept="image/*">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            @include('settings.partials.catalog-item-extra-fields', ['presentation' => $presentation, 'prefix' => 'new'])
+                            @if(!($presentation['supports_inventory'] ?? true) && !empty($bookingServices))
+                                <div class="col-md-4 col-lg-3">
+                                    <div class="form-group">
+                                        <label for="newItemBookingSource">{{ __('Bookable service (Reminders)') }}</label>
+                                        <select id="newItemBookingSource" class="form-control">
+                                            <option value="">{{ __('None') }}</option>
+                                            @foreach($bookingServices as $service)
+                                                <option value="{{ $service['id'] }}">{{ $service['name'] }}</option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted">{{ __('Links listing bookings to calendar availability') }}</small>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                        @endif
                         <div class="row align-items-end">
                             <div class="col-md-8">
                                 <div class="form-group mb-0">
                                     <label>{{ __('Tags') }}</label>
-                                    <input type="text" id="newItemTags" class="form-control" placeholder="New, Sale, Popular">
+                                    <input type="text" id="newItemTags" class="form-control" placeholder="Featured, New">
                                 </div>
                             </div>
                             <div class="col-md-4 text-md-right mt-3 mt-md-0">
@@ -129,6 +172,40 @@
                     </form>
                 </div>
             </div>
+
+            @if(!$supportsInventory)
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">{{ __('Listing feed (API)') }}</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        {{ __('Pull listings from a JSON feed (MLS export, dealer inventory, or custom API). Items are mapped using your vertical template fields.') }}
+                    </p>
+                    <div class="form-row">
+                        <div class="form-group col-md-8">
+                            <label for="listingFeedUrl">{{ __('Feed URL') }}</label>
+                            <input type="url" id="listingFeedUrl" class="form-control" value="{{ $catalog->api_config['url'] ?? '' }}" placeholder="https://example.com/api/listings">
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label for="listingFeedDataPath">{{ __('JSON data path') }}</label>
+                            <input type="text" id="listingFeedDataPath" class="form-control" value="{{ $catalog->api_config['data_path'] ?? 'data' }}" placeholder="data">
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center" style="gap: 8px;">
+                        <button type="button" class="btn btn-outline-primary" onclick="syncListingFeed(false)">
+                            <i class="ni ni-cloud-download-95 mr-1"></i>{{ __('Sync feed') }}
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="syncListingFeed(true)">
+                            {{ __('Replace missing items') }}
+                        </button>
+                        @if(!empty($catalog->metadata['last_api_import_at']))
+                            <small class="text-muted ml-2">{{ __('Last sync:') }} {{ $catalog->metadata['last_api_import_at'] }}</small>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @endif
 
             <!-- Items List -->
             <div class="card">
@@ -160,8 +237,8 @@
                                 <th>{{ __('ID') }}</th>
                                 <th>{{ __('Title') }}</th>
                                 <th>{{ __('Category') }}</th>
-                                <th>{{ __('Price (KSh) & Stock') }}</th>
-                                <th>{{ __('Tags & Variants') }}</th>
+                                <th>{{ __('Price') }} @if($supportsInventory)& {{ __('Stock') }}@else& {{ __('Status') }}@endif</th>
+                                <th>{{ $supportsInventory ? __('Tags & Variants') : __('Details') }}</th>
                                 <th class="text-right col-actions">{{ __('Actions') }}</th>
                             </tr>
                         </thead>
@@ -222,13 +299,16 @@
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label>{{ __('Image') }}</label>
+                            <label>{{ __('Cover image URL') }}</label>
                             <input type="url" id="editItemImageUrl" class="form-control mb-2">
+                            <label class="small text-muted">{{ __('Gallery image URLs (one per line)') }}</label>
+                            <textarea id="editItemImagesText" class="form-control mb-2" rows="3"></textarea>
                             <input type="file" id="editItemImageFile" class="form-control-file" accept="image/*">
                         </div>
                     </div>
                 </div>
                 <div class="row">
+                    @if($supportsInventory)
                     <div class="col-md-4">
                         <div class="form-group">
                             <label>{{ __('Stock Status') }}</label>
@@ -251,6 +331,19 @@
                             <input type="text" id="editItemTags" class="form-control">
                         </div>
                     </div>
+                    @else
+                    <div class="col-12">
+                        <div class="row" id="editVerticalFields">
+                            @include('settings.partials.catalog-item-extra-fields', ['presentation' => $presentation, 'prefix' => 'edit'])
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label>{{ __('Tags') }}</label>
+                            <input type="text" id="editItemTags" class="form-control">
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
             <div class="modal-footer">
@@ -261,5 +354,8 @@
     </div>
 </div>
 
+<script>
+    window.catalogPresentation = @json($presentation);
+</script>
 <script src="{{ asset('js/catalog-items.js') }}?v={{ filemtime(public_path('js/catalog-items.js')) }}"></script>
 @endsection

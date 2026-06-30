@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\WhatsappFlow;
+use App\Services\WhatsappFlowSendService;
 use App\Services\WhatsappMetaFlowService;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
@@ -29,6 +30,14 @@ class WhatsappFlowsList extends Component
     public bool $metaPreviewLoading = false;
 
     public ?string $metaPreviewError = null;
+
+    public ?int $testSendFlowId = null;
+
+    public string $testSendPhone = '';
+
+    public bool $testSendLoading = false;
+
+    public ?string $testSendMessage = null;
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -188,11 +197,64 @@ class WhatsappFlowsList extends Component
         $this->metaPreviewError = null;
     }
 
+    public function openTestSend(int $id): void
+    {
+        $this->testSendFlowId = $id;
+        $this->testSendPhone = '';
+        $this->testSendMessage = null;
+    }
+
+    public function cancelTestSend(): void
+    {
+        $this->testSendFlowId = null;
+        $this->testSendPhone = '';
+        $this->testSendMessage = null;
+        $this->testSendLoading = false;
+    }
+
+    public function sendTest(): void
+    {
+        if (! $this->testSendFlowId || trim($this->testSendPhone) === '') {
+            $this->dispatch('showNotification', type: 'error', message: 'Enter a phone number to send the test form.');
+
+            return;
+        }
+
+        $this->testSendLoading = true;
+        $this->testSendMessage = null;
+
+        $flow = WhatsappFlow::where('id', $this->testSendFlowId)
+            ->where('company_id', auth()->user()->activeCompanyId())
+            ->first();
+
+        if (! $flow) {
+            $this->testSendLoading = false;
+            $this->dispatch('showNotification', type: 'error', message: 'Form not found.');
+
+            return;
+        }
+
+        $result = app(WhatsappFlowSendService::class)->sendTest(
+            $flow,
+            trim($this->testSendPhone),
+            auth()->user()->activeCompanyId()
+        );
+
+        $this->testSendLoading = false;
+        $this->testSendMessage = $result['message'] ?? ($result['success'] ? 'Sent.' : 'Failed.');
+        $type = ($result['success'] ?? false) ? 'success' : 'error';
+        $this->dispatch('showNotification', type: $type, message: $this->testSendMessage);
+    }
+
     public function render(): View
     {
         $companyId = auth()->user()->activeCompanyId();
 
         $query = WhatsappFlow::forListing()
+            ->withCount([
+                'responses as submissions_count' => fn ($q) => $q->where('status', 'completed'),
+                'responses as pending_count' => fn ($q) => $q->where('status', 'pending'),
+            ])
             ->where('company_id', $companyId)
             ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
             ->when($this->search, fn ($q) => $q->where(function ($q2) {

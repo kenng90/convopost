@@ -11,13 +11,16 @@ class ApiCatalogImportService
     public function __construct(
         protected CatalogItemRepository $itemRepository,
         protected CatalogReimportService $reimportService,
+        protected CatalogItemPayloadService $catalogItemPayloadService,
+        protected CatalogTemplateRegistry $catalogTemplateRegistry,
+        protected CatalogItemImageService $catalogItemImageService,
     ) {
     }
 
     /**
      * @return array{items: list<array<string, mixed>>, total: int}
      */
-    public function fetchFromConfig(array $apiConfig): array
+    public function fetchFromConfig(array $apiConfig, ?ListCatalog $catalog = null): array
     {
         $url = $apiConfig['url'] ?? null;
         if (! $url) {
@@ -49,7 +52,14 @@ class ApiCatalogImportService
         }
 
         $mapping = $apiConfig['column_mapping'] ?? [];
-        $items = array_map(fn ($row) => $this->mapRow(is_array($row) ? $row : (array) $row, $mapping), $rows);
+        if ($mapping === [] && $catalog !== null && ! $catalog->isCommerce()) {
+            $mapping = $this->catalogTemplateRegistry->defaultApiColumnMapping($catalog->resolvedVertical());
+        }
+
+        $items = array_map(
+            fn ($row) => $this->mapRow(is_array($row) ? $row : (array) $row, $mapping, $catalog),
+            $rows
+        );
 
         return [
             'items' => array_values(array_filter($items, fn ($item) => ($item['title'] ?? '') !== '')),
@@ -64,7 +74,7 @@ class ApiCatalogImportService
             throw new RuntimeException('Catalog has no API configuration.');
         }
 
-        $fetched = $this->fetchFromConfig($config);
+        $fetched = $this->fetchFromConfig($config, $catalog);
         $merge = $this->reimportService->mergeByItemId(
             $this->itemRepository->getItemsArray($catalog),
             $fetched['items'],
@@ -92,7 +102,7 @@ class ApiCatalogImportService
      * @param  array<string, string>  $mapping
      * @return array<string, mixed>
      */
-    private function mapRow(array $row, array $mapping): array
+    private function mapRow(array $row, array $mapping, ?ListCatalog $catalog = null): array
     {
         $get = function (string $field, array $fallbacks = []) use ($row, $mapping) {
             $key = $mapping[$field] ?? $field;
@@ -108,8 +118,8 @@ class ApiCatalogImportService
             return null;
         };
 
-        return [
-            'id' => (string) ($get('id', ['sku', 'product_id', 'ID']) ?: uniqid('api_')),
+        $input = [
+            'id' => (string) ($get('id', ['sku', 'product_id', 'ID', 'reference']) ?: uniqid('api_')),
             'title' => (string) ($get('title', ['name', 'product_name']) ?? ''),
             'description' => (string) ($get('description', ['desc', 'summary']) ?? ''),
             'price' => (float) ($get('price', ['amount', 'cost']) ?? 0),
@@ -120,6 +130,35 @@ class ApiCatalogImportService
             'variants' => $get('variants') ?? [],
             'tags' => $get('tags') ?? [],
         ];
+
+        $images = $get('images', ['gallery', 'photos', 'pictures']);
+        if (is_array($images)) {
+            $input['images'] = array_values(array_filter(array_map('strval', $images)));
+        } elseif (is_string($images) && $images !== '') {
+            $input['imagesText'] = $images;
+        }
+
+        if ($catalog !== null && ! $catalog->isCommerce()) {
+            foreach ($catalog->presentation()['item_fields'] ?? [] as $field) {
+                $key = (string) ($field['key'] ?? '');
+                if ($key === '') {
+                    continue;
+                }
+
+                $value = $get($key);
+                if ($value !== null && $value !== '') {
+                    $input[$key] = $value;
+                }
+            }
+
+            return $this->catalogItemPayloadService->buildPayload($input, $catalog);
+        }
+
+        $images = $this->catalogItemImageService->normalize($input);
+        $input['images'] = $images;
+        $input['imageUrl'] = $this->catalogItemImageService->primaryUrl($images);
+
+        return $input;
     }
 
     private function extractByPath(mixed $data, string $path): mixed

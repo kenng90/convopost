@@ -62,6 +62,8 @@ class EventRegistrationService
                 'party_size' => $partySize,
                 'status' => EventRegistration::STATUS_CONFIRMED,
                 'external_id' => $payload['external_id'] ?? null,
+                'flow_id' => $payload['flow_id'] ?? null,
+                'flow_node_id' => $payload['flow_node_id'] ?? null,
             ]);
 
             $registration = $registration->fresh(['event', 'occurrence', 'contact']);

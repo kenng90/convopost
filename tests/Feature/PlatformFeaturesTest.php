@@ -76,11 +76,55 @@ class PlatformFeaturesTest extends TestCase
 
     public function test_flow_template_install_creates_flow(): void
     {
-        $flow = app(FlowTemplateService::class)->install('lead_capture');
+        $flow = app(FlowTemplateService::class)->install('lead_intake_routing');
 
         $this->assertNotNull($flow);
-        $this->assertDatabaseHas('flows', ['id' => $flow->id, 'name' => 'Lead Capture']);
+        $this->assertDatabaseHas('flows', ['id' => $flow->id, 'name' => 'Lead Intake & Team Routing']);
         $this->assertStringContainsString('keyword_trigger', $flow->flow_data);
+    }
+
+    public function test_flow_template_install_links_bundled_whatsapp_form(): void
+    {
+        $flow = app(FlowTemplateService::class)->install('healthcare_clinic_bot');
+
+        $this->assertNotNull($flow);
+        $this->assertDatabaseHas('whatsapp_flows', [
+            'company_id' => $this->company->id,
+            'form_bundle_key' => 'healthcare_appointment',
+        ]);
+
+        $flowData = json_decode($flow->flow_data, true);
+        $whatsappNode = collect($flowData['nodes'] ?? [])->firstWhere('type', 'whatsapp_flow');
+        $this->assertNotEmpty($whatsappNode['data']['settings']['whatsappFlowId'] ?? null);
+    }
+
+    public function test_flows_index_shows_template_cards(): void
+    {
+        $this->company->setMultipleConfig([
+            'whatsapp_webhook_verified' => 'yes',
+            'whatsapp_settings_done' => 'yes',
+        ]);
+
+        $response = $this->actingAs($this->owner)->get(route('flows.index'));
+
+        $response->assertOk();
+        $response->assertSee('Lead Capture');
+        $response->assertSee('Use template');
+        $response->assertSee('AI Flow Assistant');
+        $response->assertSee('Generate draft');
+    }
+
+    public function test_flow_create_from_template_redirects_to_editor(): void
+    {
+        $this->company->setMultipleConfig([
+            'whatsapp_webhook_verified' => 'yes',
+            'whatsapp_settings_done' => 'yes',
+        ]);
+
+        $response = $this->actingAs($this->owner)->get(route('flows.create-from-template', 'lead_capture'));
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('flows', ['name' => 'Lead Capture', 'company_id' => $this->company->id]);
     }
 
     public function test_ai_flow_assistant_generates_valid_graph(): void

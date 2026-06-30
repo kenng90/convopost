@@ -3,7 +3,7 @@ import { Node, useReactFlow } from '@xyflow/react';
 // import { ActionType, NodeData, WebhookVariable } from '@/types/flow';
 
 export const useFlowActions = () => {
-  const { addNodes, deleteElements, getNodes, setViewport, getViewport, setNodes } = useReactFlow();
+  const { addNodes, deleteElements, getNodes, setViewport, getViewport, setNodes, addEdges } = useReactFlow();
 
   const getRightmostPosition = () => {
     const nodes = getNodes();
@@ -59,6 +59,7 @@ export const useFlowActions = () => {
             type === 'quick_replies' ? 'quick_replies' :
             type === 'list_message' ? 'list_message' :
             type === 'whatsapp_catalog' ? 'whatsapp_catalog' :
+            type === 'listing_inquiry' ? 'listing_inquiry' :
             type === 'whatsapp_flow' ? 'whatsapp_flow' :
             type === 'openai' ? 'openai' :
             type === 'datastore' ? 'datastore' :
@@ -68,6 +69,11 @@ export const useFlowActions = () => {
             type === 'counter' ? 'counter' :
             type === 'check_pricing' ? 'check_pricing' :
             type === 'mpesa_stk_push' ? 'mpesa_stk_push' :
+            type === 'book_appointment' ? 'book_appointment' :
+            type === 'booking_events_list' ? 'booking_events_list' :
+            type === 'booking_event_register' ? 'booking_event_register' :
+            type === 'send_booking_link' ? 'send_booking_link' :
+            type === 'manage_booking' ? 'manage_booking' :
             type === 'branch' ? 'branch' : 'action',
       position: newPosition,
       data: data || {
@@ -83,6 +89,7 @@ export const useFlowActions = () => {
                type === 'quick_replies' ? 'Quick Replies Message' :
                type === 'list_message' ? 'List Message' :
                type === 'whatsapp_catalog' ? 'WhatsApp Catalog' :
+               type === 'listing_inquiry' ? 'Listing Inquiry' :
                type === 'openai' ? 'OpenAI' :
                type === 'datastore' ? 'Data Store' :
                type === 'assign_agent' ? 'Assign to Agent' :
@@ -91,6 +98,11 @@ export const useFlowActions = () => {
                type === 'counter' ? 'Counter' :
                type === 'check_pricing' ? 'Check User Pricing' :
                type === 'mpesa_stk_push' ? 'MPesa STK Push' :
+               type === 'book_appointment' ? 'Book appointment' :
+               type === 'booking_events_list' ? 'List events' :
+               type === 'booking_event_register' ? 'Register for event' :
+               type === 'send_booking_link' ? 'Send booking link' :
+               type === 'manage_booking' ? 'Manage booking' :
                type.charAt(0).toUpperCase() + type.slice(1),
         type,
         settings: type === 'branch' 
@@ -120,7 +132,7 @@ export const useFlowActions = () => {
               ]
             }
           : type === 'openai'
-          ? { openai: { model: 'gpt-4o-mini', prompt: '', systemPrompt: '', temperature: 0.7, maxTokens: 1000, responseHandling: 'reply' as const } }
+          ? { llm: { model: 'openai/gpt-4o-mini', prompt: '', systemPrompt: '', temperature: 0.7, maxTokens: 1000, variableName: 'ai_response', autoSendMessage: true, intentions: [] } }
           : type === 'datastore'
           ? { dataSource: '' }
           : type === 'assign_agent'
@@ -135,6 +147,57 @@ export const useFlowActions = () => {
           ? { pricing: { freeExecutions: 0 } }
           : type === 'mpesa_stk_push'
           ? { mpesa: { amount: '', accountReference: 'Payment', transactionDesc: 'Payment', responseVar: 'mpesa_result' } }
+          : type === 'book_appointment'
+          ? {
+              source_name: '',
+              duration_minutes: '',
+              header: 'Book appointment',
+              body: 'Let us find a time that works for you.',
+              footer: '',
+              buttonText: 'Choose option',
+              success_message: 'Your appointment for {{booking_service}} on {{booking_date}} at {{booking_time}} is confirmed.',
+            }
+          : type === 'booking_events_list'
+          ? {
+              header: 'Upcoming events',
+              body: 'Choose an event session to register.',
+              footer: '',
+              buttonText: 'View events',
+              limit: '10',
+            }
+          : type === 'booking_event_register'
+          ? {
+              occurrence_id: '',
+              party_size: '1',
+              success_message: 'You are registered for {{booking_event_title}} on {{booking_event_date}} at {{booking_event_time}}.',
+            }
+          : type === 'listing_inquiry'
+          ? {
+              catalogId: '',
+              header: 'Browse our listings',
+              footer: 'Tap the link to view listings and book on WhatsApp.',
+              completionType: 'booking',
+              bookingVariablePrefix: 'listing_booking',
+              requirePreferredDateTime: false,
+              bookingBackend: 'whatsapp_only',
+              autoResumeFlow: false,
+            }
+          : type === 'send_booking_link'
+          ? {
+              link_type: 'appointments',
+              message: 'Book online: {{booking_link}}',
+              header: '',
+              footer: '',
+            }
+          : type === 'manage_booking'
+          ? {
+              header: 'Manage your booking',
+              body: 'What would you like to do?',
+              buttonText: 'Choose',
+              reference_variable: 'booking_reference',
+              allow_reschedule: true,
+              default_action: 'menu',
+            }
           : {},
       },
     };
@@ -234,14 +297,15 @@ export const useFlowActions = () => {
       label: "OpenAI",
       type: "openai",
       settings: {
-        openai: {
-          model: 'gpt-4o-mini',
+        llm: {
+          model: 'openai/gpt-4o-mini',
           prompt: '',
           systemPrompt: '',
           temperature: 0.7,
           maxTokens: 1000,
-          responseHandling: 'reply' as const,
-          variableName: ''
+          variableName: 'ai_response',
+          autoSendMessage: true,
+          intentions: [],
         }
       }
     });
@@ -321,8 +385,48 @@ export const useFlowActions = () => {
     });
   }, [createNodeBase]);
 
+  const createEventRegistrationPreset = useCallback(() => {
+    const basePosition = getRightmostPosition();
+    const listNode = createNodeBase('booking_events_list', basePosition, {
+      label: 'List events',
+      type: 'booking_events_list',
+      settings: {
+        header: 'Upcoming events',
+        body: 'Choose an event session to register.',
+        footer: '',
+        buttonText: 'View events',
+        limit: '10',
+      },
+    });
+
+    const registerNode = createNodeBase('booking_event_register', {
+      x: basePosition.x,
+      y: basePosition.y + 220,
+    }, {
+      label: 'Register for event',
+      type: 'booking_event_register',
+      settings: {
+        occurrence_id: '',
+        party_size: '1',
+        success_message: 'You are registered for {{booking_event_title}} on {{booking_event_date}} at {{booking_event_time}}.',
+      },
+    });
+
+    addEdges([
+      {
+        id: `e-${listNode.id}-${registerNode.id}`,
+        source: listNode.id,
+        target: registerNode.id,
+        sourceHandle: 'selected',
+      },
+    ]);
+
+    return { listNode, registerNode };
+  }, [createNodeBase, addEdges, getRightmostPosition]);
+
   return {
     createNodeBase,
+    createEventRegistrationPreset,
     createNodeKeyword,
     createNodeQuickReply,
     createNodeListMessage,

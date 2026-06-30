@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Flow Builder</title>
+    <title>WhatsApp Form Builder</title>
     @vite(['resources/css/app.css'])
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
@@ -42,8 +42,8 @@
                 </svg>
             </a>
             <div>
-                <h1 class="text-lg font-bold text-gray-900 dark:text-white" x-text="flowId ? 'Edit Flow' : 'Create Flow'"></h1>
-                <p class="text-xs text-gray-500 dark:text-gray-400">WhatsApp Flow Builder</p>
+                <h1 class="text-lg font-bold text-gray-900 dark:text-white" x-text="flowId ? 'Edit Form' : 'Create Form'"></h1>
+                <p class="text-xs text-gray-500 dark:text-gray-400">WhatsApp Form Builder</p>
             </div>
             {{-- Dirty indicator --}}
             <span
@@ -56,6 +56,12 @@
         </div>
 
         <div class="flex items-center gap-4">
+            {{-- Templates --}}
+            <button
+                @click="openTemplatesModal()"
+                class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition text-sm"
+            >📋 Templates</button>
+
             {{-- Import --}}
             <button
                 @click="showImportModal = true"
@@ -118,6 +124,18 @@
                 <span x-text="flowId ? (saving ? 'Saving...' : 'Save') : (saving ? 'Creating...' : 'Create Flow')"></span>
             </button>
         </div>
+    </div>
+
+    {{-- ── Submission Webhook Bar ─────────────────────────────────────────── --}}
+    <div class="bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-200 dark:border-emerald-800 px-4 py-2 flex flex-wrap items-center gap-3 text-xs">
+        <span class="text-emerald-800 dark:text-emerald-200 font-medium">Submission webhook:</span>
+        <label class="inline-flex items-center gap-1.5 text-emerald-900 dark:text-emerald-100">
+            <input type="checkbox" x-model="webhookEnabled" @change="isDirty = true" class="rounded">
+            Enabled
+        </label>
+        <input type="url" x-model="webhookUrl" @input="isDirty = true" placeholder="https://hooks.example.com/form-submissions"
+            class="flex-1 min-w-[16rem] px-2 py-1 border border-emerald-300 dark:border-emerald-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white"/>
+        <span class="text-emerald-700 dark:text-emerald-300" x-show="lastAutosavedAt">Auto-saved <span x-text="lastAutosavedAt?.toLocaleTimeString?.() || ''"></span></span>
     </div>
 
     {{-- ── Endpoint URI Bar ────────────────────────────────────────────────── --}}
@@ -228,14 +246,7 @@
                 <p class="text-xs text-gray-400 dark:text-gray-500 truncate" x-text="screens.map(s => s.id).join(' → ')"></p>
             </div>
 
-            {{-- Screen templates --}}
-            <div class="px-3 py-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
-                <p class="text-xs font-semibold text-gray-400 uppercase">Templates</p>
-                <!-- <button @click="addSummaryScreen()" class="w-full text-left text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">+ Summary screen</button>
-                <button @click="addStepScreen()" class="w-full text-left text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">+ Step screen</button> -->
-                <button @click="addBookingScreen()" class="w-full text-left text-xs px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium">+ Booking flow (dynamic slots)</button>
-                <button @click="addBookingFlowWithServices()" class="w-full text-left text-xs px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium">+ Booking flow with service picker</button>
-            </div>
+            {{-- Screen templates removed: use Flowmaker "Book appointment" node instead --}}
         
             {{-- Validation results --}}
             <div x-show="validationResults.errors.length || validationResults.warnings.length" class="px-3 py-2 flex-1 border-t border-gray-200 dark:border-gray-700 text-xs space-y-1 max-h-32 overflow-y-auto">
@@ -274,35 +285,6 @@
                         </div>
                         <p class="text-xs text-gray-400 mt-1" x-text="`${countScreenComponents(selectedScreen)} / 50 components`"></p>
                         <p x-show="selectedScreen.endpoint_template" class="text-xs text-blue-600 dark:text-blue-400 mt-1 font-mono" x-text="`Endpoint template: ${selectedScreen.endpoint_template}`"></p>
-
-                        <div
-                            x-show="selectedScreen.endpoint_template === 'booking_slots'"
-                            class="mt-3 p-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 space-y-2"
-                        >
-                            <p class="text-xs font-semibold text-blue-800 dark:text-blue-200 uppercase tracking-wide">Booking integration</p>
-                            <p class="text-[11px] text-blue-700 dark:text-blue-300">Must match a service in Bookings → Services exactly.</p>
-                            <div>
-                                <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Bookings service name</label>
-                                <input
-                                    type="text"
-                                    :value="selectedScreen.booking_source || ''"
-                                    @blur="setScreenProp(selectedScreen.id, 'booking_source', $event.target.value.trim())"
-                                    placeholder="Consultation"
-                                    class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm"
-                                />
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">Default slot duration (minutes)</label>
-                                <input
-                                    type="number"
-                                    min="5"
-                                    max="480"
-                                    :value="selectedScreen.booking_duration_minutes || 30"
-                                    @blur="setScreenProp(selectedScreen.id, 'booking_duration_minutes', parseInt($event.target.value, 10) || 30)"
-                                    class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm"
-                                />
-                            </div>
-                        </div>
                     </div>
 
                     <!-- {{-- Dynamic data (endpoint) --}}
@@ -983,19 +965,8 @@
             <template x-if="!selectedField">
                 <div class="h-full flex items-center justify-center p-4 text-center">
                     <div>
-                        <template x-if="selectedScreen?.endpoint_template === 'booking_slots'">
-                            <div class="text-left space-y-3 max-w-xs">
-                                <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Booking screen</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Set <strong>Bookings service name</strong> in the panel to the left (under Screen Title), e.g. <code class="font-mono">Consultation</code>.</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Click a component in the list to edit labels. The date field loads slots from your endpoint when published.</p>
-                            </div>
-                        </template>
-                        <template x-if="selectedScreen?.endpoint_template !== 'booking_slots'">
-                            <div>
-                                <p class="text-gray-500 dark:text-gray-400 text-sm">No field selected</p>
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Click a component to edit</p>
-                            </div>
-                        </template>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm">No field selected</p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Click a component to edit</p>
                     </div>
                 </div>
             </template>
@@ -1035,6 +1006,28 @@
             </div>
         </div>
         </template>
+
+        {{-- Templates Modal --}}
+        <template x-if="showTemplatesModal">
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-gray-900 dark:text-white">Form templates</h2>
+                    <button @click="showTemplatesModal = false" class="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+                <div class="p-6 overflow-y-auto grid gap-3 sm:grid-cols-2">
+                    <template x-for="tpl in formTemplates" :key="tpl.key">
+                        <button @click="applyTemplate(tpl.key)"
+                            class="text-left p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition">
+                            <div class="font-semibold text-gray-900 dark:text-white" x-text="tpl.name"></div>
+                            <div class="text-xs text-gray-500 mt-1" x-text="tpl.description"></div>
+                            <div class="text-xs text-blue-600 mt-2" x-text="`${tpl.screen_count} screen(s)`"></div>
+                        </button>
+                    </template>
+                </div>
+            </div>
+        </div>
+        </template>
 </div>
 
 <script>
@@ -1047,6 +1040,12 @@ function flowBuilder(initialFlowId) {
         flowDescription: '',
         flowCategory: 'OTHER',
         metaFlowId: null,
+        webhookUrl: '',
+        webhookEnabled: false,
+        showTemplatesModal: false,
+        formTemplates: [],
+        autosaveTimer: null,
+        lastAutosavedAt: null,
         screens: [],
         selectedScreenId: null,
         selectedFieldId: null,
@@ -1158,6 +1157,8 @@ function flowBuilder(initialFlowId) {
                     this.flowDescription = f.description || '';
                     this.flowCategory = f.category || 'OTHER';
                     this.metaFlowId = f.meta_flow_id || null;
+                    this.webhookUrl = f.webhook_url || '';
+                    this.webhookEnabled = !!f.webhook_enabled;
                     this.screens = Array.isArray(f.screens) ? f.screens : [];
                     this.normalizeScreensOnLoad();
                     this.hydrateImportedFieldMetadata();
@@ -1178,7 +1179,43 @@ function flowBuilder(initialFlowId) {
             }
 
             this.loading = false;
+            this.startAutosave();
             console.log('🏁 init() COMPLETED - loading = false');
+        },
+
+        startAutosave() {
+            if (this.autosaveTimer) clearInterval(this.autosaveTimer);
+            this.autosaveTimer = setInterval(() => {
+                if (this.isDirty && this.flowName.trim() && !this.saving) {
+                    this.save(true);
+                }
+            }, 45000);
+        },
+
+        async openTemplatesModal() {
+            this.showTemplatesModal = true;
+            if (!this.formTemplates.length) {
+                try {
+                    const r = await this.api('GET', '/api/whatsapp-flows/templates');
+                    this.formTemplates = r.templates || [];
+                } catch (e) {
+                    this.notify('Could not load templates.', 'error');
+                }
+            }
+        },
+
+        async applyTemplate(key) {
+            try {
+                const r = await this.api('POST', `/api/whatsapp-flows/from-bundle/${key}`);
+                if (r.redirect) {
+                    window.location.href = r.redirect;
+                    return;
+                }
+                this.showTemplatesModal = false;
+                this.notify('Template applied.', 'success');
+            } catch (e) {
+                this.notify(e.message || 'Failed to apply template.', 'error');
+            }
         },
 
         async loadFlow() {
@@ -1262,7 +1299,6 @@ function flowBuilder(initialFlowId) {
             const screen = this.screens.find(s => s.id === id);
             if (screen) {
                 this.repairDuplicateFieldIds(screen);
-                this.repairBookingScreenIfNeeded(screen);
             }
         },
 
@@ -1272,12 +1308,7 @@ function flowBuilder(initialFlowId) {
                     screen.fields = [];
                 }
 
-                if (screen.id === 'BOOKING' && ! screen.endpoint_template) {
-                    screen.endpoint_template = 'booking_slots';
-                }
-
                 this.repairDuplicateFieldIds(screen);
-                this.repairBookingScreenIfNeeded(screen);
             }
         },
 
@@ -1304,51 +1335,6 @@ function flowBuilder(initialFlowId) {
                 field.id = ids[index];
             });
             this.isDirty = true;
-        },
-
-        repairBookingScreenIfNeeded(screen) {
-            if (screen.endpoint_template !== 'booking_slots') {
-                return;
-            }
-
-            if (! screen.booking_source) {
-                screen.booking_source = 'Consultation';
-            }
-
-            if (! screen.booking_duration_minutes) {
-                screen.booking_duration_minutes = 30;
-            }
-
-            if (! Array.isArray(screen.dynamic_data) || ! screen.dynamic_data.length) {
-                screen.dynamic_data = [
-                    { key: 'is_dropdown_visible', type: 'boolean', example: false },
-                    { key: 'available_slots', type: 'option_list', example_items: [] },
-                ];
-            }
-
-            if (! this.bookingScreenIsComplete(screen)) {
-                screen.fields = this.buildBookingScreenFields();
-                this.isDirty = true;
-            }
-        },
-
-        bookingScreenIsComplete(screen) {
-            const fields = screen?.fields || [];
-
-            return fields.some(f => f.type === 'date')
-                && fields.some(f => f.type === 'select' && f.dynamic_data_source)
-                && fields.some(f => f.type === 'footer');
-        },
-
-        restoreBookingComponents(screenId) {
-            const screen = this.screens.find(s => s.id === screenId);
-            if (! screen || screen.endpoint_template !== 'booking_slots') {
-                return;
-            }
-
-            screen.fields = this.buildBookingScreenFields();
-            this.isDirty = true;
-            this.notify('Booking components restored (date, time slot, confirm).', 'success');
         },
 
         updateScreenTitle(id, title) {
@@ -1434,117 +1420,6 @@ function flowBuilder(initialFlowId) {
             });
             this.selectedScreenId = id;
             this.isDirty = true;
-        },
-
-        addBookingScreen() {
-            const existing = this.screens.find(s => s.id === 'BOOKING');
-
-            if (existing) {
-                existing.endpoint_template = 'booking_slots';
-                existing.dynamic_data = existing.dynamic_data || [
-                    { key: 'is_dropdown_visible', type: 'boolean', example: false },
-                    { key: 'available_slots', type: 'option_list', example_items: [] },
-                ];
-
-                this.repairDuplicateFieldIds(existing);
-
-                if (! this.bookingScreenIsComplete(existing)) {
-                    existing.fields = this.buildBookingScreenFields();
-                    this.isDirty = true;
-                    this.notify('Booking screen repaired — all 3 components restored.', 'success');
-                } else {
-                    this.notify('A BOOKING screen already exists. Select it from the screen list.', 'error');
-                }
-
-                this.selectedScreenId = 'BOOKING';
-                return;
-            }
-
-            this.screens.push({
-                id: 'BOOKING',
-                title: 'Book appointment',
-                endpoint_template: 'booking_slots',
-                booking_source: 'Consultation',
-                booking_duration_minutes: 30,
-                dynamic_data: [
-                    { key: 'is_dropdown_visible', type: 'boolean', example: false },
-                    { key: 'available_slots', type: 'option_list', example_items: [] },
-                ],
-                fields: this.buildBookingScreenFields(),
-            });
-
-            this.setTerminalScreen('BOOKING');
-            this.selectedScreenId = 'BOOKING';
-            this.isDirty = true;
-            this.notify('Booking screen added. Set Bookings service name under Screen Title, then Save.', 'success');
-        },
-
-        addBookingFlowWithServices() {
-            if (! this.screens.find(s => s.id === 'SERVICE_SELECT')) {
-                const [selectId, continueId] = this.allocateFieldIds(2);
-                this.screens.push({
-                    id: 'SERVICE_SELECT',
-                    title: 'Choose service',
-                    endpoint_template: 'booking_services',
-                    dynamic_data: [
-                        { key: 'available_services', type: 'option_list', example_items: [] },
-                    ],
-                    fields: [
-                        {
-                            id: selectId,
-                            type: 'select',
-                            label: 'Select a service',
-                            required: true,
-                            meta_type: 'string',
-                            meta_example: 'Consultation',
-                            dynamic_data_source: true,
-                            data_source_key: 'available_services',
-                            options: [],
-                        },
-                        {
-                            id: continueId,
-                            type: 'footer',
-                            label: 'Continue',
-                            required: false,
-                        },
-                    ],
-                });
-            }
-
-            this.addBookingScreen();
-            const booking = this.screens.find(s => s.id === 'BOOKING');
-            if (booking) {
-                booking.booking_source = '';
-            }
-
-            this.selectedScreenId = 'SERVICE_SELECT';
-            this.isDirty = true;
-            this.notify('Service picker + booking screens added. Publish to load services from your account.', 'success');
-        },
-
-        buildBookingScreenFields() {
-            const [dateId, slotId, footerId] = this.allocateFieldIds(3);
-
-            return [
-                {
-                    id: dateId, type: 'date', label: 'Select date', required: true,
-                    meta_type: 'string', meta_example: '2026-01-01',
-                    on_select_action: 'data_exchange',
-                    on_select_payload: { component_action: 'update_date' },
-                },
-                {
-                    id: slotId, type: 'select', label: 'Pick a time slot', required: false,
-                    meta_type: 'string', meta_example: 'slot_1',
-                    dynamic_data_source: true,
-                    data_source_key: 'available_slots',
-                    visible_binding: '${data.is_dropdown_visible}',
-                    required_binding: '${data.is_dropdown_visible}',
-                    options: [],
-                },
-                {
-                    id: footerId, type: 'footer', label: 'Confirm booking', required: false,
-                },
-            ];
         },
 
         addDynamicDataEntry(screenId) {
@@ -1962,8 +1837,8 @@ function flowBuilder(initialFlowId) {
         typeIcon(type) { return this.typeIcons[type] || '·'; },
 
         // ── Save / Publish ────────────────────────────────────────────────────
-        async save() {
-            if (!this.flowName.trim()) { this.notify('Flow name is required.', 'error'); return; }
+        async save(silent = false) {
+            if (!this.flowName.trim()) { if (!silent) this.notify('Form name is required.', 'error'); return; }
             this.saving = true;
             try {
                 const payload = {
@@ -1971,6 +1846,8 @@ function flowBuilder(initialFlowId) {
                     description: this.flowDescription,
                     category:    this.flowCategory,
                     screens:     this.screens,
+                    webhook_url: this.webhookUrl || null,
+                    webhook_enabled: this.webhookEnabled,
                 };
 
                 if (this.flowId) {
@@ -1978,14 +1855,14 @@ function flowBuilder(initialFlowId) {
                 } else {
                     const r = await this.api('POST', '/api/flow-builder', payload);
                     this.flowId = r.flow_id;
-                    // Update URL without page reload
                     window.history.replaceState({}, '', `/whatsapp-flows/${this.flowId}/edit`);
                 }
 
                 this.isDirty = false;
-                this.notify('Flow saved successfully.', 'success');
+                this.lastAutosavedAt = new Date();
+                if (!silent) this.notify('Form saved successfully.', 'success');
             } catch(e) {
-                this.notify(e.message || 'Save failed.', 'error');
+                if (!silent) this.notify(e.message || 'Save failed.', 'error');
             } finally {
                 this.saving = false;
             }

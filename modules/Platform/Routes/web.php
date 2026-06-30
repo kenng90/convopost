@@ -16,6 +16,7 @@ Route::group([
 
         Route::get('api/health-alerts', 'HealthMonitorController@index')->name('health-alerts.index');
         Route::get('api/customer360/{contact}', 'Customer360Controller@show')->name('customer360.show');
+        Route::get('api/managed-ai/status', 'DashboardController@managedAiStatus')->name('managed-ai.status');
 
         Route::middleware('isOwnerOnPro')->group(function () {
             Route::get('integrations', 'IntegrationHubController@index')->name('integrations.index');

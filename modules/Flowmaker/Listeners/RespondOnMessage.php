@@ -14,11 +14,6 @@ class RespondOnMessage
         try {
             $contact = $event->message->contact;
             $message = $event->message;
-
-            if (($message->channel ?? 'whatsapp') !== 'whatsapp') {
-                return;
-            }
-
             if ($contact->enabled_ai_bot && ! $message->bot_has_replied) {
                 $company_id = $contact->company_id;
                 $company = Company::findOrFail($company_id);

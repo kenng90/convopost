@@ -35,7 +35,7 @@ class FlowBuilderScreenValidator
 
         return [
             'Duplicate component field ids detected ('.implode(', ', array_keys($duplicates)).'). '
-            .'Re-add the booking template in the flow builder or assign unique ids to each component.',
+            .'Assign unique ids to each component.',
         ];
     }
 }

@@ -192,6 +192,19 @@ class RemindersBookingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Consultation');
+        $response->assertSee(__('Browse upcoming events'));
+    }
+
+    public function test_public_booking_catalog_hides_events_link_when_events_disabled(): void
+    {
+        $this->company->setConfig('ENABLE_EVENTS_BOOKING', 'false');
+
+        $response = $this->get(route('reminders.booking.catalog', [
+            'subdomain' => $this->company->subdomain,
+        ]));
+
+        $response->assertOk();
+        $response->assertDontSee(__('Browse upcoming events'));
     }
 
     public function test_public_booking_widget_page_loads(): void

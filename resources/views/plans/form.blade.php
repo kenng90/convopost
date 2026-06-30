@@ -10,10 +10,22 @@
 
 @include('partials.input',['type'=>'number','name'=>'Price','id'=>"price",'placeholder'=>"Plan prce",'required'=>true,'value'=>(isset($plan)?$plan->price:null)])
 
-@if (config('settings.enable_credits'))
-    <div style="width: 50%;">
-        @include('partials.input',['class'=>'','additionalInfo'=>'Number of credits that will be added to the user\'s account when they subscribe to this plan, on the interval selected below','type'=>'number','name'=>'Credit amount','id'=>"credit_amount",'placeholder'=>"Plan credit amount",'required'=>true,'value'=>(isset($plan)?$plan->credit_amount:null)])
-    </div>
+@if (config('settings.enable_credits') || config('managed-ai.enabled', true))
+<div class="row">
+    <div class="col-12 mt-4"><h6 class="heading text-muted mb-4">{{ __('Credits per billing period') }}</h6></div>
+
+    @if (config('settings.enable_credits'))
+        <div class="col-md-6">
+            @include('partials.input',['class'=>'','additionalInfo'=>__('Granted to the owner on subscribe / renewal. Used for campaigns, M-Pesa STK, and other messaging actions.'),'type'=>'number','name'=>__('Messaging credits'),'id'=>"credit_amount",'placeholder'=>__('Messaging credit amount'),'required'=>true,'value'=>(isset($plan)?$plan->credit_amount:null)])
+        </div>
+    @endif
+
+    @if (config('managed-ai.enabled', true))
+        <div class="col-md-6">
+            @include('partials.input',['class'=>'','additionalInfo'=>__('Monthly AI allowance when using the platform OpenRouter / OpenAI keys. BYOK users are not charged from this pool.'),'type'=>'number','name'=>__('AI credits'),'id'=>"managed_ai_monthly_credits",'placeholder'=>__('AI credits per billing period'),'required'=>false,'value'=>(isset($plan)?$plan->getConfig('managed_ai_monthly_credits', config('managed-ai.default_monthly_credits', 0)):config('managed-ai.default_monthly_credits', 0))])
+        </div>
+    @endif
+</div>
 @endif
 
 <div class="row">

@@ -95,6 +95,11 @@
                                 </nav>
                             @endunless
                         @else
+                            @if(isset($getting_started_type))
+                                <div class="card-body border-bottom pt-0">
+                                    @include('reminders::partials.getting-started', ['gettingStartedType' => $getting_started_type])
+                                </div>
+                            @endif
                             <h4>{{__('crud.no_items',['items'=>$item_names])}}</h4>
                         @endif
                     </div>
@@ -104,6 +109,8 @@
                 </div>
             </div>
         </div>
+
+        @yield('customfooter')
 
         @include('layouts.footers.auth')
     </div>

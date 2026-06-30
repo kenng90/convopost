@@ -23,6 +23,7 @@ class OrgAuthorizationManagerTest extends TestCase
         $this->assertSame('wpbox', $map['copilot.suggest']);
         $this->assertSame('flowmaker', $map['flow-templates.index']);
         $this->assertSame('flowmaker', $map['flow-templates.install']);
+        $this->assertSame('flowmaker', $map['flows.create-from-template']);
     }
 
     public function test_activation_routes_are_protected_from_managers(): void

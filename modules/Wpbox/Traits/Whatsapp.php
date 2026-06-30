@@ -4,10 +4,10 @@ namespace Modules\Wpbox\Traits;
 
 use Akaunting\Module\Facade as Module;
 use App\Models\Company;
-use App\Models\Config;
 use App\Models\User;
 use App\Services\Billing\CreditBillingResolver;
 use App\Services\Billing\CreditCharger;
+use App\Services\WhatsApp\WebhookCompanyResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -206,20 +206,15 @@ trait Whatsapp
 
             //if the user is admin
             if ($user->hasRole('admin') || true) {
-                //Find company based on the WABAID
-                $wabaid = $request->entry[0]['id'];
-                $configRecord = Config::where('value', $wabaid)->first();
-                if ($configRecord && $configRecord->model_id) {
-                    $company_id = $configRecord->model_id;
-                    $company = Company::find($company_id);
-                    if (! $company) {
-                        return response()->json(['send' => false, 'error' => 'Company not found']);
-                    } else {
-                        Auth::login($company->user);
-                    }
-                } else {
-                    return response()->json(['send' => false, 'error' => 'Company not found for WABAID: '.$wabaid]);
+                $company = app(WebhookCompanyResolver::class)->resolveFromWebhookRequest($request);
+
+                if (! $company) {
+                    $wabaid = $request->entry[0]['id'] ?? 'unknown';
+
+                    return response()->json(['send' => false, 'error' => 'Company not found for WhatsApp webhook (WABAID: '.$wabaid.')']);
                 }
+
+                Auth::login($company->user);
             } else {
                 //Company, -- not used anymore
                 $company = $this->getCompany();
@@ -405,19 +400,24 @@ trait Whatsapp
                                     $responseId = $parts[1] ?? null;
 
                                     if ($responseId) {
-                                        $flowResponse = \App\Models\WhatsappFlowResponse::find($responseId);
-                                        if ($flowResponse) {
-                                            // Always update — nfm_reply is authoritative for form data
-                                            // (flows webhook may have stored empty data if it ran first)
-                                            if (! empty($formData) || $flowResponse->status === 'pending') {
-                                                $flowResponse->markCompleted(! empty($formData) ? $formData : $responseJson);
+                                        $flowResponse = \App\Models\WhatsappFlowResponse::with('whatsappFlow')->find($responseId);
+                                        if ($flowResponse && (! empty($formData) || $flowResponse->status === 'pending')) {
+                                            $submissionService = app(\App\Services\WhatsappFlowSubmissionService::class);
+                                            $contactModel = \Modules\Flowmaker\Models\Contact::find($contact->id);
+                                            $automationFlowId = $flowResponse->flow_id;
 
-                                                \Illuminate\Support\Facades\Log::info('WhatsApp Flow response marked completed via nfm_reply', [
-                                                    'response_id' => $responseId,
-                                                    'field_count' => count($formData),
-                                                    'fields' => array_keys($formData),
-                                                ]);
-                                            }
+                                            $submissionService->handleCompleted(
+                                                $flowResponse,
+                                                ! empty($formData) ? $formData : $responseJson,
+                                                $contactModel,
+                                                $automationFlowId
+                                            );
+
+                                            \Illuminate\Support\Facades\Log::info('WhatsApp Flow response marked completed via nfm_reply', [
+                                                'response_id' => $responseId,
+                                                'field_count' => count($formData),
+                                                'fields' => array_keys($formData),
+                                            ]);
                                         }
                                     }
                                 }

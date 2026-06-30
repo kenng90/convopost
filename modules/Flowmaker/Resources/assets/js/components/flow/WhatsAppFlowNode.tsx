@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Send, Trash2, Plus, X } from 'lucide-react';
 import { Label } from "@/components/ui/label";
@@ -30,28 +30,34 @@ interface NodeSettings {
   conditions?: Condition[];
 }
 
+interface FormFieldOption {
+  key: string;
+  label: string;
+  type: string;
+  screen_title?: string;
+}
+
 interface WhatsAppFlowOption {
   id: number;
   name: string;
   status: string;
   meta_flow_id?: string;
   screen_count?: number;
+  fields?: FormFieldOption[];
 }
 
 const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
   const { deleteNode } = useFlowActions();
   
-  const [selectedFlowId, setSelectedFlowId] = useState<string>(data.settings?.whatsappFlowId || "");
+  const [selectedFlowId, setSelectedFlowId] = useState<string>(String(data.settings?.whatsappFlowId || ""));
   const [flows, setFlows] = useState<WhatsAppFlowOption[]>([]);
   const [header, setHeader] = useState<string>(data.settings?.header || 'Complete the form');
   const [footer, setFooter] = useState<string>(data.settings?.footer || 'Your responses help us serve you better');
   const [conditions, setConditions] = useState<Condition[]>(data.settings?.conditions || []);
 
-  // Load flows on mount
   useEffect(() => {
     const loadFlows = async () => {
       try {
-        console.log('WhatsAppFlowNode: Fetching flows...');
         const response = await fetch('/api/whatsapp-flows', {
           method: 'GET',
           headers: {
@@ -62,30 +68,23 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
           credentials: 'include',
         });
 
-        console.log('WhatsAppFlowNode: Response status:', response.status);
-
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
         const result = await response.json();
-        console.log('WhatsAppFlowNode: Flows data received:', result);
 
         if (result.success && Array.isArray(result.flows)) {
-          console.log('WhatsAppFlowNode: Setting flows:', result.flows);
           setFlows(result.flows);
-        } else {
-          console.warn('WhatsAppFlowNode: Invalid response format:', result);
         }
       } catch (error) {
-        console.error('WhatsAppFlowNode: Error loading flows:', error);
+        console.error('WhatsAppFormNode: Error loading forms:', error);
       }
     };
 
     loadFlows();
   }, []);
 
-  // Persist settings to node data
   useEffect(() => {
     if (data && data.settings) {
       data.settings.whatsappFlowId = selectedFlowId;
@@ -137,6 +136,10 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
   };
 
   const selectedFlow = flows.find(f => f.id.toString() === selectedFlowId);
+  const fieldOptions: FormFieldOption[] = useMemo(
+    () => selectedFlow?.fields ?? [],
+    [selectedFlow]
+  );
 
   return (
     <ContextMenu>
@@ -150,12 +153,11 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
           
           <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 px-4 pt-3 bg-gray-50">
             <Send className="h-4 w-4 text-blue-600" />
-            <div className="font-medium">Send WhatsApp Flow</div>
+            <div className="font-medium">Send WhatsApp Form</div>
           </div>
 
           <div className="p-4">
             <div className="space-y-4">
-              {/* Header Text */}
               <div className="space-y-2">
                 <Label htmlFor="header">Message Header</Label>
                 <textarea
@@ -166,15 +168,14 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
                   rows={2}
                   className="w-full px-2 py-1 text-xs border rounded"
                 />
-                <p className="text-xs text-gray-500">Text to show above the flow</p>
+                <p className="text-xs text-gray-500">Text to show above the form</p>
               </div>
 
-              {/* Flow Selection */}
               <div className="space-y-2">
-                <Label htmlFor="flow-select">Select WhatsApp Flow</Label>
+                <Label htmlFor="flow-select">Select published form</Label>
                 {flows.length === 0 ? (
                   <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded border border-gray-200">
-                    No flows found. Create one in WhatsApp Flows.
+                    No published forms found. Create and publish one under WhatsApp forms.
                   </div>
                 ) : (
                   <select
@@ -183,29 +184,26 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
                     onChange={(e) => handleFlowSelect(e.target.value)}
                     className="w-full px-2 py-2 text-xs border rounded bg-white"
                   >
-                    <option value="">-- Choose a flow --</option>
+                    <option value="">-- Choose a form --</option>
                     {flows.map(flow => (
                       <option key={flow.id} value={flow.id}>
-                        {flow.name} ({flow.status})
-                        {flow.meta_flow_id ? ' ✓' : ''}
+                        {flow.name}
                       </option>
                     ))}
                   </select>
                 )}
               </div>
 
-              {/* Selected Flow Preview */}
               {selectedFlow && (
                 <div className="bg-blue-50 border border-blue-200 p-2 rounded text-xs">
                   <div className="font-medium text-blue-900">{selectedFlow.name}</div>
-                  <div className="text-gray-600">Status: {selectedFlow.status}</div>
-                  {selectedFlow.meta_flow_id && (
-                    <div className="text-green-600">Meta ID: {selectedFlow.meta_flow_id}</div>
+                  <div className="text-green-600">Published to Meta</div>
+                  {fieldOptions.length > 0 && (
+                    <div className="text-gray-600 mt-1">{fieldOptions.length} field(s) available for routing</div>
                   )}
                 </div>
               )}
 
-              {/* Footer Text */}
               <div className="space-y-2">
                 <Label htmlFor="footer">Message Footer</Label>
                 <textarea
@@ -216,10 +214,8 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
                   rows={2}
                   className="w-full px-2 py-1 text-xs border rounded"
                 />
-                <p className="text-xs text-gray-500">Text to show below the flow</p>
               </div>
 
-              {/* Conditional Routing */}
               <div className="border-t pt-3">
                 <div className="flex items-center justify-between mb-2">
                   <Label className="font-bold text-xs">Route Based on Responses</Label>
@@ -232,19 +228,34 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
                 </div>
 
                 {conditions.length === 0 ? (
-                  <p className="text-xs text-gray-500">No conditions set. Flow will always go to "Completed"</p>
+                  <p className="text-xs text-gray-500">No conditions set. Form will always go to "Completed"</p>
                 ) : (
                   <div className="space-y-2">
                     {conditions.map((condition, idx) => (
                       <div key={condition.id} className="bg-gray-50 p-2 rounded border border-gray-200 text-xs">
-                        <div className="flex items-start gap-2">
-                          <input
-                            type="text"
-                            placeholder="Field name (e.g., 'contact_preference')"
-                            value={condition.fieldName}
-                            onChange={(e) => updateCondition(condition.id, 'fieldName', e.target.value)}
-                            className="flex-1 px-1.5 py-1 border rounded text-xs"
-                          />
+                        <div className="flex items-start gap-2 flex-wrap">
+                          {fieldOptions.length > 0 ? (
+                            <select
+                              value={condition.fieldName}
+                              onChange={(e) => updateCondition(condition.id, 'fieldName', e.target.value)}
+                              className="flex-1 min-w-[8rem] px-1.5 py-1 border rounded text-xs"
+                            >
+                              <option value="">Select field</option>
+                              {fieldOptions.map((field) => (
+                                <option key={field.key} value={field.key}>
+                                  {field.label} ({field.key})
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder="Field key (e.g. radio_2)"
+                              value={condition.fieldName}
+                              onChange={(e) => updateCondition(condition.id, 'fieldName', e.target.value)}
+                              className="flex-1 px-1.5 py-1 border rounded text-xs"
+                            />
+                          )}
                           <select
                             value={condition.operator}
                             onChange={(e) => updateCondition(condition.id, 'operator', e.target.value)}
@@ -269,7 +280,7 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
                             <X className="h-3 w-3" />
                           </button>
                         </div>
-                        <p className="text-gray-500 mt-1">Routes to "Match {idx + 1}" handle if condition is true</p>
+                        <p className="text-gray-500 mt-1">Routes to "Match {idx + 1}" if true. Use {"{{form_field_key}}"} in HTTP nodes.</p>
                       </div>
                     ))}
                   </div>
@@ -278,7 +289,6 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
             </div>
           </div>
 
-          {/* Output Handles */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
             <span className="text-xs text-gray-500">On completion</span>
             <Handle
@@ -289,7 +299,6 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
             />
           </div>
 
-          {/* Condition Match Handles */}
           {conditions.map((condition, idx) => (
             <div key={condition.id} className="flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-white text-xs">
               <span className="text-gray-500">Match {idx + 1}</span>
@@ -302,10 +311,9 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
             </div>
           ))}
 
-          {/* Else Handle */}
           <div className="flex items-center justify-center px-4 py-2 border-t border-gray-100 bg-white">
             <span className="text-xs text-gray-500 mr-2">
-              {conditions.length > 0 ? 'No match' : 'Timeout/Abandoned'}
+              {conditions.length > 0 ? 'No match' : 'Abandoned / timeout'}
             </span>
             <Handle
               type="source"

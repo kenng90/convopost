@@ -18,6 +18,7 @@ class ReportServicePaymentsReportTest extends TestCase
             'customer_name' => 'Jane Doe',
             'customer_phone' => '254712345678',
             'customer_email' => 'jane@example.com',
+            'delivery_address' => '45 Kenyatta Avenue, Nairobi',
             'amount' => 1500.00,
             'currency' => 'KES',
             'status' => 'sent',
@@ -49,6 +50,7 @@ class ReportServicePaymentsReportTest extends TestCase
         $formatted = (new ReportService($company))->formatInvoiceForPaymentsReport($invoice);
 
         $this->assertSame('TST-20260101-1', $formatted['invoice_number']);
+        $this->assertSame('45 Kenyatta Avenue, Nairobi', $formatted['delivery_address']);
         $this->assertSame('KES', $formatted['currency']);
         $this->assertCount(1, $formatted['items']);
         $this->assertSame('Consulting', $formatted['items'][0]['title']);

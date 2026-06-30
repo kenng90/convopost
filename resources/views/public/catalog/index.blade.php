@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $catalog->name }} - Shop</title>
+    <title>{{ $catalog->name }} - {{ $presentation['public_title_suffix'] ?? 'Shop' }}</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -72,9 +72,89 @@
             color: white;
         }
         
-        .stock-low {
+        .stock-reserved,
+        .stock-underoffer {
             background-color: #ffc107;
             color: #333;
+        }
+
+        .stock-sold,
+        .stock-leased {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .listing-highlight {
+            font-size: 12px;
+            color: #495057;
+        }
+
+        .listing-image-gallery {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .listing-gallery-track,
+        .listing-gallery-slide {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .listing-gallery-slide {
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .listing-gallery-slide.active {
+            opacity: 1;
+        }
+
+        .gallery-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: rgba(0, 0, 0, 0.45);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+        .gallery-prev { left: 8px; }
+        .gallery-next { right: 8px; }
+
+        .gallery-dots {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            z-index: 2;
+        }
+
+        .gallery-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.55);
+            cursor: pointer;
+        }
+
+        .gallery-dot.active {
+            background: #fff;
+        }
+
+        #listingMap {
+            height: 320px;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #dee2e6;
         }
         
         .product-body {
@@ -296,6 +376,98 @@
             padding: 20px;
             border-top: 1px solid #dee2e6;
         }
+
+        .delivery-details-section {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .delivery-details-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #212529;
+        }
+
+        .delivery-details-hint {
+            font-size: 11px;
+            color: #6c757d;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .delivery-field {
+            margin-bottom: 10px;
+        }
+
+        .delivery-field label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 4px;
+        }
+
+        .delivery-field label .optional {
+            font-weight: 400;
+            color: #6c757d;
+        }
+
+        .delivery-field input,
+        .delivery-field textarea {
+            width: 100%;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 8px 10px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .delivery-field input:focus,
+        .delivery-field textarea:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+        }
+
+        .delivery-field.has-error input,
+        .delivery-field.has-error textarea {
+            border-color: #dc3545;
+        }
+
+        .delivery-field-error {
+            display: none;
+            font-size: 11px;
+            color: #dc3545;
+            margin-top: 4px;
+        }
+
+        .delivery-field.has-error .delivery-field-error {
+            display: block;
+        }
+
+        .cart-success-banner {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.45;
+            margin-bottom: 14px;
+        }
+
+        .cart-error-banner {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 13px;
+            line-height: 1.45;
+            margin-bottom: 14px;
+        }
         
         .cart-total {
             font-size: 18px;
@@ -443,7 +615,10 @@
     <!-- Main Content -->
     <div class="container grid-container">
         @if($totalInCatalog > 0)
-            <form method="GET" action="{{ route('catalog.public', $catalog->id) }}" class="catalog-filters">
+            <form method="GET" action="{{ route('catalog.public', $catalog->id) }}" class="catalog-filters" id="catalogFiltersForm">
+                @if($flowToken)
+                    <input type="hidden" name="flow_token" value="{{ $flowToken }}">
+                @endif
                 <div class="form-row">
                     <div class="form-group col-md-4 col-12">
                         <label for="filter-q" class="sr-only">Search</label>
@@ -451,7 +626,7 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text"><i class="fas fa-search"></i></span>
                             </div>
-                            <input type="search" id="filter-q" name="q" class="form-control" placeholder="Search products..." value="{{ $filters['q'] }}">
+                            <input type="search" id="filter-q" name="q" class="form-control" placeholder="{{ $presentation['search_placeholder'] ?? 'Search...' }}" value="{{ $filters['q'] }}">
                         </div>
                     </div>
                     <div class="form-group col-md-2 col-6">
@@ -463,6 +638,7 @@
                             @endforeach
                         </select>
                     </div>
+                    @if($presentation['supports_inventory'] ?? true)
                     <div class="form-group col-md-2 col-6">
                         <label for="filter-stock" class="sr-only">Stock</label>
                         <select id="filter-stock" name="stock" class="custom-select">
@@ -472,6 +648,47 @@
                             <option value="Out of Stock" @selected($filters['stock'] === 'Out of Stock')>Out of Stock</option>
                         </select>
                     </div>
+                    @else
+                    <div class="form-group col-md-2 col-6">
+                        <label for="filter-status" class="sr-only">Status</label>
+                        <select id="filter-status" name="status" class="custom-select">
+                            <option value="">All statuses</option>
+                            @foreach($filterOptions['statuses'] as $status)
+                                <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ $status }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+                    @if(in_array('location', $presentation['filter_facets'] ?? [], true))
+                    <div class="form-group col-md-2 col-6">
+                        <label for="filter-location" class="sr-only">Location</label>
+                        <select id="filter-location" name="location" class="custom-select">
+                            <option value="">All locations</option>
+                            @foreach($filterOptions['locations'] as $location)
+                                <option value="{{ $location }}" @selected($filters['location'] === $location)>{{ $location }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+                    @if(($presentation['supports_geo_map'] ?? false) && in_array('geo', $presentation['filter_facets'] ?? [], true))
+                    <div class="form-group col-md-3 col-12">
+                        <div class="d-flex flex-wrap align-items-center" style="gap: 8px;">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="useMyLocationForFilter()">
+                                <i class="fas fa-location-arrow mr-1"></i>Near me
+                            </button>
+                            <select id="filter-radius" name="radius_km" class="custom-select" style="max-width: 140px;">
+                                @foreach([5, 10, 25, 50, 100] as $radius)
+                                    <option value="{{ $radius }}" @selected((float) ($filters['radius_km'] ?? 25) === (float) $radius)>{{ $radius }} km</option>
+                                @endforeach
+                            </select>
+                            <input type="hidden" id="filter-near-lat" name="near_lat" value="{{ $filters['near_lat'] ?? '' }}">
+                            <input type="hidden" id="filter-near-lng" name="near_lng" value="{{ $filters['near_lng'] ?? '' }}">
+                            @if(!empty($filters['near_lat']) && !empty($filters['near_lng']))
+                                <a href="{{ route('catalog.public', $catalog->id) }}" class="btn btn-sm btn-link">Clear map filter</a>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
                     <div class="form-group col-md-2 col-6">
                         <label for="filter-tag" class="sr-only">Tag</label>
                         <select id="filter-tag" name="tag" class="custom-select">
@@ -511,25 +728,33 @@
             </form>
 
             <div class="catalog-results-meta">
+                @php $itemNoun = $presentation['item_noun'] ?? 'item'; $itemNounPlural = $presentation['item_noun_plural'] ?? 'items'; @endphp
                 @if($filteredTotal > 0)
-                    Showing {{ $items->firstItem() }}–{{ $items->lastItem() }} of {{ $filteredTotal }} product{{ $filteredTotal === 1 ? '' : 's' }}
+                    Showing {{ $items->firstItem() }}–{{ $items->lastItem() }} of {{ $filteredTotal }} {{ $filteredTotal === 1 ? $itemNoun : $itemNounPlural }}
                     @if($filteredTotal < $totalInCatalog)
                         ({{ $totalInCatalog }} total in catalog)
                     @endif
                 @else
-                    No products match your filters ({{ $totalInCatalog }} in catalog)
+                    No {{ $itemNounPlural }} match your filters ({{ $totalInCatalog }} in catalog)
                 @endif
             </div>
         @endif
 
         @if($totalInCatalog === 0)
             <div class="alert alert-info" role="alert">
-                <i class="fas fa-info-circle mr-2"></i>No products available in this catalog yet.
+                <i class="fas fa-info-circle mr-2"></i>No {{ $itemNounPlural }} available in this catalog yet.
             </div>
         @elseif($items->count() > 0)
+            @if(($presentation['supports_geo_map'] ?? false) && count($mapMarkers ?? []) > 0)
+                <div id="listingMap"></div>
+            @endif
             <div class="row">
                 @foreach($items as $item)
-                    @include('public.catalog.partials.product-card', ['item' => $item])
+                    @if($presentation['supports_cart'] ?? true)
+                        @include('public.catalog.partials.product-card', ['item' => $item])
+                    @else
+                        @include('public.catalog.partials.listing-card', ['item' => $item, 'presentation' => $presentation])
+                    @endif
                 @endforeach
             </div>
 
@@ -540,12 +765,13 @@
             @endif
         @else
             <div class="alert alert-warning" role="alert">
-                <i class="fas fa-search mr-2"></i>No products match your search or filters.
+                <i class="fas fa-search mr-2"></i>No {{ $presentation['item_noun_plural'] ?? 'items' }} match your search or filters.
                 <a href="{{ route('catalog.public', $catalog->id) }}" class="alert-link ml-1">Clear filters</a>
             </div>
         @endif
     </div>
 
+    @if($presentation['supports_cart'] ?? true)
     <!-- Cart Sidebar -->
     <div class="cart-sidebar" id="cartSidebar">
         <div class="cart-header">
@@ -559,6 +785,37 @@
             </div>
         </div>
         <div class="cart-footer">
+            <div id="cartSuccessBanner" class="cart-success-banner" style="display: none;" role="status"></div>
+            <div id="cartErrorBanner" class="cart-error-banner" style="display: none;" role="alert"></div>
+
+            <div id="deliveryDetailsSection" class="delivery-details-section" style="display: none;">
+                <div class="delivery-details-title">Delivery details</div>
+                <p class="delivery-details-hint">Required for Pay. Optional for WhatsApp — helps us fulfil your order faster.</p>
+
+                <div class="delivery-field" id="fieldCustomerName">
+                    <label for="customerName">Full name <span class="optional">(recommended)</span></label>
+                    <input type="text" id="customerName" name="customerName" autocomplete="name" placeholder="Your name">
+                    <div class="delivery-field-error" id="errorCustomerName"></div>
+                </div>
+
+                <div class="delivery-field" id="fieldCustomerPhone">
+                    <label for="customerPhone">Phone (M-Pesa / WhatsApp)</label>
+                    <input type="tel" id="customerPhone" name="customerPhone" autocomplete="tel" placeholder="e.g. 254712345678">
+                    <div class="delivery-field-error" id="errorCustomerPhone"></div>
+                </div>
+
+                <div class="delivery-field" id="fieldDeliveryAddress">
+                    <label for="deliveryAddress">Delivery address</label>
+                    <textarea id="deliveryAddress" name="deliveryAddress" rows="2" autocomplete="street-address" placeholder="Street, building, area, city"></textarea>
+                    <div class="delivery-field-error" id="errorDeliveryAddress"></div>
+                </div>
+
+                <div class="delivery-field" id="fieldOrderNotes">
+                    <label for="orderNotes">Order notes <span class="optional">(optional)</span></label>
+                    <textarea id="orderNotes" name="orderNotes" rows="2" placeholder="Delivery instructions, gate code, etc."></textarea>
+                </div>
+            </div>
+
             <div class="cart-total">
                 <span>Total:</span>
                 <span id="cartTotal">{{ $currencySymbol }} 0.00</span>
@@ -568,9 +825,10 @@
                     <i class="fab fa-whatsapp mr-2"></i>WhatsApp
                 </button>
                 <button class="checkout-btn" id="invoiceBtn" onclick="generateInvoice()" disabled style="background-color: #007bff;">
-                    <i class="fas fa-file-invoice mr-2"></i>Invoice
+                    <i class="fas fa-credit-card mr-2"></i>Pay
                 </button>
             </div>
+            <p class="delivery-details-hint" id="payHelperText" style="display: none; margin-top: 10px; margin-bottom: 0;">Invoice will be sent to your WhatsApp — open the link there when ready to pay.</p>
         </div>
     </div>
 
@@ -582,6 +840,60 @@
 
     <!-- Overlay -->
     <div class="overlay" id="overlay" onclick="toggleCart()"></div>
+    @endif
+
+    @if(!($presentation['supports_cart'] ?? true))
+    <div class="cart-sidebar" id="bookingSidebar">
+        <div class="cart-header">
+            <i class="fas fa-calendar-check mr-2"></i><span id="bookingPanelTitle">Book</span>
+            <button type="button" onclick="closeBookingPanel()" style="position: absolute; right: 15px; top: 15px; background: none; border: none; font-size: 20px; cursor: pointer;">×</button>
+        </div>
+        <div class="cart-items" style="padding: 20px;">
+            <div id="bookingSuccessBanner" class="cart-success-banner" style="display: none;" role="status"></div>
+            <div id="bookingErrorBanner" class="cart-error-banner" style="display: none;" role="alert"></div>
+
+            <div class="delivery-details-section" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+                <div class="delivery-details-title">Booking details</div>
+                <p class="delivery-details-hint" id="bookingDetailsHint">Required to send your booking request on WhatsApp.</p>
+
+                <div class="delivery-field" id="fieldBookingCustomerName">
+                    <label for="bookingCustomerName">Full name <span class="optional">(recommended)</span></label>
+                    <input type="text" id="bookingCustomerName" autocomplete="name" placeholder="Your name">
+                    <div class="delivery-field-error" id="errorBookingCustomerName"></div>
+                </div>
+
+                <div class="delivery-field" id="fieldBookingCustomerPhone">
+                    <label for="bookingCustomerPhone">Phone</label>
+                    <input type="tel" id="bookingCustomerPhone" autocomplete="tel" placeholder="e.g. 254712345678">
+                    <div class="delivery-field-error" id="errorBookingCustomerPhone"></div>
+                </div>
+
+                <div class="delivery-field" id="fieldBookingPreferredDateTime">
+                    <label for="bookingPreferredDateTime">Preferred date / time <span class="optional" id="bookingDateOptional">(optional)</span></label>
+                    <input type="text" id="bookingPreferredDateTime" placeholder="e.g. Saturday 10am or 2026-06-28 14:00">
+                    <div class="delivery-field-error" id="errorBookingPreferredDateTime"></div>
+                </div>
+
+                <div class="delivery-field" id="fieldBookingNotes">
+                    <label for="bookingNotes">Notes <span class="optional">(optional)</span></label>
+                    <textarea id="bookingNotes" rows="2" placeholder="Viewing request, questions, or special requests"></textarea>
+                    <div class="delivery-field-error" id="errorBookingNotes"></div>
+                </div>
+            </div>
+        </div>
+        <div class="cart-footer">
+            <button class="checkout-btn" id="bookingSubmitBtn" onclick="submitBookingRequest()" style="background-color: #25D366; width: 100%;">
+                <i class="fab fa-whatsapp mr-2"></i><span id="bookingSubmitLabel">Book on WhatsApp</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="overlay" id="bookingOverlay" onclick="closeBookingPanel()"></div>
+    @endif
+
+    @if(($presentation['supports_geo_map'] ?? false) && count($mapMarkers ?? []) > 0)
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    @endif
 
     <!-- Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -604,6 +916,7 @@
 
         const flowToken = @json($flowToken);
         const catalogId = {{ $catalog->id }};
+        const flowNodeSettings = @json($flowNodeSettings ?? []);
 
         function trackCatalogEvent(event, metadata = {}) {
             fetch(`/catalog/${catalogId}/events`, {
@@ -618,9 +931,127 @@
 
         trackCatalogEvent('view');
 
+        @if($presentation['supports_cart'] ?? true)
         // Cart state with selected variants
         let cart = JSON.parse(localStorage.getItem('catalog_{{ $catalog->id }}_cart')) || [];
         let selectedVariants = {};
+        const deliveryStorageKey = 'catalog_{{ $catalog->id }}_delivery';
+
+        function loadDeliveryDetails() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(deliveryStorageKey) || '{}');
+                document.getElementById('customerName').value = saved.customerName || '';
+                document.getElementById('customerPhone').value = saved.customerPhone || '';
+                document.getElementById('deliveryAddress').value = saved.deliveryAddress || '';
+                document.getElementById('orderNotes').value = saved.orderNotes || '';
+            } catch (e) {
+                // Ignore invalid saved data
+            }
+        }
+
+        function saveDeliveryDetails() {
+            const details = getDeliveryFormValues();
+            localStorage.setItem(deliveryStorageKey, JSON.stringify(details));
+        }
+
+        function getDeliveryFormValues() {
+            return {
+                customerName: document.getElementById('customerName').value.trim(),
+                customerPhone: document.getElementById('customerPhone').value.trim(),
+                deliveryAddress: document.getElementById('deliveryAddress').value.trim(),
+                orderNotes: document.getElementById('orderNotes').value.trim(),
+            };
+        }
+
+        function clearDeliveryFieldErrors() {
+            ['fieldCustomerName', 'fieldCustomerPhone', 'fieldDeliveryAddress'].forEach((id) => {
+                const field = document.getElementById(id);
+                if (field) {
+                    field.classList.remove('has-error');
+                }
+            });
+            ['errorCustomerName', 'errorCustomerPhone', 'errorDeliveryAddress'].forEach((id) => {
+                const error = document.getElementById(id);
+                if (error) {
+                    error.textContent = '';
+                }
+            });
+            hideCartBanners();
+        }
+
+        function setDeliveryFieldError(fieldId, errorId, message) {
+            document.getElementById(fieldId).classList.add('has-error');
+            document.getElementById(errorId).textContent = message;
+        }
+
+        function hideCartBanners() {
+            document.getElementById('cartSuccessBanner').style.display = 'none';
+            document.getElementById('cartErrorBanner').style.display = 'none';
+        }
+
+        function showCartSuccessBanner(message) {
+            const banner = document.getElementById('cartSuccessBanner');
+            banner.textContent = message;
+            banner.style.display = 'block';
+            document.getElementById('cartErrorBanner').style.display = 'none';
+        }
+
+        function showCartErrorBanner(message) {
+            const banner = document.getElementById('cartErrorBanner');
+            banner.textContent = message;
+            banner.style.display = 'block';
+            document.getElementById('cartSuccessBanner').style.display = 'none';
+        }
+
+        function validateDeliveryDetails(requireAddress = true) {
+            clearDeliveryFieldErrors();
+            const details = getDeliveryFormValues();
+            let valid = true;
+
+            if (!details.customerPhone) {
+                setDeliveryFieldError('fieldCustomerPhone', 'errorCustomerPhone', 'Phone number is required.');
+                valid = false;
+            } else if (details.customerPhone.replace(/\D/g, '').length < 9) {
+                setDeliveryFieldError('fieldCustomerPhone', 'errorCustomerPhone', 'Enter a valid phone number (e.g. 254712345678).');
+                valid = false;
+            }
+
+            if (requireAddress && !details.deliveryAddress) {
+                setDeliveryFieldError('fieldDeliveryAddress', 'errorDeliveryAddress', 'Delivery address is required for Pay.');
+                valid = false;
+            }
+
+            if (!valid) {
+                const firstError = document.querySelector('.delivery-field.has-error input, .delivery-field.has-error textarea');
+                if (firstError) {
+                    firstError.focus();
+                }
+            }
+
+            return valid ? details : null;
+        }
+
+        function updateDeliverySectionVisibility() {
+            const hasItems = cart.length > 0;
+            document.getElementById('deliveryDetailsSection').style.display = hasItems ? 'block' : 'none';
+            document.getElementById('payHelperText').style.display = hasItems ? 'block' : 'none';
+        }
+
+        ['customerName', 'customerPhone', 'deliveryAddress', 'orderNotes'].forEach((id) => {
+            const input = document.getElementById(id);
+            if (!input) {
+                return;
+            }
+            input.addEventListener('input', () => {
+                saveDeliveryDetails();
+                const field = input.closest('.delivery-field');
+                if (field) {
+                    field.classList.remove('has-error');
+                }
+            });
+        });
+
+        loadDeliveryDetails();
         
         // Initialize cart display
         updateCartDisplay();
@@ -672,6 +1103,7 @@
 
             saveCart();
             updateCartDisplay();
+            hideCartBanners();
             trackCatalogEvent('cart_add', { product_id: productId, quantity });
             
             // Reset quantity and variant
@@ -722,6 +1154,8 @@
                 cartBadge.style.display = 'none';
                 cartTotal.textContent = formatPrice(0);
                 checkoutBtn.disabled = true;
+                document.getElementById('invoiceBtn').disabled = true;
+                updateDeliverySectionVisibility();
                 return;
             }
 
@@ -756,6 +1190,7 @@
             cartTotal.textContent = formatPrice(total);
             checkoutBtn.disabled = false;
             document.getElementById('invoiceBtn').disabled = false;
+            updateDeliverySectionVisibility();
         }
 
         // Remove from cart
@@ -769,16 +1204,29 @@
         function proceedToCheckout() {
             if (cart.length === 0) return;
 
-            const whatsappNumber = "{{ $company->getConfig('whatsapp_phone_number', '') }}";
+            const whatsappNumber = @json($whatsappOrderNumber);
             if (!whatsappNumber) {
-                alert('WhatsApp number not configured for this seller. Please contact the seller directly.');
+                showCartErrorBanner('WhatsApp number not configured for this seller. Please contact the seller directly.');
                 return;
             }
+
+            const details = getDeliveryFormValues();
+            saveDeliveryDetails();
 
             const payload = {
                 items: cart.map(item => ({ id: item.id, quantity: item.quantity })),
                 flow_token: flowToken,
             };
+
+            if (details.customerName) {
+                payload.customerName = details.customerName;
+            }
+            if (details.customerPhone) {
+                payload.customerPhone = details.customerPhone;
+            }
+            if (details.orderNotes) {
+                payload.notes = details.orderNotes;
+            }
 
             fetch(`/catalog/${catalogId}/generate-order`, {
                 method: 'POST',
@@ -791,47 +1239,57 @@
             .then(r => r.json())
             .then(data => {
                 if (!data.success) {
-                    alert(data.message || 'Could not generate order');
+                    showCartErrorBanner(data.message || 'Could not generate order');
                     return;
                 }
 
+                hideCartBanners();
                 const encodedMessage = encodeURIComponent(data.message);
                 window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank');
             })
-            .catch(() => alert('Could not start WhatsApp checkout. Please try again.'));
+            .catch(() => showCartErrorBanner('Could not start WhatsApp checkout. Please try again.'));
         }
 
-        // Generate invoice and redirect to payment
+        // Generate invoice and send payment link via WhatsApp
         function generateInvoice() {
             if (cart.length === 0) return;
 
-            // Collect customer info
-            const customerName = prompt('Enter your name (optional):', '');
-            const customerPhone = prompt('Enter your phone number (required):', '');
-
-            if (!customerPhone) {
-                alert('Phone number is required');
+            const details = validateDeliveryDetails(true);
+            if (!details) {
+                showCartErrorBanner('Please complete the required delivery details below.');
                 return;
             }
 
-            const customerEmail = prompt('Enter your email (optional):', '');
+            saveDeliveryDetails();
 
-            // Calculate total
             let total = 0;
             cart.forEach(item => {
                 const price = parseFloat(item.price) || 0;
                 total += price * item.quantity;
             });
 
-            // Show loading
             const button = document.getElementById('invoiceBtn');
-            const originalText = button.textContent;
+            const originalHtml = button.innerHTML;
             button.disabled = true;
             button.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Creating...';
 
-            // Create invoice
             const csrfToken = document.querySelector('meta[name="csrf-token"]');
             const token = csrfToken ? csrfToken.getAttribute('content') : '';
+
+            const requestBody = {
+                items: cart,
+                customerPhone: details.customerPhone,
+                deliveryAddress: details.deliveryAddress,
+                amount: total.toFixed(2),
+                flow_token: flowToken,
+            };
+
+            if (details.customerName) {
+                requestBody.customerName = details.customerName;
+            }
+            if (details.orderNotes) {
+                requestBody.notes = details.orderNotes;
+            }
 
             fetch('/catalog/{{ $catalog->id }}/create-invoice', {
                 method: 'POST',
@@ -839,60 +1297,336 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': token,
                 },
-                body: JSON.stringify({
-                    items: cart,
-                    customerName: customerName || 'Guest Customer',
-                    customerPhone: customerPhone,
-                    customerEmail: customerEmail || null,
-                    amount: total.toFixed(2),
-                    flow_token: flowToken,
-                })
+                body: JSON.stringify(requestBody)
             })
             .then(response => {
-                // Check if response is actually JSON
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
-                    return response.text().then(text => {
-                        throw new Error('Server returned HTML instead of JSON. Status: ' + response.status);
+                    return response.text().then(() => {
+                        throw new Error('Server returned an unexpected response. Status: ' + response.status);
                     });
                 }
                 return response.json();
             })
             .then(data => {
                 button.disabled = false;
-                button.textContent = originalText;
+                button.innerHTML = originalHtml;
 
                 if (data.success) {
-                    // Show success message
-                    let successMsg = '✅ Invoice created successfully!';
+                    let successMsg = 'Invoice created successfully!';
                     if (data.invoice.whatsapp_sent) {
-                        successMsg += '\n📱 Invoice sent to WhatsApp';
+                        successMsg += ' It has been sent to your WhatsApp — open the link there when you are ready to pay.';
                     } else {
-                        successMsg += '\n⚠️ Invoice created but WhatsApp not configured';
+                        successMsg += ' WhatsApp delivery is not configured for this seller.';
                     }
 
-                    // Clear cart and close sidebar
                     cart = [];
                     saveCart();
                     updateCartDisplay();
-                    toggleCart();
-
-                    // Show message and redirect
-                    console.log(successMsg);
-                    setTimeout(() => {
-                        window.location.href = '/catalog/pay/' + data.invoice.id;
-                    }, 1500);
+                    showCartSuccessBanner(successMsg);
                 } else {
-                    alert('Error: ' + (data.message || 'Failed to create invoice'));
+                    showCartErrorBanner(data.message || 'Failed to create invoice');
                 }
             })
             .catch(error => {
                 button.disabled = false;
-                button.textContent = originalText;
+                button.innerHTML = originalHtml;
                 console.error('Invoice creation error:', error);
-                alert('Error creating invoice: ' + error.message);
+                showCartErrorBanner('Error creating invoice: ' + error.message);
             });
         }
+        @else
+        let selectedBookingItemId = null;
+        let selectedBookingItemTitle = '';
+        const bookingStorageKey = 'catalog_{{ $catalog->id }}_booking';
+        const completionType = flowNodeSettings.completionType || 'booking';
+        const requirePreferredDateTime = !!flowNodeSettings.requirePreferredDateTime;
+
+        function loadBookingDetails() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(bookingStorageKey) || '{}');
+                document.getElementById('bookingCustomerName').value = saved.customerName || '';
+                document.getElementById('bookingCustomerPhone').value = saved.customerPhone || '';
+                document.getElementById('bookingPreferredDateTime').value = saved.preferredDateTime || '';
+                document.getElementById('bookingNotes').value = saved.notes || '';
+            } catch (e) {
+                // Ignore invalid saved data
+            }
+        }
+
+        function saveBookingDetails() {
+            localStorage.setItem(bookingStorageKey, JSON.stringify(getBookingFormValues()));
+        }
+
+        function getBookingFormValues() {
+            return {
+                customerName: document.getElementById('bookingCustomerName').value.trim(),
+                customerPhone: document.getElementById('bookingCustomerPhone').value.trim(),
+                preferredDateTime: document.getElementById('bookingPreferredDateTime').value.trim(),
+                notes: document.getElementById('bookingNotes').value.trim(),
+            };
+        }
+
+        function clearBookingFieldErrors() {
+            ['fieldBookingCustomerName', 'fieldBookingCustomerPhone', 'fieldBookingPreferredDateTime', 'fieldBookingNotes'].forEach((id) => {
+                const field = document.getElementById(id);
+                if (field) {
+                    field.classList.remove('has-error');
+                }
+            });
+            ['errorBookingCustomerName', 'errorBookingCustomerPhone', 'errorBookingPreferredDateTime', 'errorBookingNotes'].forEach((id) => {
+                const error = document.getElementById(id);
+                if (error) {
+                    error.textContent = '';
+                }
+            });
+            hideBookingBanners();
+        }
+
+        function setBookingFieldError(fieldId, errorId, message) {
+            document.getElementById(fieldId).classList.add('has-error');
+            document.getElementById(errorId).textContent = message;
+        }
+
+        function hideBookingBanners() {
+            document.getElementById('bookingSuccessBanner').style.display = 'none';
+            document.getElementById('bookingErrorBanner').style.display = 'none';
+        }
+
+        function showBookingErrorBanner(message) {
+            hideBookingBanners();
+            const banner = document.getElementById('bookingErrorBanner');
+            banner.textContent = message;
+            banner.style.display = 'block';
+        }
+
+        function showBookingSuccessBanner(message) {
+            hideBookingBanners();
+            const banner = document.getElementById('bookingSuccessBanner');
+            banner.textContent = message;
+            banner.style.display = 'block';
+        }
+
+        function validateBookingDetails() {
+            clearBookingFieldErrors();
+            const details = getBookingFormValues();
+            let valid = true;
+
+            if (completionType !== 'inquiry' && !details.customerPhone) {
+                setBookingFieldError('fieldBookingCustomerPhone', 'errorBookingCustomerPhone', 'Phone is required.');
+                valid = false;
+            }
+
+            if (requirePreferredDateTime && !details.preferredDateTime) {
+                setBookingFieldError('fieldBookingPreferredDateTime', 'errorBookingPreferredDateTime', 'Preferred date and time is required.');
+                valid = false;
+            }
+
+            if (!valid) {
+                const firstError = document.querySelector('#bookingSidebar .delivery-field.has-error input, #bookingSidebar .delivery-field.has-error textarea');
+                if (firstError) {
+                    firstError.focus();
+                }
+            }
+
+            return valid ? details : null;
+        }
+
+        function openBookingPanel(itemId, itemTitle) {
+            selectedBookingItemId = itemId;
+            selectedBookingItemTitle = itemTitle || 'Listing';
+            document.getElementById('bookingPanelTitle').textContent = completionType === 'inquiry'
+                ? 'Inquire: ' + selectedBookingItemTitle
+                : 'Book: ' + selectedBookingItemTitle;
+
+            const submitLabel = document.getElementById('bookingSubmitLabel');
+            submitLabel.textContent = completionType === 'inquiry' ? 'Inquire on WhatsApp' : @json($presentation['cta_label'] ?? 'Book on WhatsApp');
+
+            const dateOptional = document.getElementById('bookingDateOptional');
+            if (dateOptional) {
+                dateOptional.textContent = requirePreferredDateTime ? '' : '(optional)';
+            }
+
+            const phoneField = document.getElementById('fieldBookingCustomerPhone');
+            const dateField = document.getElementById('fieldBookingPreferredDateTime');
+            if (phoneField) {
+                phoneField.style.display = completionType === 'inquiry' ? 'none' : 'block';
+            }
+            if (dateField) {
+                dateField.style.display = completionType === 'inquiry' ? 'none' : 'block';
+            }
+
+            loadBookingDetails();
+            hideBookingBanners();
+            document.getElementById('bookingSidebar').classList.add('open');
+            document.getElementById('bookingOverlay').classList.add('visible');
+        }
+
+        function closeBookingPanel() {
+            document.getElementById('bookingSidebar').classList.remove('open');
+            document.getElementById('bookingOverlay').classList.remove('visible');
+        }
+
+        function submitBookingRequest() {
+            if (!selectedBookingItemId) {
+                return;
+            }
+
+            const details = validateBookingDetails();
+            if (!details) {
+                showBookingErrorBanner('Please complete the required booking details.');
+                return;
+            }
+
+            saveBookingDetails();
+
+            const endpoint = completionType === 'inquiry'
+                ? `/catalog/${catalogId}/generate-inquiry`
+                : `/catalog/${catalogId}/generate-booking`;
+
+            const payload = {
+                item_id: selectedBookingItemId,
+                customerName: details.customerName || null,
+                notes: details.notes || null,
+                flow_token: flowToken,
+            };
+
+            if (completionType !== 'inquiry') {
+                payload.customerPhone = details.customerPhone;
+                payload.preferredDateTime = details.preferredDateTime || null;
+            }
+
+            const button = document.getElementById('bookingSubmitBtn');
+            const originalHtml = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Sending...';
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify(payload),
+            })
+            .then(response => response.json())
+            .then(data => {
+                button.disabled = false;
+                button.innerHTML = originalHtml;
+
+                if (!data.success) {
+                    showBookingErrorBanner(data.message || 'Could not start WhatsApp booking.');
+                    return;
+                }
+
+                trackCatalogEvent(completionType === 'inquiry' ? 'listing_inquiry' : 'listing_booking', {
+                    item_id: selectedBookingItemId,
+                });
+
+                if (data.whatsapp_url) {
+                    window.open(data.whatsapp_url, '_blank');
+                    showBookingSuccessBanner('Open WhatsApp and send the message to continue in chat.');
+                    return;
+                }
+
+                showBookingErrorBanner('WhatsApp number is not configured for this business.');
+            })
+            .catch(() => {
+                button.disabled = false;
+                button.innerHTML = originalHtml;
+                showBookingErrorBanner('Could not start WhatsApp booking. Please try again.');
+            });
+        }
+
+        ['bookingCustomerName', 'bookingCustomerPhone', 'bookingPreferredDateTime', 'bookingNotes'].forEach((id) => {
+            const input = document.getElementById(id);
+            if (!input) {
+                return;
+            }
+            input.addEventListener('input', () => {
+                saveBookingDetails();
+                const field = input.closest('.delivery-field');
+                if (field) {
+                    field.classList.remove('has-error');
+                }
+            });
+        });
+
+        loadBookingDetails();
+
+        function listingGalleryGo(cardId, index) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            const slides = card.querySelectorAll('.listing-gallery-slide');
+            const dots = card.querySelectorAll('.gallery-dot');
+            slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+            dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+        }
+
+        function listingGalleryPrev(cardId) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            const slides = card.querySelectorAll('.listing-gallery-slide');
+            const current = [...slides].findIndex(slide => slide.classList.contains('active'));
+            const next = current <= 0 ? slides.length - 1 : current - 1;
+            listingGalleryGo(cardId, next);
+        }
+
+        function listingGalleryNext(cardId) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            const slides = card.querySelectorAll('.listing-gallery-slide');
+            const current = [...slides].findIndex(slide => slide.classList.contains('active'));
+            const next = current >= slides.length - 1 ? 0 : current + 1;
+            listingGalleryGo(cardId, next);
+        }
+
+        function useMyLocationForFilter() {
+            if (!navigator.geolocation) {
+                alert('Location is not supported in this browser.');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition((position) => {
+                document.getElementById('filter-near-lat').value = position.coords.latitude;
+                document.getElementById('filter-near-lng').value = position.coords.longitude;
+                document.getElementById('catalogFiltersForm').submit();
+            }, () => alert('Could not access your location.'));
+        }
+
+        @if(($presentation['supports_geo_map'] ?? false) && count($mapMarkers ?? []) > 0)
+        const listingMapMarkers = @json($mapMarkers);
+        @endif
+        @endif
     </script>
+    @if(($presentation['supports_geo_map'] ?? false) && count($mapMarkers ?? []) > 0)
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!window.L || !listingMapMarkers || listingMapMarkers.length === 0) {
+                return;
+            }
+
+            const map = L.map('listingMap');
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors',
+            }).addTo(map);
+
+            const bounds = [];
+            listingMapMarkers.forEach((marker) => {
+                const popup = `<strong>${marker.title}</strong>`;
+                L.marker([marker.lat, marker.lng]).addTo(map).bindPopup(popup);
+                bounds.push([marker.lat, marker.lng]);
+            });
+
+            if (bounds.length === 1) {
+                map.setView(bounds[0], 13);
+            } else {
+                map.fitBounds(bounds, { padding: [24, 24] });
+            }
+        });
+    </script>
+    @endif
 </body>
 </html>

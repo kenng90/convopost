@@ -9,6 +9,7 @@ use Modules\Reminders\Models\Department;
 use Modules\Reminders\Models\Source;
 use Modules\Reminders\Models\SourceStaff;
 use Modules\Reminders\Services\SourceReminderSyncService;
+use Modules\Reminders\Support\BookingPaymentConfig;
 use Modules\Reminders\Support\WorkingHours;
 use Modules\Wpbox\Models\Campaign;
 
@@ -45,6 +46,10 @@ class SourcesController extends Controller
 
         $fields[] = ['class' => $class, 'ftype' => 'input', 'name' => __('Service name'), 'id' => 'name', 'placeholder' => 'Consultation', 'required' => true, 'value' => $source?->name];
         $fields[] = ['class' => $class, 'ftype' => 'bool', 'name' => __('Bookable online'), 'id' => 'is_bookable', 'required' => false, 'value' => $source?->is_bookable ?? true];
+        $fields[] = ['class' => $class, 'ftype' => 'bool', 'name' => __('Require payment'), 'id' => 'payment_required', 'required' => false, 'value' => $source?->payment_required ?? false, 'additionalInfo' => __('When enabled, customers must pay via M-Pesa before the appointment is confirmed.')];
+        $fields[] = ['class' => $class, 'ftype' => 'input', 'type' => 'number', 'name' => __('Total amount'), 'id' => 'payment_amount', 'placeholder' => '1500', 'required' => false, 'value' => $source?->payment_amount, 'additionalInfo' => __('Full service price in the selected currency.')];
+        $fields[] = ['class' => $class, 'ftype' => 'input', 'type' => 'number', 'name' => __('Upfront payment (%)'), 'id' => 'payment_upfront_percent', 'placeholder' => '100', 'required' => false, 'value' => $source?->payment_upfront_percent ?? 100, 'additionalInfo' => __('Percentage of the total collected via M-Pesa to confirm the booking. Use 100 for full payment.')];
+        $fields[] = ['class' => $class, 'ftype' => 'input', 'name' => __('Payment currency'), 'id' => 'payment_currency', 'placeholder' => 'KES', 'required' => false, 'value' => $source?->payment_currency ?? 'KES'];
 
         $fields[] = [
             'class' => $class,
@@ -54,7 +59,7 @@ class SourcesController extends Controller
             'required' => false,
             'value' => $source?->department_id,
             'data' => ['' => __('All departments')] + Department::query()->orderBy('name')->pluck('name', 'id')->toArray(),
-            'additionalInfo' => __('Optional. Limits which appointment team members can be assigned.'),
+            'additionalInfo' => __('Optional. Limits which team members can be assigned to this service.'),
         ];
 
         $fields[] = [
@@ -145,7 +150,7 @@ class SourcesController extends Controller
         $fields[] = [
             'class' => $class,
             'ftype' => 'select',
-            'name' => __('Assigned appointment team'),
+            'name' => __('Assigned team'),
             'id' => 'appointment_staff_ids[]',
             'placeholder' => __('Select team members'),
             'required' => false,
@@ -164,7 +169,7 @@ class SourcesController extends Controller
             'ftype' => 'info',
             'id' => 'client_notifications_intro',
             'name' => __('Client notifications'),
-            'text' => __('WhatsApp messages sent to the client before and after their appointment. When you save this service, matching rules appear automatically under Notification rules — edit them here.'),
+            'text' => __('WhatsApp messages sent to the client before and after their appointment. When you save this service, matching rules appear automatically under Client notifications — edit them here.'),
             'button' => [
                 'link' => route('reminders.reminders.index'),
                 'text' => __('View synced rules'),
@@ -269,6 +274,7 @@ class SourcesController extends Controller
         return view($this->view_path.'index', ['setup' => [
             'usefilter' => true,
             'title' => __('Services'),
+            'subtitle' => __('Bookable appointment types for your public booking page.'),
             'action_link' => route($this->webroute_path.'create'),
             'action_name' => __('Add service'),
             'items' => $items,
@@ -279,6 +285,7 @@ class SourcesController extends Controller
             'custom_table' => true,
             'parameter_name' => $this->parameter_name,
             'parameters' => count($_GET) != 0,
+            'getting_started_type' => 'services',
             'breadcrumbs' => [
                 [__('Services'), '#'],
             ],
@@ -378,6 +385,12 @@ class SourcesController extends Controller
         return [
             'name' => $request->name,
             'is_bookable' => $request->boolean('is_bookable'),
+            'payment_required' => $request->boolean('payment_required'),
+            'payment_amount' => $request->filled('payment_amount') ? $request->input('payment_amount') : null,
+            'payment_upfront_percent' => $request->boolean('payment_required')
+                ? BookingPaymentConfig::normalizeUpfrontPercent($request->input('payment_upfront_percent'))
+                : null,
+            'payment_currency' => strtoupper((string) $request->input('payment_currency', 'KES')),
             'department_id' => $request->input('department_id') ?: null,
             'default_duration_minutes' => (int) $request->input('default_duration_minutes', 30),
             'duration_options' => $durationOptions ?: [(int) $request->input('default_duration_minutes', 30)],

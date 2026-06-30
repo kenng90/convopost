@@ -7,8 +7,6 @@ use App\Models\Company;
 use App\Models\User;
 use App\Models\WhatsappFlow;
 use App\Models\WhatsappFlowResponse;
-use App\Services\WhatsappFlowEndpointHandlers\BookingServicesHandler;
-use App\Services\WhatsappFlowEndpointHandlers\BookingSlotsHandler;
 use App\Traits\EnsuresOpenSsl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -21,12 +19,6 @@ class FlowsWebhookController extends Controller
 {
     use Contacts;
     use EnsuresOpenSsl;
-
-    public function __construct(
-        private readonly BookingSlotsHandler $bookingSlotsHandler,
-        private readonly BookingServicesHandler $bookingServicesHandler,
-    ) {
-    }
 
     /**
      * Handle GET — Meta webhook verification (hub challenge).
@@ -328,19 +320,31 @@ class FlowsWebhookController extends Controller
      */
     protected function initDataForScreen(?WhatsappFlow $flow, string $screenId): array
     {
-        if ($this->bookingServicesHandler->supportsScreen($flow, $screenId)) {
-            return $this->bookingServicesHandler->initData($flow);
+        if (! $flow) {
+            return [];
         }
 
-        if ($this->bookingSlotsHandler->supportsScreen($flow, $screenId)) {
-            if ($flow?->company_id) {
-                session(['company_id' => $flow->company_id]);
-            }
+        $screens = $flow->flow_json['screens'] ?? [];
+        $screen = collect($screens)->firstWhere('id', $screenId) ?? ($screens[0] ?? null);
 
-            return $this->bookingSlotsHandler->initData();
+        if (! is_array($screen)) {
+            return [];
         }
 
-        return [];
+        $dynamicEntries = $screen['dynamic_data'] ?? [];
+        if ($dynamicEntries === []) {
+            return [];
+        }
+
+        $builder = app(\App\Services\WhatsappFlowDynamicDataBuilder::class);
+        $schema = $builder->entriesToMetaSchema($dynamicEntries);
+        $initData = [];
+
+        foreach ($schema as $key => $definition) {
+            $initData[$key] = $definition['__example__'] ?? '';
+        }
+
+        return $initData;
     }
 
     /**
@@ -349,20 +353,30 @@ class FlowsWebhookController extends Controller
      */
     protected function resolveTemplateDataExchange(?WhatsappFlow $flow, ?string $screen, array $data): ?array
     {
-        if (! $screen || ! $flow) {
+        if (! $flow || ! $screen) {
             return null;
         }
 
-        if ($this->bookingServicesHandler->supportsScreen($flow, $screen)) {
-            return $this->bookingServicesHandler->handleDataExchange($screen, $data, $flow);
+        $screens = $flow->flow_json['screens'] ?? [];
+        $screenData = collect($screens)->firstWhere('id', $screen);
+
+        if (! is_array($screenData)) {
+            return null;
         }
 
-        if ($this->bookingSlotsHandler->supportsScreen($flow, $screen)) {
-            if ($flow->company_id) {
-                session(['company_id' => $flow->company_id]);
-            }
+        $endpointTemplate = $screenData['endpoint_template'] ?? null;
+        if (empty($endpointTemplate)) {
+            return null;
+        }
 
-            return $this->bookingSlotsHandler->handleDataExchange($screen, $data, $flow);
+        // Built-in template: pass dynamic option lists from screen schema examples
+        if ($endpointTemplate === 'dynamic_options') {
+            $initData = $this->initDataForScreen($flow, $screen);
+
+            return [
+                'screen' => $screen,
+                'data' => (object) $initData,
+            ];
         }
 
         return null;

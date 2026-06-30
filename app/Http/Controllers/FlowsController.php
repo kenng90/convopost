@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\WhatsappFlow;
+use App\Services\WhatsappFlowSendService;
+use App\Services\WhatsappFlowSubmissionService;
+use App\Services\WhatsappFormTemplateService;
 use App\Services\WhatsappMetaFlowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -59,16 +62,19 @@ class FlowsController extends Controller
             $companyId = $this->activeCompanyId();
 
             $flows = WhatsappFlow::where('company_id', $companyId)
-                ->where('status', '!=', 'archived')
+                ->publishedToMeta()
                 ->orderByDesc('updated_at')
                 ->get()
                 ->map(function ($flow) {
+                    $submissionService = app(WhatsappFlowSubmissionService::class);
+
                     return [
                         'id' => $flow->id,
                         'name' => $flow->name,
                         'status' => $flow->status,
                         'meta_flow_id' => $flow->meta_flow_id,
                         'screen_count' => count($flow->flow_json['screens'] ?? []),
+                        'fields' => $submissionService->getFieldOptionsForForm($flow),
                     ];
                 });
 
@@ -586,5 +592,102 @@ class FlowsController extends Controller
         }
 
         return $user->activeCompanyId();
+    }
+
+    /**
+     * Get form field definitions for conditional routing in Flowmaker.
+     */
+    public function getFields(int $id): \Illuminate\Http\JsonResponse
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $companyId = $this->activeCompanyId();
+        $flow = WhatsappFlow::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+        $fields = app(WhatsappFlowSubmissionService::class)->getFieldOptionsForForm($flow);
+
+        return response()->json(['success' => true, 'fields' => $fields]);
+    }
+
+    /**
+     * Send a test form to a phone number.
+     */
+    public function testSend(int $id, Request $request): \Illuminate\Http\JsonResponse
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'phone' => 'required|string|max:30',
+        ]);
+
+        $companyId = $this->activeCompanyId();
+        $flow = WhatsappFlow::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+
+        $result = app(WhatsappFlowSendService::class)->sendTest(
+            $flow,
+            $validated['phone'],
+            $companyId
+        );
+
+        return response()->json($result, ($result['success'] ?? false) ? 200 : 422);
+    }
+
+    /**
+     * List available form templates for the builder gallery.
+     */
+    public function listTemplates(): \Illuminate\Http\JsonResponse
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        return response()->json([
+            'success' => true,
+            'templates' => app(WhatsappFormTemplateService::class)->listForGallery(),
+        ]);
+    }
+
+    /**
+     * Create a draft form from a template bundle.
+     */
+    public function createFromBundle(string $key, Request $request): \Illuminate\Http\JsonResponse
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        try {
+            $companyId = $this->activeCompanyId();
+            $flow = app(WhatsappFormTemplateService::class)->createFromTemplate(
+                $key,
+                $companyId,
+                $request->input('name')
+            );
+
+            return response()->json([
+                'success' => true,
+                'flow' => [
+                    'id' => $flow->id,
+                    'name' => $flow->name,
+                ],
+                'redirect' => route('whatsapp-flows.edit', $flow->id),
+            ], 201);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 404);
+        }
+    }
+
+    /**
+     * Deep-link helper: use form in Flowmaker automation builder.
+     */
+    public function useInAutomation(int $id): \Illuminate\Http\RedirectResponse
+    {
+        $companyId = $this->activeCompanyId();
+        WhatsappFlow::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+
+        return redirect()->route('flows.index', ['prefillWhatsappFormId' => $id]);
     }
 }

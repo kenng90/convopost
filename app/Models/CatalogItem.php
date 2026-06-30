@@ -104,7 +104,7 @@ class CatalogItem extends Model
      */
     public function toCatalogArray(): array
     {
-        return [
+        $array = [
             'id' => $this->item_id,
             'title' => $this->title,
             'description' => $this->description ?? '',
@@ -116,6 +116,23 @@ class CatalogItem extends Model
             'variants' => $this->variants ?? [],
             'tags' => $this->tags ?? [],
         ];
+
+        $metadata = is_array($this->metadata) ? $this->metadata : [];
+        if (isset($metadata['images']) && is_array($metadata['images'])) {
+            $array['images'] = $metadata['images'];
+        }
+
+        if ($metadata !== []) {
+            $array['metadata'] = $metadata;
+
+            foreach ($metadata as $key => $value) {
+                if (! array_key_exists($key, $array) && $value !== null && $value !== '') {
+                    $array[$key] = $value;
+                }
+            }
+        }
+
+        return $array;
     }
 
     /**

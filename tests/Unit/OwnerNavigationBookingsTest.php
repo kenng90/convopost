@@ -13,7 +13,7 @@ class OwnerNavigationBookingsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_appointment_menus_are_under_automations_and_setup_is_under_setup(): void
+    public function test_bookings_menu_is_unified_under_automations(): void
     {
         Role::firstOrCreate(['name' => 'owner']);
 
@@ -28,24 +28,37 @@ class OwnerNavigationBookingsTest extends TestCase
 
         $this->assertNotNull($automations);
 
-        $appointmentsMenu = collect($automations['menus'])->firstWhere('id', 'appointmentsMenu');
-        $eventsMenu = collect($automations['menus'])->firstWhere('id', 'eventsMenu');
+        $bookingsMenu = collect($automations['menus'])->firstWhere('id', 'bookingsMenu');
 
-        $this->assertNotNull($appointmentsMenu);
-        $this->assertSame('Appointments', $appointmentsMenu['name']);
-        $this->assertNotNull($eventsMenu);
-        $this->assertSame('Events', $eventsMenu['name']);
+        $this->assertNotNull($bookingsMenu);
+        $this->assertSame('Bookings', $bookingsMenu['name']);
+        $this->assertSame('reminders.overview.index', $bookingsMenu['route']);
+        $this->assertTrue($bookingsMenu['navSectionsCollapsible'] ?? false);
+
+        $submenuRoutes = collect($bookingsMenu['menus'])->pluck('route')->all();
+
+        $this->assertContains('reminders.reservations.index', $submenuRoutes);
+        $this->assertContains('reminders.sources.index', $submenuRoutes);
+        $this->assertContains('reminders.events.index', $submenuRoutes);
+        $this->assertContains('reminders.appointment-staff.index', $submenuRoutes);
+        $this->assertContains('reminders.departments.index', $submenuRoutes);
+        $this->assertContains('reminders.reminders.index', $submenuRoutes);
+        $this->assertContains('reminders.booking-settings.index', $submenuRoutes);
+
+        $this->assertNull(collect($automations['menus'])->firstWhere('id', 'appointmentsMenu'));
+        $this->assertNull(collect($automations['menus'])->firstWhere('id', 'eventsMenu'));
         $this->assertNull(collect($automations['menus'])->firstWhere('id', 'bookingSetupMenu'));
 
-        $setup = collect($sections)->firstWhere('label', __('Setup'));
-        $this->assertNotNull($setup);
+        $allMenuIds = collect($sections)
+            ->flatMap(fn (array $section) => $section['menus'] ?? [])
+            ->pluck('id')
+            ->filter()
+            ->all();
 
-        $bookingSetupMenu = collect($setup['menus'])->firstWhere('id', 'bookingSetupMenu');
-        $this->assertNotNull($bookingSetupMenu);
-        $this->assertSame('Booking setup', $bookingSetupMenu['name']);
+        $this->assertNotContains('bookingSetupMenu', $allMenuIds);
     }
 
-    public function test_events_menu_is_hidden_when_feature_disabled(): void
+    public function test_event_submenus_are_hidden_when_feature_disabled(): void
     {
         Role::firstOrCreate(['name' => 'owner']);
 
@@ -60,7 +73,15 @@ class OwnerNavigationBookingsTest extends TestCase
         $automations = collect($sections)->firstWhere('label', __('Automations & commerce'));
 
         $this->assertNotNull($automations);
-        $this->assertNull(collect($automations['menus'])->firstWhere('id', 'eventsMenu'));
-        $this->assertNotNull(collect($automations['menus'])->firstWhere('id', 'appointmentsMenu'));
+
+        $bookingsMenu = collect($automations['menus'])->firstWhere('id', 'bookingsMenu');
+        $this->assertNotNull($bookingsMenu);
+
+        $submenuRoutes = collect($bookingsMenu['menus'])->pluck('route')->all();
+
+        $this->assertNotContains('reminders.events.index', $submenuRoutes);
+        $this->assertNotContains('reminders.event-registrations.index', $submenuRoutes);
+        $this->assertContains('reminders.reservations.index', $submenuRoutes);
+        $this->assertContains('reminders.overview.index', $submenuRoutes);
     }
 }

@@ -33,34 +33,59 @@
         },
         {
             "separator":"Bookings",
-            "title":"Show booking customers in inbox",
+            "title":"Show appointment and event customers in inbox",
             "key":"BOOKING_CONTACTS_IN_INBOX",
             "ftype":"bool",
             "icon":"💬",
-            "value":false
+            "value":false,
+            "help":"Automatically add customers who book an appointment or register for an event to the chat inbox."
         },
         {
             "separator":"Bookings",
-            "title":"Enable events booking",
+            "title":"Show Events section under Bookings",
             "key":"ENABLE_EVENTS_BOOKING",
             "ftype":"bool",
             "icon":"🎟️",
             "value":true
+        },
+        {
+            "separator":"Bookings",
+            "title":"Default phone country on booking forms",
+            "key":"BOOKING_DEFAULT_PHONE_COUNTRY",
+            "ftype":"select",
+            "icon":"📱",
+            "value":"ke",
+            "data":{
+                "ke":"Kenya (+254)",
+                "ug":"Uganda (+256)",
+                "tz":"Tanzania (+255)",
+                "ng":"Nigeria (+234)",
+                "za":"South Africa (+27)",
+                "gb":"United Kingdom (+44)",
+                "us":"United States (+1)"
+            }
         }
     ],
     "ownermenus":[
         {
-            "id":"appointmentsMenu",
-            "name":"Appointments",
+            "id":"bookingsMenu",
+            "name":"Bookings",
             "priority":5,
-            "icon":"ni ni-time-alarm text-primary",
-            "route":"reminders.reservations.index",
+            "icon":"ni ni-calendar-grid-58 text-primary",
+            "route":"reminders.overview.index",
             "isGroup":true,
+            "navSectionsCollapsible":true,
             "menus":[
                 {
-                    "name": "Appointment list",
-                    "icon": "ni ni-calendar-grid-58 text-primary",
-                    "route": "reminders.reservations.index"
+                    "name": "Overview",
+                    "icon": "ni ni-shop text-primary",
+                    "route": "reminders.overview.index"
+                },
+                {
+                    "name": "Appointments",
+                    "icon": "ni ni-time-alarm text-primary",
+                    "route": "reminders.reservations.index",
+                    "navSection": "Appointments"
                 },
                 {
                     "name": "Services",
@@ -68,53 +93,40 @@
                     "route": "reminders.sources.index"
                 },
                 {
-                    "name": "Departments",
-                    "icon": "ni ni-building text-primary",
-                    "route": "reminders.departments.index"
-                },
-                {
-                    "name": "Appointment team",
-                    "icon": "ni ni-single-02 text-primary",
-                    "route": "reminders.appointment-staff.index"
-                }
-            ]
-        },
-        {
-            "id":"eventsMenu",
-            "name":"Events",
-            "priority":6,
-            "icon":"ni ni-badge text-info",
-            "route":"reminders.events.index",
-            "isGroup":true,
-            "requires_company_config":{
-                "key":"ENABLE_EVENTS_BOOKING",
-                "equals":"true"
-            },
-            "menus":[
-                {
-                    "name": "Event list",
+                    "name": "Events",
                     "icon": "ni ni-calendar-grid-58 text-info",
-                    "route": "reminders.events.index"
+                    "route": "reminders.events.index",
+                    "navSection": "Events",
+                    "requires_company_config": {
+                        "key": "ENABLE_EVENTS_BOOKING",
+                        "equals": "true"
+                    }
                 },
                 {
                     "name": "Registrations",
                     "icon": "ni ni-single-copy-04 text-info",
-                    "route": "reminders.event-registrations.index"
-                }
-            ]
-        },
-        {
-            "id":"bookingSetupMenu",
-            "name":"Booking setup",
-            "priority":7,
-            "icon":"ni ni-settings text-green",
-            "route":"reminders.booking-settings.index",
-            "isGroup":true,
-            "menus":[
+                    "route": "reminders.event-registrations.index",
+                    "requires_company_config": {
+                        "key": "ENABLE_EVENTS_BOOKING",
+                        "equals": "true"
+                    }
+                },
+                {
+                    "name": "Team",
+                    "icon": "ni ni-single-02 text-default",
+                    "route": "reminders.appointment-staff.index",
+                    "navSection": "Shared setup"
+                },
+                {
+                    "name": "Departments",
+                    "icon": "ni ni-building text-default",
+                    "route": "reminders.departments.index"
+                },
                 {
                     "name": "Client notifications",
-                    "icon": "ni ni-bell-55 text-primary",
-                    "route": "reminders.reminders.index"
+                    "icon": "ni ni-bell-55 text-green",
+                    "route": "reminders.reminders.index",
+                    "navSection": "Settings"
                 },
                 {
                     "name": "Booking settings",

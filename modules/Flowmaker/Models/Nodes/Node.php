@@ -2,21 +2,26 @@
 
 namespace Modules\Flowmaker\Models\Nodes;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-
-class Node extends Model
+class Node
 {
-   
     public $edges;
+
     public $incomingEdges;
+
     public $outgoingEdges;
+
     public $data;
+
     public $id;
+
     public $type;
+
     public $isStartNode;
+
+    public $flow_id;
 
     public function __construct($nodeData, $edges)
     {
@@ -49,19 +54,20 @@ class Node extends Model
 
     /**
      * Process the message and return next node information
-     * 
-     * @param string $message The message to process
-     * @param array $data Additional data needed for processing
+     *
+     * @param  string  $message  The message to process
+     * @param  array  $data  Additional data needed for processing
      * @return array Processing result with success status and next node ID
      */
-     public function process($message, $data){
-       Log::info('Processing message in normal node', ['message' => $message, 'data' => $data]);
-     }
+    public function process($message, $data)
+    {
+        Log::info('Processing message in normal node', ['message' => $message, 'data' => $data]);
+    }
 
     /**
      * Get the next connected node ID
      */
-    protected function getNextNodeId($param=null)
+    protected function getNextNodeId($param = null)
     {
         if (empty($this->edges)) {
             return null;
@@ -82,11 +88,12 @@ class Node extends Model
     {
         return json_encode([
             'id' => $this->id,
-            'type' => $this->type
+            'type' => $this->type,
         ]);
     }
 
-    public function getMediaUrl($mediaUrl){
+    public function getMediaUrl($mediaUrl)
+    {
         // Check if the mediaUrl already has /storage/ in it
         if (strpos($mediaUrl, '/storage/') === 0) {
             // If it starts with /storage/, just add the base URL

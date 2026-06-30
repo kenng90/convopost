@@ -63,6 +63,8 @@ class FlowBuilderController extends Controller
                 'meta_flow_id' => $flow->meta_flow_id,
                 'meta_error' => $flow->meta_error,
                 'published_at' => $flow->published_at?->toIso8601String(),
+                'webhook_url' => $flow->webhook_url,
+                'webhook_enabled' => (bool) $flow->webhook_enabled,
                 'screens' => $flow->flow_json['screens'] ?? [],
             ],
             'endpoint_url' => $endpointUrl,
@@ -107,6 +109,8 @@ class FlowBuilderController extends Controller
             'description' => 'nullable|string',
             'category' => 'nullable|string',
             'screens' => 'required|array',
+            'webhook_url' => 'nullable|url|max:2048',
+            'webhook_enabled' => 'nullable|boolean',
         ]);
 
         $user = Auth::user();
@@ -141,6 +145,8 @@ class FlowBuilderController extends Controller
             'description' => 'nullable|string',
             'category' => 'nullable|string',
             'screens' => 'required|array',
+            'webhook_url' => 'nullable|url|max:2048',
+            'webhook_enabled' => 'nullable|boolean',
         ]);
 
         $flow->update([
@@ -148,6 +154,8 @@ class FlowBuilderController extends Controller
             'description' => $data['description'] ?? $flow->description,
             'category' => $data['category'] ?? $flow->category,
             'flow_json' => ['screens' => $data['screens']],
+            'webhook_url' => $data['webhook_url'] ?? $flow->webhook_url,
+            'webhook_enabled' => $data['webhook_enabled'] ?? $flow->webhook_enabled,
         ]);
 
         return response()->json([
@@ -193,6 +201,8 @@ class FlowBuilderController extends Controller
             'description' => 'nullable|string',
             'category' => 'nullable|string',
             'screens' => 'required|array',
+            'webhook_url' => 'nullable|url|max:2048',
+            'webhook_enabled' => 'nullable|boolean',
         ]);
 
         $flow->update([

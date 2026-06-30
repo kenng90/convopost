@@ -36,7 +36,7 @@ class AppointmentStaffController extends Controller
                 'id' => 'user_id',
                 'required' => false,
                 'value' => $member?->user_id,
-                'additionalInfo' => 'Link a login account for Google Calendar OAuth.',
+                'additionalInfo' => __('Optional. Used for Google Calendar sync on appointments and WhatsApp alerts when assigned as an event host.'),
                 'data' => $this->linkableUserOptions(),
             ],
             ['class' => 'col-md-6', 'ftype' => 'bool', 'name' => 'Active', 'id' => 'is_active', 'required' => false, 'value' => $member?->is_active ?? true],
@@ -54,7 +54,8 @@ class AppointmentStaffController extends Controller
 
         return view($this->view_path.'index', [
             'setup' => [
-                'title' => __('Appointment team'),
+                'title' => __('Team'),
+                'subtitle' => __('Shared by appointments and events. Assign members to services or choose a host on event forms.'),
                 'action_link' => route($this->webroute_path.'create'),
                 'action_name' => __('Add team member'),
                 'items' => $items,
@@ -62,6 +63,7 @@ class AppointmentStaffController extends Controller
                 'webroute_path' => $this->webroute_path,
                 'parameter_name' => 'appointmentStaff',
                 'custom_table' => true,
+                'getting_started_type' => 'team',
             ],
         ]);
     }
@@ -72,7 +74,7 @@ class AppointmentStaffController extends Controller
 
         return view('general.form', [
             'setup' => [
-                'title' => __('New appointment team member'),
+                'title' => __('New team member'),
                 'action_link' => route($this->webroute_path.'index'),
                 'action_name' => __('Back'),
                 'iscontent' => true,

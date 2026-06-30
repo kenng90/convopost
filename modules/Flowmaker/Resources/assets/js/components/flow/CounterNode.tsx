@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Handle, Position, useReactFlow } from '@xyflow/react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calculator, Settings } from "lucide-react";
+import { Calculator, Settings, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -10,7 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { NodeData } from '@/types/flow';
+import { useFlowActions } from '@/hooks/useFlowActions';
 
 interface CounterNodeProps {
   data: NodeData;
@@ -29,6 +36,7 @@ const periods = [
 
 const CounterNode = ({ data, id }: CounterNodeProps) => {
   const { setNodes } = useReactFlow();
+  const { deleteNode } = useFlowActions();
   const [settings, setSettings] = useState<CounterSettings>(
     data.settings?.counter || { maxExecutions: 1, period: 'all_time' }
   );
@@ -67,17 +75,24 @@ const CounterNode = ({ data, id }: CounterNodeProps) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg">
-      <Handle 
-        type="target" 
-        position={Position.Left}
-        className="!bg-gray-300 !w-3 !h-3 !rounded-full"
-      />
-      
-      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 px-4 pt-3 bg-orange-50">
-        <Calculator className="h-4 w-4 text-orange-600" />
-        <div className="font-medium">Counter</div>
-      </div>
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <div className="bg-white rounded-lg shadow-lg">
+          <Handle
+            type="target"
+            position={Position.Left}
+            className="!bg-gray-300 !w-3 !h-3 !rounded-full"
+          />
+
+          <div className="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-gray-100 px-4 pt-3 bg-orange-50">
+            <div className="flex items-center gap-2">
+              <Calculator className="h-4 w-4 text-orange-600" />
+              <div className="font-medium">Counter</div>
+            </div>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600" onClick={() => deleteNode(id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
 
       <div className="p-4">
         <div className="space-y-4">
@@ -166,7 +181,15 @@ const CounterNode = ({ data, id }: CounterNodeProps) => {
           <span className="text-xs text-red-600 font-medium mt-1">FALSE</span>
         </div>
       </div>
-    </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem className="text-red-600" onClick={() => deleteNode(id)}>
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 };
 

@@ -24,6 +24,8 @@ class Reservation extends Model
         'end_date' => 'datetime',
         'cancelled_at' => 'datetime',
         'duration_minutes' => 'integer',
+        'payment_amount' => 'decimal:2',
+        'payment_total_amount' => 'decimal:2',
     ];
 
     public function contact(): BelongsTo

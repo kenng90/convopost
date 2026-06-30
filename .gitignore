@@ -221,3 +221,5 @@ credentials.json
 *.old
 *.orig
 *.rej
+
+docs/

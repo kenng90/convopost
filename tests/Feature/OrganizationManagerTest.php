@@ -262,9 +262,22 @@ class OrganizationManagerTest extends TestCase
 
         $this->actingAs($manager)
             ->withSession(['company_id' => $this->company->id])
-            ->get(route('flow-templates.index'))
+            ->get(route('flows.index'))
             ->assertOk()
-            ->assertSee('Flow templates library');
+            ->assertSee('Lead Capture')
+            ->assertSee('AI Flow Assistant');
+    }
+
+    public function test_flow_templates_index_redirects_to_flows_list(): void
+    {
+        $this->withoutMiddleware(EnsurePlanPlugin::class);
+
+        $manager = $this->createManager(['flowmaker']);
+
+        $this->actingAs($manager)
+            ->withSession(['company_id' => $this->company->id])
+            ->get(route('flow-templates.index'))
+            ->assertRedirect(route('flows.index'));
     }
 
     public function test_manager_is_not_redirected_to_activation_from_chat(): void

@@ -2,16 +2,9 @@
 
 namespace Modules\Wpbox\Models;
 
-use App\Enums\MessagingChannelType;
 use App\Models\Company;
-use App\Models\Messaging\ChannelIdentity;
-use App\Models\Messaging\Conversation;
 use App\Services\Billing\CreditBillingResolver;
 use App\Services\Billing\CreditCharger;
-use App\Services\Messaging\DTO\MessageContent;
-use App\Services\Messaging\InboundMessageProcessor;
-use App\Services\Messaging\OutboundMessageService;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Log;
 use Modules\Contacts\Models\Contact as ModelsContact;
 use Modules\Whatsappcall\Models\Call as WhatsappCallModel;
@@ -38,26 +31,6 @@ class Contact extends ModelsContact
         return $this->hasMany(
             Message::class
         )->where('is_note', true)->orderBy('created_at', 'DESC');
-    }
-
-    public function channelIdentities(): HasMany
-    {
-        return $this->hasMany(ChannelIdentity::class, 'contact_id');
-    }
-
-    public function conversations(): HasMany
-    {
-        return $this->hasMany(Conversation::class, 'contact_id');
-    }
-
-    public function messagingChannel(): MessagingChannelType
-    {
-        $identity = ChannelIdentity::withoutGlobalScopes()
-            ->where('contact_id', $this->id)
-            ->orderByDesc('id')
-            ->first();
-
-        return $identity?->channel ?? MessagingChannelType::Whatsapp;
     }
 
     public function trimString($str, $maxLength)
@@ -238,8 +211,8 @@ class Contact extends ModelsContact
             'contact_id' => $this->id,
             'company_id' => $this->company_id,
             'value' => $reply->text,
-            'header_text' => $reply->header,
-            'footer_text' => $reply->footer,
+            'header_text' => (string) ($reply->header ?? ''),
+            'footer_text' => (string) ($reply->footer ?? ''),
             'buttons' => json_encode($buttons),
             'is_message_by_contact' => false,
             'is_campign_messages' => false,
@@ -310,10 +283,6 @@ class Contact extends ModelsContact
 
         //If message is from contact, and fb_message_id is set, check if the message is already in the system
         if ($is_message_by_contact && $fb_message_id) {
-            // Customer replied — reopen the conversation (0 = open, 1 = closed).
-            $this->resolved_chat = 0;
-            $this->update();
-
             $message = Message::where('fb_message_id', $fb_message_id)->first();
             if ($message) {
                 return $message;
@@ -336,10 +305,8 @@ class Contact extends ModelsContact
             'buttons' => '[]',
             'components' => '',
             'fb_message_id' => $fb_message_id,
-            'channel' => $this->messagingChannel()->value,
+            'extra' => $extra ?? '',
         ]);
-
-        app(InboundMessageProcessor::class)->attachConversationToMessage($messageToBeSend, $this);
 
         //Set the original message — queued to avoid blocking webhooks
         if ($messageType == 'TEXT' && $is_message_by_contact) {
@@ -377,6 +344,7 @@ class Contact extends ModelsContact
         $messageToBeSend->save();
 
         //Update the contact last message, time etc
+        $broadcastChatListChange = false;
 
         if (! $is_campaign_messages) {
             $this->has_chat = true;
@@ -384,14 +352,16 @@ class Contact extends ModelsContact
             if ($is_message_by_contact) {
                 $this->last_client_reply_at = now();
                 $this->is_last_message_by_contact = true;
+                $this->resolved_chat = 0;
+                $broadcastChatListChange = true;
 
-                //Reply bots
-                if ($this->enabled_ai_bot) {
+                // Reply bots — skip title-based matching for interactive replies (list/button),
+                // those are routed by flow nodes using the persisted `extra` field.
+                if ($this->enabled_ai_bot && empty($extra)) {
                     $this->botReply($content, $messageToBeSend);
                 }
 
                 //Notify
-                $messageToBeSend->extra = $extra;
                 event(new ContactReplies(auth()->user(), $messageToBeSend, $this));
 
                 //Send the notification
@@ -402,9 +372,6 @@ class Contact extends ModelsContact
                 } catch (\Exception $e) {
 
                 }
-
-                $messageToBeSend->extra = null;
-                event(new Chatlistchange($this->id, $this->company_id));
 
                 //Check if we need to update the contact based on the message
 
@@ -426,27 +393,20 @@ class Contact extends ModelsContact
             } else {
                 $this->last_support_reply_at = now();
                 $this->is_last_message_by_contact = false;
-
-                $channel = $this->messagingChannel();
-                if ($channel === MessagingChannelType::Whatsapp) {
-                    $this->sendMessageToWhatsApp($messageToBeSend, $this);
-                } else {
-                    $messageContent = match ($messageType) {
-                        'IMAGE' => MessageContent::image($content),
-                        default => MessageContent::text($content),
-                    };
-                    app(OutboundMessageService::class)->send($this, $messageToBeSend, $messageContent);
-                }
-
+                $this->sendMessageToWhatsApp($messageToBeSend, $this);
                 event(new AgentReplies(auth()->user(), $messageToBeSend, $this));
 
-                if ($resolvedCreditAction !== null && (int) $messageToBeSend->status !== 5) {
+                if ($resolvedCreditAction !== null) {
                     $charger->charge($this->getCompany(), $resolvedCreditAction, $this->company_id);
                 }
             }
         }
         $this->last_message = $this->trimString($content, 40);
         $this->update();
+
+        if ($broadcastChatListChange) {
+            event(new Chatlistchange($this->id, $this->company_id));
+        }
 
         return $messageToBeSend;
     }

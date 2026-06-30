@@ -51,9 +51,7 @@ return [
     'menu_ids' => [
         'contactMenu' => 'audience',
         'more' => 'setup',
-        'appointmentsMenu' => 'automations',
-        'eventsMenu' => 'automations',
-        'bookingSetupMenu' => 'setup',
+        'bookingsMenu' => 'automations',
         'knowledgeMenu' => 'addons',
     ],
 
@@ -91,11 +89,11 @@ return [
                     'icon' => 'ni ni-send text-purple',
                     'route' => 'whatsapp-flows.index',
                 ],
-                // [
-                //     'name' => 'Form submissions',
-                //     'icon' => 'ni ni-collection text-success',
-                //     'route' => 'whatsapp-flows.responses',
-                // ],
+                [
+                    'name' => 'Form submissions',
+                    'icon' => 'ni ni-collection text-success',
+                    'route' => 'whatsapp-flows.responses',
+                ],
             ],
         ],
         'insightsMenu' => [
@@ -115,12 +113,12 @@ return [
                     'icon' => 'ni ni-chart-pie-35 text-warning',
                     'route' => 'reports.dashboard',
                 ],
-                [
-                    'name' => 'Form submissions',
-                    'icon' => 'ni ni-collection text-success',
-                    'route' => 'whatsapp-flows.responses',
-                    'plugin' => 'whatsappflows',
-                ],
+                // [
+                //     'name' => 'Form submissions',
+                //     'icon' => 'ni ni-collection text-success',
+                //     'route' => 'whatsapp-flows.responses',
+                //     'plugin' => 'whatsappflows',
+                // ],
             ],
         ],
         'callsMenu' => [

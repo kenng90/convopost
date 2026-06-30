@@ -58,7 +58,7 @@ class ActivationService
                 'title' => __('Launch your first flow'),
                 'description' => __('Install a pre-built flow template or create automation from the library.'),
                 'completed' => $flowDone,
-                'action_route' => 'flow-templates.index',
+                'action_route' => 'flows.index',
                 'action_label' => __('Browse templates'),
             ],
         ];

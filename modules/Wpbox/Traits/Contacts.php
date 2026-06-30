@@ -4,20 +4,23 @@ namespace Modules\Wpbox\Traits;
 
 use App\Models\Company;
 use Modules\Wpbox\Models\Contact;
+use Modules\Wpbox\Support\PhoneNormalizer;
 
 trait Contacts
 {
     public function findContactByPhone(Company $company, string $phone): ?Contact
     {
-        $normalized = ltrim($phone, '+');
+        $normalizer = app(PhoneNormalizer::class);
+        $dialCode = $normalizer->dialCodeForCompany($company);
+        $candidates = $normalizer->lookupCandidates($phone, $dialCode);
+
+        if ($candidates === []) {
+            return null;
+        }
 
         return Contact::withoutGlobalScopes()
             ->where('company_id', $company->id)
-            ->where(function ($query) use ($phone, $normalized) {
-                $query->where('phone', $phone)
-                    ->orWhere('phone', '+'.$normalized)
-                    ->orWhere('phone', $normalized);
-            })
+            ->whereIn('phone', $candidates)
             ->first();
     }
 
@@ -32,14 +35,13 @@ trait Contacts
 
     public function getOrMakeContact($phone, $company, $name)
     {
-        //Find the contact
-        $contact = $this->findContactByPhone($company, $phone);
+        $normalizedPhone = $this->normalizeContactPhone($phone, $company);
+        $contact = $this->findContactByPhone($company, $normalizedPhone);
 
         if (! $contact) {
-            //Create new contact
             $contact = Contact::create([
                 'name' => $name,
-                'phone' => $phone,
+                'phone' => $normalizedPhone,
                 'avatar' => '',
                 'company_id' => $company->id,
                 'has_chat' => true,
@@ -62,9 +64,15 @@ trait Contacts
 
     public function getOrMakeBookingContact($phone, Company $company, $name): Contact
     {
-        $contact = $this->findContactByPhone($company, $phone);
+        $normalizedPhone = $this->normalizeContactPhone($phone, $company);
+        $contact = $this->findContactByPhone($company, $normalizedPhone);
 
         if ($contact) {
+            if ($contact->phone !== $normalizedPhone) {
+                $contact->phone = $normalizedPhone;
+                $contact->save();
+            }
+
             return $contact;
         }
 
@@ -72,7 +80,7 @@ trait Contacts
 
         return Contact::create([
             'name' => $name,
-            'phone' => $phone,
+            'phone' => $normalizedPhone,
             'avatar' => '',
             'company_id' => $company->id,
             'has_chat' => $showInInbox,
@@ -83,6 +91,13 @@ trait Contacts
             'last_message' => '',
             'is_last_message_by_contact' => $showInInbox,
         ]);
+    }
+
+    protected function normalizeContactPhone(string $phone, Company $company): string
+    {
+        $normalizer = app(PhoneNormalizer::class);
+
+        return $normalizer->normalize($phone, $normalizer->dialCodeForCompany($company));
     }
 
     public function promoteContactToInbox(Contact $contact): Contact

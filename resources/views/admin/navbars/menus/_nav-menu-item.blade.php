@@ -16,17 +16,78 @@
     ) show @endif"
         id="navbar-{{ $menuDomId }}">
         <ul class="nav nav-sm flex-column">
-            @foreach ($menu['menus'] as $submenu)
-                @if (Route::has($submenu['route']))
-                    @php $subParams = $submenu['params'] ?? []; @endphp
-                    <li class="nav-item">
-                        <a class="nav-link @if (Route::currentRouteName() == $submenu['route'] || ($submenu['route'] === 'whatsapp-flows.index' && request()->is('whatsapp-flows*') && ! request()->is('whatsapp-flows/responses*'))) active @endif"
-                            href="{{ route($submenu['route'], $subParams) }}">
-                            <i class="{{ $submenu['icon'] ?? 'ni ni-app' }}"></i> {{ __($submenu['name']) }}
+            @php
+                $ungroupedItems = [];
+                $sectionGroups = [];
+                $currentSection = null;
+
+                foreach ($menu['menus'] ?? [] as $submenu) {
+                    if (! isset($submenu['route']) || ! Route::has($submenu['route'])) {
+                        continue;
+                    }
+
+                    if (isset($submenu['navSection'])) {
+                        $currentSection = $submenu['navSection'];
+                    }
+
+                    if ($currentSection === null) {
+                        $ungroupedItems[] = $submenu;
+                    } else {
+                        $sectionGroups[$currentSection][] = $submenu;
+                    }
+                }
+
+                $useCollapsibleSections = ($menu['navSectionsCollapsible'] ?? false) && ! empty($sectionGroups);
+            @endphp
+
+            @if ($useCollapsibleSections)
+                @foreach ($ungroupedItems as $submenu)
+                    @include('admin.navbars.menus._nav-submenu-link', ['submenu' => $submenu])
+                @endforeach
+
+                @foreach ($sectionGroups as $sectionName => $sectionItems)
+                    @php
+                        $sectionDomId = $menuDomId.'-'.\Illuminate\Support\Str::slug($sectionName);
+                        $sectionIsActive = collect($sectionItems)->pluck('route')->contains(Route::currentRouteName());
+                    @endphp
+                    <li class="nav-item mt-2">
+                        <a class="nav-link text-muted text-uppercase d-flex align-items-center justify-content-between py-1"
+                            style="font-size: 0.65rem; letter-spacing: 0.05em;"
+                            href="#navbar-{{ $sectionDomId }}"
+                            data-toggle="collapse"
+                            role="button"
+                            aria-expanded="{{ $sectionIsActive ? 'true' : 'false' }}"
+                            aria-controls="navbar-{{ $sectionDomId }}">
+                            <span>{{ __($sectionName) }}</span>
+                            <!-- <i class="ni ni-bold-down" style="font-size: 0.6rem;"></i> -->
                         </a>
                     </li>
-                @endif
-            @endforeach
+                    <li class="nav-item">
+                        <div class="collapse @if ($sectionIsActive) show @endif" id="navbar-{{ $sectionDomId }}">
+                            <ul class="nav nav-sm flex-column pl-2">
+                                @foreach ($sectionItems as $submenu)
+                                    @include('admin.navbars.menus._nav-submenu-link', ['submenu' => $submenu])
+                                @endforeach
+                            </ul>
+                        </div>
+                    </li>
+                @endforeach
+            @else
+                @php $previousNavSection = null; @endphp
+                @foreach ($menu['menus'] as $submenu)
+                    @if (isset($submenu['navSection']) && $submenu['navSection'] !== $previousNavSection)
+                        <li class="nav-item mt-2">
+                            <span class="nav-link text-muted text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.05em; padding-top: 0.25rem; padding-bottom: 0.25rem;">
+                                {{ __($submenu['navSection']) }}
+                            </span>
+                        </li>
+                        @php $previousNavSection = $submenu['navSection']; @endphp
+                    @endif
+                    @if (Route::has($submenu['route'] ?? ''))
+                        @include('admin.navbars.menus._nav-submenu-link', ['submenu' => $submenu])
+                    @endif
+                @endforeach
+            @endif
         </ul>
     </div>
 @else

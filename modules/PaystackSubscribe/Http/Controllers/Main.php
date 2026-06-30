@@ -4,6 +4,7 @@ namespace Modules\PaystackSubscribe\Http\Controllers;
 
 use App\Models\Plans;
 use App\Models\User;
+use App\Services\DefaultPlanService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -12,74 +13,73 @@ use Illuminate\Support\Facades\Log;
 
 class Main extends Controller
 {
-
     //Manage
-    public function updateCancelSubscription(){
+    public function updateCancelSubscription()
+    {
         $client = new \GuzzleHttp\Client();
 
         $payload = [
             'headers' => [
                 'Authorization' => 'Bearer '.config('paystack-subscribe.secret'),
-                'Accept'     => 'application/json'
+                'Accept' => 'application/json',
             ],
         ];
-        $response = $client->request('GET', "https://api.paystack.co/subscription/". Auth::user()->paystack_subscribtion_id."/manage/link", $payload);
+        $response = $client->request('GET', 'https://api.paystack.co/subscription/'.Auth::user()->paystack_subscribtion_id.'/manage/link', $payload);
         $responseDecoded = json_decode($response->getBody());
+
         return redirect($responseDecoded->data->link);
     }
 
-     //Subscribe
-     public function subscribe(Request $request)
-     {
-         //Assign user to plan
-         //auth()->user()->plan_id = $request->planID;
+    //Subscribe
+    public function subscribe(Request $request)
+    {
+        //Assign user to plan
+        //auth()->user()->plan_id = $request->planID;
         // auth()->user()->paystack_subscribtion_id = $request->subscriptionID;
-         //auth()->user()->update();
- 
-         return response()->json(
-             [
-                 'status' => true,
-                 'success_url' => redirect()->intended('/plan')->getTargetUrl(),
-             ]
-         );
-     }
+        //auth()->user()->update();
 
-     //Webhook called when there is an event
-     public function webhook(Request $request)
-     {
-       //Email - find the user
-       $event = $request->event;
-       $user = User::where('email', $request->data['customer']['email'])->first();
+        return response()->json(
+            [
+                'status' => true,
+                'success_url' => redirect()->intended('/plan')->getTargetUrl(),
+            ]
+        );
+    }
 
-      
+    //Webhook called when there is an event
+    public function webhook(Request $request)
+    {
+        //Email - find the user
+        $event = $request->event;
+        $user = User::where('email', $request->data['customer']['email'])->first();
 
-       // Log the entire request
-       Log::info('Paystack Webhook Request:', [
-           'event' => $event,
-           'user' => $user,
-           'data' => $request->all()
-       ]);
-      
-       if($user){
-            if($event=="subscription.create" || $event=="charge.success"){
-                    $subscription_plan_id = $request->data['plan']['plan_code'];
-                    $plan = Plans::where('paystack_id', $subscription_plan_id)->firstOrFail();
-                    $user->plan_id = $plan->id;
-                    $user->paystack_subscribtion_id = $request->data['subscription_code'];
-                    $user->update();
-            }
-            if($event=="subscription.disable"||$event=="subscription.not_renew"){
-                $user->plan_id = null;
-                $user->paystack_subscribtion_id = null;
+        // Log the entire request
+        Log::info('Paystack Webhook Request:', [
+            'event' => $event,
+            'user' => $user,
+            'data' => $request->all(),
+        ]);
+
+        if ($user) {
+            if ($event == 'subscription.create' || $event == 'charge.success') {
+                $subscription_plan_id = $request->data['plan']['plan_code'];
+                $plan = Plans::where('paystack_id', $subscription_plan_id)->firstOrFail();
+                $user->plan_id = $plan->id;
+                $user->paystack_subscribtion_id = $request->data['subscription_code'];
                 $user->update();
+            }
+            if ($event == 'subscription.disable' || $event == 'subscription.not_renew') {
+                $user->paystack_subscribtion_id = null;
+                app(DefaultPlanService::class)->assignToUser($user);
+            }
         }
-       }
-       dd('done');
-       
-     } 
+        dd('done');
+
+    }
 
     /**
      * Display a listing of the resource.
+     *
      * @return Response
      */
     public function index()
@@ -89,6 +89,7 @@ class Main extends Controller
 
     /**
      * Show the form for creating a new resource.
+     *
      * @return Response
      */
     public function create()
@@ -98,7 +99,7 @@ class Main extends Controller
 
     /**
      * Store a newly created resource in storage.
-     * @param Request $request
+     *
      * @return Response
      */
     public function store(Request $request)
@@ -108,7 +109,8 @@ class Main extends Controller
 
     /**
      * Show the specified resource.
-     * @param int $id
+     *
+     * @param  int  $id
      * @return Response
      */
     public function show($id)
@@ -118,7 +120,8 @@ class Main extends Controller
 
     /**
      * Show the form for editing the specified resource.
-     * @param int $id
+     *
+     * @param  int  $id
      * @return Response
      */
     public function edit($id)
@@ -128,8 +131,8 @@ class Main extends Controller
 
     /**
      * Update the specified resource in storage.
-     * @param Request $request
-     * @param int $id
+     *
+     * @param  int  $id
      * @return Response
      */
     public function update(Request $request, $id)
@@ -139,7 +142,8 @@ class Main extends Controller
 
     /**
      * Remove the specified resource from storage.
-     * @param int $id
+     *
+     * @param  int  $id
      * @return Response
      */
     public function destroy($id)

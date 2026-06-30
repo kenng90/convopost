@@ -120,6 +120,11 @@ class WhatsappFlow extends MyModel
         return $this->flow_json['screens'] ?? [];
     }
 
+    public function responses()
+    {
+        return $this->hasMany(WhatsappFlowResponse::class, 'whatsapp_flow_id');
+    }
+
     /**
      * Get flow settings.
      */
@@ -133,7 +138,7 @@ class WhatsappFlow extends MyModel
      */
     public function getStatusLabel(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'draft' => 'Draft',
             'published' => 'Published Locally',
             'archived' => 'Archived',
@@ -146,9 +151,10 @@ class WhatsappFlow extends MyModel
      */
     public function getMetaStatusLabel(): string
     {
-        if (!$this->meta_flow_id) {
+        if (! $this->meta_flow_id) {
             return 'Not Published';
         }
+
         return 'Published to Meta';
     }
 }

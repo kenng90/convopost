@@ -18,6 +18,9 @@ class Event extends Model
 
     protected $casts = [
         'is_published' => 'boolean',
+        'payment_required' => 'boolean',
+        'payment_amount' => 'decimal:2',
+        'payment_upfront_percent' => 'integer',
         'sort_order' => 'integer',
         'reminder_before_value' => 'integer',
         'reminder_after_value' => 'integer',

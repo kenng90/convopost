@@ -28,7 +28,13 @@ Route::group([
         Route::post('events/register', 'APIController@registerForEvent');
         Route::post('events/cancel-registration', 'APIController@cancelEventRegistration');
         Route::post('get-contact-event-registrations', 'APIController@getContactEventRegistrations');
+        Route::post('booking/pay/appointment', 'APIController@payForAppointment');
+        Route::post('booking/pay/event', 'APIController@payForEvent');
+        Route::get('booking/payment/{invoicePublicUuid}', 'APIController@bookingPaymentStatus');
     });
+
+    Route::post('api/reminders/booking/mpesa/callback', 'BookingMpesaController@stkCallback')
+        ->name('reminders.booking.mpesa.callback');
 
     Route::get('book/{subdomain}', 'BookingSettingsController@widgetCatalog')
         ->name('reminders.booking.catalog');
@@ -49,6 +55,8 @@ Route::group([
     Route::post('/api/reminders/get-contact-bookings', 'APIController@getContactBookings')->name('reminders.get-contact-bookings');
 
     Route::prefix('reminders')->group(function () {
+
+        Route::get('overview', 'BookingsOverviewController@index')->name('reminders.overview.index');
 
         Route::get('booking-settings', 'BookingSettingsController@index')->name('reminders.booking-settings.index');
         Route::post('booking-settings/calendar', 'BookingSettingsController@updateCalendar')->name('reminders.booking-settings.calendar');

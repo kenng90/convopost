@@ -7,9 +7,12 @@ use App\Models\Company;
 use Illuminate\Http\Request;
 use Modules\Reminders\Models\Source;
 use Modules\Reminders\Services\BookingCatalogService;
+use Modules\Reminders\Services\BookingPaymentService;
 use Modules\Reminders\Services\BookingPublicKeyService;
 use Modules\Reminders\Services\EventCatalogService;
 use Modules\Reminders\Services\GoogleCalendarService;
+use Modules\Reminders\Support\BookingPaymentConfig;
+use Modules\Wpbox\Support\PhoneNormalizer;
 
 class BookingSettingsController extends Controller
 {
@@ -17,7 +20,8 @@ class BookingSettingsController extends Controller
         private readonly GoogleCalendarService $googleCalendarService,
         private readonly BookingCatalogService $catalogService,
         private readonly BookingPublicKeyService $bookingPublicKeyService,
-        private readonly EventCatalogService $eventCatalogService
+        private readonly EventCatalogService $eventCatalogService,
+        private readonly BookingPaymentService $bookingPaymentService
     ) {
     }
 
@@ -32,8 +36,8 @@ class BookingSettingsController extends Controller
         return view('reminders::booking-settings.index', [
             'setup' => [
                 'title' => __('Booking settings'),
-                'action_link' => route('reminders.reservations.index'),
-                'action_name' => __('Back to appointments'),
+                'action_link' => route('reminders.overview.index'),
+                'action_name' => __('Back to bookings'),
                 'iscontent' => true,
             ],
             'connected' => $this->googleCalendarService->isConnected($user),
@@ -108,6 +112,7 @@ class BookingSettingsController extends Controller
         return view('reminders::booking.catalog', [
             'company' => $company,
             'services' => $services,
+            'eventsEnabled' => $this->eventCatalogService->eventsEnabled($company),
         ]);
     }
 
@@ -126,6 +131,9 @@ class BookingSettingsController extends Controller
             'services' => $this->catalogService->bookableServicesForCompany($company),
             'bookingKey' => $this->bookingPublicKeyService->ensureKey($company),
             'showServicePicker' => false,
+            'bookingPhoneCountry' => app(PhoneNormalizer::class)->isoForCompany($company),
+            'paymentConfig' => BookingPaymentConfig::fromSource($source),
+            'mpesaConfigured' => $this->bookingPaymentService->mpesaConfigured($company),
         ]);
     }
 
@@ -159,6 +167,9 @@ class BookingSettingsController extends Controller
             'event' => $event,
             'occurrence' => $formattedOccurrence,
             'bookingKey' => $this->bookingPublicKeyService->ensureKey($company),
+            'bookingPhoneCountry' => app(PhoneNormalizer::class)->isoForCompany($company),
+            'paymentConfig' => BookingPaymentConfig::fromEvent($occurrenceModel->event),
+            'mpesaConfigured' => $this->bookingPaymentService->mpesaConfigured($company),
         ]);
     }
 }

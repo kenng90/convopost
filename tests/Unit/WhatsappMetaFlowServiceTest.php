@@ -131,7 +131,7 @@ class WhatsappMetaFlowServiceTest extends TestCase
             [
                 'id' => 'BOOKING',
                 'title' => 'Book appointment',
-                'endpoint_template' => 'booking_slots',
+                'endpoint_template' => 'custom_slots',
                 'terminal' => true,
                 'dynamic_data' => [
                     ['key' => 'available_slots', 'type' => 'option_list', 'example_items' => []],

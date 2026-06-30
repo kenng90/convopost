@@ -4,32 +4,42 @@ namespace Modules\Flowmaker\Models;
 
 use App\Models\Company;
 use App\Scopes\CompanyScope;
+use App\Services\Catalog\CatalogFlowCallbackService;
+use App\Services\Flowmaker\FlowRunLogger;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Nodes\AssignAgent;
 use Modules\Flowmaker\Models\Nodes\AssignGroup;
 use Modules\Flowmaker\Models\Nodes\AssignJourneyStage;
+use Modules\Flowmaker\Models\Nodes\BookAppointment;
 use Modules\Flowmaker\Models\Nodes\BookingEventRegister;
 use Modules\Flowmaker\Models\Nodes\BookingEventsList;
 use Modules\Flowmaker\Models\Nodes\Branch;
 use Modules\Flowmaker\Models\Nodes\Buttons;
+use Modules\Flowmaker\Models\Nodes\CheckPricing;
+use Modules\Flowmaker\Models\Nodes\Counter;
 use Modules\Flowmaker\Models\Nodes\Edge;
 use Modules\Flowmaker\Models\Nodes\End;
 use Modules\Flowmaker\Models\Nodes\Every;
 use Modules\Flowmaker\Models\Nodes\FlowHTTPNode;
 use Modules\Flowmaker\Models\Nodes\Keyword;
+use Modules\Flowmaker\Models\Nodes\ListingInquiry;
 use Modules\Flowmaker\Models\Nodes\ListMessage;
 use Modules\Flowmaker\Models\Nodes\LLM;
+use Modules\Flowmaker\Models\Nodes\ManageBooking;
 use Modules\Flowmaker\Models\Nodes\Media;
 use Modules\Flowmaker\Models\Nodes\Message;
 use Modules\Flowmaker\Models\Nodes\MpesaStkPush;
 use Modules\Flowmaker\Models\Nodes\Node;
+use Modules\Flowmaker\Models\Nodes\SendBookingLink;
 use Modules\Flowmaker\Models\Nodes\SetVariable;
 use Modules\Flowmaker\Models\Nodes\Template;
 use Modules\Flowmaker\Models\Nodes\UserReply;
 use Modules\Flowmaker\Models\Nodes\WhatsAppCatalog;
 use Modules\Flowmaker\Models\Nodes\WhatsAppFlow;
+use Modules\Reminders\Models\EventRegistration;
+use Modules\Reminders\Models\Reservation;
 
 class Flow extends Model
 {
@@ -59,6 +69,8 @@ class Flow extends Model
     {
         try {
             $message = $data->value;
+
+            FlowRunLogger::log($this->id, $data->contact_id ?? null, 'message_received', null, mb_substr((string) $message, 0, 500));
 
             $flowData = $this->getDecodedFlowData();
             if (! $flowData || ! isset($flowData->nodes) || ! isset($flowData->edges)) {
@@ -221,12 +233,24 @@ class Flow extends Model
                 $theNewNode = new MpesaStkPush($nodeArray, []);
             } elseif ($nodeArray['type'] === 'whatsapp_catalog') {
                 $theNewNode = new WhatsAppCatalog($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'listing_inquiry') {
+                $theNewNode = new ListingInquiry($nodeArray, []);
             } elseif ($nodeArray['type'] === 'whatsapp_flow') {
                 $theNewNode = new WhatsAppFlow($nodeArray, []);
             } elseif ($nodeArray['type'] === 'booking_events_list') {
                 $theNewNode = new BookingEventsList($nodeArray, []);
             } elseif ($nodeArray['type'] === 'booking_event_register') {
                 $theNewNode = new BookingEventRegister($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'book_appointment') {
+                $theNewNode = new BookAppointment($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'send_booking_link') {
+                $theNewNode = new SendBookingLink($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'manage_booking') {
+                $theNewNode = new ManageBooking($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'counter') {
+                $theNewNode = new Counter($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'check_pricing') {
+                $theNewNode = new CheckPricing($nodeArray, []);
             } else {
                 $theNewNode = new Node($nodeArray, []);
             }
@@ -348,6 +372,92 @@ class Flow extends Model
         $this->resumeWaitingNode($contact, null);
     }
 
+    public function resumeBookingPaymentSuccess(Contact $contact, string $nodeId, int $reservationId): void
+    {
+        try {
+            $reservation = Reservation::withoutGlobalScopes()->find($reservationId);
+
+            if (! $reservation) {
+                Log::error('Flow booking resume: reservation not found', ['reservationId' => $reservationId]);
+
+                return;
+            }
+
+            $flowData = $this->getDecodedFlowData();
+
+            if (! $flowData || ! isset($flowData->nodes, $flowData->edges)) {
+                return;
+            }
+
+            $nodes = $this->buildWiredNodes($flowData->nodes, $flowData->edges);
+            $node = $nodes[$nodeId] ?? null;
+
+            if (! $node instanceof BookAppointment) {
+                BookAppointment::notifyPaymentOutcome($this->id, $contact->id, $nodeId, 'success');
+
+                return;
+            }
+
+            $node->isStartNode = true;
+            $mockData = new \stdClass();
+            $mockData->contact_id = $contact->id;
+            $mockData->company_id = $contact->company_id;
+            $mockData->value = '';
+            $mockData->extra = null;
+
+            $node->completeSuccess($contact, $reservation, '', $mockData);
+        } catch (\Exception $e) {
+            Log::error('Flow booking resume: exception', [
+                'error' => $e->getMessage(),
+                'flowId' => $this->id,
+                'nodeId' => $nodeId,
+            ]);
+        }
+    }
+
+    public function resumeEventRegistrationPaymentSuccess(Contact $contact, string $nodeId, int $registrationId): void
+    {
+        try {
+            $registration = EventRegistration::withoutGlobalScopes()->find($registrationId);
+
+            if (! $registration) {
+                Log::error('Flow event registration resume: registration not found', ['registrationId' => $registrationId]);
+
+                return;
+            }
+
+            $flowData = $this->getDecodedFlowData();
+
+            if (! $flowData || ! isset($flowData->nodes, $flowData->edges)) {
+                return;
+            }
+
+            $nodes = $this->buildWiredNodes($flowData->nodes, $flowData->edges);
+            $node = $nodes[$nodeId] ?? null;
+
+            if (! $node instanceof BookingEventRegister) {
+                BookingEventRegister::notifyPaymentOutcome($this->id, $contact->id, $nodeId, 'success');
+
+                return;
+            }
+
+            $node->isStartNode = true;
+            $mockData = new \stdClass();
+            $mockData->contact_id = $contact->id;
+            $mockData->company_id = $contact->company_id;
+            $mockData->value = '';
+            $mockData->extra = null;
+
+            $node->completeSuccess($contact, $registration, '', $mockData);
+        } catch (\Exception $e) {
+            Log::error('Flow event registration resume: exception', [
+                'error' => $e->getMessage(),
+                'flowId' => $this->id,
+                'nodeId' => $nodeId,
+            ]);
+        }
+    }
+
     /**
      * Resume a flow after a catalog web checkout completes.
      *
@@ -355,11 +465,80 @@ class Flow extends Model
      */
     public function resumeFromCatalogCheckout(Contact $contact, string $productId, array $cartItems = [])
     {
-        if ($cartItems !== []) {
-            $contact->setContactState($this->id, 'catalog_cart', json_encode($cartItems));
-        }
+        $extra = $cartItems !== []
+            ? CatalogFlowCallbackService::CHECKOUT_COMPLETE_EXTRA
+            : $productId;
 
-        $this->resumeWaitingNode($contact, $productId);
+        $this->resumeWaitingNode($contact, $extra);
+    }
+
+    /**
+     * Resume a flow after a listing catalog web inquiry is submitted.
+     */
+    public function resumeFromListingInquiry(Contact $contact, string $itemId): void
+    {
+        $extra = app(CatalogFlowCallbackService::class)->listingInquiryExtra($itemId);
+        $this->resumeWaitingNode($contact, $extra);
+    }
+
+    /**
+     * Resume automation from the else handle when a WhatsApp Form was abandoned.
+     */
+    public function resumeFromFormAbandonment(Contact $contact, string $whatsappFlowNodeId): bool
+    {
+        try {
+            $flowData = $this->getDecodedFlowData();
+            if (! $flowData || ! isset($flowData->edges)) {
+                return false;
+            }
+
+            $elseTargetId = null;
+            foreach ($flowData->edges as $edge) {
+                $edgeArray = is_array($edge) ? $edge : (array) $edge;
+                $source = $edgeArray['source'] ?? null;
+                if ($source !== $whatsappFlowNodeId) {
+                    continue;
+                }
+
+                $handle = (string) ($edgeArray['sourceHandle'] ?? '');
+                if ($handle === 'else' || str_contains($handle, 'else')) {
+                    $elseTargetId = $edgeArray['target'] ?? null;
+                    break;
+                }
+            }
+
+            if (! $elseTargetId) {
+                return false;
+            }
+
+            $contact->clearContactState($this->id, 'current_node');
+            $contact->primeFlowStateCache($this->id);
+
+            $nodes = $this->getWiredNodes($flowData->nodes, $flowData->edges);
+            if (! isset($nodes[$elseTargetId])) {
+                return false;
+            }
+
+            $nodes[$elseTargetId]->isStartNode = true;
+
+            $mockData = new \stdClass();
+            $mockData->contact_id = $contact->id;
+            $mockData->company_id = $contact->company_id;
+            $mockData->value = '';
+            $mockData->extra = json_encode(['abandoned' => true]);
+
+            $nodes[$elseTargetId]->process('', $mockData);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Flow form abandonment resume: exception', [
+                'error' => $e->getMessage(),
+                'flowId' => $this->id,
+                'nodeId' => $whatsappFlowNodeId,
+            ]);
+
+            return false;
+        }
     }
 
     private function resumeWaitingNode(Contact $contact, ?string $extra): void

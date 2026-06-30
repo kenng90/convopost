@@ -3,7 +3,7 @@
 namespace Tests\Unit;
 
 use App\Services\ExcelImportService;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class ExcelImportServiceTest extends TestCase
 {
@@ -80,9 +80,9 @@ class ExcelImportServiceTest extends TestCase
             'price' => 24.5,
             'category' => 'Kitchen',
             'imageUrl' => 'https://example.com/bowl.jpg',
+            'tags' => ['New', 'Sale'],
             'stockStatus' => 'Low Stock',
             'variants' => ['S', 'M', 'L'],
-            'tags' => ['New', 'Sale'],
         ], $transformed[0]);
     }
 
@@ -121,5 +121,64 @@ class ExcelImportServiceTest extends TestCase
             'Variants',
             'Tags',
         ], ExcelImportService::TEMPLATE_HEADERS);
+    }
+
+    public function test_transform_items_maps_real_estate_vertical_fields_into_metadata(): void
+    {
+        $items = [[
+            'Item ID' => 'HOME_001',
+            'Title' => 'Karen Apartment',
+            'Price' => '15000000',
+            'Location' => 'Karen',
+            'Bedrooms' => '3',
+            'Status' => 'Available',
+        ]];
+
+        $mapping = $this->service->buildColumnMappingFromHeaders(array_keys($items[0]), 'real_estate');
+        $transformed = $this->service->transformItems($items, $mapping, 'real_estate');
+
+        $this->assertSame('Karen', $transformed[0]['metadata']['location']);
+        $this->assertSame('3', $transformed[0]['metadata']['bedrooms']);
+        $this->assertSame('Available', $transformed[0]['metadata']['listing_status']);
+    }
+
+    public function test_import_template_filename_includes_mode_and_vertical(): void
+    {
+        $registry = app(\App\Services\Catalog\CatalogTemplateRegistry::class);
+
+        $this->assertSame('catalog-import-commerce-retail.xlsx', $registry->importTemplateFilename('commerce', 'retail'));
+        $this->assertSame('catalog-import-listing-real-estate.xlsx', $registry->importTemplateFilename('listing', 'real_estate'));
+        $this->assertSame('catalog-import-service-general-service.xlsx', $registry->importTemplateFilename('service', 'general_service'));
+    }
+
+    public function test_template_spreadsheet_includes_five_sample_rows_for_each_vertical(): void
+    {
+        foreach (['retail', 'real_estate', 'automotive', 'general_listing', 'general_service'] as $vertical) {
+            $spreadsheet = $this->service->createTemplateSpreadsheet($vertical);
+            $sheet = $spreadsheet->getActiveSheet();
+
+            $this->assertSame(
+                1 + ExcelImportService::TEMPLATE_SAMPLE_ROW_COUNT,
+                (int) $sheet->getHighestRow(),
+                "Expected header + 5 sample rows for vertical [{$vertical}]"
+            );
+
+            $this->assertNotSame('', (string) $sheet->getCell([1, 2])->getValue());
+            $this->assertNotSame('', (string) $sheet->getCell([2, 2])->getValue());
+        }
+    }
+
+    public function test_template_headers_match_registry_for_listing_vertical(): void
+    {
+        $registry = app(\App\Services\Catalog\CatalogTemplateRegistry::class);
+        $expected = $registry->excelHeadersForVertical('real_estate');
+        $sheet = $this->service->createTemplateSpreadsheet('real_estate')->getActiveSheet();
+
+        $headers = [];
+        foreach ($expected as $index => $header) {
+            $headers[] = (string) $sheet->getCell([$index + 1, 1])->getValue();
+        }
+
+        $this->assertSame($expected, $headers);
     }
 }

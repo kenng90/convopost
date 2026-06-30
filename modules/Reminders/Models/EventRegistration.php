@@ -27,6 +27,8 @@ class EventRegistration extends Model
         'party_size' => 'integer',
         'registered_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'payment_amount' => 'decimal:2',
+        'payment_total_amount' => 'decimal:2',
     ];
 
     public function event(): BelongsTo

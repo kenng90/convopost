@@ -2,6 +2,7 @@
 
 namespace App\Services\Flowmaker;
 
+use App\Services\WhatsappFormTemplateService;
 use Modules\Flowmaker\Models\Flow;
 
 class FlowTemplateService
@@ -26,12 +27,27 @@ class FlowTemplateService
             return null;
         }
 
+        $companyId = session('company_id') ?? auth()->user()?->currentCompany()?->id;
+
+        $flowData = $template['flow_data'];
+        if (! empty($template['form_bundle']) && $companyId) {
+            $whatsappForm = app(WhatsappFormTemplateService::class)->createFromTemplate(
+                $template['form_bundle'],
+                (int) $companyId
+            );
+            $flowData = $this->linkBundledWhatsappForms($flowData, $whatsappForm->id);
+        }
+
         $flow = Flow::create([
             'name' => $customName ?: $template['name'],
-            'company_id' => session('company_id') ?? auth()->user()?->currentCompany()?->id,
+            'company_id' => $companyId,
         ]);
 
-        $flow->flow_data = json_encode($template['flow_data']);
+        $encoded = json_encode($flowData);
+        $flow->flow_data = $encoded;
+        $flow->draft_flow_data = $encoded;
+        $flow->has_unpublished_changes = false;
+        $flow->source_template = $key;
         $flow->save();
 
         $company = $flow->company ?? auth()->user()?->currentCompany();
@@ -54,5 +70,32 @@ class FlowTemplateService
         }
 
         return $grouped;
+    }
+
+    /**
+     * @param  array<string, mixed>  $flowData
+     * @return array<string, mixed>
+     */
+    private function linkBundledWhatsappForms(array $flowData, int $whatsappFlowId): array
+    {
+        $nodes = $flowData['nodes'] ?? [];
+
+        foreach ($nodes as $index => $node) {
+            if (($node['type'] ?? '') !== 'whatsapp_flow') {
+                continue;
+            }
+
+            $settings = $node['data']['settings'] ?? [];
+            if (! empty($settings['whatsappFlowId'])) {
+                continue;
+            }
+
+            $settings['whatsappFlowId'] = $whatsappFlowId;
+            $nodes[$index]['data']['settings'] = $settings;
+        }
+
+        $flowData['nodes'] = $nodes;
+
+        return $flowData;
     }
 }

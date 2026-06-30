@@ -5,6 +5,7 @@ namespace App\Actions\Fortify;
 use App\Events\NewClient;
 use App\Models\Company;
 use App\Models\User;
+use App\Services\DefaultPlanService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -15,6 +16,11 @@ class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules;
 
+    public function __construct(
+        private readonly DefaultPlanService $defaultPlanService,
+    ) {
+    }
+
     /**
      * Validate and create a newly registered user.
      *
@@ -23,7 +29,6 @@ class CreateNewUser implements CreatesNewUsers
     public function create(array $input): User
     {
 
-       
         Validator::make($input, [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
@@ -32,26 +37,25 @@ class CreateNewUser implements CreatesNewUsers
             'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature() ? ['accepted', 'required'] : '',
         ])->validate();
 
-        $phone = "+" . $input['country_code'] . trim($input['phone']);
+        $phone = '+'.$input['country_code'].trim($input['phone']);
 
         $user = User::create([
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => Hash::make($input['password']),
-            'phone' =>$phone, // Add 'phone' to the user creation
+            'phone' => $phone, // Add 'phone' to the user creation
         ]);
 
         //Passed by the form ( only if register from company page)
-        $company_id=null;
+        $company_id = null;
         try {
             $company_id = $input['company_id'];
         } catch (\Exception $e) {
             $company_id = null;
         }
-        if (!$company_id ) {
+        if (! $company_id) {
             $company_id = session('company_id');
         }
-
 
         //If we have a company session, then we need to create the user as client in the company
         if ($company_id) {
@@ -67,9 +71,7 @@ class CreateNewUser implements CreatesNewUsers
                 return $user;
             }
 
-            
         }
-
 
         //Continue as company owner
         $user->assignRole('owner');
@@ -79,16 +81,17 @@ class CreateNewUser implements CreatesNewUsers
             'name' => $input['name'],
             'subdomain' => strtolower(preg_replace('/[^A-Za-z0-9]/', '', $input['name'])),
             'user_id' => $user->id,
-            'created_at' => now(),  
+            'created_at' => now(),
             'updated_at' => now(),
-            'phone'=>$phone, // Add 'phone' to the company creation
-            'logo'=>asset('uploads').'/default/no_image.jpg',
+            'phone' => $phone, // Add 'phone' to the company creation
+            'logo' => asset('uploads').'/default/no_image.jpg',
         ]);
 
         $user->company_id = $lastCompanyId;
-        $user->save(); 
+        $user->save();
+
+        $this->defaultPlanService->assignToUser($user);
 
         return $user;
     }
-    
 }

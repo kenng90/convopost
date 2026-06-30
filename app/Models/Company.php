@@ -70,6 +70,7 @@ class Company extends MyModel
 
         $catalogLimit = (int) ($currentPlan->limit_catalog_items ?? 0);
         $planInfo['usageSummary'] = app(\App\Services\PlanUsageLimit::class)->getUsageSummary($this);
+        $planInfo['creditWallets'] = $this->buildCreditWalletsSummary();
 
         if (config('settings.enable_per_seat_billing', false)) {
             $owner = $this->user;
@@ -100,6 +101,54 @@ class Company extends MyModel
 
         return $planInfo;
 
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function buildCreditWalletsSummary(): array
+    {
+        $wallets = [];
+
+        if (config('settings.enable_credits', false) && $this->user) {
+            $messagingStats = $this->user->getMessagingCreditWalletStats();
+
+            $wallets[] = array_merge($messagingStats, [
+                'key' => 'messaging',
+                'label' => __('Messaging credits'),
+                'has_own_key' => false,
+                'alert' => $messagingStats['percent_used'] >= 90 ? 'warning' : 'info',
+            ]);
+        }
+
+        $managedAiStatus = app(\App\Services\Platform\ManagedAiService::class)->status($this);
+
+        if ($managedAiStatus['enabled'] && $managedAiStatus['monthly_allowance'] > 0) {
+            $allowance = (int) $managedAiStatus['monthly_allowance'];
+            $used = (int) $managedAiStatus['used'];
+            $remaining = (int) $managedAiStatus['remaining'];
+            $percentUsed = 0;
+
+            if ($allowance > 0) {
+                $percentUsed = (int) round(($used / $allowance) * 100);
+                if ($used > 0 && $percentUsed === 0) {
+                    $percentUsed = 1;
+                }
+            }
+
+            $wallets[] = [
+                'key' => 'ai',
+                'label' => __('AI credits'),
+                'available' => $remaining,
+                'used' => $used,
+                'total' => $allowance,
+                'percent_used' => $percentUsed,
+                'has_own_key' => (bool) $managedAiStatus['has_own_key'],
+                'alert' => $remaining <= 0 && ! $managedAiStatus['has_own_key'] ? 'warning' : 'info',
+            ];
+        }
+
+        return $wallets;
     }
 
     /**

@@ -4,6 +4,8 @@
   </div>
 
   <template v-else>
+    <p class="text-muted small mb-3">{{ __("This contact's bookings") }}</p>
+
     <div v-if="dynamicProperties.appointments && dynamicProperties.appointments.length > 0" class="mb-4">
       <h5 class="text-muted mb-3">{{ __('Appointments') }}</h5>
       <div

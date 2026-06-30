@@ -1,8 +1,9 @@
 
-import { MessageCircle, Zap, GitMerge, BrainCog, Database, Globe } from "lucide-react";
+import { MessageCircle, Zap, GitMerge, BrainCog, Database, Globe, CalendarCheck } from "lucide-react";
 import { useState } from "react";
 import { TriggerSection } from "./panels/TriggerSection";
 import { MessagingSection } from "./panels/MessagingSection";
+import { BookingsSection } from "./panels/BookingsSection";
 import { FlowControlSection } from "./panels/FlowControlSection";
 import { IntegrationsSection } from "./panels/IntegrationsSection";
 import { DataSection } from "./panels/DataSection";
@@ -51,16 +52,17 @@ const ActionPanel = ({
     { icon: Zap, label: "Events", content: <TriggerSection searchQuery={searchQuery} /> },
     { icon: MessageCircle, label: "Message", content: <MessagingSection searchQuery={searchQuery} /> },
     { icon: GitMerge, label: "Logic", content: <FlowControlSection searchQuery={searchQuery} /> },
+    { icon: CalendarCheck, label: "Bookings", content: <BookingsSection searchQuery={searchQuery} /> },
     // Web moved to second panel
     { icon: BrainCog, label: "AI", content: <IntegrationsSection searchQuery={searchQuery} /> },
     { icon: Database, label: "Data", content: <DataSection searchQuery={searchQuery} onOpenDataSidebar={onOpenDataSidebar} /> },
     { icon: Globe, label: "API", content: <WebSection searchQuery={searchQuery} /> },
   ];
 
-  // First panel: Events, Messages, Logic
-  const firstPanelActions = actions.slice(0, 3);
+  // First panel: Events, Messages, Logic, Bookings
+  const firstPanelActions = actions.slice(0, 4);
   // Second panel: AI, Data, Web
-  const secondPanelActions = actions.slice(3);
+  const secondPanelActions = actions.slice(4);
 
   return (
     <div className="flex flex-col items-center">

@@ -68,6 +68,33 @@ return [
             'module' => 'flowmaker',
             'sort_order' => 60,
         ],
+        [
+            'action' => 'ai_flow_generate',
+            'name' => 'AI Flow Assistant — generate draft',
+            'category' => 'managed_ai',
+            'default_cost' => 5,
+            'help' => 'Managed AI credits per flow draft when using the platform OpenRouter key.',
+            'module' => 'flowmaker',
+            'sort_order' => 70,
+        ],
+        [
+            'action' => 'ai_llm_reply',
+            'name' => 'Flow LLM node reply',
+            'category' => 'managed_ai',
+            'default_cost' => 1,
+            'help' => 'Managed AI credits per LLM node invocation when using the platform OpenRouter key.',
+            'module' => 'flowmaker',
+            'sort_order' => 80,
+        ],
+        [
+            'action' => 'ai_embedding',
+            'name' => 'Knowledge base embedding chunk',
+            'category' => 'managed_ai',
+            'default_cost' => 1,
+            'help' => 'Managed AI credits per embedding chunk when using the platform OpenAI key.',
+            'module' => 'flowmaker',
+            'sort_order' => 90,
+        ],
     ],
 
     'category_labels' => [
@@ -75,6 +102,7 @@ return [
         'campaigns' => 'Campaigns & templates',
         'automation' => 'Automation',
         'payments' => 'Payments',
+        'managed_ai' => 'Managed AI',
         'other' => 'Other',
     ],
 
