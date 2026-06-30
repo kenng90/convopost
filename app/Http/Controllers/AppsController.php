@@ -36,6 +36,7 @@ class AppsController extends Controller
         }
 
         $separators = [];
+        $separatorIndex = [];
         $icons = [];
         try {
             foreach ($appFields as $key => $field) {
@@ -43,22 +44,29 @@ class AppsController extends Controller
                     $snake = Str::snake($field['separator']);
                     if (isset($field['icon'])) {
                         $icon = $field['icon'];
+                        $icons[$snake] = $icon;
                     } elseif (isset($icons[$snake])) {
                         $icon = $icons[$snake];
                     } else {
                         $icon = '⚙️';
                     }
                     $field['snake'] = $snake;
-                    //Check if separators is empty array
 
-                    array_push($separators, ['icon' => $icon, 'name' => $field['separator'], 'snake' => $snake]);
-                    $separators[count($separators) - 1]['fields'][] = $field;
+                    if (! isset($separatorIndex[$snake])) {
+                        $separatorIndex[$snake] = count($separators);
+                        $separators[] = [
+                            'icon' => $icon,
+                            'name' => $field['separator'],
+                            'snake' => $snake,
+                            'fields' => [],
+                        ];
+                    }
 
+                    $separators[$separatorIndex[$snake]]['fields'][] = $field;
                 } else {
-                    //Get the last separator
                     $snake = $separators[count($separators) - 1]['snake'];
                     $field['snake'] = $snake;
-                    $separators[count($separators) - 1]['fields'][] = $field;
+                    $separators[$separatorIndex[$snake]]['fields'][] = $field;
                 }
             }
         } catch (\Throwable $th) {

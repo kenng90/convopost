@@ -58,6 +58,7 @@
             </div>
             <div class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
                 <a href="#features" class="hover:text-wa transition-colors">Features</a>
+                <a href="#journeys" class="hover:text-wa transition-colors">Journeys</a>
                 <a href="#automation" class="hover:text-wa transition-colors">Automation</a>
                 <a href="#integrations" class="hover:text-wa transition-colors">Integrations</a>
                 <a href="#api" class="hover:text-wa transition-colors">API</a>
@@ -106,7 +107,7 @@
                 </h1>
 
                 <p class="text-xl text-white/75 leading-relaxed mb-10 max-w-xl">
-                    Team inbox, outbound campaigns, visual workflows, in-chat payments, and integrations — one platform for sales, support, and operations on WhatsApp. AI handles tier-1 inside your flows; your team owns the rest.
+                    Team inbox, journey pipelines, outbound campaigns, visual workflows, bookings, in-chat payments, and integrations — one platform for sales, support, and operations on WhatsApp.
                 </p>
 
                 <div class="flex flex-col sm:flex-row gap-4 mb-12">
@@ -230,7 +231,7 @@
         <div class="text-center mb-16">
             <span class="text-wa font-semibold text-sm uppercase tracking-widest">Everything You Need</span>
             <h2 class="text-4xl lg:text-5xl font-black mt-3 mb-4">One Platform, Infinite Possibilities</h2>
-            <p class="text-xl text-gray-500 max-w-2xl mx-auto">Team inbox, campaigns, workflows, and payments — everything your business needs to sell and support on WhatsApp.</p>
+            <p class="text-xl text-gray-500 max-w-2xl mx-auto">Team inbox, journey pipelines, campaigns, workflows, bookings, and payments — everything your business needs to sell and support on WhatsApp.</p>
         </div>
 
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -248,10 +249,16 @@
                     'items' => ['Bulk messaging', 'Message templates', 'Scheduled delivery', 'Delivery & read receipts'],
                 ],
                 [
+                    'icon' => '🧭',
+                    'title' => 'Journey Pipelines',
+                    'desc' => 'Kanban CRM with templates for sales, support, e-commerce, and events. Move contacts across stages and trigger WhatsApp campaigns automatically.',
+                    'items' => ['7 ready-made playbooks', 'Stage-triggered campaigns', 'Auto-enroll new contacts', 'Inbox journey sidebar'],
+                ],
+                [
                     'icon' => '👥',
                     'title' => 'Contact CRM',
                     'desc' => 'Manage your entire contact database. Organize into groups, add custom fields, import/export, and keep a full conversation history.',
-                    'items' => ['Contact groups & segments', 'Custom fields', 'CSV import/export', 'Journey pipelines'],
+                    'items' => ['Contact groups & segments', 'Custom fields', 'CSV import/export', 'Customer 360 in inbox'],
                 ],
                 [
                     'icon' => '⚡',
@@ -285,9 +292,9 @@
                 ],
                 [
                     'icon' => '📅',
-                    'title' => 'Reminders & Reservations',
-                    'desc' => 'Let customers book appointments and receive automated WhatsApp reminders. Reduce no-shows and manage your calendar.',
-                    'items' => ['Online booking widget', 'Automated reminders', 'Calendar management', 'Source tracking'],
+                    'title' => 'Bookings',
+                    'desc' => 'Let customers book appointments and events, receive automated WhatsApp reminders, and manage staff schedules from one Bookings app.',
+                    'items' => ['Online booking widget', 'Events & registrations', 'Google Calendar sync', 'WhatsApp reminders'],
                 ],
             ] as $feature)
             <div class="bg-white border border-gray-100 rounded-3xl p-8 card-hover shadow-sm hover:border-wa/30">
@@ -304,6 +311,54 @@
                 </ul>
             </div>
             @endforeach
+        </div>
+    </div>
+</section>
+
+{{-- ===== JOURNEYS ===== --}}
+<section id="journeys" class="py-24 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+                <span class="text-wa font-semibold text-sm uppercase tracking-widest">Journey Pipelines</span>
+                <h2 class="text-4xl lg:text-5xl font-black mt-3 mb-6">Kanban CRM for<br>WhatsApp Contacts</h2>
+                <p class="text-lg text-gray-600 mb-8 leading-relaxed">
+                    Launch pipelines from templates, drag contacts between stages on a kanban board, and attach WhatsApp campaigns that fire when someone enters a stage. Configure journeys, auto-enrollment, and staff permissions from Company Apps.
+                </p>
+                <div class="space-y-4 mb-10">
+                    @foreach([
+                        ['Ready-made playbooks', 'Sales, support, marketing, onboarding, revenue, e-commerce, and event registration templates.'],
+                        ['Stage-triggered campaigns', 'Link broadcast templates to stages so messages send automatically on move.'],
+                        ['Inbox journey sidebar', 'Agents move contacts and view pipeline context without leaving chat.'],
+                    ] as [$title, $desc])
+                    <div class="flex gap-4">
+                        <div class="w-10 h-10 gradient-wa rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-5 h-5 text-white fill-current" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                        </div>
+                        <div>
+                            <div class="font-semibold text-gray-900">{{ $title }}</div>
+                            <div class="text-gray-500 text-sm mt-0.5">{{ $desc }}</div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+                <a href="{{ route('register') }}" class="gradient-wa text-white font-bold px-8 py-4 rounded-full inline-block hover:opacity-90 transition-opacity shadow-lg">
+                    Start Your First Journey →
+                </a>
+            </div>
+            <div class="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    @foreach(['Lead', 'Qualified', 'Proposal', 'Won'] as $stage)
+                    <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                        <div class="text-xs font-bold text-gray-400 uppercase mb-3">{{ $stage }}</div>
+                        <div class="space-y-2">
+                            <div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-xs text-gray-600">Contact A</div>
+                            <div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-xs text-gray-600">Contact B</div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
         </div>
     </div>
 </section>
