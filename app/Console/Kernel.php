@@ -14,6 +14,9 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('catalog:sync-stores')->hourly();
         $schedule->command('whatsapp-flows:mark-abandoned')->hourly();
+        $schedule->command('campaigns:dispatch-scheduled')->everyMinute();
+        $schedule->command('campaigns:check-completion')->everyFiveMinutes();
+        $schedule->command('campaigns:process-recurring')->everyFifteenMinutes();
     }
 
     /**

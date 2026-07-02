@@ -15,9 +15,40 @@ class Campaign extends Model
 {
     use Whatsapp;
 
+    public const STATUS_DRAFT = 'draft';
+
+    public const STATUS_SCHEDULED = 'scheduled';
+
+    public const STATUS_SENDING = 'sending';
+
+    public const STATUS_COMPLETED = 'completed';
+
+    public const STATUS_PAUSED = 'paused';
+
+    public const STATUS_CANCELLED = 'cancelled';
+
+    public const STATUS_PAUSED_INSUFFICIENT_CREDITS = 'paused_insufficient_credits';
+
+    public const CHANNEL_WHATSAPP = 'whatsapp';
+
+    public const CHANNEL_SMS = 'sms';
+
+    public const CHANNEL_EMAIL = 'email';
+
+    public const TIMEZONE_MODE_CONTACT = 'contact';
+
+    public const TIMEZONE_MODE_BUSINESS = 'business';
+
     protected $table = 'wa_campaings';
 
     public $guarded = [];
+
+    protected $casts = [
+        'recurrence_rule' => 'array',
+        'launched_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'recurrence_next_at' => 'datetime',
+    ];
 
     public function template()
     {
@@ -32,6 +63,51 @@ class Campaign extends Model
     public function messages()
     {
         return $this->hasMany(Message::class);
+    }
+
+    public function segment()
+    {
+        return $this->belongsTo(CampaignSegment::class, 'segment_id');
+    }
+
+    public function scopeBroadcastsOnly($query)
+    {
+        return $query
+            ->whereNull('contact_id')
+            ->where('is_bot', false)
+            ->where('is_api', false)
+            ->where('is_reminder', false);
+    }
+
+    public function isBroadcast(): bool
+    {
+        return ! $this->is_bot && ! $this->is_api && ! $this->is_reminder && $this->contact_id === null;
+    }
+
+    public function cloneAsDraft(?string $name = null): self
+    {
+        $clone = $this->replicate([
+            'sended_to', 'delivered_to', 'read_by', 'used', 'launched_at', 'completed_at',
+        ]);
+
+        $clone->name = $name ?? ($this->name.' (copy)');
+        $clone->status = self::STATUS_DRAFT;
+        $clone->cloned_from_id = $this->id;
+        $clone->is_active = true;
+        $clone->send_to = 0;
+        $clone->sended_to = 0;
+        $clone->delivered_to = 0;
+        $clone->read_by = 0;
+        $clone->save();
+
+        return $clone;
+    }
+
+    public function cancelPendingMessages(): int
+    {
+        return $this->messages()
+            ->where('status', Message::STATUS_PENDING)
+            ->update(['status' => Message::STATUS_CANCELLED]);
     }
 
     protected static function booted()
@@ -132,7 +208,12 @@ class Campaign extends Model
 
     public function makeMessages($request, ?ContactModel $contact = null)
     {
-        if ($this->group_id == null && $this->contact_id == null && $contact == null) {
+        if ($this->segment_id != null && $contact == null) {
+            $company = $this->company ?? Company::find($this->company_id);
+            $resolver = app(\App\Services\Campaign\CampaignAudienceResolver::class);
+            $audience = $resolver->resolve($company, ['segment_id' => $this->segment_id]);
+            $contacts = $audience['contacts'];
+        } elseif ($this->group_id == null && $this->contact_id == null && $contact == null) {
             $contacts = Contact::where('subscribed', 1)->get();
         } elseif ($this->group_id != null) {
             $contacts = Group::findOrFail($this->group_id)
@@ -198,6 +279,16 @@ class Campaign extends Model
      */
     public function buildMessageDataForContact(ContactModel $contact, $request = null, ?array $variablesValuesOverride = null): ?array
     {
+        $channel = $this->channel ?? self::CHANNEL_WHATSAPP;
+
+        if ($channel === self::CHANNEL_SMS) {
+            return $this->buildSmsMessageDataForContact($contact, $request, $variablesValuesOverride);
+        }
+
+        if ($channel === self::CHANNEL_EMAIL) {
+            return $this->buildEmailMessageDataForContact($contact, $request, $variablesValuesOverride);
+        }
+
         $template = Template::withoutGlobalScope(\App\Scopes\CompanyScope::class)->where('id', $this->template_id)->first();
 
         if (! $template) {
@@ -237,11 +328,13 @@ class Campaign extends Model
 
         $sendTime = Carbon::now();
 
-        if ($tzBasedDelivery) {
+        if ($tzBasedDelivery && ($this->timezone_mode ?? self::TIMEZONE_MODE_CONTACT) === self::TIMEZONE_MODE_CONTACT) {
             try {
                 $sendTime = Carbon::parse($systemRelatedDateTimeOfSend->format('Y-m-d H:i:s'), $contact->country->timezone)->copy()->tz(config('app.timezone'))->format('Y-m-d H:i:s');
             } catch (\Throwable $th) {
             }
+        } elseif ($tzBasedDelivery) {
+            $sendTime = $systemRelatedDateTimeOfSend;
         }
 
         $APIComponents = [];
@@ -266,6 +359,11 @@ class Campaign extends Model
 
                 if (isset($variables_match[$lowKey])) {
                     $this->setParameter($variables_match[$lowKey], $variablesValues[$lowKey], $component, $content, $contact);
+                    unset($component['text']);
+                    unset($component['format']);
+                    unset($component['example']);
+                    array_push($APIComponents, $component);
+                } elseif (! preg_match('/{{(\d+)}}/', $component['text'] ?? '')) {
                     unset($component['text']);
                     unset($component['format']);
                     unset($component['example']);
@@ -386,6 +484,111 @@ class Campaign extends Model
         }
 
         return $dataToSend;
+    }
+
+    public function buildSmsMessageDataForContact(ContactModel $contact, $request = null, ?array $variablesValuesOverride = null): ?array
+    {
+        $variablesValues = $variablesValuesOverride ?? json_decode($this->variables, true) ?? [];
+        $body = $variablesValues['sms_body'] ?? '';
+
+        if ($body === '') {
+            return null;
+        }
+
+        $body = $this->applyContactMergeTags($body, $contact);
+        $sendTime = $this->resolveSendTimeForContact($contact, $request);
+
+        return [
+            'contact_id' => $contact->id,
+            'company_id' => $contact->company_id ?? $this->company_id,
+            'value' => $body,
+            'header_image' => '',
+            'header_video' => '',
+            'header_audio' => '',
+            'header_document' => '',
+            'footer_text' => '',
+            'buttons' => '[]',
+            'header_text' => '',
+            'is_message_by_contact' => false,
+            'is_campign_messages' => true,
+            'status' => 0,
+            'created_at' => now(),
+            'scchuduled_at' => $sendTime,
+            'components' => '[]',
+            'campaign_id' => $this->id,
+        ];
+    }
+
+    public function buildEmailMessageDataForContact(ContactModel $contact, $request = null, ?array $variablesValuesOverride = null): ?array
+    {
+        if (empty($contact->email)) {
+            return null;
+        }
+
+        $variablesValues = $variablesValuesOverride ?? json_decode($this->variables, true) ?? [];
+        $subject = $variablesValues['email_subject'] ?? $this->name;
+        $body = $variablesValues['email_body'] ?? '';
+
+        if ($body === '') {
+            return null;
+        }
+
+        $subject = $this->applyContactMergeTags($subject, $contact);
+        $body = $this->applyContactMergeTags($body, $contact);
+        $sendTime = $this->resolveSendTimeForContact($contact, $request);
+
+        return [
+            'contact_id' => $contact->id,
+            'company_id' => $contact->company_id ?? $this->company_id,
+            'value' => $body,
+            'header_image' => '',
+            'header_video' => '',
+            'header_audio' => '',
+            'header_document' => '',
+            'footer_text' => '',
+            'buttons' => '[]',
+            'header_text' => $subject,
+            'is_message_by_contact' => false,
+            'is_campign_messages' => true,
+            'status' => 0,
+            'created_at' => now(),
+            'scchuduled_at' => $sendTime,
+            'components' => '[]',
+            'campaign_id' => $this->id,
+        ];
+    }
+
+    private function applyContactMergeTags(string $text, ContactModel $contact): string
+    {
+        return str_replace(
+            ['{{name}}', '{{phone}}', '{{email}}', '{{contact.name}}', '{{contact.phone}}', '{{contact.email}}'],
+            [$contact->name ?? '', $contact->phone ?? '', $contact->email ?? '', $contact->name ?? '', $contact->phone ?? '', $contact->email ?? ''],
+            $text
+        );
+    }
+
+    private function resolveSendTimeForContact(ContactModel $contact, $request = null): mixed
+    {
+        $sendTime = Carbon::now();
+
+        if ($request === null || $request->has('send_now') || ! $request->has('send_time') || $request->send_time === null) {
+            return $sendTime;
+        }
+
+        $company = $this->company ?? Company::find($this->company_id);
+        config(['app.timezone' => $company?->getConfig('time_zone', config('app.timezone'))]);
+
+        $systemRelatedDateTimeOfSend = Carbon::parse($request->send_time)->tz(config('app.timezone'));
+
+        if (($this->timezone_mode ?? self::TIMEZONE_MODE_CONTACT) === self::TIMEZONE_MODE_CONTACT) {
+            try {
+                return Carbon::parse($systemRelatedDateTimeOfSend->format('Y-m-d H:i:s'), $contact->country->timezone)
+                    ->copy()->tz(config('app.timezone'))->format('Y-m-d H:i:s');
+            } catch (\Throwable $th) {
+            }
+        }
+
+        return $systemRelatedDateTimeOfSend;
     }
 
     /**

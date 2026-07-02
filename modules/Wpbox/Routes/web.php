@@ -27,12 +27,24 @@ Route::group([
         Route::middleware('plan.capability:campaigns')->group(function () {
             //Campaigns
             Route::get('campaigns', 'CampaignsController@index')->name('campaigns.index');
+            Route::get('campaigns/wizard', 'CampaignsController@wizard')->name('campaigns.wizard');
+            Route::post('campaigns/estimate', 'CampaignsController@estimate')->name('campaigns.estimate');
             Route::get('campaigns/{campaign}/show', 'CampaignsController@show')->name('campaigns.show');
             Route::get('campaigns/create/{type?}', 'CampaignsController@create')->name('campaigns.create');
-            Route::post('campaigns', 'CampaignsController@store')->name('campaigns.store');
+            Route::post('campaigns', 'CampaignsController@store')->name('campaigns.store')->middleware('campaign.plan');
             Route::put('campaigns/{campaign}', 'CampaignsController@update')->name('campaigns.update');
             Route::get('campaigns/del/{campaign}', 'CampaignsController@destroy')->name('campaigns.delete');
             Route::post('campaigns/parse-file', 'CampaignsController@parseFile')->name('campaigns.parse-file');
+
+            Route::get('campaigns/clone/{campaign}', 'CampaignsController@cloneCampaign')->name('campaigns.clone');
+            Route::get('campaigns/cancel/{campaign}', 'CampaignsController@cancel')->name('campaigns.cancel');
+            Route::get('campaigns/launch/{campaign}', 'CampaignsController@launch')->name('campaigns.launch');
+
+            Route::get('campaigns/integrations', 'IntegrationsHubController@index')->name('campaigns.integrations');
+            Route::post('campaigns/integrations/triggers', 'IntegrationsHubController@storeTrigger')->name('campaigns.integrations.triggers.store');
+            Route::get('campaigns/segments', 'CampaignSegmentsController@index')->name('campaigns.segments.index');
+            Route::post('campaigns/segments', 'CampaignSegmentsController@store')->name('campaigns.segments.store');
+            Route::delete('campaigns/segments/{segment}', 'CampaignSegmentsController@destroy')->name('campaigns.segments.destroy');
 
             //Deactivate and activate bot
             Route::get('campaigns/deactivatebot/{campaign}', 'CampaignsController@deactivateBot')->name('campaigns.deactivatebot');
@@ -101,7 +113,10 @@ Route::group([
     Route::prefix('webhook/wpbox')->group(function () {
         Route::post('receive/{token}', 'ChatController@receiveMessage');
         Route::get('receive/{tokenViaURL}', 'ChatController@verifyWebhook');
-        Route::get('sendschuduledmessages', 'CampaignsController@sendSchuduledMessages');
+        Route::get('sendschuduledmessages', 'CampaignsController@sendSchuduledMessages')
+            ->middleware('campaign.dispatch');
+        Route::post('store-event', 'IntegrationsHubController@receiveStoreEvent')
+            ->middleware('campaign.dispatch');
 
         // WhatsApp Flows webhook — handles data_exchange payloads from Meta
         Route::post('flows/{token}', 'FlowsWebhookController@receive')->name('wpbox.flows.webhook');

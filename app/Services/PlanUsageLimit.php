@@ -77,6 +77,10 @@ class PlanUsageLimit
             'campaigns' => (int) DB::table('wa_campaings')
                 ->where('created_at', '>=', $since)
                 ->where('company_id', $company->id)
+                ->whereNull('contact_id')
+                ->where('is_bot', false)
+                ->where('is_api', false)
+                ->where('is_reminder', false)
                 ->count(),
             'messages' => (int) DB::table('messages')
                 ->where('created_at', '>=', $since)
@@ -102,7 +106,7 @@ class PlanUsageLimit
         $allowed = $this->getAllowedLimits($plan);
         $usage = $this->getUsageForCompany($company, $plan);
 
-        foreach (['messages', 'campaigns', 'contacts'] as $key) {
+        foreach (['messages', 'contacts'] as $key) {
             if (! $this->isUnlimited($allowed[$key]) && $usage[$key] >= $allowed[$key]) {
                 return $key;
             }

@@ -127,7 +127,7 @@
             <td>
                 <!-- CHAT -->
                 @if(config('settings.app_code_name','') == 'wpbox')
-                    <a href="{{ route('campaigns.create',['contact_id'=>$item->id]) }}" class="btn btn-outline-success btn-sm">
+                    <a href="{{ route('campaigns.wizard', ['contact_id' => $item->id, 'broadcast_type' => 'group']) }}" class="btn btn-outline-success btn-sm">
                         <span class="btn-inner--icon"><i class="ni ni-chat-round"></i></span>
                         <span class="btn-inner--text">{{ __('Start chat')}}</span>
                     </a>

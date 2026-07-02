@@ -9,6 +9,20 @@ use Illuminate\Support\Facades\Http;
 
 class Message extends Model
 {
+    public const STATUS_PENDING = 0;
+
+    public const STATUS_SENT = 1;
+
+    public const STATUS_SENT_ALT = 2;
+
+    public const STATUS_DELIVERED = 3;
+
+    public const STATUS_READ = 4;
+
+    public const STATUS_FAILED = 5;
+
+    public const STATUS_CANCELLED = 6;
+
     protected $table = 'messages';
 
     public $guarded = [];
