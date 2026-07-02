@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ConvoConnect — Social Commerce Platform for WhatsApp</title>
-<meta name="description" content="Sell from chat, run campaigns, take bookings, and get paid on WhatsApp. ConvoConnect is the social commerce platform with catalogs, team inbox, and M-Pesa payments." />
+<meta name="description" content="Sell from chat, run journey pipelines, take bookings, and get paid on WhatsApp. ConvoConnect is the social commerce platform with catalogs, kanban CRM, team inbox, and M-Pesa payments." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet" />
@@ -243,15 +243,16 @@ tailwind.config = {
     <!-- Logo -->
     <a href="#" class="flex items-center gap-2.5 flex-shrink-0">
       <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#25D366,#075E54);">
-      <img src="public/uploads/lgU7zxttjQlFP0g8jI9EE9FxfvelUIQ6wVT5Qwq1.png" alt="icon" class="w-full h-full object-contain p-1" />
+      <img src="{{ config('settings.logo', asset('favicon.ico')) }}" alt="{{ config('settings.site_name', config('app.name')) }}" class="w-full h-full object-contain p-1" />
       </div>
-      <span class="font-display font-800 text-lg tracking-tight text-white">Convo<span class="grad-text">Connect</span></span>
+      <span class="font-display font-800 text-lg tracking-tight text-white">{{ config('settings.site_name', config('app.name')) }}</span>
     </a>
 
     <!-- Desktop Nav -->
     <div class="hidden lg:flex items-center gap-7">
       <a href="#features" class="text-sm text-gray-400 hover:text-white transition-colors">Features</a>
       <a href="#platform" class="text-sm text-gray-400 hover:text-white transition-colors">Platform</a>
+      <a href="#journeys" class="text-sm text-gray-400 hover:text-white transition-colors">Journeys</a>
       <a href="#bookings" class="text-sm text-gray-400 hover:text-white transition-colors">Bookings</a>
       <a href="#catalog" class="text-sm text-gray-400 hover:text-white transition-colors">Catalog</a>
       <a href="#automation" class="text-sm text-gray-400 hover:text-white transition-colors">Automation</a>
@@ -282,6 +283,7 @@ tailwind.config = {
   <div x-show="mobileOpen" x-cloak class="lg:hidden border-t border-white/5 px-4 py-4 space-y-1" style="background:rgba(4,15,12,0.98);">
     <a href="#features" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Features</a>
     <a href="#platform" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Platform</a>
+    <a href="#journeys" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Journeys</a>
     <a href="#bookings" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Bookings</a>
     <a href="#catalog" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Catalog</a>
     <a href="#automation" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Automation</a>
@@ -323,7 +325,7 @@ tailwind.config = {
       </h1>
 
       <p class="text-lg text-gray-400 leading-relaxed mb-8 max-w-xl">
-        Sell from chat, run campaigns, take bookings, and get paid — product catalogs, team inbox, and M-Pesa in one platform. Go from signup to your first sale in as little as 15 minutes.
+        Sell from chat, move contacts through journey pipelines, take bookings, and get paid — product catalogs, kanban CRM, team inbox, and M-Pesa in one platform. Go from signup to your first sale in as little as 15 minutes.
       </p>
 
       <div class="flex flex-wrap gap-3 mb-10">
@@ -472,7 +474,7 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Commerce + operations</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Everything to sell and<br/>support on WhatsApp</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Catalogs and checkout for social selling, plus inbox, campaigns, bookings, and payments — one platform for your entire WhatsApp business.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">Catalogs and checkout for social selling, plus journey pipelines, inbox, campaigns, bookings, and payments — one platform for your entire WhatsApp business.</p>
     </div>
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -503,13 +505,13 @@ tailwind.config = {
       <!-- Card 3 -->
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">🗂️</div>
-        <h3 class="font-display font-700 text-lg mb-2">Contact CRM</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Segment contacts, run kanban journey pipelines with ready-made playbooks, and see every touchpoint from one CRM.</p>
+        <h3 class="font-display font-700 text-lg mb-2">Journey Pipelines</h3>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Kanban CRM with ready-made playbooks for sales, support, e-commerce, and events — move contacts across stages and fire WhatsApp campaigns automatically.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Journey playbooks (sales, e-commerce, events)</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Groups, tags & custom fields</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Stage-triggered campaigns</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>CSV import & export</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>7 templates: sales, support, revenue & more</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Stage-triggered WhatsApp campaigns</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Auto-enroll new contacts & group rules</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Journey sidebar in chat</li>
         </ul>
       </div>
       <!-- Card 4 -->
@@ -565,8 +567,8 @@ tailwind.config = {
       <div class="card-lift border rounded-2xl p-6 relative overflow-hidden" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
         <div class="absolute top-3 right-3 badge text-xs">Updated</div>
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.15);">📅</div>
-        <h3 class="font-display font-700 text-lg mb-2">Appointments & Events</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Full booking system with multi-staff scheduling, public widgets, events with seat limits, and automated WhatsApp reminders.</p>
+        <h3 class="font-display font-700 text-lg mb-2">Bookings</h3>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Full booking app with multi-staff scheduling, public widgets, events with seat limits, and automated WhatsApp reminders — configurable from Company Apps.</p>
         <ul class="space-y-2">
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Multi-staff & department scheduling</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Embeddable booking widgets & events</li>
@@ -605,7 +607,7 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">🚀</div>
         <h3 class="font-display font-700 text-base mb-2">Activation OS</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">Step-by-step onboarding wizard tracks WhatsApp setup, team invites, first flow, and first campaign — so owners go live in minutes, not days.</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Guided onboarding tracks WhatsApp setup, a test message, your first contacts, and first flow — so owners go live in minutes, not days.</p>
       </div>
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">👤</div>
@@ -766,13 +768,123 @@ tailwind.config = {
   </div>
 </section>
 
+<!-- ===== JOURNEYS SPOTLIGHT ===== -->
+<section id="journeys" class="py-24 border-y border-white/5" style="background:rgba(126,34,206,0.03);">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="text-center mb-16">
+      <div class="badge inline-flex mb-4">Journey Pipelines</div>
+      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Move every contact<br/><span class="grad-text">through a pipeline.</span></h2>
+      <p class="text-gray-400 max-w-xl mx-auto">Kanban journeys with stage automation — launch from templates, trigger WhatsApp campaigns when contacts move, and manage pipelines from the inbox sidebar.</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-4 mb-16">
+      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">📋</div>
+        <p class="font-display font-700 text-base mb-2">1. Pick a Playbook</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Start from seven templates — sales, support, marketing, onboarding, revenue, e-commerce, or event registrations — each with ordered stages ready to go.</p>
+      </div>
+      <div class="card-lift border rounded-2xl p-6 text-center" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.15);">🧭</div>
+        <p class="font-display font-700 text-base mb-2" style="color:#25D366;">2. Drag Contacts on Kanban</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Move contacts across stages visually. Attach campaigns to stages so WhatsApp messages fire automatically when someone enters a step.</p>
+      </div>
+      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">📊</div>
+        <p class="font-display font-700 text-base mb-2">3. Track Pipeline Value</p>
+        <p class="text-sm text-gray-500 leading-relaxed">See stage counts, activity history, and revenue metrics on your dashboard. Auto-enroll new contacts or route by group rules from Company Apps.</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-12 items-center">
+      <div>
+        <h3 class="font-display text-2xl font-800 mb-6">Everything you need to run journeys on WhatsApp</h3>
+        <div class="space-y-4">
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🎯</div>
+            <div>
+              <p class="text-sm font-semibold text-white mb-0.5">Stage-triggered campaigns</p>
+              <p class="text-sm text-gray-500">Link a broadcast template to any stage. When a contact moves there — manually or via automation — the campaign queues with optional delay.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🆕</div>
+            <div>
+              <p class="text-sm font-semibold text-white mb-0.5">Auto-enroll new contacts</p>
+              <p class="text-sm text-gray-500">Turn on auto-enrollment in Company Apps to add every new contact to your default journey's first stage automatically.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">💬</div>
+            <div>
+              <p class="text-sm font-semibold text-white mb-0.5">Contact journeys sidebar</p>
+              <p class="text-sm text-gray-500">Agents move contacts between stages, view pipeline context, and launch stage campaigns without leaving the chat inbox.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">⚙️</div>
+            <div>
+              <p class="text-sm font-semibold text-white mb-0.5">Per-app settings in Company Apps</p>
+              <p class="text-sm text-gray-500">Enable journeys, confirm before send, staff permissions, and default journey ID — all grouped under one Journeys tab in workspace settings.</p>
+            </div>
+          </div>
+        </div>
+        <a href="{{ route('register') }}" class="inline-flex items-center gap-2 mt-8 px-5 py-3 text-sm font-semibold text-black rounded-xl" style="background:#25D366;">Start Your First Journey →</a>
+      </div>
+
+      <div class="relative">
+        <div class="bg-[#0d1a15] border border-white/[0.07] rounded-2xl overflow-hidden shadow-2xl">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style="background:#0a1410;">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-red-500 opacity-70"></div>
+              <div class="w-3 h-3 rounded-full bg-yellow-400 opacity-70"></div>
+              <div class="w-3 h-3 rounded-full opacity-70" style="background:#25D366;"></div>
+            </div>
+            <p class="text-xs text-gray-500 font-medium">Sales Pipeline — Kanban</p>
+            <div class="badge text-xs">Live</div>
+          </div>
+          <div class="px-4 py-4 grid grid-cols-4 gap-2">
+            @foreach([
+              ['Lead', '12', '#64748b'],
+              ['Qualified', '8', '#2563eb'],
+              ['Proposal', '5', '#d97706'],
+              ['Won', '3', '#25D366'],
+            ] as [$stage, $count, $color])
+            <div class="rounded-xl border border-white/[0.06] p-2" style="background:rgba(255,255,255,0.02);">
+              <div class="flex items-center justify-between mb-2">
+                <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{{ $stage }}</p>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full text-gray-300" style="background:{{ $color }}33;color:{{ $color }};">{{ $count }}</span>
+              </div>
+              <div class="space-y-1.5">
+                @for($i = 0; $i < min(2, (int) $count); $i++)
+                <div class="rounded-lg px-2 py-1.5 border border-white/[0.05]" style="background:#162318;">
+                  <p class="text-[10px] text-white font-medium">Contact {{ $i + 1 }}</p>
+                  <p class="text-[9px] text-gray-500">Moved today</p>
+                </div>
+                @endfor
+              </div>
+            </div>
+            @endforeach
+          </div>
+          <div class="px-4 py-2.5 border-t border-white/[0.06] flex items-center justify-between" style="background:#0a1410;">
+            <p class="text-xs text-gray-600">Stage campaign queued on move</p>
+            <div class="flex gap-2">
+              <div class="badge text-xs">Templates ✓</div>
+              <div class="badge text-xs">Kanban ✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ===== BOOKINGS SPOTLIGHT ===== -->
 <section id="bookings" class="py-24 border-y border-white/5" style="background:rgba(37,211,102,0.02);">
   <div class="max-w-7xl mx-auto px-4 sm:px-6">
     <div class="text-center mb-16">
-      <div class="badge inline-flex mb-4">Appointments & Events</div>
+      <div class="badge inline-flex mb-4">Bookings</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Book appointments.<br/><span class="grad-text">Run events. Reduce no-shows.</span></h2>
-      <p class="text-gray-400 max-w-xl mx-auto">A complete booking platform inside ConvoConnect — multi-staff scheduling, public widgets, event registrations, Google Calendar sync, and WhatsApp reminders.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">The Bookings app inside ConvoConnect — multi-staff scheduling, public widgets, event registrations, Google Calendar sync, and WhatsApp reminders. Configure everything from one Bookings tab in Company Apps.</p>
     </div>
 
     <!-- 3-step flow -->
@@ -1501,7 +1613,7 @@ tailwind.config = {
           <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 7 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div x-show="open === 7" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Meta's Business Agent handles simple FAQ support. ConvoConnect is a full social commerce platform: sell from catalog sidebars and branded shops, run file/group/quick campaigns, take bookings, manage a Customer 360 inbox with AI Copilot, collect M-Pesa and Stripe payments, and track revenue — with AI as one step in your flows, not a black-box replacement for your stack.</p>
+          <p class="text-sm text-gray-400 leading-relaxed">Meta's Business Agent handles simple FAQ support. ConvoConnect is a full social commerce platform: sell from catalog sidebars and branded shops, run journey pipelines and file/group/quick campaigns, take bookings, manage a Customer 360 inbox with AI Copilot, collect M-Pesa and Stripe payments, and track revenue — with AI as one step in your flows, not a black-box replacement for your stack.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
@@ -1549,6 +1661,15 @@ tailwind.config = {
           <p class="text-sm text-gray-400 leading-relaxed">Yes. Organization managers get scoped access to specific modules — like inbox, campaigns, or flows — without billing or WhatsApp setup permissions. They see Customer 360, Copilot suggestions, and revenue widgets based on what you grant them. Owners keep control of activation, integrations, and account settings.</p>
         </div>
       </div>
+      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 13 ? null : 13">
+          <span class="text-sm font-semibold text-white">What are journey pipelines?</span>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 13 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+        <div x-show="open === 13" x-cloak class="px-6 pb-4">
+          <p class="text-sm text-gray-400 leading-relaxed">Journey pipelines are kanban boards for your WhatsApp contacts. Create pipelines from templates (sales, support, e-commerce, events, and more), drag contacts between stages, and attach WhatsApp campaigns that fire when someone enters a stage. New contacts can auto-enroll, agents manage journeys from the inbox sidebar, and owners configure the app from the Journeys tab in Company Apps.</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -1562,7 +1683,7 @@ tailwind.config = {
     <h2 class="font-display text-5xl sm:text-6xl lg:text-7xl font-800 leading-tight mb-6" style="letter-spacing:-0.02em;">
       Start selling on<br/><span class="grad-text">WhatsApp today</span>
     </h2>
-    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Join 2,400+ brands selling on WhatsApp — catalogs, campaigns, bookings, inbox, and payments in one social commerce platform.</p>
+    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Join 2,400+ brands selling on WhatsApp — journey pipelines, catalogs, campaigns, bookings, inbox, and payments in one social commerce platform.</p>
     <div class="flex flex-wrap justify-center gap-4 mb-6">
       <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
         Start Free Today
@@ -1663,11 +1784,11 @@ tailwind.config = {
       <div class="lg:col-span-2">
         <a href="#" class="flex items-center gap-2.5 mb-4">
           <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#25D366,#075E54);">
-          <img src="public/uploads/lgU7zxttjQlFP0g8jI9EE9FxfvelUIQ6wVT5Qwq1.png" alt="icon" class="w-full h-full object-contain p-1" />
+          <img src="{{ config('settings.logo', asset('favicon.ico')) }}" alt="{{ config('settings.site_name', config('app.name')) }}" class="w-full h-full object-contain p-1" />
           </div>
-          <span class="font-display font-800 text-lg tracking-tight">Convo<span class="grad-text">Connect</span></span>
+          <span class="font-display font-800 text-lg tracking-tight">{{ config('settings.site_name', config('app.name')) }}</span>
         </a>
-        <p class="text-sm text-gray-500 leading-relaxed max-w-xs mb-5">The social commerce platform for WhatsApp — sell from chat, run campaigns, take bookings, and get paid. Built on the official Meta WhatsApp Business API.</p>
+        <p class="text-sm text-gray-500 leading-relaxed max-w-xs mb-5">The social commerce platform for WhatsApp — sell from chat, run journey pipelines, take bookings, and get paid. Built on the official Meta WhatsApp Business API.</p>
         <div class="flex items-center gap-3">
           <a href="#" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all">
             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
@@ -1682,6 +1803,7 @@ tailwind.config = {
         <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">Product</p>
         <ul class="space-y-2.5">
           <li><a href="#features" class="text-sm text-gray-400 hover:text-white transition-colors">Features</a></li>
+          <li><a href="#journeys" class="text-sm text-gray-400 hover:text-white transition-colors">Journeys</a></li>
           <li><a href="#bookings" class="text-sm text-gray-400 hover:text-white transition-colors">Bookings</a></li>
           <li><a href="#catalog" class="text-sm text-gray-400 hover:text-white transition-colors">Product Catalog</a></li>
           <li><a href="#automation" class="text-sm text-gray-400 hover:text-white transition-colors">Automation</a></li>

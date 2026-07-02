@@ -45,7 +45,6 @@ class SettingsController extends Controller
     public function getCurrentEnv()
     {
 
-        
         if (Module::has('blog')) {
             //Get the static pages
             $staticPages = \Modules\Blog\Models\Blog::where('post_type', 'page')->get();
@@ -55,17 +54,15 @@ class SettingsController extends Controller
             }
 
             try {
-                    config(['config.env.0.fields.21.data' => $staticPagesData]);
-                    config(['config.env.0.fields.22.data' => $staticPagesData]);
-                    //dd( config('config.env.0.fields.21'));
+                config(['config.env.0.fields.21.data' => $staticPagesData]);
+                config(['config.env.0.fields.22.data' => $staticPagesData]);
+                //dd( config('config.env.0.fields.21'));
             } catch (\Exception $e) {
                 //throw $th;
             }
         }
 
         $envConfigs = config('config.env');
-
-       
 
         //Extra fields from included modules
         $extraFields = [];
@@ -82,7 +79,7 @@ class SettingsController extends Controller
         foreach ($envConfigs as $key => $group) {
             $theMegedGroupFields = [];
             foreach ($group['fields'] as $key => $field) {
-                if (! (isset($field['onlyin']) && str_contains( $field['onlyin'],config('settings.app_project_type')))) {
+                if (! (isset($field['onlyin']) && str_contains($field['onlyin'], config('settings.app_project_type')))) {
 
                     $shouldBeAdded = true;
 
@@ -97,22 +94,22 @@ class SettingsController extends Controller
                     }
                     if ($shouldBeAdded) {
                         $value = env($field['key'], $field['value']);
-                        if($field['key'] == 'DB_PASSWORD'){
+                        if ($field['key'] == 'DB_PASSWORD') {
                             $value = config('database.connections.mysql.password');
                         }
-                        if($field['key'] == 'DB_DATABASE'){
+                        if ($field['key'] == 'DB_DATABASE') {
                             $value = config('database.connections.mysql.database');
                         }
-                        if($field['key'] == 'DB_USERNAME'){
+                        if ($field['key'] == 'DB_USERNAME') {
                             $value = config('database.connections.mysql.username');
                         }
-                        if($field['key'] == 'DB_HOST'){ 
+                        if ($field['key'] == 'DB_HOST') {
                             $value = config('database.connections.mysql.host');
                         }
-                        if($field['key'] == 'DB_PORT'){
+                        if ($field['key'] == 'DB_PORT') {
                             $value = config('database.connections.mysql.port');
                         }
-                        if($field['key'] == 'DB_URL'){
+                        if ($field['key'] == 'DB_URL') {
                             $value = config('database.connections.mysql.url');
                         }
                         array_push($theMegedGroupFields, [
@@ -129,7 +126,6 @@ class SettingsController extends Controller
                         ]);
                     }
 
-                   
                 }
             }
             array_push($envMerged, [
@@ -143,7 +139,7 @@ class SettingsController extends Controller
         // Apply database settings from env_settings table
         try {
             $envDbSettings = DB::table('env_settings')->get();
-            
+
             foreach ($envDbSettings as $setting) {
                 // Find and update the corresponding field in envMerged
                 foreach ($envMerged as $groupIndex => $group) {
@@ -178,10 +174,10 @@ class SettingsController extends Controller
      */
     public function index()
     {
-        try{
+        try {
             Artisan::call('migrate', ['--force' => true]);
             Artisan::call('module:migrate', ['--force' => true]);
-        }catch(\Exception $e){
+        } catch (\Exception $e) {
             Log::error('Error migrating: '.$e->getMessage());
         }
 
@@ -220,6 +216,34 @@ class SettingsController extends Controller
         } else {
             return redirect()->route('dashboard')->withStatus(__('No Access'));
         }
+    }
+
+    /**
+     * Ensure unchecked boolean env fields are submitted as "0".
+     *
+     * @param  array<string, mixed>  $env
+     * @return array<string, mixed>
+     */
+    private function normalizeEnvBoolValues(array $env): array
+    {
+        foreach ($this->getCurrentEnv() as $group) {
+            foreach ($group['fields'] as $field) {
+                if (($field['ftype'] ?? 'input') !== 'bool') {
+                    continue;
+                }
+
+                if (! preg_match('/^env\[(.+)\]$/', $field['id'], $matches)) {
+                    continue;
+                }
+
+                $key = $matches[1];
+                if (! array_key_exists($key, $env)) {
+                    $env[$key] = '0';
+                }
+            }
+        }
+
+        return $env;
     }
 
     /**
@@ -305,11 +329,11 @@ class SettingsController extends Controller
                     $value = substr($value, 1, -1);
                 }
 
-                if (! empty($key) && !in_array($key, $usedKeys)) {
+                if (! empty($key) && ! in_array($key, $usedKeys)) {
                     $usedKeys[] = $key;
                     $dataToInsert[] = [
                         'key' => $key,
-                        'value' => $value
+                        'value' => $value,
                     ];
                 }
             }
@@ -339,6 +363,8 @@ class SettingsController extends Controller
             return redirect()->route('admin.settings.index')->withStatus(__('Settings not allowed to be updated in DEMO mode!'));
         }
 
+        $env = $this->normalizeEnvBoolValues($request->input('env', []));
+
         if ($request->hasFile('site_logo')) {
             $LOGO_URL = $this->saveImageVersions(
                 $this->imagePath,
@@ -348,17 +374,14 @@ class SettingsController extends Controller
                 ]
             );
             Log::info('LOGO_URL', ['LOGO_URL' => $LOGO_URL]);
-            $envs = $request->env;
-            if(str_contains($LOGO_URL, 'http')){
-                $envs['LOGO_URL'] = $LOGO_URL;
-            }else{
-                $envs['LOGO_URL'] = $this->imagePath.''.$LOGO_URL.'_logo.jpg';
+            if (str_contains($LOGO_URL, 'http')) {
+                $env['LOGO_URL'] = $LOGO_URL;
+            } else {
+                $env['LOGO_URL'] = $this->imagePath.''.$LOGO_URL.'_logo.jpg';
             }
-            $request->merge(['env' => $envs]);
         }
 
-        $this->setEnvironmentValue($request->env);
-       
+        $this->setEnvironmentValue($env);
 
         //Update the custom js and css files created by admin
         fwrite(fopen(__DIR__.'/../../../public/byadmin/front.js', 'w'), str_replace('tagscript', 'script', $request->jsfront));
