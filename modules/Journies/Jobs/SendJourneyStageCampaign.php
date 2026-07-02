@@ -2,6 +2,7 @@
 
 namespace Modules\Journies\Jobs;
 
+use App\Services\Campaign\CampaignDispatchService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -10,6 +11,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Modules\Journies\Models\JourneyActivity;
 use Modules\Journies\Models\JourneyStage;
+use Modules\Wpbox\Models\Campaign;
 use Modules\Wpbox\Models\Contact;
 
 class SendJourneyStageCampaign implements ShouldQueue
@@ -26,7 +28,7 @@ class SendJourneyStageCampaign implements ShouldQueue
     ) {
     }
 
-    public function handle(): void
+    public function handle(CampaignDispatchService $dispatchService): void
     {
         $contact = Contact::withoutGlobalScopes()->find($this->contactId);
         $stage = JourneyStage::withoutGlobalScopes()->find($this->stageId);
@@ -43,17 +45,12 @@ class SendJourneyStageCampaign implements ShouldQueue
         ]);
 
         try {
-            $apiController = new \Modules\Wpbox\Http\Controllers\APIController();
+            $campaign = Campaign::withoutGlobalScopes()->findOrFail($stage->campaign_id);
+            $message = $campaign->makeMessages(null, $contact);
 
-            $request = new \Illuminate\Http\Request();
-            $request->merge([
-                'campaing_id' => $stage->campaign_id,
-                'phone' => $contact->phone,
-                'data' => [],
-                'token' => '_',
-            ]);
-
-            $apiController->sendCampaignMessageToPhoneNumber($request);
+            if ($message) {
+                $dispatchService->sendSynchronously($message);
+            }
 
             if ($this->activityId) {
                 JourneyActivity::withoutGlobalScopes()

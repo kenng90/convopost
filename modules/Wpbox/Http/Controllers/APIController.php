@@ -414,14 +414,24 @@ class APIController extends Controller
 
         return $this->authenticate($request, function ($request) {
 
+            $request->validate([
+                'phone' => 'required',
+            ]);
+
+            if (! $request->filled('campaign_id') && ! $request->filled('campaing_id')) {
+                abort(422, 'campaign_id is required');
+            }
+
             //Make or get the contact
             $contact = $this->getOrMakeContact($request->phone, $this->getCompany(), $request->phone);
 
             //All the passed data in request data, merge with the contact
             $contact['extra_value'] = $request->data;
 
+            $campaignId = $request->input('campaign_id', $request->input('campaing_id'));
+
             //Get the campaign
-            $message = Campaign::findOrFail($request->campaing_id)->makeMessages(null, $contact);
+            $message = Campaign::findOrFail($campaignId)->makeMessages(null, $contact);
 
             //We are queuing the message to be sent, so we don't need to send it here
             //$this->sendCampaignMessageToWhatsApp($message);
@@ -432,7 +442,6 @@ class APIController extends Controller
             [
                 'token' => 'required',
                 'phone' => 'required',
-                'campaing_id' => 'required',
             ]);
     }
 

@@ -74,6 +74,8 @@ class Kernel extends HttpKernel
         'XssSanitizer' => \App\Http\Middleware\XssSanitization::class,
         'plan.plugin' => \App\Http\Middleware\EnsurePlanPlugin::class,
         'plan.capability' => \App\Http\Middleware\EnsurePlanCapability::class,
+        'campaign.dispatch' => \App\Http\Middleware\VerifyCampaignDispatchToken::class,
+        'campaign.plan' => \Modules\Wpbox\Http\Middleware\CheckCampaignPlanLimit::class,
         'org.route' => \App\Http\Middleware\EnsureOrgRouteAccess::class,
         'owner.account' => \App\Http\Middleware\EnsureOwnerAccount::class,
     ];

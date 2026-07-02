@@ -3,13 +3,15 @@
 namespace Modules\Wpbox\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Carbon\Carbon;
+use App\Services\Campaign\CampaignDispatchService;
+use App\Services\Campaign\CampaignEstimateService;
+use App\Services\Campaign\CampaignShowPresenter;
+use App\Services\Campaign\CampaignTemplateVariablesParser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Modules\Contacts\Models\Field;
 use Modules\Contacts\Models\Group;
-use Modules\Wpbox\Jobs\SendMessage;
 use Modules\Wpbox\Models\Campaign;
 use Modules\Wpbox\Models\Contact;
 use Modules\Wpbox\Models\Message;
@@ -55,30 +57,41 @@ class CampaignsController extends Controller
 
         $this->authChecker();
 
-        if ($this->getCompany()->getConfig('whatsapp_webhook_verified', 'no') != 'yes' || $this->getCompany()->getConfig('whatsapp_settings_done', 'no') != 'yes') {
-            return redirect(route('whatsapp.setup'));
-        }
+        $whatsappReady = $this->getCompany()->getConfig('whatsapp_webhook_verified', 'no') == 'yes'
+            && $this->getCompany()->getConfig('whatsapp_settings_done', 'no') == 'yes';
 
         $items = $this->provider::with('template')
-            ->orderBy('id', 'desc')
-            ->whereNull('contact_id')
-            ->where('is_bot', false)
-            ->where('is_api', false)
-            ->where('is_reminder', false);
+            ->broadcastsOnly()
+            ->orderBy('id', 'desc');
+
         if (isset($_GET['name']) && strlen($_GET['name']) > 1) {
             $items = $items->where('name', 'like', '%'.$_GET['name'].'%');
         }
+
+        if (! empty($_GET['status'])) {
+            $items = $items->where('status', $_GET['status']);
+        }
+
+        if (! empty($_GET['broadcast_type'])) {
+            $items = $items->where('broadcast_type', $_GET['broadcast_type']);
+        }
+
         $items = $items->paginate(100);
 
-        return view($this->view_path.'index', ['total_contacts' => Contact::count(),
+        return view($this->view_path.'index', [
+            'total_contacts' => Contact::count(),
+            'whatsappReady' => $whatsappReady,
+            'dispatcherLastRun' => cache('campaign_dispatcher_last_run'),
             'setup' => [
 
                 'title' => __('crud.item_managment', ['item' => __($this->titlePlural)]),
                 'iscontent' => true,
-                'action_link' => route($this->webroute_path.'create'),
+                'action_link' => route($this->webroute_path.'wizard'),
                 'action_name' => __('Send new campaign').' 📢',
-                'action_link2' => route('wpbox.api.index', ['type' => 'api']),
-                'action_name2' => __('Manage API campaigns'),
+                'action_link2' => route('campaigns.integrations'),
+                'action_name2' => __('Integrations hub'),
+                'action_link3' => route('wpbox.api.index', ['type' => 'api']),
+                'action_name3' => __('Manage API campaigns'),
                 'items' => $items,
                 'item_names' => $this->titlePlural,
                 'webroute_path' => $this->webroute_path,
@@ -91,6 +104,9 @@ class CampaignsController extends Controller
 
     public function show(Campaign $campaign)
     {
+        $campaign->load(['template', 'segment', 'company']);
+
+        $presenter = CampaignShowPresenter::for($campaign);
 
         //Get countries we have send to
         $contact_ids = $campaign->messages()->select(['contact_id'])->pluck('contact_id')->toArray();
@@ -101,15 +117,20 @@ class CampaignsController extends Controller
             ->groupBy('contacts.country_id')
             ->get()->toArray();
 
+        $analytics = $presenter->analytics();
+
         $dataToSend = [
-            'total_contacts' => Contact::count(),
+            'presenter' => $presenter,
+            'contentPreview' => $presenter->contentPreview(),
+            'total_contacts' => Contact::where('company_id', $campaign->company_id)->count(),
+            'analytics' => $analytics,
             'item' => $campaign,
             'setup' => [
                 'countriesCount' => $countriesCount,
                 'title' => __('Campaign').' '.$campaign->name,
                 'action_link' => route($this->webroute_path.'index'),
                 'action_name' => '📢 '.__('Back'),
-                'items' => $campaign->messages()->with('contact')->paginate(config('settings.paginate')),
+                'items' => $campaign->messages()->with('contact.country')->paginate(config('settings.paginate')),
                 'item_names' => $this->titlePlural,
                 'webroute_path' => $this->webroute_path,
                 'fields' => [],
@@ -140,6 +161,14 @@ class CampaignsController extends Controller
 
             $dataToSend['setup']['action_link3'] = route($this->webroute_path.'report', $campaign->id);
             $dataToSend['setup']['action_name3'] = '📊 '.__('Download report');
+
+            if (in_array($campaign->status, [Campaign::STATUS_DRAFT, Campaign::STATUS_SCHEDULED, Campaign::STATUS_SENDING], true)) {
+                $dataToSend['setup']['action_link4'] = route($this->webroute_path.'cancel', $campaign->id);
+                $dataToSend['setup']['action_name4'] = '⛔ '.__('Cancel campaign');
+            }
+
+            $dataToSend['setup']['action_link5'] = route($this->webroute_path.'clone', $campaign->id);
+            $dataToSend['setup']['action_name5'] = '📋 '.__('Clone campaign');
         }
 
         return view($this->view_path.'show', $dataToSend);
@@ -153,76 +182,37 @@ class CampaignsController extends Controller
         $this->ownerAndStaffOnly();
     }
 
+    public function componentToVariablesListPublic(Template $template): array
+    {
+        return app(CampaignTemplateVariablesParser::class)->parse($template);
+    }
+
     private function componentToVariablesList($template)
     {
-        $jsonData = json_decode($template->components, true);
-
-        $variables = [];
-        foreach ($jsonData as $item) {
-
-            if ($item['type'] == 'HEADER' && $item['format'] == 'TEXT') {
-                preg_match_all('/{{(\d+)}}/', $item['text'], $matches);
-                if (! empty($matches[1])) {
-                    foreach ($matches[1] as $id) {
-                        $exampleValue = '';
-                        try {
-                            $exampleValue = $item['example']['header_text'][$id - 1];
-                        } catch (\Throwable $th) {
-                        }
-                        $variables['header'][] = ['id' => $id, 'exampleValue' => $exampleValue];
-                    }
-                }
-            } elseif ($item['type'] == 'HEADER' && $item['format'] == 'DOCUMENT') {
-                $variables['document'] = true;
-            } elseif ($item['type'] == 'HEADER' && $item['format'] == 'IMAGE') {
-                $variables['image'] = true;
-            } elseif ($item['type'] == 'HEADER' && $item['format'] == 'VIDEO') {
-                $variables['video'] = true;
-            } elseif ($item['type'] == 'BODY') {
-                preg_match_all('/{{(\d+)}}/', $item['text'], $matches);
-                if (! empty($matches[1])) {
-                    foreach ($matches[1] as $id) {
-                        $exampleValue = '';
-                        try {
-                            $exampleValue = $item['example']['body_text'][0][$id - 1];
-                        } catch (\Throwable $th) {
-                        }
-                        $variables['body'][] = ['id' => $id, 'exampleValue' => $exampleValue];
-                    }
-                }
-            } elseif ($item['type'] == 'BUTTONS') {
-                foreach ($item['buttons'] as $keyBtn => $button) {
-                    if ($button['type'] == 'URL') {
-                        preg_match_all('/{{(\d+)}}/', $button['url'], $matches);
-
-                        if (! empty($matches[1])) {
-
-                            foreach ($matches[1] as $id) {
-                                $exampleValue = '';
-                                try {
-                                    $exampleValue = $button['url'];
-                                    $exampleValue = str_replace('{{1}}', '', $exampleValue);
-                                } catch (\Throwable $th) {
-                                }
-                                $variables['buttons'][$id - 1][] = ['id' => $id, 'exampleValue' => $exampleValue, 'type' => $button['type'], 'text' => $button['text']];
-                            }
-                        }
-                    }
-                    if ($button['type'] == 'COPY_CODE') {
-                        $exampleValue = $button['example'][0];
-                        $variables['buttons'][$keyBtn][] = ['id' => $keyBtn, 'exampleValue' => $exampleValue, 'type' => $button['type'], 'text' => $button['text']];
-                    }
-
-                }
-
-            }
-        }
-
-        return $variables;
+        return app(CampaignTemplateVariablesParser::class)->parse($template);
     }
 
     public function create(Request $request, $type = null)
     {
+        $specialType = $request->query('type');
+
+        if ($specialType === null && in_array($type, ['bot', 'api', 'reminder'], true)) {
+            $specialType = $type;
+        }
+
+        $isSpecialCampaign = in_array($specialType, ['bot', 'api', 'reminder'], true);
+
+        if (! $isSpecialCampaign) {
+            return redirect()->route('campaigns.wizard', array_filter([
+                'broadcast_type' => in_array($type, ['file', 'group', 'quick'], true) ? $type : 'group',
+                'channel' => $request->query('channel'),
+                'contact_id' => $request->query('contact_id'),
+                'template_id' => $request->query('template_id'),
+                'group_id' => $request->query('group_id'),
+                'send_now' => $request->has('send_now') ? 1 : null,
+            ], fn ($value) => $value !== null && $value !== ''));
+        }
+
         $templates = [];
         foreach (Template::where('status', 'APPROVED')->get() as $key => $template) {
             $templates[$template->id] = $template->name.' - '.$template->language;
@@ -635,9 +625,13 @@ class CampaignsController extends Controller
             'variables_match' => json_encode($request->parammatch),
             'template_id' => $request->template_id,
             'group_id' => $request->group_id.'' === '0' ? null : $request->group_id,
+            'segment_id' => $request->segment_id ?: null,
             'contact_id' => $request->contact_id,
             'total_contacts' => Contact::count(),
             'broadcast_type' => 'group',
+            'channel' => $request->input('channel', Campaign::CHANNEL_WHATSAPP),
+            'timezone_mode' => $request->input('timezone_mode', Campaign::TIMEZONE_MODE_CONTACT),
+            'status' => $request->boolean('save_draft') ? Campaign::STATUS_DRAFT : Campaign::STATUS_SCHEDULED,
         ]);
 
         $isBot = $request->has('type') && $request->type === 'bot';
@@ -687,7 +681,38 @@ class CampaignsController extends Controller
             return redirect()->route('reminders.reminders.index')->withStatus(__('You have created a new reminder.'));
         }
 
+        if ($request->boolean('save_draft')) {
+            return redirect()->route($this->webroute_path.'show', $campaign)->withStatus(__('Campaign saved as draft.'));
+        }
+
+        $template = Template::find($request->template_id);
+        $estimate = app(CampaignEstimateService::class)->estimate(
+            $this->getCompany(),
+            $template,
+            [
+                'group_id' => $campaign->group_id,
+                'segment_id' => $campaign->segment_id,
+                'contact_id' => $campaign->contact_id,
+            ]
+        );
+
+        if (! $estimate['can_afford'] && config('settings.enable_credits', false)) {
+            $campaign->delete();
+
+            return back()->withInput()->withErrors([
+                'credits' => __('Insufficient credits. This campaign requires :credits credits.', ['credits' => $estimate['total_credits']]),
+            ]);
+        }
+
         $campaign->makeMessages($request);
+        $campaign->update([
+            'status' => Campaign::STATUS_SENDING,
+            'launched_at' => now(),
+        ]);
+
+        if ($request->has('send_now')) {
+            app(CampaignDispatchService::class)->dispatchPendingBatch();
+        }
 
         if ($request->has('contact_id')) {
             return redirect()->route('chat.index')->withStatus(__('Message will be send shortly. Please note that if new contact, it will not appear in this list until the contact start interacting with you!'));
@@ -898,43 +923,89 @@ class CampaignsController extends Controller
         return $perRowParams;
     }
 
-    public function sendSchuduledMessages()
+    public function sendSchuduledMessages(CampaignDispatchService $dispatchService)
     {
-        //Find all unsent Messages that are within the timeline
-        $limit = 100;
+        $sent = $dispatchService->dispatchPendingBatch();
 
-        //campaign_sending_batch
-        try {
-            $limit = (int) config('wpbox.campaign_sending_batch', 100);
-
-            //Limit must be number
-            if (! is_numeric($limit)) {
-                $limit = 100;
-            }
-        } catch (\Throwable $th) {
-            //throw $th;
-        }
-        $messagesToBeSend = Message::where('status', 0)
-            ->where('scchuduled_at', '<', Carbon::now())
-            ->whereIn('campaign_id', function ($query) {
-                $query->select('id')
-                    ->from('wa_campaings')
-                    ->where('is_active', true);
-            })
-            ->limit($limit)
-            ->get();
-        foreach ($messagesToBeSend as $key => $message) {
-            if (config('wpbox.campaign_sending_type', 'normal') == 'normal') {
-                //Old way - send all at once
-                $this->sendCampaignMessageToWhatsApp($message);
-            } else {
-                dispatch(new SendMessage($message));
-            }
-        }
-
+        return response()->json(['status' => 'ok', 'sent' => $sent]);
     }
 
-    //Delete campaign, only if type is BOT
+    public function wizard()
+    {
+        $this->authChecker();
+
+        return view($this->view_path.'wizard');
+    }
+
+    public function estimate(Request $request)
+    {
+        $this->authChecker();
+
+        $request->validate([
+            'template_id' => 'required|integer',
+            'group_id' => 'nullable',
+            'segment_id' => 'nullable|integer',
+        ]);
+
+        $template = Template::findOrFail($request->template_id);
+        $estimate = app(CampaignEstimateService::class)->estimate(
+            $this->getCompany(),
+            $template,
+            $request->only(['group_id', 'segment_id', 'contact_id'])
+        );
+
+        return response()->json($estimate);
+    }
+
+    public function cloneCampaign(Campaign $campaign)
+    {
+        $this->authChecker();
+
+        if (! $campaign->isBroadcast()) {
+            return redirect()->back()->withStatus(__('Only broadcast campaigns can be cloned.'));
+        }
+
+        $clone = $campaign->cloneAsDraft();
+
+        return redirect()->route($this->webroute_path.'wizard', ['draft' => $clone->id])
+            ->withStatus(__('Campaign cloned. Review and launch when ready.'));
+    }
+
+    public function cancel(Campaign $campaign)
+    {
+        $this->authChecker();
+
+        $campaign->cancelPendingMessages();
+        $campaign->update([
+            'status' => Campaign::STATUS_CANCELLED,
+            'is_active' => false,
+        ]);
+
+        return redirect()->route($this->webroute_path.'show', $campaign)->withStatus(__('Campaign cancelled.'));
+    }
+
+    public function launch(Campaign $campaign)
+    {
+        $this->authChecker();
+
+        if ($campaign->status !== Campaign::STATUS_DRAFT) {
+            return redirect()->back()->withStatus(__('Only draft campaigns can be launched.'));
+        }
+
+        $request = new Request(['send_now' => 'on']);
+        $campaign->makeMessages($request);
+        $campaign->update([
+            'status' => Campaign::STATUS_SENDING,
+            'launched_at' => now(),
+            'is_active' => true,
+        ]);
+
+        app(CampaignDispatchService::class)->dispatchPendingBatch();
+
+        return redirect()->route($this->webroute_path.'show', $campaign)->withStatus(__('Campaign launched.'));
+    }
+
+    //Delete campaign
     public function destroy(Campaign $campaign)
     {
         if ($campaign->is_bot || $campaign->is_api) {
@@ -945,9 +1016,15 @@ class CampaignsController extends Controller
             }
 
             return redirect()->route('replies.index', ['type' => 'bot'])->withStatus(__('Bot deleted'));
-        } else {
-            return redirect()->route($this->webroute_path.'index')->withStatus(__('You can only delete bot campaigns'));
         }
+
+        if ($campaign->isBroadcast() && in_array($campaign->status, [Campaign::STATUS_DRAFT, Campaign::STATUS_CANCELLED, Campaign::STATUS_COMPLETED], true)) {
+            $campaign->delete();
+
+            return redirect()->route($this->webroute_path.'index')->withStatus(__('Campaign deleted'));
+        }
+
+        return redirect()->route($this->webroute_path.'index')->withStatus(__('You can only delete draft, cancelled, or completed broadcast campaigns'));
     }
 
     //Activate bot
@@ -989,31 +1066,18 @@ class CampaignsController extends Controller
     //Download report
     public function report(Campaign $campaign)
     {
-        $filename = 'report_campaign_'.$campaign->id.'_'.now().'.csv';
+        $presenter = CampaignShowPresenter::for($campaign);
+        $filename = 'report_campaign_'.$campaign->id.'_'.now()->format('Y-m-d_His').'.csv';
         $handle = fopen($filename, 'w+');
-        fputcsv($handle, ['Name', 'Phone', 'Country', 'Status', 'Sent at', 'Last status update', 'Extra']);
-        foreach ($campaign->messages as $key => $message) {
-            //Status
-            $status = '';
-            $error = $message->error;
-            if ($message->status == 0) {
-                $status = 'PENDING_SENT';
-            } elseif ($message->status == 1 || $message->status = 2) {
-                $status = 'SENT';
-            } elseif ($message->status == 3) {
-                $status = 'DELIVERED';
-            } elseif ($message->status == 4) {
-                $status = 'READ';
-            } elseif ($message->status == 5) {
-                $status = 'FAILED';
-            }
-            try {
-                fputcsv($handle, [$message->contact->name, $message->contact->phone, $message->contact->country->name, $status, $message->scchuduled_at ? $message->scchuduled_at : $message->created_at, $message->updated_at, $error]);
-            } catch (\Throwable $th) {
-                //throw $th;
-            }
+        fputcsv($handle, $presenter->reportHeaders());
 
+        foreach ($campaign->messages()->with('contact.country')->get() as $message) {
+            try {
+                fputcsv($handle, $presenter->reportRow($message));
+            } catch (\Throwable $th) {
+            }
         }
+
         fclose($handle);
         $headers = [
             'Content-Type' => 'text/csv',

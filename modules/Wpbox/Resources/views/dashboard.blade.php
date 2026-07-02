@@ -4,7 +4,7 @@
 
 
 <div class="mt-4">
-    <a href="{{ route('campaigns.create') }}" type="button" class="btn btn-outline-primary ">📢 {{ __('Send campaign')}}</a>
+    <a href="{{ route('campaigns.wizard') }}" type="button" class="btn btn-outline-primary ">📢 {{ __('Send campaign')}}</a>
     <a href="{{ route('contacts.create') }}" type="button" class="btn btn-outline-primary ">🪪 {{ __('Create contact')}}</a>
     <!-- <a href="{{ route('replies.create') }}" type="button" class="btn btn-outline-primary ">📤 {{ __('Create reply bot')}}</a> -->
     <a target="_blank" href="https://business.facebook.com/wa/manage/message-templates/" type="button" class="btn btn-outline-primary ">🔖 {{ __('Create template')}}</a>
