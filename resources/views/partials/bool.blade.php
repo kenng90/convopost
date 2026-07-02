@@ -16,6 +16,7 @@
             }
             $isChecked = filter_var($boolValue, FILTER_VALIDATE_BOOLEAN);
         @endphp
+        <input type="hidden" name="{{ $id }}" value="0">
         <input value="1" @if($isChecked) checked @endif type="checkbox" class="custom-control-input" name="{{ $id }}" id="{{ $id }}">
         <label class="custom-control-label" for="{{ $id }}">{{ __($name) }}</label>
    </div>
