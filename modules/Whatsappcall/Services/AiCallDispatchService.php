@@ -15,6 +15,7 @@ class AiCallDispatchService
     public function __construct(
         protected WhatsappAgentContextService $contextService,
         protected VoiceBookingContextService $bookingContextService,
+        protected VoiceAgentCapabilityBriefService $capabilityBriefService,
         protected CompanyVoiceOpenAiKeyResolver $openAiKeyResolver,
     ) {
     }
@@ -86,7 +87,12 @@ class AiCallDispatchService
         );
 
         $booking = $this->bookingContextService->buildForCompany($company);
-        $systemContext = trim(($context['system_context'] ?? '')."\n\n".($booking['booking_context'] ?? ''));
+        $capabilityBrief = $this->capabilityBriefService->buildForCompany($company);
+        $systemContext = trim(implode("\n\n", array_filter([
+            $context['system_context'] ?? '',
+            $booking['booking_context'] ?? '',
+            $capabilityBrief['instruction_brief'] ?? '',
+        ])));
 
         $contact = $this->resolveDispatchContact($call, $company);
 
@@ -108,6 +114,8 @@ class AiCallDispatchService
             'vector_context' => $context['vector_context'],
             'flow_id' => $context['flow_id'],
             'voice_booking' => $booking['voice_booking'],
+            'capability_brief' => $capabilityBrief['spoken_brief'],
+            'mention_capability_in_greeting' => $capabilityBrief['mention_in_greeting'],
             'openai_api_key' => $openAiKey,
             'worker_callback_base' => rtrim(config('whatsappcall.laravel_callback_url', 'http://127.0.0.1:8000'), '/').'/api/whatsappcall/worker',
             'laravel_base_url' => rtrim(config('whatsappcall.laravel_callback_url', 'http://127.0.0.1:8000'), '/'),

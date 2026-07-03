@@ -8,6 +8,7 @@ use App\Services\VoiceBooking\VoiceBookingContextService;
 use Modules\Flowmaker\Models\Flow;
 use Modules\Flowmaker\Models\Flowdocument;
 use Modules\Voicecall\Models\VoicePhoneNumber;
+use Modules\Whatsappcall\Services\VoiceAgentCapabilityBriefService;
 
 class VoiceAgentContextService
 {
@@ -54,6 +55,14 @@ class VoiceAgentContextService
         $booking = app(VoiceBookingContextService::class)->buildForCompany($company);
         if (! empty($booking['booking_context'])) {
             $parts[] = $booking['booking_context'];
+        }
+
+        $capabilityBrief = app(VoiceAgentCapabilityBriefService::class)->buildForCompany($company);
+        if (! empty($capabilityBrief['instruction_brief'])) {
+            $parts[] = $capabilityBrief['instruction_brief'];
+        }
+        if (! empty($capabilityBrief['mention_in_greeting']) && ! empty($capabilityBrief['spoken_brief'])) {
+            $parts[] = 'Opening orientation for the caller: '.$capabilityBrief['spoken_brief'];
         }
 
         return implode("\n", $parts);

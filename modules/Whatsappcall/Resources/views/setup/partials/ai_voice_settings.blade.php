@@ -154,6 +154,14 @@
             <small class="text-muted d-block">{{ __('Spoken AI uses OpenAI Realtime on your API key. Also used to seed vector search at call start.') }}</small>
         </div>
 
+        <div class="form-group">
+            <label class="d-block">
+                <input type="checkbox" name="ai_mention_capabilities_in_greeting" value="1" {{ ($settings['ai_mention_capabilities_in_greeting'] ?? true) ? 'checked' : '' }}>
+                {{ __('In the opening greeting, briefly say what the agent can help with (products, bookings, questions)') }}
+            </label>
+            <small class="text-muted d-block">{{ __('Auto-built from selected catalogs, bookable services/events, and the knowledge flow. Mentions categories and a few examples — not the full catalog.') }}</small>
+        </div>
+
         <div class="form-group mb-0">
             <label>{{ __('Required fields to collect on AI calls') }}</label>
             <div class="row">
