@@ -40,6 +40,7 @@ class SetupController extends Controller
             'ai_booking_events' => filter_var($company->getConfig('whatsapp_ai_booking_events', true), FILTER_VALIDATE_BOOLEAN),
             'ai_booking_send_payment_link' => filter_var($company->getConfig('whatsapp_ai_booking_send_payment_link', true), FILTER_VALIDATE_BOOLEAN),
             'ai_booking_hold_minutes' => (int) $company->getConfig('whatsapp_ai_booking_hold_minutes', 15),
+            'ai_mention_capabilities_in_greeting' => filter_var($company->getConfig('whatsapp_ai_mention_capabilities_in_greeting', true), FILTER_VALIDATE_BOOLEAN),
             'ai_openai_api_key_set' => app(CompanyVoiceOpenAiKeyResolver::class)->isConfigured($company),
             'ai_voice_ready' => app(CompanyVoiceOpenAiKeyResolver::class)->isConfigured($company),
         ];
@@ -80,6 +81,7 @@ class SetupController extends Controller
             'ai_booking_events' => 'sometimes|boolean',
             'ai_booking_send_payment_link' => 'sometimes|boolean',
             'ai_booking_hold_minutes' => 'nullable|integer|min:5|max:60',
+            'ai_mention_capabilities_in_greeting' => 'sometimes|boolean',
             'ai_openai_api_key' => 'nullable|string|max:500',
         ]);
 
@@ -127,6 +129,7 @@ class SetupController extends Controller
         $company->setConfig('whatsapp_ai_booking_events', $request->boolean('ai_booking_events', true));
         $company->setConfig('whatsapp_ai_booking_send_payment_link', $request->boolean('ai_booking_send_payment_link', true));
         $company->setConfig('whatsapp_ai_booking_hold_minutes', (int) ($validated['ai_booking_hold_minutes'] ?? 15));
+        $company->setConfig('whatsapp_ai_mention_capabilities_in_greeting', $request->boolean('ai_mention_capabilities_in_greeting'));
 
         if (! empty($validated['ai_openai_api_key'])) {
             $company->setConfig('whatsapp_ai_openai_api_key', trim($validated['ai_openai_api_key']));

@@ -94,7 +94,10 @@ export async function runRealtimeCallSession({ payload, laravel, startedAt, peer
     remoteTrack = await bridge.start();
 
     await sleep(400);
-    realtime.triggerInitialGreeting();
+    realtime.triggerInitialGreeting({
+      mentionCapabilityInGreeting: Boolean(payload.mention_capability_in_greeting),
+      capabilityBrief: payload.capability_brief || '',
+    });
 
     logInfo('Waiting for caller hangup (WebRTC + Laravel status poll)');
     await waitForCallEnd({ peerConnection, laravel, remoteTrack });
@@ -138,6 +141,13 @@ function buildInstructions(payload) {
 
   if (payload.ai_greeting) {
     sections.push(`Your opening greeting should be based on: ${payload.ai_greeting}`);
+  }
+
+  if (payload.mention_capability_in_greeting && payload.capability_brief) {
+    sections.push(
+      'In your first spoken turn, greet the caller, then orient them with this capability brief (paraphrase naturally, keep it short — do not list a full catalog):',
+      payload.capability_brief,
+    );
   }
 
   const required = payload.required_field_keys ?? [];

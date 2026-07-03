@@ -327,15 +327,26 @@ export class OpenAIRealtimeClient {
     });
   }
 
-  triggerInitialGreeting() {
+  triggerInitialGreeting(options = {}) {
     logInfo('Triggering initial AI greeting (response.create)');
     if (this.debug) this.debug.initial_greeting_sent = true;
+
+    let instructions =
+      'The caller just connected on a WhatsApp voice call. Greet them warmly and briefly.';
+
+    if (options.mentionCapabilityInGreeting && options.capabilityBrief) {
+      instructions +=
+        ' Then briefly orient them on what you can help with using this brief (paraphrase naturally, keep it to one or two short sentences, do not read a full product list): ' +
+        options.capabilityBrief;
+    } else {
+      instructions += ' Then ask how you can help.';
+    }
+
     this.send({
       type: 'response.create',
       response: {
         output_modalities: ['audio'],
-        instructions:
-          'The caller just connected on a WhatsApp voice call. Greet them warmly and briefly, then ask how you can help.',
+        instructions,
       },
     });
   }
