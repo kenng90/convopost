@@ -222,6 +222,36 @@ class BookingPaymentService
 
         try {
             if ($bookingType === self::BOOKING_TYPE_APPOINTMENT) {
+                $pendingReservationId = (int) ($notes['pending_reservation_id'] ?? 0);
+                if ($pendingReservationId > 0) {
+                    $reservation = Reservation::withoutGlobalScopes()->find($pendingReservationId);
+                    if ($reservation && $reservation->company_id === $company->id) {
+                        $reservation->update([
+                            'payment_status' => BookingPaymentConfig::STATUS_PAID,
+                            'payment_amount' => $payment->amount,
+                            'payment_total_amount' => $notes['payment_total_amount'] ?? $payment->amount,
+                            'payment_currency' => $invoice->currency,
+                            'invoice_payment_id' => $payment->id,
+                            'payment_hold_expires_at' => null,
+                        ]);
+
+                        $invoice->update([
+                            'notes' => array_merge($notes, [
+                                'fulfilled_at' => now()->toIso8601String(),
+                                'reservation_id' => $reservation->id,
+                            ]),
+                        ]);
+
+                        Log::info('Booking payment fulfilled: voice pending appointment', [
+                            'invoice_id' => $invoice->id,
+                            'payment_id' => $payment->id,
+                            'reservation_id' => $reservation->id,
+                        ]);
+
+                        return;
+                    }
+                }
+
                 $reservation = $this->reservationBookingService->book($company, $payload);
                 $reservation->update([
                     'payment_status' => BookingPaymentConfig::STATUS_PAID,
@@ -248,6 +278,36 @@ class BookingPaymentService
             }
 
             if ($bookingType === self::BOOKING_TYPE_EVENT) {
+                $pendingRegistrationId = (int) ($notes['pending_registration_id'] ?? 0);
+                if ($pendingRegistrationId > 0) {
+                    $registration = EventRegistration::withoutGlobalScopes()->find($pendingRegistrationId);
+                    if ($registration && $registration->company_id === $company->id) {
+                        $registration->update([
+                            'payment_status' => BookingPaymentConfig::STATUS_PAID,
+                            'payment_amount' => $payment->amount,
+                            'payment_total_amount' => $notes['payment_total_amount'] ?? $payment->amount,
+                            'payment_currency' => $invoice->currency,
+                            'invoice_payment_id' => $payment->id,
+                            'payment_hold_expires_at' => null,
+                        ]);
+
+                        $invoice->update([
+                            'notes' => array_merge($notes, [
+                                'fulfilled_at' => now()->toIso8601String(),
+                                'event_registration_id' => $registration->id,
+                            ]),
+                        ]);
+
+                        Log::info('Booking payment fulfilled: voice pending event', [
+                            'invoice_id' => $invoice->id,
+                            'payment_id' => $payment->id,
+                            'event_registration_id' => $registration->id,
+                        ]);
+
+                        return;
+                    }
+                }
+
                 $registration = $this->eventRegistrationService->register($company, $payload);
                 $registration->update([
                     'payment_status' => BookingPaymentConfig::STATUS_PAID,
@@ -282,6 +342,95 @@ class BookingPaymentService
     public function mpesaConfigured(Company $company): bool
     {
         return (new MpesaService($company))->isConfigured();
+    }
+
+    /**
+     * Voice AI: invoice + public payment link (no STK). Optional pending booking record is linked in invoice notes.
+     *
+     * @param  array<string, mixed>  $bookingPayload
+     * @return array{ok: bool, invoice?: Invoice, payment?: InvoicePayment, payment_url?: string, invoice_public_uuid?: string}
+     */
+    public function createVoiceBookingPaymentLink(
+        Company $company,
+        string $bookingType,
+        array $bookingPayload,
+        \Modules\Wpbox\Models\Contact $contact,
+        int $voiceCallId,
+        ?int $pendingReservationId = null,
+        ?int $pendingRegistrationId = null,
+    ): array {
+        session(['company_id' => $company->id]);
+
+        $amount = 0.0;
+        $currency = 'KES';
+        $transactionDesc = 'Booking';
+        $accountReference = 'BK-VOICE';
+
+        if ($bookingType === self::BOOKING_TYPE_APPOINTMENT) {
+            $source = Source::withoutGlobalScopes()
+                ->where('company_id', $company->id)
+                ->where('is_bookable', true)
+                ->where('name', $bookingPayload['source'])
+                ->firstOrFail();
+            $paymentConfig = BookingPaymentConfig::fromSource($source);
+            $amount = (float) $paymentConfig['payment_amount'];
+            $currency = (string) $paymentConfig['payment_currency'];
+            $transactionDesc = substr($source->name, 0, 40);
+            $accountReference = 'BK-APT-VOICE';
+        } else {
+            $occurrence = $this->eventCatalogService->findRegisterableOccurrence(
+                $company,
+                (int) ($bookingPayload['occurrence_id'] ?? 0)
+            );
+            if (! $occurrence?->event) {
+                throw new \RuntimeException('Event occurrence not found.');
+            }
+            $paymentConfig = BookingPaymentConfig::fromEvent($occurrence->event);
+            $amount = (float) $paymentConfig['payment_amount'];
+            $currency = (string) $paymentConfig['payment_currency'];
+            $transactionDesc = substr($occurrence->event->title, 0, 40);
+            $accountReference = 'BK-EVT-VOICE';
+        }
+
+        $storedPayload = $bookingPayload;
+        unset($storedPayload['flow_context']);
+
+        $records = Invoice::createForBookingPayment(
+            company: $company,
+            customerName: (string) ($bookingPayload['name'] ?? $contact->name ?? 'Guest'),
+            customerPhone: (string) ($bookingPayload['phone'] ?? $contact->phone ?? ''),
+            bookingType: $bookingType,
+            bookingPayload: $storedPayload,
+            amount: $amount,
+            currency: $currency,
+            transactionDesc: $transactionDesc,
+            accountReference: $accountReference,
+            flowContext: [
+                'contact_id' => $contact->id,
+                'voice_call_id' => $voiceCallId,
+            ],
+            paymentTotalAmount: $paymentConfig['payment_total_amount'] ?? $amount,
+            paymentUpfrontPercent: $paymentConfig['payment_upfront_percent'] ?? 100,
+        );
+
+        /** @var Invoice $invoice */
+        $invoice = $records['invoice'];
+        $notes = $invoice->bookingNotes();
+        $notes['pending_reservation_id'] = $pendingReservationId;
+        $notes['pending_registration_id'] = $pendingRegistrationId;
+        $notes['voice_call_id'] = $voiceCallId;
+        $notes['booking_source'] = 'voice_ai';
+        $invoice->update(['notes' => $notes]);
+
+        $paymentUrl = route('catalog.invoice.pay', $invoice->public_uuid, true);
+
+        return [
+            'ok' => true,
+            'invoice' => $invoice->fresh(),
+            'payment' => $records['payment']->fresh(),
+            'payment_url' => $paymentUrl,
+            'invoice_public_uuid' => $invoice->public_uuid,
+        ];
     }
 
     /**

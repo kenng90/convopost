@@ -5,6 +5,7 @@ import { logInfo, logError, logWarn } from './logger.js';
 import { addError } from './sessionDebug.js';
 import { buildSuccessCompletionPayload } from './callCompletion.js';
 import { waitForCallEnd } from './callHangup.js';
+import { buildVoiceBookingTools, isVoiceBookingEnabled, voiceBookingInstructionLines } from './voiceBookingTools.js';
 
 /**
  * Production OpenAI Realtime voice session for a connected WhatsApp call.
@@ -19,14 +20,34 @@ export async function runRealtimeCallSession({ payload, laravel, startedAt, peer
   }
 
   const instructions = buildInstructions(payload);
+  const tools = buildVoiceBookingTools(payload);
+  /** @type {Array<Record<string, unknown>>} */
+  const voiceBookings = [];
+
   logInfo('Realtime session starting', {
     instructions_chars: instructions.length,
     flow_id: payload.flow_id,
     has_system_context: Boolean(payload.system_context),
     has_vector_context: Boolean(payload.vector_context),
+    voice_booking_enabled: isVoiceBookingEnabled(payload),
+    booking_tools: tools.length,
   });
 
-  const realtime = new OpenAIRealtimeClient({ instructions, apiKey: openaiApiKey, debug });
+  const realtime = new OpenAIRealtimeClient({
+    instructions,
+    apiKey: openaiApiKey,
+    debug,
+    tools,
+    onToolCall: tools.length
+      ? async (name, args, toolCallId) => {
+          const result = await laravel.invokeBookingTool(name, args, toolCallId);
+          if (result?.ok && (name === 'create_appointment_booking' || name === 'create_event_registration')) {
+            voiceBookings.push({ tool: name, ...result });
+          }
+          return result;
+        }
+      : undefined,
+  });
   let bridge = null;
   let remoteTrack = null;
   let ended = false;
@@ -61,6 +82,7 @@ export async function runRealtimeCallSession({ payload, laravel, startedAt, peer
       debug,
       transcript,
       reason,
+      voiceBookings,
     });
 
     return completionPayload;
@@ -111,6 +133,8 @@ function buildInstructions(payload) {
     'Use only the knowledge provided above — if unsure, say so and offer to follow up in chat.',
     'When the caller is done or says goodbye, thank them and end the conversation politely.',
   );
+
+  sections.push(...voiceBookingInstructionLines(payload));
 
   if (payload.ai_greeting) {
     sections.push(`Your opening greeting should be based on: ${payload.ai_greeting}`);

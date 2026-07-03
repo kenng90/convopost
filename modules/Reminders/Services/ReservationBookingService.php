@@ -58,6 +58,8 @@ class ReservationBookingService
                 'external_id' => $payload['external_id'] ?? null,
                 'flow_id' => $payload['flow_id'] ?? null,
                 'flow_node_id' => $payload['flow_node_id'] ?? null,
+                'booking_source' => $payload['booking_source'] ?? null,
+                'voice_call_id' => $payload['voice_call_id'] ?? null,
             ]);
 
             $this->syncCalendarEvent($reservation->fresh(['contact', 'source', 'appointmentStaffMember']));

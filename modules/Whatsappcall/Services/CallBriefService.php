@@ -3,6 +3,7 @@
 namespace Modules\Whatsappcall\Services;
 
 use App\Models\Company;
+use App\Services\VoiceBooking\VoiceCallBookingService;
 use Illuminate\Support\Facades\Log;
 use Modules\Contacts\Models\Field;
 use Modules\Whatsappcall\Models\Call as CallModel;
@@ -31,6 +32,7 @@ class CallBriefService
             ) ?: [];
         }
         $payload = $this->normalizeStructuredPayload($structured, $data, $call);
+        $payload = app(VoiceCallBookingService::class)->mergeBookingResultsIntoStructured($payload);
 
         $call->update([
             'handled_by_type' => 'ai',

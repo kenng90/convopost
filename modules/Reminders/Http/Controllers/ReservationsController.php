@@ -222,6 +222,10 @@ class ReservationsController extends Controller
             $items->filterByDisplayStatus($request->display_status);
         }
 
+        if ($request->filled('booking_source')) {
+            $items->where('booking_source', $request->booking_source);
+        }
+
         return $items;
     }
 

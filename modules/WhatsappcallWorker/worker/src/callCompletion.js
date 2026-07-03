@@ -63,21 +63,34 @@ export async function postCallCompletion(laravel, completionPayload) {
   }
 }
 
-export function buildSuccessCompletionPayload({ payload, startedAt, debug, transcript, reason }) {
+export function buildSuccessCompletionPayload({ payload, startedAt, debug, transcript, reason, voiceBookings = [] }) {
   finalizeDebug(debug);
   debug.end_reason = reason;
   const duration = Math.round((Date.now() - startedAt) / 1000);
+
+  const structured = buildCallBriefStructured({
+    transcript: transcript || '',
+    debug,
+    reason,
+    payload,
+  });
+
+  if (voiceBookings.length) {
+    structured.voice_bookings = voiceBookings;
+    const summaries = voiceBookings
+      .map((b) => b.summary || b.message)
+      .filter(Boolean);
+    if (summaries.length) {
+      structured.summary_bullets = [...(structured.summary_bullets || []), ...summaries];
+      structured.summary = structured.summary_bullets[0] ?? structured.summary;
+    }
+  }
 
   return {
     duration_seconds: duration,
     transcript: transcript || `Call ended (${reason}).`,
     handoff_requested: false,
     worker_debug: debug,
-    structured: buildCallBriefStructured({
-      transcript: transcript || '',
-      debug,
-      reason,
-      payload,
-    }),
+    structured,
   };
 }

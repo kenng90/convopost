@@ -103,6 +103,14 @@ export class LaravelClient {
     return this.request('POST', '/complete', data);
   }
 
+  invokeBookingTool(tool, args, toolCallId) {
+    return this.request('POST', '/booking-tool', {
+      tool,
+      arguments: args ?? {},
+      tool_call_id: toolCallId ?? null,
+    });
+  }
+
   show() {
     return this.request('GET', '');
   }
