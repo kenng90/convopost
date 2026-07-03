@@ -7,6 +7,8 @@ export class OpenAIRealtimeClient {
   constructor(options) {
     this.apiKey = options.apiKey;
     this.instructions = options.instructions;
+    this.tools = options.tools ?? [];
+    this.onToolCall = options.onToolCall;
     this.debug = options.debug ?? null;
     this.onAudioDelta = options.onAudioDelta;
     this.onUserTranscript = options.onUserTranscript;
@@ -19,6 +21,8 @@ export class OpenAIRealtimeClient {
     this.transcriptLines = [];
     this.currentAssistantText = '';
     this.connectStartedAt = Date.now();
+    /** @type {Map<string, {name: string, arguments: string}>} */
+    this.pendingFunctionCalls = new Map();
   }
 
   connect() {
@@ -201,6 +205,77 @@ export class OpenAIRealtimeClient {
       logDebug('OpenAI output item added', { item: event.item?.type });
       return;
     }
+
+    if (type === 'response.function_call_arguments.delta') {
+      const callId = event.call_id;
+      if (!callId) return;
+      const existing = this.pendingFunctionCalls.get(callId) ?? { name: event.name ?? '', arguments: '' };
+      existing.arguments += event.delta ?? '';
+      if (event.name) existing.name = event.name;
+      this.pendingFunctionCalls.set(callId, existing);
+      return;
+    }
+
+    if (type === 'response.function_call_arguments.done') {
+      this.handleFunctionCall(event.call_id, event.name, event.arguments).catch((err) => {
+        logError('Function call handler failed', { message: err.message });
+        this.onError?.(err);
+      });
+      return;
+    }
+
+    if (type === 'response.output_item.done' && event.item?.type === 'function_call') {
+      this.handleFunctionCall(event.item.call_id, event.item.name, event.item.arguments).catch((err) => {
+        logError('Function call handler failed', { message: err.message });
+        this.onError?.(err);
+      });
+      return;
+    }
+  }
+
+  async handleFunctionCall(callId, name, argsJson) {
+    if (!callId || !name || !this.onToolCall) {
+      return;
+    }
+
+    const dedupeKey = `${callId}:${name}`;
+    if (this._handledFunctionCalls?.has(dedupeKey)) {
+      return;
+    }
+    if (!this._handledFunctionCalls) {
+      this._handledFunctionCalls = new Set();
+    }
+    this._handledFunctionCalls.add(dedupeKey);
+
+    let args = {};
+    try {
+      args = argsJson ? JSON.parse(argsJson) : {};
+    } catch {
+      args = {};
+    }
+
+    logInfo('OpenAI function call', { name, call_id: callId, args_keys: Object.keys(args) });
+
+    let output;
+    try {
+      output = await this.onToolCall(name, args, callId);
+    } catch (err) {
+      output = { ok: false, error: err.message || 'Tool execution failed' };
+    }
+
+    this.send({
+      type: 'conversation.item.create',
+      item: {
+        type: 'function_call_output',
+        call_id: callId,
+        output: JSON.stringify(output ?? { ok: false }),
+      },
+    });
+
+    this.send({
+      type: 'response.create',
+      response: { output_modalities: ['audio'] },
+    });
   }
 
   sendSessionUpdate() {
@@ -208,39 +283,47 @@ export class OpenAIRealtimeClient {
       instructions_chars: this.instructions?.length || 0,
       voice: config.openaiVoice,
       model: config.openaiRealtimeModel,
+      tools: this.tools?.length ?? 0,
     });
-    this.send({
-      type: 'session.update',
-      session: {
-        type: 'realtime',
-        model: config.openaiRealtimeModel,
-        instructions: this.instructions,
-        output_modalities: ['audio'],
-        audio: {
-          input: {
-            format: {
-              type: 'audio/pcm',
-              rate: config.openaiAudioRate,
-            },
-            turn_detection: {
-              type: 'server_vad',
-              threshold: config.openaiVadThreshold,
-              prefix_padding_ms: config.openaiVadPrefixMs,
-              silence_duration_ms: config.openaiVadSilenceMs,
-            },
-            transcription: {
-              model: config.openaiTranscriptionModel,
-            },
+    const session = {
+      type: 'realtime',
+      model: config.openaiRealtimeModel,
+      instructions: this.instructions,
+      output_modalities: ['audio'],
+      audio: {
+        input: {
+          format: {
+            type: 'audio/pcm',
+            rate: config.openaiAudioRate,
           },
-          output: {
-            format: {
-              type: 'audio/pcm',
-              rate: config.openaiAudioRate,
-            },
-            voice: config.openaiVoice,
+          turn_detection: {
+            type: 'server_vad',
+            threshold: config.openaiVadThreshold,
+            prefix_padding_ms: config.openaiVadPrefixMs,
+            silence_duration_ms: config.openaiVadSilenceMs,
+          },
+          transcription: {
+            model: config.openaiTranscriptionModel,
           },
         },
+        output: {
+          format: {
+            type: 'audio/pcm',
+            rate: config.openaiAudioRate,
+          },
+          voice: config.openaiVoice,
+        },
       },
+    };
+
+    if (this.tools?.length) {
+      session.tools = this.tools;
+      session.tool_choice = 'auto';
+    }
+
+    this.send({
+      type: 'session.update',
+      session,
     });
   }
 

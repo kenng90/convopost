@@ -35,6 +35,11 @@ class SetupController extends Controller
             'ai_catalog_ids' => json_decode($company->getConfig('whatsapp_ai_catalog_ids', '[]'), true) ?: [],
             'ai_enable_vector_search' => filter_var($company->getConfig('whatsapp_ai_enable_vector_search', true), FILTER_VALIDATE_BOOLEAN),
             'ai_send_invoice_after_call' => filter_var($company->getConfig('whatsapp_ai_send_invoice_after_call', true), FILTER_VALIDATE_BOOLEAN),
+            'ai_booking_enabled' => filter_var($company->getConfig('whatsapp_ai_booking_enabled', false), FILTER_VALIDATE_BOOLEAN),
+            'ai_booking_appointments' => filter_var($company->getConfig('whatsapp_ai_booking_appointments', true), FILTER_VALIDATE_BOOLEAN),
+            'ai_booking_events' => filter_var($company->getConfig('whatsapp_ai_booking_events', true), FILTER_VALIDATE_BOOLEAN),
+            'ai_booking_send_payment_link' => filter_var($company->getConfig('whatsapp_ai_booking_send_payment_link', true), FILTER_VALIDATE_BOOLEAN),
+            'ai_booking_hold_minutes' => (int) $company->getConfig('whatsapp_ai_booking_hold_minutes', 15),
             'ai_openai_api_key_set' => app(CompanyVoiceOpenAiKeyResolver::class)->isConfigured($company),
             'ai_voice_ready' => app(CompanyVoiceOpenAiKeyResolver::class)->isConfigured($company),
         ];
@@ -70,6 +75,11 @@ class SetupController extends Controller
             'ai_catalog_ids.*' => 'integer',
             'ai_enable_vector_search' => 'sometimes|boolean',
             'ai_send_invoice_after_call' => 'sometimes|boolean',
+            'ai_booking_enabled' => 'sometimes|boolean',
+            'ai_booking_appointments' => 'sometimes|boolean',
+            'ai_booking_events' => 'sometimes|boolean',
+            'ai_booking_send_payment_link' => 'sometimes|boolean',
+            'ai_booking_hold_minutes' => 'nullable|integer|min:5|max:60',
             'ai_openai_api_key' => 'nullable|string|max:500',
         ]);
 
@@ -112,6 +122,11 @@ class SetupController extends Controller
         $company->setConfig('whatsapp_ai_catalog_ids', json_encode(array_values($validated['ai_catalog_ids'] ?? [])));
         $company->setConfig('whatsapp_ai_enable_vector_search', $request->boolean('ai_enable_vector_search', true));
         $company->setConfig('whatsapp_ai_send_invoice_after_call', $request->boolean('ai_send_invoice_after_call', true));
+        $company->setConfig('whatsapp_ai_booking_enabled', $request->boolean('ai_booking_enabled', false));
+        $company->setConfig('whatsapp_ai_booking_appointments', $request->boolean('ai_booking_appointments', true));
+        $company->setConfig('whatsapp_ai_booking_events', $request->boolean('ai_booking_events', true));
+        $company->setConfig('whatsapp_ai_booking_send_payment_link', $request->boolean('ai_booking_send_payment_link', true));
+        $company->setConfig('whatsapp_ai_booking_hold_minutes', (int) ($validated['ai_booking_hold_minutes'] ?? 15));
 
         if (! empty($validated['ai_openai_api_key'])) {
             $company->setConfig('whatsapp_ai_openai_api_key', trim($validated['ai_openai_api_key']));

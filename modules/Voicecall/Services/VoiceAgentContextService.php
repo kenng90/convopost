@@ -4,6 +4,7 @@ namespace Modules\Voicecall\Services;
 
 use App\Models\Company;
 use App\Models\ListCatalog;
+use App\Services\VoiceBooking\VoiceBookingContextService;
 use Modules\Flowmaker\Models\Flow;
 use Modules\Flowmaker\Models\Flowdocument;
 use Modules\Voicecall\Models\VoicePhoneNumber;
@@ -48,6 +49,11 @@ class VoiceAgentContextService
                 $desc = mb_substr($item['description'] ?? '', 0, 120);
                 $parts[] = "- {$title}".($price ? " ({$price})" : '').($desc ? ": {$desc}" : '');
             }
+        }
+
+        $booking = app(VoiceBookingContextService::class)->buildForCompany($company);
+        if (! empty($booking['booking_context'])) {
+            $parts[] = $booking['booking_context'];
         }
 
         return implode("\n", $parts);

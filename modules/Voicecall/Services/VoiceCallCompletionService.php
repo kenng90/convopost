@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use Modules\Voicecall\Models\VoiceCall;
 use Modules\Voicecall\Models\VoicePhoneNumber;
 use Modules\Whatsappcall\Services\CallBriefService;
+use App\Services\VoiceBooking\VoiceCallBookingService;
 use Modules\Wpbox\Events\Chatlistchange;
 use Modules\Wpbox\Models\Contact;
 
@@ -49,6 +50,10 @@ class VoiceCallCompletionService
             'handoff_requested' => $voiceCall->handoff_requested,
             'handoff_reason' => $voiceCall->handoff_reason,
         ]);
+
+        if ($voiceCall->id) {
+            $payload = app(VoiceCallBookingService::class)->mergeBookingResultsIntoStructured($payload);
+        }
 
         $message = $contact->addCallBrief($payload, null);
         $message->update(['call_id' => null]);

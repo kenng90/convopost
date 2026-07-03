@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Whatsappcall\Http\Controllers\CallWorkerController;
+use Modules\Whatsappcall\Http\Controllers\VoiceBookingToolController;
 use Modules\Whatsappcall\Http\Middleware\ValidateAiWorkerSecret;
 
 Route::prefix('api/whatsappcall/worker')
@@ -16,5 +17,7 @@ Route::prefix('api/whatsappcall/worker')
         Route::post('calls/{call}/terminate', [CallWorkerController::class, 'terminate'])
             ->whereNumber('call');
         Route::post('calls/{call}/complete', [CallWorkerController::class, 'complete'])
+            ->whereNumber('call');
+        Route::post('calls/{call}/booking-tool', [VoiceBookingToolController::class, 'invoke'])
             ->whereNumber('call');
     });

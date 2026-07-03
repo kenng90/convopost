@@ -71,6 +71,42 @@
             <small class="text-muted d-block">{{ __('Runs when the call ends — matches products from catalogs above against what the caller said. Not used for text chat flows.') }}</small>
         </div>
 
+        <div class="card bg-light mt-3 mb-3">
+            <div class="card-body py-3">
+                <h6 class="mb-2">{{ __('Voice AI bookings (Reminders)') }}</h6>
+                <label class="d-block mb-2">
+                    <input type="checkbox" name="ai_booking_enabled" value="1" {{ ($settings['ai_booking_enabled'] ?? false) ? 'checked' : '' }}>
+                    {{ __('Let voice AI check availability and book appointments / events on behalf of callers') }}
+                </label>
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="d-block">
+                            <input type="checkbox" name="ai_booking_appointments" value="1" {{ ($settings['ai_booking_appointments'] ?? true) ? 'checked' : '' }}>
+                            {{ __('Appointments') }}
+                        </label>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="d-block">
+                            <input type="checkbox" name="ai_booking_events" value="1" {{ ($settings['ai_booking_events'] ?? true) ? 'checked' : '' }}>
+                            {{ __('Events') }}
+                        </label>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="d-block">
+                            <input type="checkbox" name="ai_booking_send_payment_link" value="1" {{ ($settings['ai_booking_send_payment_link'] ?? true) ? 'checked' : '' }}>
+                            {{ __('Send payment link on WhatsApp for paid bookings') }}
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group mt-2 mb-0">
+                    <label>{{ __('Payment hold (minutes)') }}</label>
+                    <input type="number" class="form-control form-control-sm" style="max-width: 8rem" name="ai_booking_hold_minutes"
+                        min="5" max="60" value="{{ (int) ($settings['ai_booking_hold_minutes'] ?? 15) }}">
+                    <small class="text-muted">{{ __('Unpaid voice bookings are released after this time.') }}</small>
+                </div>
+            </div>
+        </div>
+
         <div class="form-group">
             <label>{{ __('Catalogs (product reference for AI)') }}</label>
             <div class="row">
