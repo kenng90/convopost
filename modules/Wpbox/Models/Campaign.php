@@ -29,6 +29,10 @@ class Campaign extends Model
 
     public const STATUS_PAUSED_INSUFFICIENT_CREDITS = 'paused_insufficient_credits';
 
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_INACTIVE = 'inactive';
+
     public const CHANNEL_WHATSAPP = 'whatsapp';
 
     public const CHANNEL_SMS = 'sms';

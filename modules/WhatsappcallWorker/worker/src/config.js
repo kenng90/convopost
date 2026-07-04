@@ -5,7 +5,7 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '..', '.env'), override: false });
 
-export const WORKER_VERSION = '1.4.0';
+export const WORKER_VERSION = '1.4.1';
 
 const openaiKey = process.env.OPENAI_API_KEY || '';
 const workerModeEnv = (process.env.WORKER_MODE || process.env.WHATSAPP_AI_WORKER_MODE || '').toLowerCase();
@@ -29,9 +29,15 @@ export const config = {
   openaiTranscriptionModel: process.env.OPENAI_TRANSCRIPTION_MODEL || 'whisper-1',
   openaiTemperature: parseFloat(process.env.OPENAI_REALTIME_TEMPERATURE || '0.7'),
   openaiMaxOutputTokens: process.env.OPENAI_REALTIME_MAX_OUTPUT_TOKENS || '4096',
-  openaiVadThreshold: parseFloat(process.env.OPENAI_VAD_THRESHOLD || '0.5'),
+  // Higher threshold = less sensitive to background noise (OpenAI recommends raising in noisy environments).
+  openaiVadThreshold: parseFloat(process.env.OPENAI_VAD_THRESHOLD || '0.65'),
   openaiVadPrefixMs: parseInt(process.env.OPENAI_VAD_PREFIX_MS || '300', 10),
-  openaiVadSilenceMs: parseInt(process.env.OPENAI_VAD_SILENCE_MS || '700', 10),
+  openaiVadSilenceMs: parseInt(process.env.OPENAI_VAD_SILENCE_MS || '800', 10),
+  // server_vad | semantic_vad — semantic is less volume-driven; server_vad uses threshold for noise.
+  openaiVadType: (process.env.OPENAI_VAD_TYPE || 'server_vad').toLowerCase(),
+  openaiVadEagerness: (process.env.OPENAI_VAD_EAGERNESS || 'low').toLowerCase(),
+  // near_field (phone/headset) | far_field | off
+  openaiNoiseReduction: (process.env.OPENAI_NOISE_REDUCTION || 'near_field').toLowerCase(),
   openaiAudioRate: 24000,
   webrtcAudioRate: parseInt(process.env.WEBRTC_AUDIO_RATE || '48000', 10),
   maxCallDurationMs: parseInt(process.env.WHATSAPP_AI_MAX_CALL_MS || '900000', 10),

@@ -66,6 +66,8 @@ class CampaignTriggerService
             ->where('company_id', $company->id)
             ->where('id', $trigger->campaign_id)
             ->where('is_api', true)
+            ->where('is_active', true)
+            ->where('status', '!=', Campaign::STATUS_INACTIVE)
             ->first();
 
         if (! $campaign) {

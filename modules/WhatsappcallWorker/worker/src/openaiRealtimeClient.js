@@ -279,33 +279,41 @@ export class OpenAIRealtimeClient {
   }
 
   sendSessionUpdate() {
+    const turnDetection = buildTurnDetection();
+    const noiseReduction = buildNoiseReduction();
+
     logInfo('Sending session.update (GA)', {
       instructions_chars: this.instructions?.length || 0,
       voice: config.openaiVoice,
       model: config.openaiRealtimeModel,
       tools: this.tools?.length ?? 0,
+      vad_type: turnDetection.type,
+      vad_threshold: turnDetection.threshold ?? null,
+      noise_reduction: noiseReduction?.type ?? 'off',
     });
+
+    const input = {
+      format: {
+        type: 'audio/pcm',
+        rate: config.openaiAudioRate,
+      },
+      turn_detection: turnDetection,
+      transcription: {
+        model: config.openaiTranscriptionModel,
+      },
+    };
+
+    if (noiseReduction) {
+      input.noise_reduction = noiseReduction;
+    }
+
     const session = {
       type: 'realtime',
       model: config.openaiRealtimeModel,
       instructions: this.instructions,
       output_modalities: ['audio'],
       audio: {
-        input: {
-          format: {
-            type: 'audio/pcm',
-            rate: config.openaiAudioRate,
-          },
-          turn_detection: {
-            type: 'server_vad',
-            threshold: config.openaiVadThreshold,
-            prefix_padding_ms: config.openaiVadPrefixMs,
-            silence_duration_ms: config.openaiVadSilenceMs,
-          },
-          transcription: {
-            model: config.openaiTranscriptionModel,
-          },
-        },
+        input,
         output: {
           format: {
             type: 'audio/pcm',
@@ -386,4 +394,41 @@ export class OpenAIRealtimeClient {
       /* ignore */
     }
   }
+}
+
+function buildTurnDetection() {
+  if (config.openaiVadType === 'semantic_vad') {
+    return {
+      type: 'semantic_vad',
+      eagerness: ['low', 'medium', 'high', 'auto'].includes(config.openaiVadEagerness)
+        ? config.openaiVadEagerness
+        : 'low',
+      create_response: true,
+      interrupt_response: true,
+    };
+  }
+
+  const threshold = Number.isFinite(config.openaiVadThreshold)
+    ? Math.min(1, Math.max(0, config.openaiVadThreshold))
+    : 0.65;
+
+  return {
+    type: 'server_vad',
+    threshold,
+    prefix_padding_ms: config.openaiVadPrefixMs,
+    silence_duration_ms: config.openaiVadSilenceMs,
+    create_response: true,
+    interrupt_response: true,
+  };
+}
+
+function buildNoiseReduction() {
+  const mode = config.openaiNoiseReduction;
+  if (!mode || mode === 'off' || mode === 'none' || mode === 'false') {
+    return null;
+  }
+  if (mode === 'far_field' || mode === 'near_field') {
+    return { type: mode };
+  }
+  return { type: 'near_field' };
 }

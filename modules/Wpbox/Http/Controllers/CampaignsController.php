@@ -3,6 +3,7 @@
 namespace Modules\Wpbox\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Services\Campaign\ApiCampaignService;
 use App\Services\Campaign\CampaignDispatchService;
 use App\Services\Campaign\CampaignEstimateService;
 use App\Services\Campaign\CampaignShowPresenter;
@@ -145,8 +146,17 @@ class CampaignsController extends Controller
             $dataToSend['setup']['action_link'] = route('replies.index', ['type' => 'bot']);
         } elseif ($campaign->is_api) {
             $dataToSend['setup']['title'] = __('API').' '.$campaign->name;
-            $dataToSend['setup']['action_name'] = __('Back to Api');
-            $dataToSend['setup']['action_link'] = route('wpbox.api.index', ['type' => 'api']);
+            $dataToSend['setup']['action_name'] = __('Back to API campaigns');
+            $dataToSend['setup']['action_link'] = route('wpbox.api.index');
+            $dataToSend['setup']['action_link2'] = route('wpbox.api.edit', $campaign);
+            $dataToSend['setup']['action_name2'] = '✏️ '.__('Edit');
+            $dataToSend['setup']['action_link3'] = route('wpbox.api.clone', $campaign);
+            $dataToSend['setup']['action_name3'] = '📋 '.__('Clone');
+            $dataToSend['setup']['action_link4'] = route('wpbox.api.toggle', $campaign);
+            $dataToSend['setup']['action_name4'] = $campaign->is_active && $campaign->status !== Campaign::STATUS_INACTIVE
+                ? '⏸️ '.__('Deactivate')
+                : '▶️ '.__('Activate');
+            $dataToSend['apiToken'] = $this->getCompany()?->getConfig('plain_token', '');
         } else {
             //Regular campaign
             //If there is at lease 1 pending message, show action to pause campaign
@@ -194,15 +204,13 @@ class CampaignsController extends Controller
 
     public function create(Request $request, $type = null)
     {
-        $specialType = $request->query('type');
+        $specialType = $this->resolveSpecialCampaignType($request, $type);
 
-        if ($specialType === null && in_array($type, ['bot', 'api', 'reminder'], true)) {
-            $specialType = $type;
+        if ($specialType === 'api') {
+            return redirect()->route('wpbox.api.create', $request->query());
         }
 
-        $isSpecialCampaign = in_array($specialType, ['bot', 'api', 'reminder'], true);
-
-        if (! $isSpecialCampaign) {
+        if ($specialType === null) {
             return redirect()->route('campaigns.wizard', array_filter([
                 'broadcast_type' => in_array($type, ['file', 'group', 'quick'], true) ? $type : 'group',
                 'channel' => $request->query('channel'),
@@ -213,48 +221,68 @@ class CampaignsController extends Controller
             ], fn ($value) => $value !== null && $value !== ''));
         }
 
+        return $this->renderSpecialCampaignForm($request, $specialType);
+    }
+
+    /**
+     * Resolve bot/api/reminder from path or query (path wins when both present).
+     */
+    private function resolveSpecialCampaignType(Request $request, ?string $type = null): ?string
+    {
+        foreach ([$type, $request->query('type')] as $candidate) {
+            if (in_array($candidate, ['bot', 'api', 'reminder'], true)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return \Illuminate\Contracts\View\View|\Illuminate\Http\RedirectResponse
+     */
+    private function renderSpecialCampaignForm(Request $request, string $specialType)
+    {
         $templates = [];
-        foreach (Template::where('status', 'APPROVED')->get() as $key => $template) {
+        foreach (Template::where('status', 'APPROVED')->get() as $template) {
             $templates[$template->id] = $template->name.' - '.$template->language;
         }
+
         if (count($templates) == 0) {
-            //If there are 0 template,re-load them
             try {
                 $this->loadTemplatesFromWhatsApp();
-                foreach (Template::where('status', 'APPROVED')->get() as $key => $template) {
+                foreach (Template::where('status', 'APPROVED')->get() as $template) {
                     $templates[$template->id] = $template->name.' - '.$template->language;
                 }
             } catch (\Throwable $th) {
-                //throw $th;
             }
         }
 
         if (count($templates) == 0) {
-            //Redirect to templates
             return redirect()->route('templates.index')->withStatus(__('Please add a template first. Or wait some to be approved'));
         }
 
-        $groups = Group::pluck('name', 'id');
-        $groups[0] = __('Send to all contacts');
-
         $selectedTemplate = null;
         $variables = null;
-        if (isset($_GET['template_id'])) {
-            $selectedTemplate = Template::withoutGlobalScope(\App\Scopes\CompanyScope::class)->where('id', $_GET['template_id'])->first();
-            $variables = $this->componentToVariablesList($selectedTemplate);
-
+        if ($request->filled('template_id')) {
+            $selectedTemplate = Template::withoutGlobalScope(\App\Scopes\CompanyScope::class)
+                ->where('id', $request->template_id)
+                ->first();
+            if ($selectedTemplate) {
+                $variables = $this->componentToVariablesList($selectedTemplate);
+            }
         }
 
-        $isApiCampaignMaker = $request->has('type') && $request->type === 'api';
-        $isReminderCampaignMaker = $request->has('type') && $request->type === 'reminder';
+        $isBot = $specialType === 'bot';
+        $isApi = $specialType === 'api';
+        $isReminder = $specialType === 'reminder';
 
         $contactFields = [];
-        if ($isApiCampaignMaker) {
+        if ($isApi) {
             $contactFields[-3] = __('Use API defined value');
         }
 
-        if ($isReminderCampaignMaker) {
-            //Add Start date, Start time, Start Date And time, End date, End time and End date and time
+        if ($isReminder) {
             $contactFields[-4] = __('Start date');
             $contactFields[-5] = __('Start time');
             $contactFields[-6] = __('Start date and time');
@@ -271,42 +299,30 @@ class CampaignsController extends Controller
             $contactFields[$key] = $value;
         }
 
-        $selectedContacts = 0;
-        if (isset($_GET['group_id'])) {
-            if ($_GET['group_id'] == '0') {
-                $selectedContacts = Contact::where('subscribed', 1)->count();
-            } else {
-                $group = Group::findOrFail($_GET['group_id']);
-                $selectedContacts = $group->contacts()->where('subscribed', 1)->count();
-            }
-        }
-
         $dataToSend = [
-            'selectedContacts' => $selectedContacts,
+            'selectedContacts' => 0,
             'selectedTemplate' => $selectedTemplate,
             'selectedTemplateComponents' => $selectedTemplate ? json_decode($selectedTemplate->components, true) : null,
             'contactFields' => $contactFields,
             'variables' => $variables,
-            'groups' => $groups,
+            'groups' => collect([0 => __('Send to all contacts')])->union(Group::pluck('name', 'id')),
             'contacts' => Contact::pluck('name', 'id'),
             'templates' => $templates,
-            'isBot' => $request->has('type') && $request->type === 'bot',
-            'isAPI' => $isApiCampaignMaker,
-            'isReminder' => $isReminderCampaignMaker,
+            'isBot' => $isBot,
+            'isAPI' => $isApi,
+            'isReminder' => $isReminder,
+            'specialType' => $specialType,
+            'formAction' => route('campaigns.store'),
+            'campaign' => null,
         ];
 
-        if ($isReminderCampaignMaker) {
-            $dataToSend['sources'] = \Modules\Reminders\Models\Source::pluck('name', 'id');
-            //Prepend the all source
-            $dataToSend['sources'] = collect([0 => __('All')])->union($dataToSend['sources']);
+        if ($isReminder) {
+            $dataToSend['sources'] = collect([0 => __('All')])->union(
+                \Modules\Reminders\Models\Source::pluck('name', 'id')
+            );
         }
 
-        // If type is specified → show specific form
-        if (in_array($type, ['file', 'group', 'quick'])) {
-            return view($this->view_path.'create_'.$type, $dataToSend);
-        }
-
-        return view($this->view_path.'create', $dataToSend);
+        return view($this->view_path.'create_group', $dataToSend);
     }
 
     public function parseFile(Request $request)
@@ -610,6 +626,17 @@ class CampaignsController extends Controller
     {
         $this->authChecker();
 
+        if ($request->input('type') === 'api') {
+            $campaign = app(ApiCampaignService::class)->create(
+                $this->getCompany(),
+                app(ApiCampaignService::class)->payloadFromRequest($request)
+            );
+
+            return redirect()
+                ->route('campaigns.show', $campaign)
+                ->withStatus(__('API campaign created. Use campaign ID :id to trigger it.', ['id' => $campaign->id]));
+        }
+
         if ($request->input('broadcast_type') === 'file') {
             return $this->storeFileBroadcast($request);
         }
@@ -618,23 +645,27 @@ class CampaignsController extends Controller
             return $this->storeQuickBroadcast($request);
         }
 
+        $isBot = $request->input('type') === 'bot';
+        $isReminder = $request->input('type') === 'reminder';
+
         $campaign = $this->provider::create([
             'name' => $request->has('name') ? $request->name : 'template_message_'.now(),
-            'timestamp_for_delivery' => $request->has('send_now') ? null : $request->send_time,
+            'timestamp_for_delivery' => ($isBot || $isReminder || $request->has('send_now')) ? null : $request->send_time,
             'variables' => $request->has('paramvalues') ? json_encode($request->paramvalues) : '',
             'variables_match' => json_encode($request->parammatch),
             'template_id' => $request->template_id,
-            'group_id' => $request->group_id.'' === '0' ? null : $request->group_id,
-            'segment_id' => $request->segment_id ?: null,
-            'contact_id' => $request->contact_id,
-            'total_contacts' => Contact::count(),
-            'broadcast_type' => 'group',
+            'group_id' => ($isBot || $isReminder || $request->group_id.'' === '0') ? null : $request->group_id,
+            'segment_id' => ($isBot || $isReminder) ? null : ($request->segment_id ?: null),
+            'contact_id' => ($isBot || $isReminder) ? null : $request->contact_id,
+            'total_contacts' => ($isBot || $isReminder) ? 0 : Contact::count(),
+            'broadcast_type' => ($isBot || $isReminder) ? null : 'group',
             'channel' => $request->input('channel', Campaign::CHANNEL_WHATSAPP),
             'timezone_mode' => $request->input('timezone_mode', Campaign::TIMEZONE_MODE_CONTACT),
-            'status' => $request->boolean('save_draft') ? Campaign::STATUS_DRAFT : Campaign::STATUS_SCHEDULED,
+            'status' => ($isBot || $isReminder)
+                ? Campaign::STATUS_ACTIVE
+                : ($request->boolean('save_draft') ? Campaign::STATUS_DRAFT : Campaign::STATUS_SCHEDULED),
+            'is_active' => true,
         ]);
-
-        $isBot = $request->has('type') && $request->type === 'bot';
 
         if ($isBot) {
             $campaign->is_bot = true;
@@ -642,15 +673,6 @@ class CampaignsController extends Controller
             $campaign->trigger = $request->trigger;
             $campaign->save();
         }
-
-        $isAPI = $request->has('type') && $request->type === 'api';
-
-        if ($isAPI) {
-            $campaign->is_api = true;
-            $campaign->save();
-        }
-
-        $isReminder = $request->has('type') && $request->type === 'reminder';
 
         if ($isReminder) {
             $campaign->is_reminder = true;
@@ -671,10 +693,6 @@ class CampaignsController extends Controller
 
         if ($isBot) {
             return redirect()->route('replies.index', ['type' => 'bot'])->withStatus(__('You have created a new bot.'));
-        }
-
-        if ($isAPI) {
-            return redirect()->route('wpbox.api.index', ['type' => 'api'])->withStatus(__('You have created new API Campaigns.'));
         }
 
         if ($isReminder) {
@@ -960,6 +978,10 @@ class CampaignsController extends Controller
     public function cloneCampaign(Campaign $campaign)
     {
         $this->authChecker();
+
+        if ($campaign->is_api) {
+            return redirect()->route('wpbox.api.clone', $campaign);
+        }
 
         if (! $campaign->isBroadcast()) {
             return redirect()->back()->withStatus(__('Only broadcast campaigns can be cloned.'));

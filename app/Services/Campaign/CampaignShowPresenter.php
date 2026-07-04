@@ -44,6 +44,18 @@ class CampaignShowPresenter
 
     public function broadcastTypeLabel(): string
     {
+        if ($this->campaign->is_api) {
+            return __('API campaign');
+        }
+
+        if ($this->campaign->is_bot) {
+            return __('Bot');
+        }
+
+        if ($this->campaign->is_reminder) {
+            return __('Reminder');
+        }
+
         return match ($this->campaign->broadcast_type) {
             'file' => __('File broadcast'),
             'quick' => __('Quick broadcast'),
@@ -53,9 +65,46 @@ class CampaignShowPresenter
 
     public function statusLabel(): string
     {
+        if ($this->campaign->is_api) {
+            return $this->campaign->is_active && $this->campaign->status !== Campaign::STATUS_INACTIVE
+                ? __('Active')
+                : __('Inactive');
+        }
+
         $status = $this->campaign->status ?? '';
 
         return ucfirst(str_replace('_', ' ', $status));
+    }
+
+    public function isApiCampaign(): bool
+    {
+        return (bool) $this->campaign->is_api;
+    }
+
+    /**
+     * @return array<int, array{section: string, id: string, path: string}>
+     */
+    public function apiVariablePaths(): array
+    {
+        return app(ApiCampaignService::class)->apiVariablePaths($this->campaign);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function samplePayload(?string $token = null): array
+    {
+        return app(ApiCampaignService::class)->samplePayload($this->campaign, $token);
+    }
+
+    public function sampleCurl(?string $token = null): string
+    {
+        return app(ApiCampaignService::class)->sampleCurl($this->campaign, $token);
+    }
+
+    public function sendEndpoint(): string
+    {
+        return rtrim(config('app.url'), '/').'/api/wpbox/sendcampaigns';
     }
 
     public function templateLabel(): string

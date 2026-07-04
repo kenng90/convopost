@@ -22,8 +22,11 @@
     </div>
 </div>
 
-<form method="POST" action="{{ route('campaigns.store') }}" id="campign" enctype="multipart/form-data">
+<form method="POST" action="{{ $formAction ?? route('campaigns.store') }}" id="campign" enctype="multipart/form-data">
     @csrf
+    @if (! empty($specialType))
+        <input type="hidden" name="type" value="{{ $specialType }}">
+    @endif
 <div class="container-fluid mt--7" id="campign_managment">
     <div class="row">
         <!--Main info-->
@@ -147,18 +150,24 @@
 
     function submitJustCampign(){
         event.preventDefault();
-    
-    
-        // Get form data
+
         const formData = new FormData(document.getElementById("campign"));
-    
-        // Build URL with GET parameters
-        const url = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + new URLSearchParams(formData).toString();
-    
-        // Redirect to the URL (or use for AJAX request)
-        window.location.href = url;
-    
-       
+        const params = new URLSearchParams();
+        for (const [key, value] of formData.entries()) {
+            if (key === '_token' || key === '_method') {
+                continue;
+            }
+            if (value instanceof File) {
+                continue;
+            }
+            params.append(key, value);
+        }
+
+        @if (! empty($specialType))
+            params.set('type', @json($specialType));
+        @endif
+
+        window.location.href = window.location.protocol + "//" + window.location.host + window.location.pathname + "?" + params.toString();
     }
 
     

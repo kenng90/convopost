@@ -18,8 +18,6 @@
     <input type="hidden" name="type" value="bot">
     @include('partials.select',['id'=>'reply_type','name'=>'Reply type','value'=>2,'data'=>['2'=>__('Reply bot: On exact match'),'3'=>__('Reply bot: When message contains')], 'required'=>true])  
     @include('partials.input',[ 'name'=>'Trigger', 'id'=>'trigger', 'placeholder'=>'Enter bot reply trigger', 'required'=>false])
-@elseif($isAPI)
-    <input type="hidden" name="type" value="api">
 @elseif($isReminder)
     <input type="hidden" name="type" value="reminder">
 

@@ -87,7 +87,17 @@ class CampaignWizardTest extends TestCase
 
         $this->actingAsOwner()
             ->get(route('campaigns.create', ['type' => 'bot']))
-            ->assertOk();
+            ->assertOk()
+            ->assertSee('Create new template bot');
+    }
+
+    public function test_api_create_redirects_to_api_builder(): void
+    {
+        $this->makeTemplate();
+
+        $this->actingAsOwner()
+            ->get(route('campaigns.create', ['type' => 'api']))
+            ->assertRedirect(route('wpbox.api.create'));
     }
 
     public function test_wizard_page_loads(): void
