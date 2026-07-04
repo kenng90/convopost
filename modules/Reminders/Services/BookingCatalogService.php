@@ -13,8 +13,7 @@ class BookingCatalogService
      */
     public function bookableServicesForCompany(Company $company): array
     {
-        return Source::withoutGlobalScopes()
-            ->where('company_id', $company->id)
+        return Source::queryForCompany($company->id)
             ->where('is_bookable', true)
             ->orderBy('sort_order')
             ->orderBy('name')

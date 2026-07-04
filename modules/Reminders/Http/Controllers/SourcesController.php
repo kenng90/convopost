@@ -8,6 +8,7 @@ use Modules\Reminders\Models\AppointmentStaff;
 use Modules\Reminders\Models\Department;
 use Modules\Reminders\Models\Source;
 use Modules\Reminders\Models\SourceStaff;
+use Modules\Reminders\Services\SourceArchiveService;
 use Modules\Reminders\Services\SourceReminderSyncService;
 use Modules\Reminders\Support\BookingPaymentConfig;
 use Modules\Reminders\Support\WorkingHours;
@@ -28,7 +29,8 @@ class SourcesController extends Controller
     private $titlePlural = 'sources';
 
     public function __construct(
-        private readonly SourceReminderSyncService $sourceReminderSync
+        private readonly SourceReminderSyncService $sourceReminderSync,
+        private readonly SourceArchiveService $sourceArchive,
     ) {
     }
 
@@ -162,18 +164,42 @@ class SourcesController extends Controller
             'additionalInfo' => __('Who can receive bookings and calendar notifications for this service.'),
         ];
 
-        $campaignOptions = ['' => __('— None —')] + $this->reminderCampaignOptions();
+        $campaignOptions = ['' => __('— None —')] + $this->reminderCampaignOptions($source);
 
         $fields[] = [
-            'class' => 'col-md-12',
-            'ftype' => 'info',
-            'id' => 'client_notifications_intro',
-            'name' => __('Client notifications'),
-            'text' => __('WhatsApp messages sent to the client before and after their appointment. When you save this service, matching rules appear automatically under Client notifications — edit them here.'),
-            'button' => [
-                'link' => route('reminders.reminders.index'),
-                'text' => __('View synced rules'),
-            ],
+            'class' => $class,
+            'ftype' => 'input',
+            'separator' => __('Location'),
+            'name' => __('Location'),
+            'id' => 'location',
+            'placeholder' => __('Main clinic, Room 2'),
+            'required' => false,
+            'value' => $source?->location,
+            'additionalInfo' => __('Shown in confirmation and reminder templates when you map the Location variable.'),
+        ];
+
+        // $fields[] = [
+        //     'class' => 'col-md-12',
+        //     'ftype' => 'info',
+        //     'id' => 'client_notifications_intro',
+        //     'name' => __('Client notifications'),
+        //     'text' => __('Use reminder-type WhatsApp templates. Map variables to Date, Time, and Location (and optional service/staff fields). Confirmation sends immediately on booking; before/after reminders are scheduled automatically.'),
+        //     'button' => [
+        //         'link' => route('reminders.reminders.index'),
+        //         'text' => __('View synced rules'),
+        //     ],
+        // ];
+
+        $fields[] = [
+            'class' => $class,
+            'ftype' => 'select',
+            'separator' => __('Confirmation'),
+            'name' => __('Confirmation template'),
+            'id' => 'confirmation_campaign_id',
+            'required' => false,
+            'value' => $source?->confirmation_campaign_id,
+            'data' => $campaignOptions,
+            'additionalInfo' => __('Sent immediately when a booking is created. Map template variables to Date, Time, Location.'),
         ];
 
         $fields[] = [
@@ -360,9 +386,15 @@ class SourcesController extends Controller
     {
         $this->authChecker();
         $item = $this->provider::findOrFail($id);
-        $item->delete();
 
-        return redirect()->route($this->webroute_path.'index')->withStatus(__('Service removed.'));
+        $hasReservations = $item->reservations()->exists();
+        $this->sourceArchive->archive($item);
+
+        $message = $hasReservations
+            ? __('Service archived. Existing appointments are kept for your records.')
+            : __('Service removed.');
+
+        return redirect()->route($this->webroute_path.'index')->withStatus($message);
     }
 
     /**
@@ -400,6 +432,8 @@ class SourcesController extends Controller
             'max_advance_days' => (int) $request->input('max_advance_days', 60),
             'staff_assignment_mode' => $mode,
             'working_hours' => $existing?->working_hours ?: WorkingHours::default(),
+            'location' => $request->input('location') ?: null,
+            'confirmation_campaign_id' => $request->input('confirmation_campaign_id') ?: null,
             'reminder_before_campaign_id' => $request->input('reminder_before_campaign_id') ?: null,
             'reminder_after_campaign_id' => $request->input('reminder_after_campaign_id') ?: null,
             'reminder_before_value' => $request->input('reminder_before_value') ?: null,
@@ -462,16 +496,27 @@ class SourcesController extends Controller
     /**
      * @return array<int, string>
      */
-    private function reminderCampaignOptions(): array
+    private function reminderCampaignOptions(?Source $source = null): array
     {
         $company = $this->getCompany();
         if (! $company) {
             return [];
         }
 
+        $selectedCampaignIds = array_filter([
+            $source?->confirmation_campaign_id,
+            $source?->reminder_before_campaign_id,
+            $source?->reminder_after_campaign_id,
+        ]);
+
         return Campaign::query()
             ->where('company_id', $company->id)
-            ->where('is_reminder', true)
+            ->where(function ($query) use ($selectedCampaignIds) {
+                $query->where('is_reminder', true);
+                if ($selectedCampaignIds !== []) {
+                    $query->orWhereIn('id', $selectedCampaignIds);
+                }
+            })
             ->orderBy('name')
             ->pluck('name', 'id')
             ->toArray();

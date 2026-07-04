@@ -29,7 +29,22 @@ class EventsController extends Controller
      */
     private function fields(?Event $event = null, string $class = 'col-md-4'): array
     {
-        $campaigns = Campaign::query()->orderBy('name')->pluck('name', 'id')->toArray();
+        $selectedCampaignIds = array_filter([
+            $event?->confirmation_campaign_id,
+            $event?->reminder_before_campaign_id,
+            $event?->reminder_after_campaign_id,
+        ]);
+
+        $campaigns = Campaign::query()
+            ->where(function ($query) use ($selectedCampaignIds) {
+                $query->where('is_reminder', true);
+                if ($selectedCampaignIds !== []) {
+                    $query->orWhereIn('id', $selectedCampaignIds);
+                }
+            })
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->toArray();
 
         return [
             ['class' => 'col-md-12', 'ftype' => 'info', 'id' => 'event_intro', 'name' => __('Event details'), 'text' => __('Events are scheduled sessions with a start and end date/time. Add at least one published session for the event to appear in flows and public booking.')],
@@ -46,8 +61,8 @@ class EventsController extends Controller
             ['class' => $class, 'ftype' => 'select', 'name' => __('Department'), 'id' => 'department_id', 'required' => false, 'value' => $event?->department_id, 'data' => ['' => __('None')] + Department::query()->orderBy('name')->pluck('name', 'id')->toArray(), 'additionalInfo' => __('Optional label for your records. Does not filter the public events page or affect registration.')],
             ['class' => $class, 'ftype' => 'select', 'name' => __('Host'), 'id' => 'appointment_staff_id', 'required' => false, 'value' => $event?->appointment_staff_id, 'data' => ['' => __('None')] + AppointmentStaff::query()->orderBy('name')->pluck('name', 'id')->toArray(), 'additionalInfo' => __('Optional. Choose someone from Bookings → Team to receive WhatsApp alerts when guests register or cancel.')],
             ['class' => 'col-md-12', 'ftype' => 'info', 'id' => 'event_calendar_note', 'name' => __('Google Calendar'), 'text' => __('Events do not sync to Google Calendar. Calendar integration applies to one-to-one appointments only.')],
-            ['class' => 'col-md-12', 'ftype' => 'info', 'id' => 'event_notifications_intro', 'name' => __('Client notifications'), 'text' => __('Confirmation and reminder messages for registrants.')],
-            ['class' => $class, 'ftype' => 'select', 'name' => __('Confirmation campaign'), 'id' => 'confirmation_campaign_id', 'required' => false, 'value' => $event?->confirmation_campaign_id, 'data' => ['' => __('None')] + $campaigns],
+            ['class' => 'col-md-12', 'ftype' => 'info', 'id' => 'event_notifications_intro', 'name' => __('Client notifications'), 'text' => __('Use reminder-type WhatsApp templates. Map variables to Date, Time, and Location (from the event location field). Confirmation sends on registration; before/after reminders are scheduled automatically.')],
+            ['class' => $class, 'ftype' => 'select', 'name' => __('Confirmation campaign'), 'id' => 'confirmation_campaign_id', 'required' => false, 'value' => $event?->confirmation_campaign_id, 'data' => ['' => __('None')] + $campaigns, 'additionalInfo' => __('Map template variables to Date, Time, Location, Event title.')],
             ['class' => $class, 'ftype' => 'select', 'name' => __('Reminder before (campaign)'), 'id' => 'reminder_before_campaign_id', 'required' => false, 'value' => $event?->reminder_before_campaign_id, 'data' => ['' => __('None')] + $campaigns],
             ['class' => $class, 'ftype' => 'input', 'type' => 'number', 'name' => __('Reminder before (value)'), 'id' => 'reminder_before_value', 'placeholder' => '24', 'required' => false, 'value' => $event?->reminder_before_value],
             ['class' => $class, 'ftype' => 'select', 'name' => __('Reminder before (unit)'), 'id' => 'reminder_before_unit', 'required' => false, 'value' => $event?->reminder_before_unit, 'data' => ['minutes' => 'Minutes', 'hours' => 'Hours', 'days' => 'Days']],

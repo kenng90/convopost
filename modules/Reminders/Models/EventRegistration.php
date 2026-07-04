@@ -6,6 +6,7 @@ use App\Scopes\CompanyScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Reminders\Services\BookingMessageContextService;
 use Modules\Wpbox\Models\Contact;
 use Modules\Wpbox\Models\Message;
 
@@ -131,43 +132,7 @@ class EventRegistration extends Model
 
     public function sendConfirmationMessage(): void
     {
-        $event = $this->event;
-        $contact = $this->contact;
-
-        if (! $event || ! $contact || ! $event->confirmation_campaign_id) {
-            return;
-        }
-
-        $campaign = \Modules\Wpbox\Models\Campaign::find($event->confirmation_campaign_id);
-
-        if (! $campaign) {
-            return;
-        }
-
-        $occurrence = $this->occurrence;
-        $start = $occurrence?->starts_at;
-
-        $contact->extra_value = [
-            'start_date' => $start?->toDateString(),
-            'start_time' => $start?->toTimeString(),
-            'start_date_time' => $start?->toDateTimeString(),
-            'end_date' => $occurrence?->ends_at?->toDateString(),
-            'end_time' => $occurrence?->ends_at?->toTimeString(),
-            'end_date_time' => $occurrence?->ends_at?->toDateTimeString(),
-            'external_id' => $this->external_id,
-            'event_title' => $event->title,
-        ];
-
-        $request = new \Illuminate\Http\Request();
-        $request->replace(['send_time' => now()->toDateTimeString()]);
-
-        $message = $campaign->makeMessages($request, $contact);
-
-        try {
-            $message->extra = 'event_reg:'.$this->id;
-            $message->save();
-        } catch (\Throwable) {
-        }
+        app(BookingMessageContextService::class)->sendEventConfirmation($this);
     }
 
     protected static function booted(): void

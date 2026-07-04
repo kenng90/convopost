@@ -66,6 +66,11 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        @if (! empty($isReminder))
+                            <div class="alert alert-info py-2 small">
+                                {{ __('Map template variables to booking fields: Date (start), Time (start), Location, Service name, Staff / host name, Event title, or Booking reference. These are filled automatically when a booking is confirmed or a reminder is due.') }}
+                            </div>
+                        @endif
                         @include('wpbox::campaigns.new.variables')
                     </div>
                 </div>

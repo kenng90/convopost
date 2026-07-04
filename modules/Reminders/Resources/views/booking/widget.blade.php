@@ -70,7 +70,7 @@
                 </dl>
 
                 <p class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    You will receive a confirmation message if reminders are enabled for this service.
+                    {{ __('You will receive a WhatsApp confirmation and reminders when templates are configured for this service.') }}
                 </p>
 
                 <button

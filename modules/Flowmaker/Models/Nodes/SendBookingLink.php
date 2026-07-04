@@ -4,8 +4,6 @@ namespace Modules\Flowmaker\Models\Nodes;
 
 use App\Models\Company;
 use App\Services\Flowmaker\FlowRunLogger;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Reminders\Models\Source;
 use Modules\Reminders\Services\EventCatalogService;
@@ -91,13 +89,11 @@ class SendBookingLink extends Node
         $source = null;
 
         if ($sourceId > 0) {
-            $source = Source::withoutGlobalScopes()
-                ->where('company_id', $company->id)
+            $source = Source::queryForCompany($company->id)
                 ->where('is_bookable', true)
                 ->find($sourceId);
         } elseif ($sourceName !== '') {
-            $source = Source::withoutGlobalScopes()
-                ->where('company_id', $company->id)
+            $source = Source::queryForCompany($company->id)
                 ->where('is_bookable', true)
                 ->where('name', $sourceName)
                 ->first();

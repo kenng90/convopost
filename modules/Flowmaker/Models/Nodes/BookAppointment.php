@@ -3,11 +3,11 @@
 namespace Modules\Flowmaker\Models\Nodes;
 
 use App\Models\Company;
+use App\Services\Flowmaker\BookingWebhookService;
+use App\Services\Flowmaker\FlowRunLogger;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use App\Services\Flowmaker\BookingWebhookService;
-use App\Services\Flowmaker\FlowRunLogger;
 use Modules\Flowmaker\Jobs\ResumeFlowFromMpesa;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Reminders\Models\Reservation;
@@ -241,17 +241,23 @@ class BookAppointment extends Node
         $this->storeReservationVariables($contact, $reservation);
 
         $settings = $this->getDataAsArray()['settings'] ?? [];
-        $successMessage = $settings['success_message'] ?? __('Your appointment for :service on :date at :time is confirmed.', [
-            'service' => $reservation->source?->name ?? __('your service'),
-            'date' => $reservation->start_date?->timezone($reservation->source?->timezone ?: 'UTC')->format('M j, Y'),
-            'time' => $reservation->start_date?->timezone($reservation->source?->timezone ?: 'UTC')->format('g:i A'),
-        ]);
 
-        if ($extraNote) {
-            $successMessage .= ' '.$extraNote;
+        // Prefer the service confirmation WhatsApp template when configured.
+        if (! $reservation->hasTemplateConfirmation()) {
+            $successMessage = $settings['success_message'] ?? __('Your appointment for :service on :date at :time is confirmed.', [
+                'service' => $reservation->source?->name ?? __('your service'),
+                'date' => $reservation->start_date?->timezone($reservation->source?->timezone ?: 'UTC')->format('M j, Y'),
+                'time' => $reservation->start_date?->timezone($reservation->source?->timezone ?: 'UTC')->format('g:i A'),
+            ]);
+
+            if ($extraNote) {
+                $successMessage .= ' '.$extraNote;
+            }
+
+            $contact->sendMessage($contact->changeVariables($successMessage, $this->flow_id), false, false, 'TEXT');
+        } elseif ($extraNote) {
+            $contact->sendMessage($contact->changeVariables($extraNote, $this->flow_id), false, false, 'TEXT');
         }
-
-        $contact->sendMessage($contact->changeVariables($successMessage, $this->flow_id), false, false, 'TEXT');
         FlowRunLogger::log($this->flow_id, $contact->id, 'booking_confirmed', $this->id, (string) $reservation->id);
 
         $company = Company::find($contact->company_id);
@@ -482,8 +488,7 @@ class BookAppointment extends Node
             return null;
         }
 
-        return Source::withoutGlobalScopes()
-            ->where('company_id', $company->id)
+        return Source::queryForCompany($company->id)
             ->where('is_bookable', true)
             ->where('name', $sourceName)
             ->first();
