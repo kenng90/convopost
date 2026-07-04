@@ -37,9 +37,24 @@
 
             <br />
             <div class="card shadow max-height-vh-70 overflow-auto overflow-x-hidden">
+                <div class="card-header shadow-lg">
+                    <b>{{ __('Send API campaign') }}</b>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">{{ __('Trigger a saved API campaign by ID. Messages are queued unless send_now is true. Ensure the scheduler is running.') }}</p>
+                    <code>POST {{ rtrim(config('app.url'), '/') }}/api/wpbox/sendcampaigns</code>
+                    <pre class="bg-light p-3 mt-3 mb-0 small">token, campaign_id, phone
+data[order][id]=1001   (optional API variable paths)
+send_now=true          (optional immediate send)</pre>
+                </div>
+            </div>
+
+            <br />
+            <div class="card shadow max-height-vh-70 overflow-auto overflow-x-hidden">
                 <div class="card-footer">
-                    <a href="{{ route('wpbox.api.index') }}" class="btn btn-success">🔗 {{ __('List of Camapaings for API') }}</a>
-                    <a href="{{ config('wpbox.api_docs','https://documenter.getpostman.com/view/8538142/2s9Ykn8gvj') }}" target="_blank" class="btn btn-primary">🔗 {{ __('Documentation') }}</a>
+                    <a href="{{ route('wpbox.api.index') }}" class="btn btn-success">🔗 {{ __('List of API campaigns') }}</a>
+                    <a href="{{ route('wpbox.api.create') }}" class="btn btn-primary">🔌 {{ __('New API campaign') }}</a>
+                    <a href="{{ config('wpbox.api_docs','https://documenter.getpostman.com/view/8538142/2s9Ykn8gvj') }}" target="_blank" class="btn btn-outline-primary">🔗 {{ __('Documentation') }}</a>
                 </div>
             </div>
         </div>  

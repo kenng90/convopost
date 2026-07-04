@@ -7,12 +7,24 @@
         @include('wpbox::campaigns.map')
     @endif
 
-    @include('wpbox::campaigns.show._progress', ['analytics' => $analytics])
-
-    <div class="mt-4">
-        @if ($item->is_bot || $item->is_api)
+    @if ($item->is_api)
+        <div class="mt-4">
+            @include('wpbox::campaigns.show._api-panel', [
+                'presenter' => $presenter,
+                'item' => $item,
+                'contentPreview' => $contentPreview,
+                'apiToken' => $apiToken ?? null,
+            ])
+        </div>
+    @elseif ($item->is_bot)
+        <div class="mt-4">
             @include('wpbox::campaigns.infoboxes', ['item' => $item, 'total_contacts' => $total_contacts])
-        @else
+            @include('wpbox::campaigns.show._content-preview', ['contentPreview' => $contentPreview])
+        </div>
+    @else
+        @include('wpbox::campaigns.show._progress', ['analytics' => $analytics])
+
+        <div class="mt-4">
             @include('wpbox::campaigns.show._metrics', [
                 'presenter' => $presenter,
                 'item' => $item,
@@ -20,8 +32,8 @@
                 'total_contacts' => $total_contacts,
             ])
             @include('wpbox::campaigns.show._content-preview', ['contentPreview' => $contentPreview])
-        @endif
-    </div>
+        </div>
+    @endif
 @endsection
 
 @section('thead')

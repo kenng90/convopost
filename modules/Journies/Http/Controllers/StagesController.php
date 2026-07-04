@@ -35,7 +35,7 @@ class StagesController extends Controller
             ['class' => $class, 'ftype' => 'input', 'name' => 'Name', 'id' => 'name', 'placeholder' => __('Enter name'), 'required' => true],
             ['class' => $class, 'ftype' => 'select', 'name' => 'Campaign', 'id' => 'campaign', 'placeholder' => __('Select campaign (optional)'), 'required' => false, 'data' => $campaigns],
             ['class' => $class, 'ftype' => 'input', 'name' => 'Campaign delay (minutes)', 'id' => 'campaign_delay_minutes', 'placeholder' => '0', 'required' => false],
-            ['class' => $class, 'ftype' => 'info', 'name' => 'Info', 'id' => 'info', 'text' => __('When a contact enters this stage, the selected API campaign can be triggered automatically. Leave campaign empty for manual-only stages.'), 'button' => ['text' => __('Create API Campaign'), 'link' => route('wpbox.api.index', ['type' => 'api'])]],
+            ['class' => $class, 'ftype' => 'info', 'name' => 'Info', 'id' => 'info', 'text' => __('When a contact enters this stage, the selected API campaign can be triggered automatically. Leave campaign empty for manual-only stages.'), 'button' => ['text' => __('Create API Campaign'), 'link' => route('wpbox.api.create')]],
         ];
     }
 

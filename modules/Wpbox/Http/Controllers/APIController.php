@@ -4,6 +4,9 @@ namespace Modules\Wpbox\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Campaign\ApiCampaignService;
+use App\Services\Campaign\CampaignDispatchService;
+use App\Services\Campaign\CampaignTemplateVariablesParser;
 use Carbon\Carbon;
 use Closure;
 use Illuminate\Http\Request;
@@ -411,38 +414,82 @@ class APIController extends Controller
     //Send Campaign via API
     public function sendCampaignMessageToPhoneNumber(Request $request)
     {
-
         return $this->authenticate($request, function ($request) {
-
             $request->validate([
                 'phone' => 'required',
+                'campaign_id' => 'required_without:campaing_id',
+                'campaing_id' => 'nullable',
             ]);
-
-            if (! $request->filled('campaign_id') && ! $request->filled('campaing_id')) {
-                abort(422, 'campaign_id is required');
-            }
-
-            //Make or get the contact
-            $contact = $this->getOrMakeContact($request->phone, $this->getCompany(), $request->phone);
-
-            //All the passed data in request data, merge with the contact
-            $contact['extra_value'] = $request->data;
 
             $campaignId = $request->input('campaign_id', $request->input('campaing_id'));
 
-            //Get the campaign
-            $message = Campaign::findOrFail($campaignId)->makeMessages(null, $contact);
+            if (! $campaignId) {
+                return response()->json(['status' => 'error', 'message' => 'campaign_id is required'], 422);
+            }
 
-            //We are queuing the message to be sent, so we don't need to send it here
-            //$this->sendCampaignMessageToWhatsApp($message);
+            $company = $this->getCompany();
+            $campaign = Campaign::withoutGlobalScopes()
+                ->where('company_id', $company->id)
+                ->find($campaignId);
 
-            //Api responses
-            return response()->json(['status' => 'success', 'message_id' => $message->id, 'message_wamid' => $message->fb_message_id]);
-        },
-            [
-                'token' => 'required',
-                'phone' => 'required',
+            if (! $campaign) {
+                return response()->json(['status' => 'error', 'message' => 'API campaign not found'], 404);
+            }
+
+            $apiCampaigns = app(ApiCampaignService::class);
+
+            try {
+                $apiCampaigns->assertSendable($campaign);
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+                return response()->json(['status' => 'error', 'message' => $e->getMessage()], $e->getStatusCode());
+            }
+
+            $data = $request->input('data', []);
+            if (! is_array($data)) {
+                $data = [];
+            }
+
+            $missing = $apiCampaigns->missingApiVariables($campaign, $data);
+            if ($missing !== []) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Missing required API variable paths in data.',
+                    'missing' => $missing,
+                ], 422);
+            }
+
+            $contact = $this->getOrMakeContact($request->phone, $company, $request->input('name', $request->phone));
+            $contact->extra_value = $data;
+
+            $message = $campaign->makeMessages(null, $contact);
+
+            if (! $message) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Could not build campaign message for this contact.',
+                ], 422);
+            }
+
+            // Messages are queued (status pending) and sent by the campaign dispatcher.
+            // Optional immediate send when the queue/scheduler is not relied upon:
+            if ($request->boolean('send_now')) {
+                app(CampaignDispatchService::class)->sendSynchronously($message);
+                $message->refresh();
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message_id' => $message->id,
+                'message_wamid' => $message->fb_message_id,
+                'queued' => (int) $message->status === Message::STATUS_PENDING,
+                'note' => (int) $message->status === Message::STATUS_PENDING
+                    ? 'Message queued. Ensure the scheduler runs: php artisan schedule:run'
+                    : 'Message sent.',
             ]);
+        }, [
+            'token' => 'required',
+            'phone' => 'required',
+        ]);
     }
 
     //Get groups
@@ -713,17 +760,23 @@ class APIController extends Controller
      */
     public function index()
     {
+        $this->ownerAndStaffOnly();
 
-        $items = Campaign::orderBy('id', 'desc')->whereNull('contact_id')->where('is_api', true)->get();
+        $items = Campaign::query()
+            ->with('template')
+            ->where('is_api', true)
+            ->orderByDesc('id')
+            ->get();
 
-        //Regular, bot ant template based bot
         $setup = [
             'usefilter' => null,
             'title' => __('API Campaigns'),
-            'action_link' => route('campaigns.create', ['type' => 'api']),
+            'action_link' => route('wpbox.api.create'),
             'action_name' => __('New API Campaign'),
             'action_link2' => route('api.info'),
             'action_name2' => __('API Info'),
+            'action_link3' => route('campaigns.integrations'),
+            'action_name3' => __('Integrations hub'),
             'items' => $items,
             'item_names' => __('API Campaigns'),
             'webroute_path' => 'campaigns.',
@@ -735,7 +788,144 @@ class APIController extends Controller
             'hidePaging' => true,
         ];
 
-        return view('wpbox::api.index', ['setup' => $setup]);
+        return view('wpbox::api.index', [
+            'setup' => $setup,
+            'sendEndpoint' => rtrim(config('app.url'), '/').'/api/wpbox/sendcampaigns',
+        ]);
+    }
+
+    public function create(Request $request)
+    {
+        $this->ownerAndStaffOnly();
+
+        return $this->renderApiCampaignForm($request);
+    }
+
+    public function edit(Request $request, Campaign $campaign)
+    {
+        $this->ownerAndStaffOnly();
+        abort_unless($campaign->is_api, 404);
+
+        return $this->renderApiCampaignForm($request, $campaign);
+    }
+
+    public function store(Request $request, ApiCampaignService $apiCampaigns)
+    {
+        $this->ownerAndStaffOnly();
+
+        $campaign = $apiCampaigns->create(
+            $this->getCompany(),
+            $apiCampaigns->payloadFromRequest($request)
+        );
+
+        return redirect()
+            ->route('campaigns.show', $campaign)
+            ->withStatus(__('API campaign created. Use campaign ID :id to trigger it.', ['id' => $campaign->id]));
+    }
+
+    public function update(Request $request, Campaign $campaign, ApiCampaignService $apiCampaigns)
+    {
+        $this->ownerAndStaffOnly();
+        abort_unless($campaign->is_api, 404);
+
+        $apiCampaigns->update($campaign, $apiCampaigns->payloadFromRequest($request));
+
+        return redirect()
+            ->route('campaigns.show', $campaign)
+            ->withStatus(__('API campaign updated.'));
+    }
+
+    public function toggle(Campaign $campaign, ApiCampaignService $apiCampaigns)
+    {
+        $this->ownerAndStaffOnly();
+        abort_unless($campaign->is_api, 404);
+
+        $campaign = $apiCampaigns->toggleActive($campaign);
+        $message = $campaign->is_active
+            ? __('API campaign activated.')
+            : __('API campaign deactivated.');
+
+        return redirect()->route('wpbox.api.index')->withStatus($message);
+    }
+
+    public function clone(Campaign $campaign, ApiCampaignService $apiCampaigns)
+    {
+        $this->ownerAndStaffOnly();
+        abort_unless($campaign->is_api, 404);
+
+        $clone = $apiCampaigns->clone($campaign);
+
+        return redirect()
+            ->route('wpbox.api.edit', $clone)
+            ->withStatus(__('API campaign cloned. Review and save.'));
+    }
+
+    /**
+     * @return \Illuminate\Contracts\View\View|\Illuminate\Http\RedirectResponse
+     */
+    private function renderApiCampaignForm(Request $request, ?Campaign $campaign = null)
+    {
+        $templates = Template::where('status', 'APPROVED')
+            ->get()
+            ->mapWithKeys(fn (Template $template) => [$template->id => $template->name.' - '.$template->language])
+            ->all();
+
+        if ($templates === []) {
+            try {
+                $this->loadTemplatesFromWhatsApp();
+                $templates = Template::where('status', 'APPROVED')
+                    ->get()
+                    ->mapWithKeys(fn (Template $template) => [$template->id => $template->name.' - '.$template->language])
+                    ->all();
+            } catch (\Throwable $th) {
+            }
+        }
+
+        if ($templates === []) {
+            return redirect()->route('templates.index')
+                ->withStatus(__('Please add a template first. Or wait some to be approved'));
+        }
+
+        $templateId = $request->input('template_id', $campaign?->template_id);
+        $selectedTemplate = $templateId
+            ? Template::withoutGlobalScope(\App\Scopes\CompanyScope::class)->find($templateId)
+            : null;
+
+        $variables = $selectedTemplate
+            ? app(CampaignTemplateVariablesParser::class)->parse($selectedTemplate)
+            : null;
+
+        $contactFields = [
+            -3 => __('Use API defined value'),
+            -2 => __('Use manually defined value'),
+            -1 => __('Contact name'),
+            0 => __('Contact phone'),
+        ];
+        foreach (Field::pluck('name', 'id') as $key => $value) {
+            $contactFields[$key] = $value;
+        }
+
+        $paramvalues = $request->input('paramvalues', json_decode($campaign?->variables ?? '[]', true) ?? []);
+        $parammatch = $request->input('parammatch', json_decode($campaign?->variables_match ?? '[]', true) ?? []);
+
+        return view('wpbox::api.create', [
+            'templates' => $templates,
+            'selectedTemplate' => $selectedTemplate,
+            'selectedTemplateComponents' => $selectedTemplate ? json_decode($selectedTemplate->components, true) : null,
+            'variables' => $variables,
+            'contactFields' => $contactFields,
+            'campaign' => $campaign,
+            'paramvalues' => $paramvalues,
+            'parammatch' => $parammatch,
+            'isBot' => false,
+            'isAPI' => true,
+            'isReminder' => false,
+            'selectedContacts' => 0,
+            'formAction' => $campaign
+                ? route('wpbox.api.update', $campaign)
+                : route('wpbox.api.store'),
+            'formMethod' => $campaign ? 'PUT' : 'POST',
+        ]);
     }
 
     public function updateAIBot(Request $request)

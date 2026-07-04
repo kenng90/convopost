@@ -245,6 +245,8 @@ class CampaignEnhancementsTest extends TestCase
             'company_id' => $this->company->id,
             'template_id' => $template->id,
             'is_api' => true,
+            'is_active' => true,
+            'status' => Campaign::STATUS_ACTIVE,
             'variables' => '{}',
             'variables_match' => '{}',
         ]);

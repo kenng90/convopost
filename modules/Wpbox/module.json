@@ -418,12 +418,8 @@
                     "icon":"ni ni-single-copy-04 text-green",
                     "route":"templates.index",
                     "onlyin": "wpbox,whatssupport"
-                },{
-                    "name":"Triggers",
-                    "icon":"ni ni-curved-next text-green",
-                    "route":"replies.index",
-                    "onlyin": "wpbox,whatssupport"
                 },
+              
                 {
                     "name":"API info",
                     "icon":"ni ni-badge text-green",

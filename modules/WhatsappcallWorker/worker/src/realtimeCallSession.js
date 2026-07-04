@@ -135,6 +135,9 @@ function buildInstructions(payload) {
     'Speak naturally, keep answers concise (1–3 sentences unless the caller asks for detail).',
     'Use only the knowledge provided above — if unsure, say so and offer to follow up in chat.',
     'When the caller is done or says goodbye, thank them and end the conversation politely.',
+    'Ignore background noise, music, TV, traffic, and other voices not clearly speaking to you.',
+    'Only treat clear speech directed at you as an instruction. If audio is unclear or not a real request, stay silent or briefly ask the caller to repeat.',
+    'Do not invent actions or answers from garbled or partial audio.',
   );
 
   sections.push(...voiceBookingInstructionLines(payload));

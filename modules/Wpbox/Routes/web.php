@@ -36,6 +36,15 @@ Route::group([
             Route::get('campaigns/del/{campaign}', 'CampaignsController@destroy')->name('campaigns.delete');
             Route::post('campaigns/parse-file', 'CampaignsController@parseFile')->name('campaigns.parse-file');
 
+            // API campaign builder (templates triggered by campaign_id)
+            Route::get('campaigns/api', 'APIController@index')->name('wpbox.api.campaigns');
+            Route::get('campaigns/api/create', 'APIController@create')->name('wpbox.api.create');
+            Route::post('campaigns/api', 'APIController@store')->name('wpbox.api.store')->middleware('campaign.plan');
+            Route::get('campaigns/api/{campaign}/edit', 'APIController@edit')->name('wpbox.api.edit');
+            Route::put('campaigns/api/{campaign}', 'APIController@update')->name('wpbox.api.update');
+            Route::get('campaigns/api/{campaign}/toggle', 'APIController@toggle')->name('wpbox.api.toggle');
+            Route::get('campaigns/api/{campaign}/clone', 'APIController@clone')->name('wpbox.api.clone');
+
             Route::get('campaigns/clone/{campaign}', 'CampaignsController@cloneCampaign')->name('campaigns.clone');
             Route::get('campaigns/cancel/{campaign}', 'CampaignsController@cancel')->name('campaigns.cancel');
             Route::get('campaigns/launch/{campaign}', 'CampaignsController@launch')->name('campaigns.launch');
@@ -81,6 +90,7 @@ Route::group([
         Route::prefix('api/wpbox')->group(function () {
 
             Route::get('campaings/apis', 'APIController@index')->name('wpbox.api.index');
+            Route::get('campaigns/apis', 'APIController@index');
             Route::get('info', 'APIController@info')->name('api.info');
             Route::get('chats/{lastmessagetime}/{page?}/{search_query?}', 'ChatController@chatlist');
             Route::get('chat/{contact}', 'ChatController@chatmessages');
