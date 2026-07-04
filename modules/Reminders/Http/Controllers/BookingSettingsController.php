@@ -119,8 +119,7 @@ class BookingSettingsController extends Controller
     public function widget(Request $request, string $subdomain, string $sourceName)
     {
         $company = Company::where('subdomain', $subdomain)->firstOrFail();
-        $source = Source::withoutGlobalScopes()
-            ->where('company_id', $company->id)
+        $source = Source::queryForCompany($company->id)
             ->where('name', $sourceName)
             ->where('is_bookable', true)
             ->firstOrFail();

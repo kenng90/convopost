@@ -283,13 +283,9 @@ class CampaignsController extends Controller
         }
 
         if ($isReminder) {
-            $contactFields[-4] = __('Start date');
-            $contactFields[-5] = __('Start time');
-            $contactFields[-6] = __('Start date and time');
-            $contactFields[-7] = __('End date');
-            $contactFields[-8] = __('End time');
-            $contactFields[-9] = __('End date and time');
-            $contactFields[-10] = __('External ID');
+            foreach (\Modules\Reminders\Services\BookingMessageContextService::campaignFieldOptions() as $id => $label) {
+                $contactFields[$id] = $label;
+            }
         }
 
         $contactFields[-2] = __('Use manually defined value');

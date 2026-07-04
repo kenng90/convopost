@@ -33,8 +33,7 @@ class BookingPaymentService
     {
         session(['company_id' => $company->id]);
 
-        $source = Source::withoutGlobalScopes()
-            ->where('company_id', $company->id)
+        $source = Source::queryForCompany($company->id)
             ->where('is_bookable', true)
             ->where('name', $payload['source'])
             ->firstOrFail();
@@ -367,8 +366,7 @@ class BookingPaymentService
         $accountReference = 'BK-VOICE';
 
         if ($bookingType === self::BOOKING_TYPE_APPOINTMENT) {
-            $source = Source::withoutGlobalScopes()
-                ->where('company_id', $company->id)
+            $source = Source::queryForCompany($company->id)
                 ->where('is_bookable', true)
                 ->where('name', $bookingPayload['source'])
                 ->firstOrFail();

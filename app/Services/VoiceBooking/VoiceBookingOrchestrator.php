@@ -52,8 +52,7 @@ class VoiceBookingOrchestrator
             return ['ok' => false, 'error' => 'Caller phone number is required to book.'];
         }
 
-        $source = Source::withoutGlobalScopes()
-            ->where('company_id', $company->id)
+        $source = Source::queryForCompany($company->id)
             ->where('is_bookable', true)
             ->where('name', $serviceName)
             ->first();

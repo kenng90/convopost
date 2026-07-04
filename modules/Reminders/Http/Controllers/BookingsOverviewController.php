@@ -9,12 +9,14 @@ use Modules\Reminders\Models\Event;
 use Modules\Reminders\Models\EventRegistration;
 use Modules\Reminders\Models\Reservation;
 use Modules\Reminders\Models\Source;
+use Modules\Reminders\Services\BookingMessageTemplatePackService;
 use Modules\Reminders\Services\EventCatalogService;
 
 class BookingsOverviewController extends Controller
 {
     public function __construct(
-        private readonly EventCatalogService $eventCatalogService
+        private readonly EventCatalogService $eventCatalogService,
+        private readonly BookingMessageTemplatePackService $templatePack,
     ) {
     }
 
@@ -37,6 +39,7 @@ class BookingsOverviewController extends Controller
             ->count();
 
         $eventsEnabled = $company ? $this->eventCatalogService->eventsEnabled($company) : false;
+        $messagePack = $company ? $this->templatePack->statusForCompany($company) : null;
 
         return view('reminders::overview.index', [
             'setup' => [
@@ -58,6 +61,8 @@ class BookingsOverviewController extends Controller
                 ? route('reminders.booking.events', ['subdomain' => $company->subdomain])
                 : null,
             'bookingSettingsUrl' => route('reminders.booking-settings.index'),
+            'messagePack' => $messagePack,
+            'clientNotificationsUrl' => route('reminders.reminders.index'),
         ]);
     }
 }

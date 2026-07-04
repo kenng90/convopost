@@ -1,6 +1,8 @@
 @extends('general.index', $setup)
 
 @section('cardbody')
+@include('reminders::overview.partials._message-pack')
+
 <div class="row">
     <div class="col-md-3 col-sm-6 mb-4">
         <div class="card card-stats h-100 mb-0">

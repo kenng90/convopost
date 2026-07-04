@@ -601,8 +601,7 @@ class APIController extends Controller
 
     private function resolveSource(Company $company, string $sourceRef): Source
     {
-        $query = Source::withoutGlobalScopes()
-            ->where('company_id', $company->id)
+        $query = Source::queryForCompany($company->id)
             ->where('is_bookable', true);
 
         if (is_numeric($sourceRef)) {

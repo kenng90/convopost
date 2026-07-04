@@ -3,7 +3,6 @@
 namespace App\Services\VoiceBooking;
 
 use App\Models\Company;
-use Illuminate\Support\Facades\Log;
 use Modules\Reminders\Models\Source;
 use Modules\Reminders\Services\AvailabilityService;
 use Modules\Reminders\Services\BookingCatalogService;
@@ -241,8 +240,7 @@ class VoiceBookingToolService
 
     private function resolveSource(Company $company, string $name): ?Source
     {
-        return Source::withoutGlobalScopes()
-            ->where('company_id', $company->id)
+        return Source::queryForCompany($company->id)
             ->where('is_bookable', true)
             ->where('name', $name)
             ->first();

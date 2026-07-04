@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Reminders\Services\BookingMessageContextService;
 use Modules\Wpbox\Models\Contact;
 use Modules\Wpbox\Models\Message;
 
@@ -35,7 +36,7 @@ class Reservation extends Model
 
     public function source(): BelongsTo
     {
-        return $this->belongsTo(Source::class);
+        return $this->belongsTo(Source::class)->withTrashed();
     }
 
     public function staff(): BelongsTo
@@ -158,23 +159,31 @@ class Reservation extends Model
 
     public function makeMessages()
     {
-        //Make the actual messages
+        $this->sendConfirmationMessage();
 
-        //Get all the Reminders for this reservation
         $reminders = Remineder::where('company_id', $this->company_id)
             ->where('status', 1)
             ->get();
 
-        //Remove the reminders that are not for the same source as the reservation
         $reminders = $reminders->reject(function ($reminder) {
             return $reminder->source_id !== null && $reminder->source_id != $this->source_id;
         });
 
-        //For each reminder, make the messages
         foreach ($reminders as $reminder) {
             $reminder->makeMessages($this);
         }
+    }
 
+    public function sendConfirmationMessage(): void
+    {
+        app(BookingMessageContextService::class)->sendReservationConfirmation($this);
+    }
+
+    public function hasTemplateConfirmation(): bool
+    {
+        $this->loadMissing('source');
+
+        return (bool) $this->source?->confirmation_campaign_id;
     }
 
     protected static function booted()

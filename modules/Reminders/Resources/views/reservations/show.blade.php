@@ -16,6 +16,9 @@
                     <dt class="col-sm-4">{{ __('Service') }}</dt>
                     <dd class="col-sm-8">{{ $reservation->source?->name ?? '—' }}</dd>
 
+                    <dt class="col-sm-4">{{ __('Location') }}</dt>
+                    <dd class="col-sm-8">{{ $reservation->source?->location ?: '—' }}</dd>
+
                     <dt class="col-sm-4">{{ __('Department') }}</dt>
                     <dd class="col-sm-8">{{ $reservation->source?->department?->name ?? __('All departments') }}</dd>
 
@@ -124,10 +127,10 @@
 @endif
 
 <div class="card shadow mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
+    <!-- <div class="card-header d-flex justify-content-between align-items-center">
         <h4 class="mb-0">{{ __('Client notification messages') }}</h4>
         <a href="{{ route('reminders.reminders.index') }}" class="btn btn-sm btn-outline-primary">{{ __('Client notifications') }}</a>
-    </div>
+    </div> -->
     <div class="card-body p-0">
         @if ($reminderMessages->isEmpty())
             <p class="text-muted mb-0 p-4">{{ __('No scheduled WhatsApp messages linked to this reservation yet.') }}</p>
@@ -137,6 +140,7 @@
                     <thead class="thead-light">
                         <tr>
                             <th>{{ __('Template') }}</th>
+                            <th>{{ __('Type') }}</th>
                             <th>{{ __('Preview') }}</th>
                             <th>{{ __('Scheduled') }}</th>
                             <th>{{ __('Status') }}</th>
@@ -145,9 +149,16 @@
                     <tbody>
                         @foreach ($reminderMessages as $message)
                             <tr>
-                                <td>{{ $message->campaign?->name ?? __('Reminder message') }}</td>
+                                <td>{{ $message->campaign?->name ?? __('Notification message') }}</td>
+                                <td>
+                                    @if ($message->scchuduled_at && \Carbon\Carbon::parse($message->scchuduled_at)->greaterThan($message->created_at?->addMinute()))
+                                        {{ __('Reminder') }}
+                                    @else
+                                        {{ __('Confirmation') }}
+                                    @endif
+                                </td>
                                 <td class="text-wrap" style="max-width: 280px;">{{ \Illuminate\Support\Str::limit($message->value, 120) }}</td>
-                                <td>{{ $message->created_at?->format('M j, Y g:i A') }}</td>
+                                <td>{{ $message->scchuduled_at ? \Carbon\Carbon::parse($message->scchuduled_at)->format('M j, Y g:i A') : ($message->created_at?->format('M j, Y g:i A') ?? '—') }}</td>
                                 <td>
                                     @include('reminders::reservations.partials.message-status', ['message' => $message])
                                 </td>

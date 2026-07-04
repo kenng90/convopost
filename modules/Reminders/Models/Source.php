@@ -3,16 +3,19 @@
 namespace Modules\Reminders\Models;
 
 use App\Scopes\CompanyScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Reminders\Support\WorkingHours;
 
 class Source extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     public const ASSIGNMENT_CUSTOMER_CHOICE = 'customer_choice';
 
@@ -60,6 +63,12 @@ class Source extends Model
         return $this->belongsToMany(AppointmentStaff::class, 'rem_source_staff', 'source_id', 'appointment_staff_id')
             ->withPivot(['working_hours', 'is_active'])
             ->withTimestamps();
+    }
+
+    public static function queryForCompany(int $companyId): Builder
+    {
+        return static::withoutGlobalScope(CompanyScope::class)
+            ->where('company_id', $companyId);
     }
 
     /**

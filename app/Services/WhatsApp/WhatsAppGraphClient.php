@@ -42,6 +42,37 @@ class WhatsAppGraphClient
     /**
      * @return array{status: int, content: array<string, mixed>|string}
      */
+    public function deleteMessageTemplate(string $templateName): array
+    {
+        $url = $this->facebookApi.$this->getAccountId().'/message_templates?name='.urlencode($templateName);
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer '.$this->getToken(),
+                'Content-Type' => 'application/json',
+            ])->delete($url);
+
+            return [
+                'status' => $response->status(),
+                'content' => $response->json() ?? $response->body(),
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('WhatsAppGraphClient: delete template failed', [
+                'company_id' => $this->company->id,
+                'template' => $templateName,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'status' => 500,
+                'content' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * @return array{status: int, content: array<string, mixed>|string}
+     */
     public function submitMessageTemplate(array $templateData): array
     {
         $url = $this->facebookApi.$this->getAccountId().'/message_templates';

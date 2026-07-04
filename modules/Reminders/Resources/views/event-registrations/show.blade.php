@@ -70,7 +70,7 @@
     </div>
 </div>
 
-<div class="card shadow mb-4">
+<!-- <div class="card shadow mb-4">
     <div class="card-header">
         <h4 class="mb-0">{{ __('Client notification messages') }}</h4>
     </div>
@@ -83,16 +83,28 @@
                     <thead class="thead-light">
                         <tr>
                             <th>{{ __('Template') }}</th>
+                            <th>{{ __('Type') }}</th>
                             <th>{{ __('Preview') }}</th>
                             <th>{{ __('Scheduled') }}</th>
+                            <th>{{ __('Status') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($reminderMessages as $message)
                             <tr>
                                 <td>{{ $message->campaign?->name ?? __('Message') }}</td>
+                                <td>
+                                    @if ($message->scchuduled_at && \Carbon\Carbon::parse($message->scchuduled_at)->greaterThan($message->created_at?->addMinute()))
+                                        {{ __('Reminder') }}
+                                    @else
+                                        {{ __('Confirmation') }}
+                                    @endif
+                                </td>
                                 <td>{{ \Illuminate\Support\Str::limit($message->value, 120) }}</td>
-                                <td>{{ $message->created_at?->format('M j, Y g:i A') }}</td>
+                                <td>{{ $message->scchuduled_at ? \Carbon\Carbon::parse($message->scchuduled_at)->format('M j, Y g:i A') : ($message->created_at?->format('M j, Y g:i A') ?? '—') }}</td>
+                                <td>
+                                    @include('reminders::reservations.partials.message-status', ['message' => $message])
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -100,5 +112,5 @@
             </div>
         @endif
     </div>
-</div>
+</div> -->
 @endsection

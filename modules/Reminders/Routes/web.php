@@ -58,6 +58,9 @@ Route::group([
 
         Route::get('overview', 'BookingsOverviewController@index')->name('reminders.overview.index');
 
+        Route::post('booking-templates/install', 'BookingMessageTemplatePackController@install')
+            ->name('reminders.booking-templates.install');
+
         Route::get('booking-settings', 'BookingSettingsController@index')->name('reminders.booking-settings.index');
         Route::post('booking-settings/calendar', 'BookingSettingsController@updateCalendar')->name('reminders.booking-settings.calendar');
         Route::post('booking-settings/inbox', 'BookingSettingsController@updateInbox')->name('reminders.booking-settings.inbox');
