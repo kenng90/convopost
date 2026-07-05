@@ -178,17 +178,17 @@ class SourcesController extends Controller
             'additionalInfo' => __('Shown in confirmation and reminder templates when you map the Location variable.'),
         ];
 
-        // $fields[] = [
-        //     'class' => 'col-md-12',
-        //     'ftype' => 'info',
-        //     'id' => 'client_notifications_intro',
-        //     'name' => __('Client notifications'),
-        //     'text' => __('Use reminder-type WhatsApp templates. Map variables to Date, Time, and Location (and optional service/staff fields). Confirmation sends immediately on booking; before/after reminders are scheduled automatically.'),
-        //     'button' => [
-        //         'link' => route('reminders.reminders.index'),
-        //         'text' => __('View synced rules'),
-        //     ],
-        // ];
+        $fields[] = [
+            'class' => 'col-md-12',
+            'ftype' => 'info',
+            'id' => 'client_notifications_intro',
+            'name' => __('Client notifications'),
+            'text' => __('Use reminder-type WhatsApp templates. Map variables to Date, Time, and Location (and optional service/staff fields). Confirmation sends immediately on booking; before/after reminders are scheduled automatically.'),
+            'button' => [
+                'link' => route('reminders.reminders.index'),
+                'text' => __('View synced rules'),
+            ],
+        ];
 
         $fields[] = [
             'class' => $class,

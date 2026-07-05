@@ -45,9 +45,9 @@
             </td>
             <td>
                 @if ($item->isServiceManaged())
-                    <!-- <span class="text-muted small" title="{{ __('Edit client notifications on the service form.') }}">
+                    <span class="text-muted small" title="{{ __('Edit client notifications on the service form.') }}">
                         <i class="ni ni-lock-circle-open"></i>
-                    </span> -->
+                    </span>
                 @else
                     <a href="{{ route('reminders.reminders.delete',['reminder'=>$item->id]) }}" class="btn btn-danger btn-sm" onclick="return confirm('{{ __('Delete this reminder rule?') }}')">
                         <i class="ni ni-fat-remove"></i>
