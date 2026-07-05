@@ -109,7 +109,7 @@ return [
             'name' => 'Knowledge base embedding chunk',
             'category' => 'managed_ai',
             'default_cost' => 1,
-            'help' => 'Managed AI credits per embedding chunk when using the platform OpenAI key.',
+            'help' => 'Managed AI credits per embedding chunk when indexing knowledge base documents via the platform OpenRouter key.',
             'module' => 'flowmaker',
             'sort_order' => 90,
         ],
