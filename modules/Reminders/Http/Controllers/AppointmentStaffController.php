@@ -23,11 +23,16 @@ class AppointmentStaffController extends Controller
             [
                 'class' => 'col-md-6',
                 'ftype' => 'select',
-                'name' => 'Department',
-                'id' => 'department_id',
+                'name' => __('Departments'),
+                'id' => 'department_ids[]',
+                'placeholder' => __('Select departments'),
                 'required' => false,
-                'value' => $member?->department_id,
+                'multiple' => true,
+                'multipleselected' => $member
+                    ? $member->departments()->pluck('rem_departments.id')->map(fn ($id) => (string) $id)->all()
+                    : ($member?->department_id ? [(string) $member->department_id] : []),
                 'data' => Department::query()->orderBy('name')->pluck('name', 'id')->toArray(),
+                'additionalInfo' => __('A team member can belong to more than one department.'),
             ],
             [
                 'class' => 'col-md-6',
@@ -48,7 +53,7 @@ class AppointmentStaffController extends Controller
         $this->ownerAndStaffOnly();
 
         $items = AppointmentStaff::query()
-            ->with('department')
+            ->with(['department', 'departments'])
             ->orderBy('name')
             ->paginate(config('settings.paginate'));
 
@@ -88,7 +93,8 @@ class AppointmentStaffController extends Controller
     {
         $this->ownerAndStaffOnly();
 
-        AppointmentStaff::create($this->attributes($request));
+        $member = AppointmentStaff::create($this->attributes($request));
+        $this->syncDepartments($member, $request->input('department_ids', []));
 
         return redirect()->route($this->webroute_path.'index')->withStatus(__('Team member added.'));
     }
@@ -117,6 +123,7 @@ class AppointmentStaffController extends Controller
         $this->ownerAndStaffOnly();
 
         $appointmentStaff->update($this->attributes($request));
+        $this->syncDepartments($appointmentStaff, $request->input('department_ids', []));
 
         return redirect()->route($this->webroute_path.'index')->withStatus(__('Team member updated.'));
     }
@@ -139,10 +146,25 @@ class AppointmentStaffController extends Controller
             'name' => $request->input('name'),
             'email' => $request->input('email'),
             'whatsapp_phone' => $request->input('whatsapp_phone'),
-            'department_id' => $request->input('department_id') ?: null,
             'user_id' => $request->input('user_id') ?: null,
             'is_active' => $request->boolean('is_active'),
         ];
+    }
+
+    /**
+     * @param  array<int, string|int>|null  $departmentIds
+     */
+    private function syncDepartments(AppointmentStaff $member, ?array $departmentIds): void
+    {
+        $ids = collect($departmentIds ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $member->departments()->sync($ids);
+        $member->update(['department_id' => $ids[0] ?? null]);
     }
 
     /**

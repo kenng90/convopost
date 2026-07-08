@@ -151,10 +151,62 @@ class CatalogWhatsAppCheckoutFlowTest extends TestCase
         $this->assertSame('1', $contact->getContactStateValue($flow->id, 'catalog_checkout_resumed'));
     }
 
+    public function test_catalog_order_message_does_not_restart_flow_when_keyword_contains_catalog(): void
+    {
+        [$company, $catalog, $contact, $flow] = $this->catalogFlowContext(withKeywordTrigger: true);
+
+        app(CatalogItemRepository::class)->replaceAllFromArray($catalog, [[
+            'id' => 'iphone-15',
+            'title' => 'Apple iPhone 15 Pro Max',
+            'price' => 1,
+            'quantityAvailable' => 5,
+        ]]);
+
+        $contact->setContactState($flow->id, 'current_node', 'catalog-1');
+
+        $orderText = "📦 *New Order from Catalog: {$catalog->name}*\n\n📋 *Items:*\n• Apple iPhone 15 Pro Max (x1) - KSh 1.00\n\n💰 *Total:* KSh 1.00";
+
+        $message = new \stdClass();
+        $message->contact_id = $contact->id;
+        $message->company_id = $company->id;
+        $message->value = $orderText;
+        $message->extra = '';
+
+        $flow->processMessage($message);
+
+        $this->assertSame('quick-1', $contact->getContactStateValue($flow->id, 'current_node'));
+        $this->assertSame('1', $contact->getContactStateValue($flow->id, 'catalog_checkout_resumed'));
+    }
+
+    public function test_interactive_list_product_selection_resolves_product_with_underscore_node_id(): void
+    {
+        [$company, $catalog, $contact, $flow] = $this->catalogFlowContext(nodeId: 'whatsapp_catalog-1');
+
+        app(CatalogItemRepository::class)->replaceAllFromArray($catalog, [[
+            'id' => 'LIST_001',
+            'title' => 'Conference Room Hire',
+            'price' => 1,
+            'quantityAvailable' => 5,
+        ]]);
+
+        $contact->setContactState($flow->id, 'current_node', 'whatsapp_catalog-1');
+
+        $message = new \stdClass();
+        $message->contact_id = $contact->id;
+        $message->company_id = $company->id;
+        $message->value = 'Conference Room Hire';
+        $message->extra = 'catalog_LIST_001_idwhatsapp_catalog-1_flow'.$flow->id;
+
+        $flow->processMessage($message);
+
+        $selectedProduct = json_decode($contact->getContactStateValue($flow->id, 'selected_product'), true);
+        $this->assertSame('LIST_001', $selectedProduct['id'] ?? null);
+    }
+
     /**
      * @return array{0: Company, 1: ListCatalog, 2: Contact, 3: Flow, 4: string}
      */
-    private function catalogFlowContext(): array
+    private function catalogFlowContext(bool $withKeywordTrigger = false, string $nodeId = 'catalog-1'): array
     {
         $company = Company::factory()->create();
         $company->setConfig('whatsapp_phone_number', '254712345678');
@@ -177,51 +229,86 @@ class CatalogWhatsAppCheckoutFlowTest extends TestCase
             'enabled_ai_bot' => true,
         ]);
 
+        $nodes = [];
+        $edges = [];
+
+        if ($withKeywordTrigger) {
+            $nodes[] = [
+                'id' => 'keyword-1',
+                'type' => 'keyword_trigger',
+                'position' => ['x' => 0, 'y' => 0],
+                'data' => [
+                    'keywords' => [
+                        ['id' => 'kw3', 'value' => 'catalog', 'matchType' => 'contains'],
+                    ],
+                ],
+            ];
+            $nodes[] = [
+                'id' => 'welcome-1',
+                'type' => 'message',
+                'data' => [
+                    'settings' => [
+                        'message' => 'Welcome to our shop!',
+                    ],
+                ],
+            ];
+            $edges[] = [
+                'id' => 'e-kw-welcome',
+                'source' => 'keyword-1',
+                'target' => 'welcome-1',
+                'sourceHandle' => 'keyword-kw3',
+            ];
+            $edges[] = [
+                'id' => 'e-welcome-catalog',
+                'source' => 'welcome-1',
+                'target' => $nodeId,
+            ];
+        }
+
+        $nodes[] = [
+            'id' => $nodeId,
+            'type' => 'whatsapp_catalog',
+            'data' => [
+                'settings' => [
+                    'catalogId' => $catalog->id,
+                    'header' => 'Browse',
+                    'displayMode' => 'link',
+                ],
+            ],
+        ];
+        $nodes[] = [
+            'id' => 'quick-1',
+            'type' => 'quick_replies',
+            'data' => [
+                'settings' => [
+                    'header' => 'Next',
+                    'body' => 'Choose',
+                    'activeButtons' => 2,
+                    'button1' => 'Inquire',
+                    'button2' => 'Sales',
+                ],
+            ],
+        ];
+        $edges[] = [
+            'id' => 'e-catalog-quick',
+            'source' => $nodeId,
+            'target' => 'quick-1',
+            'sourceHandle' => 'onProductSelected',
+        ];
+
         $flow = Flow::withoutGlobalScopes()->create([
             'company_id' => $company->id,
             'name' => 'Shop Flow',
             'flow_data' => json_encode([
-                'nodes' => [
-                    [
-                        'id' => 'catalog-1',
-                        'type' => 'whatsapp_catalog',
-                        'data' => [
-                            'settings' => [
-                                'catalogId' => $catalog->id,
-                                'header' => 'Browse',
-                                'displayMode' => 'link',
-                            ],
-                        ],
-                    ],
-                    [
-                        'id' => 'quick-1',
-                        'type' => 'quick_replies',
-                        'data' => [
-                            'settings' => [
-                                'header' => 'Next',
-                                'body' => 'Choose',
-                                'activeButtons' => 2,
-                                'button1' => 'Inquire',
-                                'button2' => 'Sales',
-                            ],
-                        ],
-                    ],
-                ],
-                'edges' => [
-                    [
-                        'id' => 'e-catalog-quick',
-                        'source' => 'catalog-1',
-                        'target' => 'quick-1',
-                        'sourceHandle' => 'onProductSelected',
-                    ],
-                ],
+                'nodes' => $nodes,
+                'edges' => $edges,
             ]),
         ]);
 
         $flowToken = app(CatalogFlowCallbackService::class)->makeToken(
             $flow->id,
             $contact->id,
-            'catalog-1',
+            $nodeId,
             $catalog->id
         );
 

@@ -60,7 +60,7 @@
                                 <div class="tab-pane fade show @if ($loop->first) active @endif"
                                      id="{{ $separator['snake'] }}"
                                      role="tabpanel"
-                                     aria-labelledby="{{ $separator['snake'] }}">
+                                     aria-labelledby="{{ $separator['snake'].'_tab' }}">
 
                                     @include('partials.fields', ['fields' => $separator['fields']])
 
@@ -84,4 +84,55 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('js')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabLinks = Array.from(document.querySelectorAll('#tabs-icons-text a[data-toggle="tab"]'));
+            const tabPanes = Array.from(document.querySelectorAll('#myTabContent .tab-pane'));
+
+            if (!tabLinks.length || !tabPanes.length) {
+                return;
+            }
+
+            const activateTab = (targetSelector, pushHash = false) => {
+                if (!targetSelector || !targetSelector.startsWith('#')) {
+                    return;
+                }
+
+                const targetPane = document.querySelector(targetSelector);
+                if (!targetPane) {
+                    return;
+                }
+
+                tabLinks.forEach((link) => {
+                    const isActive = link.getAttribute('href') === targetSelector;
+                    link.classList.toggle('active', isActive);
+                    link.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                });
+
+                tabPanes.forEach((pane) => {
+                    const isActive = '#'+pane.id === targetSelector;
+                    pane.classList.toggle('active', isActive);
+                    pane.classList.toggle('show', isActive);
+                });
+
+                if (pushHash) {
+                    window.history.replaceState(null, '', targetSelector);
+                }
+            };
+
+            tabLinks.forEach((link) => {
+                link.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    activateTab(this.getAttribute('href'), true);
+                });
+            });
+
+            if (window.location.hash) {
+                activateTab(window.location.hash);
+            }
+        });
+    </script>
 @endsection

@@ -89,8 +89,8 @@
                     <dt class="col-sm-4">{{ __('Team member') }}</dt>
                     <dd class="col-sm-8">
                         {{ $reservation->appointmentStaffMember?->name ?? $reservation->staff?->name ?? '—' }}
-                        @if ($reservation->appointmentStaffMember?->department)
-                            <small class="text-muted d-block">{{ $reservation->appointmentStaffMember->department->name }}</small>
+                        @if ($reservation->appointmentStaffMember?->departmentNamesLabel())
+                            <small class="text-muted d-block">{{ $reservation->appointmentStaffMember->departmentNamesLabel() }}</small>
                         @endif
                     </dd>
                 </dl>

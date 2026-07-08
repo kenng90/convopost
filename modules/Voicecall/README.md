@@ -22,7 +22,7 @@ AI phone assistant: greeting, one speech turn, call brief in contact chat.
   - Incoming: `https://your-app.com/webhook/voicecall/twilio/incoming`
   - Status: `https://your-app.com/webhook/voicecall/twilio/status`
 
-SMS uses the same `telephony_provider` via **Smswpbox**.
+SMS uses ConvoConnect (when enabled) via **Smswpbox**. Voice still uses `telephony_provider` (Telnyx/Twilio).
 
 ## Migrations
 

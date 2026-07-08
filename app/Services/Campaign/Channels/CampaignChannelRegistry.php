@@ -3,9 +3,9 @@
 namespace App\Services\Campaign\Channels;
 
 use App\Models\Company;
-use App\Services\Billing\CreditBillingResolver;
 use App\Services\Billing\CreditCharger;
-use Illuminate\Support\Facades\Http;
+use App\Services\Telephony\Sms\SmsConfig;
+use App\Services\Telephony\Sms\SmsSender;
 use Illuminate\Support\Facades\Mail;
 use Modules\Wpbox\Models\Campaign;
 use Modules\Wpbox\Models\Message;
@@ -14,7 +14,7 @@ class CampaignChannelRegistry
 {
     public function __construct(
         private readonly CreditCharger $charger,
-        private readonly CreditBillingResolver $billingResolver,
+        private readonly SmsSender $smsSender,
     ) {
     }
 
@@ -27,7 +27,7 @@ class CampaignChannelRegistry
         };
     }
 
-    private function sendSms(Message $message, Company $company): bool
+    public function sendSms(Message $message, Company $company): bool
     {
         $creditAction = 'send_sms_message';
 
@@ -39,41 +39,72 @@ class CampaignChannelRegistry
             return false;
         }
 
-        $twilioAccountSid = $company->getConfig('TWILIO_ACCOUNT_SID', '');
-        $twilioAuthToken = $company->getConfig('TWILIO_AUTH_TOKEN', '');
-        $twilioFromNumber = $company->getConfig('TWILIO_FROM_NUMBER', '');
-
-        if (empty($twilioAccountSid) || empty($twilioAuthToken) || empty($twilioFromNumber)) {
-            $message->error = 'Twilio settings are missing';
+        $message->loadMissing('contact');
+        $phone = $message->contact->phone ?? null;
+        if (empty($phone)) {
+            $message->error = 'Contact has no phone number';
             $message->status = Message::STATUS_FAILED;
             $message->save();
 
             return false;
         }
 
-        $response = Http::withBasicAuth($twilioAccountSid, $twilioAuthToken)
-            ->asForm()
-            ->post("https://api.twilio.com/2010-04-01/Accounts/{$twilioAccountSid}/Messages.json", [
-                'To' => $message->contact->phone,
-                'From' => $twilioFromNumber,
-                'Body' => $message->value,
-            ]);
-
-        $body = json_decode($response->body(), true);
-
-        if (($body['status'] ?? '') === 'queued') {
-            $this->charger->charge($company, $creditAction, $company->id);
-            $message->status = Message::STATUS_SENT;
+        $result = $this->smsSender->send($company, $phone, (string) $message->value);
+        if (! $result->success) {
+            $message->error = $result->message;
+            $message->status = Message::STATUS_FAILED;
             $message->save();
 
-            return true;
+            return false;
         }
 
-        $message->error = $body['message'] ?? 'SMS send failed';
-        $message->status = Message::STATUS_FAILED;
+        $this->charger->charge($company, $creditAction, $company->id);
+        $message->provider_message_id = $result->providerMessageId;
+        $message->status = Message::STATUS_SENT;
         $message->save();
 
-        return false;
+        return true;
+    }
+
+    public function markBulkSmsSent(array $messages, Company $company, ?string $providerMessageId = null): int
+    {
+        $creditAction = 'send_sms_message';
+        $sent = 0;
+
+        foreach ($messages as $message) {
+            if (! $message instanceof Message) {
+                continue;
+            }
+
+            if (! $this->charger->canCharge($company, $creditAction)) {
+                $message->error = $this->charger->insufficientCreditsMessage($creditAction);
+                $message->status = Message::STATUS_FAILED;
+                $message->save();
+
+                continue;
+            }
+
+            $this->charger->charge($company, $creditAction, $company->id);
+            $message->provider_message_id = $providerMessageId;
+            $message->status = Message::STATUS_SENT;
+            $message->error = '';
+            $message->save();
+            $sent++;
+        }
+
+        return $sent;
+    }
+
+    public function usesHostPinnacleBulk(Company $company): bool
+    {
+        $config = SmsConfig::forCompany($company);
+
+        return $config->isHostPinnacle() && $config->smsReady();
+    }
+
+    public function bulkMinBatch(): int
+    {
+        return max(2, (int) config('hostpinnacle.bulk_min_batch', 2));
     }
 
     private function sendEmail(Message $message, Company $company): bool

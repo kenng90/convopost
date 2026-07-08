@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Services\Billing\CreditBillingResolver;
 use App\Services\Billing\CreditCharger;
 use App\Services\Campaign\Channels\CampaignChannelRegistry;
+use App\Services\Campaign\Channels\SmsCampaignBatchSender;
 use Illuminate\Support\Facades\Log;
 use Modules\Wpbox\Models\Campaign;
 use Modules\Wpbox\Models\Message;
@@ -16,6 +17,7 @@ class CampaignDispatchService
         private readonly CreditCharger $charger,
         private readonly CreditBillingResolver $billingResolver,
         private readonly CampaignChannelRegistry $channels,
+        private readonly SmsCampaignBatchSender $smsBatchSender,
         private readonly CampaignWebhookDispatcher $webhooks,
     ) {
     }
@@ -29,6 +31,7 @@ class CampaignDispatchService
         }
 
         $messages = Message::query()
+            ->with(['campaign', 'contact'])
             ->where('status', Message::STATUS_PENDING)
             ->where('scchuduled_at', '<', now())
             ->whereIn('campaign_id', function ($query) {
@@ -41,8 +44,22 @@ class CampaignDispatchService
             ->get();
 
         $sent = 0;
+        $smsMessages = collect();
+        $otherMessages = collect();
 
         foreach ($messages as $message) {
+            if (($message->campaign->channel ?? Campaign::CHANNEL_WHATSAPP) === Campaign::CHANNEL_SMS) {
+                $smsMessages->push($message);
+            } else {
+                $otherMessages->push($message);
+            }
+        }
+
+        if ($smsMessages->isNotEmpty()) {
+            $sent += $this->smsBatchSender->dispatch($smsMessages);
+        }
+
+        foreach ($otherMessages as $message) {
             if ($this->send($message)) {
                 $sent++;
             }

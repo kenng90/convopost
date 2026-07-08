@@ -4,6 +4,7 @@ namespace Modules\Flowmaker\Models;
 
 use App\Models\Company;
 use App\Scopes\CompanyScope;
+use App\Services\Catalog\CatalogCheckoutPendingService;
 use App\Services\Catalog\CatalogFlowCallbackService;
 use App\Services\Flowmaker\FlowRunLogger;
 use Illuminate\Database\Eloquent\Model;
@@ -83,7 +84,13 @@ class Flow extends Model
             $contact->primeFlowStateCache($this->id);
             $startNode = $contact->getContactStateValue($this->id, 'current_node');
 
-            if ($this->messageMatchesKeywordTrigger($flowData->nodes, $message)) {
+            $pendingService = app(CatalogCheckoutPendingService::class);
+            $extra = is_object($data) ? ($data->extra ?? '') : ($data['extra'] ?? '');
+            $skipKeywordRestart = $pendingService->isOrderConfirmationMessage($contact, $this->id, $message)
+                || $pendingService->hasPending($contact, $this->id)
+                || ($extra !== '' && str_starts_with((string) $extra, 'catalog_'));
+
+            if (! $skipKeywordRestart && $this->messageMatchesKeywordTrigger($flowData->nodes, $message)) {
                 $contact->clearContactState($this->id, 'current_node');
                 $this->processAllKeywordTriggers($flowData->nodes, $flowData->edges, $message, $data);
 

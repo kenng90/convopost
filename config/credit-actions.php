@@ -55,7 +55,7 @@ return [
             'name' => 'SMS campaign message',
             'category' => 'campaigns',
             'default_cost' => 2,
-            'help' => 'Outbound SMS via Twilio.',
+            'help' => 'Outbound SMS via ConvoConnect, Twilio, or Telnyx.',
             'module' => 'smswpbox',
             'sort_order' => 45,
         ],

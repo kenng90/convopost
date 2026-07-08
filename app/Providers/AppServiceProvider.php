@@ -4,7 +4,10 @@ namespace App\Providers;
 
 use Akaunting\Module\Facade as Module;
 use App\Models\Company;
+use App\Models\Credit;
 use App\Models\Plans;
+use App\Observers\CompanyObserver;
+use App\Observers\CreditObserver;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -29,6 +32,10 @@ class AppServiceProvider extends ServiceProvider
         URL::forceScheme('https');
 
         Schema::defaultStringLength(191);
+
+        Company::observe(CompanyObserver::class);
+        Credit::observe(CreditObserver::class);
+
         try {
             $settings = [];
 

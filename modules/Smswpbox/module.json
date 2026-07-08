@@ -10,32 +10,33 @@
     "aliases": {},
     "files": [],
     "requires": [],
-    "hasSidebar":true,
-    "sidebarData":[
+    "hasSidebar": true,
+    "sidebarData": [
         {
-            "name":"SMS",
-            "app":"smswpbox",
-            "icon":"https://mobidonia-demo.imgix.net/icons/sms3.svg",
-            "brandColor":"#25D366",
-            "view":"smswpbox::sideapp.app",
-            "script":"smswpbox::sideapp.script"
+            "name": "SMS",
+            "app": "smswpbox",
+            "icon": "https://mobidonia-demo.imgix.net/icons/sms3.svg",
+            "brandColor": "#25D366",
+            "view": "smswpbox::sideapp.app",
+            "script": "smswpbox::sideapp.script"
         }
     ],
-    "vendor_fields":[
+    "vendor_fields": [
         {
-            "separator": "SMS Twilio",
-            "icon":"📲",
+            "separator": "Twilio (your account)",
+            "icon": "📲",
             "title": "Twilio Account SID",
-            "key": "TWILIO_ACCOUNT_SID", 
+            "key": "TWILIO_ACCOUNT_SID",
             "ftype": "input",
             "type": "text",
             "value": "",
-            "placeholder": "Enter your Twilio Account SID"
+            "placeholder": "Enter your Twilio Account SID",
+            "help": "Optional. Connect your own Twilio account to send SMS when platform SMS is unavailable."
         },
         {
             "title": "Twilio Auth Token",
             "key": "TWILIO_AUTH_TOKEN",
-            "ftype": "input", 
+            "ftype": "input",
             "type": "text",
             "value": "",
             "placeholder": "Enter your Twilio Auth Token"
@@ -44,9 +45,9 @@
             "title": "Twilio From Number",
             "key": "TWILIO_FROM_NUMBER",
             "ftype": "input",
-            "type": "text", 
+            "type": "text",
             "value": "",
-            "placeholder": "Enter your Twilio Phone Number"
+            "placeholder": "Enter your Twilio phone number (E.164)"
         },
         {
             "separator": "SMS Templates",
@@ -58,7 +59,7 @@
             "placeholder": "Enter your first SMS template"
         },
         {
-            "title": "Template 2", 
+            "title": "Template 2",
             "key": "SMS_TEMPLATE_2",
             "ftype": "textarea",
             "value": "",
@@ -66,7 +67,7 @@
         },
         {
             "title": "Template 3",
-            "key": "SMS_TEMPLATE_3", 
+            "key": "SMS_TEMPLATE_3",
             "ftype": "textarea",
             "value": "",
             "placeholder": "Enter your third SMS template"

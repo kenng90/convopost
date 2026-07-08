@@ -11,7 +11,7 @@
     @foreach ($setup['items'] as $item)
         <tr>
             <td>{{ $item->name }}</td>
-            <td>{{ $item->department?->name ?? '—' }}</td>
+            <td>{{ $item->departmentNamesLabel() ?: '—' }}</td>
             <td>{{ $item->email }}</td>
             <td>{{ $item->whatsapp_phone ?: '—' }}</td>
             <td>{{ $item->hasConnectedCalendar() ? __('Connected') : __('Not connected') }}</td>

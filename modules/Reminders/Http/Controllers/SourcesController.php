@@ -487,7 +487,10 @@ class SourcesController extends Controller
         $query = AppointmentStaff::query()->where('is_active', true)->orderBy('name');
 
         if ($departmentId) {
-            $query->where('department_id', $departmentId);
+            $query->where(function ($builder) use ($departmentId) {
+                $builder->where('department_id', $departmentId)
+                    ->orWhereHas('departments', fn ($relation) => $relation->where('rem_departments.id', $departmentId));
+            });
         }
 
         return $query->pluck('name', 'id')->toArray();
