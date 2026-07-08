@@ -99,7 +99,7 @@
                 type="button"
                 class="add-to-cart-btn"
                 style="background-color: #25D366;"
-                onclick="openBookingPanel('{{ $item['id'] }}', @json($item['title'] ?? 'Listing'))"
+                onclick="openBookingPanel(@js($item['id']), @js($item['title'] ?? 'Listing'))"
                 @if(in_array($statusValue, ['Sold', 'Leased', 'Reserved'], true)) disabled @endif
             >
                 @if(in_array($statusValue, ['Sold', 'Leased', 'Reserved'], true))
