@@ -2,10 +2,11 @@
 
 namespace Modules\Flowmaker\Traits;
 
+use App\Services\Platform\EmbeddingService;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\EmbeddedChunk;
+use Modules\Flowmaker\Models\Flow;
 
 trait VectorSearch
 {
@@ -39,42 +40,31 @@ trait VectorSearch
     }
 
     /**
-     * Get embeddings for text using OpenAI API (same method as used in AIController)
+     * Get embeddings for text via OpenRouter (same key as knowledge-base indexing).
+     *
+     * @return array<int, float>|null
      */
-    protected function getEmbedding($text)
+    protected function getEmbedding(string $text, int $flowId): ?array
     {
         try {
-            $cacheKey = 'flow_embedding:'.md5($text);
+            $cacheKey = 'flow_embedding:'.$flowId.':'.md5($text);
 
-            return Cache::remember($cacheKey, 300, function () use ($text) {
-                $apiKey = config('wpbox.openai_api_key');
+            return Cache::remember($cacheKey, 300, function () use ($text, $flowId) {
+                $flow = Flow::withoutGlobalScopes()->find($flowId);
+                $company = $flow?->company;
 
-                if (empty($apiKey)) {
-                    Log::error('OpenAI API key not configured for embeddings');
+                if ($company === null) {
+                    Log::error('Could not resolve company for vector search embedding', ['flow_id' => $flowId]);
 
                     return null;
                 }
 
-                $response = Http::withHeaders([
-                    'Authorization' => 'Bearer '.$apiKey,
-                    'Content-Type' => 'application/json',
-                ])->post('https://api.openai.com/v1/embeddings', [
-                    'input' => $text,
-                    'model' => 'text-embedding-3-small',
-                ]);
-
-                if ($response->successful()) {
-                    $data = $response->json();
-
-                    return $data['data'][0]['embedding'] ?? null;
-                }
-
-                Log::error('OpenAI API embedding error', [
-                    'status' => $response->status(),
-                    'response' => $response->body(),
-                ]);
-
-                return null;
+                return app(EmbeddingService::class)->create(
+                    $company,
+                    $text,
+                    $flowId,
+                    meterUsage: false,
+                );
             });
         } catch (\Exception $e) {
             Log::error('Error creating embedding for search', ['error' => $e->getMessage()]);
@@ -90,7 +80,7 @@ trait VectorSearch
     {
         try {
             // Get embedding for the query
-            $queryEmbedding = $this->getEmbedding($query);
+            $queryEmbedding = $this->getEmbedding($query, $flowId);
 
             if (! $queryEmbedding) {
                 Log::warning('Could not get embedding for query, skipping vector search');
@@ -183,7 +173,7 @@ trait VectorSearch
      */
     protected function debugVectorSearch($query, $flowId, $limit = 10)
     {
-        $queryEmbedding = $this->getEmbedding($query);
+        $queryEmbedding = $this->getEmbedding($query, $flowId);
 
         if (! $queryEmbedding) {
             return ['error' => 'Could not get embedding for query'];

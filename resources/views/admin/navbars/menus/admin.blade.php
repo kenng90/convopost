@@ -11,7 +11,16 @@
                 href="{{ route('admin.companies.index') }}">
                 <i class="ni ni-shop text-info"></i> {{ __('Companies') }}
             </a>
-        </li> 
+        </li>
+    @endif
+
+    @if (config('hostpinnacle.enabled', false) && auth()->user()?->hasRole('admin'))
+        <li class="nav-item">
+            <a class="nav-link @if (str_starts_with(Route::currentRouteName() ?? '', 'admin.convoconnect.')) active @endif"
+                href="{{ route('admin.convoconnect.index') }}">
+                <i class="ni ni-send text-success"></i> {{ __('ConvoConnect SMS') }}
+            </a>
+        </li>
     @endif
 
     @include('admin.navbars.menus.extra')

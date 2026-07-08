@@ -95,6 +95,7 @@ class CatalogCheckoutVariableServiceTest extends TestCase
 
         $this->assertStringContainsString('Widget', $contact->getContactStateValue($flow->id, 'shop_order_items'));
         $this->assertNotSame('', $contact->getContactStateValue($flow->id, 'shop_order_total'));
+        $this->assertSame('100.00', $contact->getContactStateValue($flow->id, 'shop_order_total_amount'));
         $this->assertSame('1', $contact->getContactStateValue($flow->id, 'shop_order_item_count'));
         $this->assertSame('Order message text', $contact->getContactStateValue($flow->id, 'shop_order_message'));
         $this->assertNotNull($contact->getContactStateValue($flow->id, 'catalog_cart'));

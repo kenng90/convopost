@@ -7,6 +7,7 @@ use App\Scopes\CompanyScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Modules\Reminders\Support\WorkingHours;
 
@@ -31,6 +32,16 @@ class Department extends Model
     public function appointmentStaff(): HasMany
     {
         return $this->hasMany(AppointmentStaff::class, 'department_id');
+    }
+
+    public function appointmentStaffMembers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            AppointmentStaff::class,
+            'rem_appointment_staff_department',
+            'department_id',
+            'appointment_staff_id'
+        )->withTimestamps();
     }
 
     public function sources(): HasMany

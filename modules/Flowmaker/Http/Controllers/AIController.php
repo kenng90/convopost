@@ -2,11 +2,10 @@
 
 namespace Modules\Flowmaker\Http\Controllers;
 
-use App\Services\Platform\ManagedAiService;
+use App\Services\Platform\EmbeddingService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Modules\Flowmaker\Models\EmbeddedChunk;
@@ -24,7 +23,7 @@ class AIController extends Controller
     public function __construct(
         WebsiteScraperService $websiteScraperService,
         DocumentParserService $documentParserService,
-        private ManagedAiService $managedAi,
+        private EmbeddingService $embeddings,
     ) {
         $this->websiteScraperService = $websiteScraperService;
         $this->documentParserService = $documentParserService;
@@ -175,7 +174,7 @@ class AIController extends Controller
                 $flowDocument->delete();
 
                 return response()->json([
-                    'error' => 'Failed to create embeddings for the document. Please check your OpenAI API configuration.',
+                    'error' => 'Failed to create embeddings for the document. Please check your OpenRouter API key or managed AI credits.',
                 ], 500);
             }
 
@@ -263,7 +262,7 @@ class AIController extends Controller
                 $flowDocument->delete();
 
                 return response()->json([
-                    'error' => 'Failed to create embedding for the FAQ. Please check your OpenAI API configuration.',
+                    'error' => 'Failed to create embedding for the FAQ. Please check your OpenRouter API key or managed AI credits.',
                 ], 500);
             }
 
@@ -647,64 +646,18 @@ class AIController extends Controller
     }
 
     /**
-     * Create embedding using OpenAI API (platform key is metered via managed AI credits).
+     * Create embedding via OpenRouter (same key as LLM / Flow Assistant).
      */
     private function createEmbedding(string $text, Flow $flow): ?array
     {
-        try {
-            $company = $flow->company;
-            if (! $company) {
-                Log::error('Flow has no company for embedding metering');
+        $company = $flow->company;
 
-                return null;
-            }
-
-            $apiKey = $this->managedAi->platformOpenAiKey();
-            $usesPlatformKey = filled($apiKey);
-            $action = 'ai_embedding';
-            $cost = $this->managedAi->actionCost($action);
-
-            if ($usesPlatformKey && ! $this->managedAi->canConsume($company, $cost)) {
-                Log::warning('Managed AI credits exhausted for embedding', ['flow_id' => $flow->id]);
-
-                return null;
-            }
-
-            if (empty($apiKey)) {
-                Log::error('OpenAI API key not configured');
-
-                return null;
-            }
-
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer '.$apiKey,
-                'Content-Type' => 'application/json',
-            ])->post('https://api.openai.com/v1/embeddings', [
-                'input' => $text,
-                'model' => 'text-embedding-3-small',
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                $embedding = $data['data'][0]['embedding'] ?? null;
-
-                if ($embedding && $usesPlatformKey) {
-                    $this->managedAi->consume($company, $cost, $action, [
-                        'model' => 'text-embedding-3-small',
-                        'flow_id' => $flow->id,
-                    ]);
-                }
-
-                return $embedding;
-            }
-
-            Log::error('OpenAI API error: '.$response->body());
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Error creating embedding: '.$e->getMessage());
+        if (! $company) {
+            Log::error('Flow has no company for embedding metering', ['flow_id' => $flow->id]);
 
             return null;
         }
+
+        return $this->embeddings->create($company, $text, $flow->id, meterUsage: true);
     }
 }

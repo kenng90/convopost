@@ -1,6 +1,18 @@
+@php
+    $smsAvailability = app(\App\Services\Telephony\Sms\SmsAvailability::class);
+    $smsReady = $smsAvailability->isReady($company);
+    $smsStatusMessage = $smsAvailability->statusMessage($company);
+    $smsUsesPlatform = $smsAvailability->resolveProvider($company) === \App\Services\Telephony\Sms\SmsProvider::HOSTPINNACLE;
+@endphp
 <!-- Send SMS Section -->
 <h5 class="text-muted mt-4">{{ __('Send SMS')}}</h5>
 <div class="contacInfo border-radius-lg border p-4 mb-4">
+    @if($smsUsesPlatform)
+        <div class="alert alert-info mb-3">
+            {{ __('SMS is provided by ConvoConnect with your organization Sender ID.') }}
+        </div>
+    @endif
+
     <div class="mb-3">
         <label class="form-label">{{ __('Recipient Phone Number') }}</label>
         <div class="form-control-plaintext"><strong>@{{ activeChat.phone }}</strong></div>
@@ -26,7 +38,7 @@
     <button 
         class="btn btn-primary w-100" 
         @click="sendSMS"
-        :disabled="dynamicProperties.isSendingSMS"
+        :disabled="dynamicProperties.isSendingSMS || !dynamicProperties.isSmsSetup"
     >
         <i class="ni ni-send mr-2"></i> {{ __('Send SMS') }}
     </button>
@@ -44,9 +56,9 @@
         </div>
     </div>
 
-    <div v-if="!dynamicProperties.isTwillioSetup" class="mt-3">
-        <div class="alert alert-danger">
-            {{ __('Twilio is not setup. Please setup Twilio to send SMS. You can do this in the App Section.') }}
+    <div v-if="!dynamicProperties.isSmsSetup" class="mt-3">
+        <div class="alert alert-warning">
+            @{{ dynamicProperties.smsStatusMessage }}
         </div>
     </div>
 
@@ -56,5 +68,4 @@
         </div>
     </div>
 </div>
-
 

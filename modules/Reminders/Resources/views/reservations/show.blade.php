@@ -89,8 +89,8 @@
                     <dt class="col-sm-4">{{ __('Team member') }}</dt>
                     <dd class="col-sm-8">
                         {{ $reservation->appointmentStaffMember?->name ?? $reservation->staff?->name ?? '—' }}
-                        @if ($reservation->appointmentStaffMember?->department)
-                            <small class="text-muted d-block">{{ $reservation->appointmentStaffMember->department->name }}</small>
+                        @if ($reservation->appointmentStaffMember?->departmentNamesLabel())
+                            <small class="text-muted d-block">{{ $reservation->appointmentStaffMember->departmentNamesLabel() }}</small>
                         @endif
                     </dd>
                 </dl>
@@ -127,10 +127,10 @@
 @endif
 
 <div class="card shadow mb-4">
-    <!-- <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card-header d-flex justify-content-between align-items-center">
         <h4 class="mb-0">{{ __('Client notification messages') }}</h4>
         <a href="{{ route('reminders.reminders.index') }}" class="btn btn-sm btn-outline-primary">{{ __('Client notifications') }}</a>
-    </div> -->
+    </div>
     <div class="card-body p-0">
         @if ($reminderMessages->isEmpty())
             <p class="text-muted mb-0 p-4">{{ __('No scheduled WhatsApp messages linked to this reservation yet.') }}</p>

@@ -8,9 +8,9 @@ return [
 
     'platform_openrouter_api_key' => env('MANAGED_AI_OPENROUTER_KEY', env('OPENROUTER_API_KEY')),
 
-    'platform_openai_api_key' => env('MANAGED_AI_OPENAI_KEY', env('OPENAI_API_KEY')),
-
     'flow_generate_model' => env('MANAGED_AI_FLOW_MODEL', 'openai/gpt-4o-mini'),
+
+    'embedding_model' => env('MANAGED_AI_EMBEDDING_MODEL', 'openai/text-embedding-3-small'),
 
     'llm_enabled' => env('MANAGED_AI_LLM_ENABLED', true),
 

@@ -65,6 +65,9 @@
                                 <div class="col-4 text-right">
                                     @if(auth()->user()->hasRole('admin'))
                                         <a href="{{ route('admin.companies.index') }}" class="btn btn-sm btn-info">{{ __('Back to list') }}</a>
+                                        @if(config('hostpinnacle.enabled', false))
+                                            <a href="{{ route('admin.convoconnect.show', $company) }}" class="btn btn-sm btn-success">{{ __('ConvoConnect SMS') }}</a>
+                                        @endif
                                     @endif
                                     @if (config('settings.show_company_page',true))
                                         @if (config('settings.wildcard_domain_ready'))

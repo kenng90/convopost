@@ -24,6 +24,7 @@ use App\Services\CatalogItemFilterService;
 use App\Services\InvoiceWhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Modules\Invoice\Models\Invoice;
 use RuntimeException;
 
@@ -602,9 +603,7 @@ class PublicCatalogController extends Controller
      */
     public function getInvoice($invoiceId)
     {
-        $invoice = Invoice::where('public_uuid', $invoiceId)
-            ->orWhere('id', $invoiceId)
-            ->first();
+        $invoice = $this->resolvePublicInvoice((string) $invoiceId);
 
         if (! $invoice) {
             return response()->json([
@@ -639,9 +638,7 @@ class PublicCatalogController extends Controller
      */
     public function showInvoice($invoiceId)
     {
-        $invoice = Invoice::where('public_uuid', $invoiceId)
-            ->orWhere('id', $invoiceId)
-            ->first();
+        $invoice = $this->resolvePublicInvoice((string) $invoiceId);
 
         if (! $invoice) {
             return view('invoice.not-found', [
@@ -763,5 +760,20 @@ class PublicCatalogController extends Controller
         foreach ($reservations as $reservation) {
             $this->catalogInventoryService->releaseReservation($reservation);
         }
+    }
+
+    private function resolvePublicInvoice(string $invoiceId): ?Invoice
+    {
+        if (Str::isUuid($invoiceId)) {
+            return Invoice::query()
+                ->where('public_uuid', $invoiceId)
+                ->first();
+        }
+
+        if (ctype_digit($invoiceId)) {
+            return Invoice::query()->find((int) $invoiceId);
+        }
+
+        return null;
     }
 }

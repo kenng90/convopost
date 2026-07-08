@@ -153,6 +153,11 @@ export function useFlowVariables() {
             category: 'Flow Variables'
           },
           {
+            label: `${label} — total amount (no currency)`,
+            value: `${prefix}_total_amount`,
+            category: 'Flow Variables'
+          },
+          {
             label: `${label} — item count`,
             value: `${prefix}_item_count`,
             category: 'Flow Variables'

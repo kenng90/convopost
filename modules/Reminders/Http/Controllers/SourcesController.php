@@ -178,17 +178,17 @@ class SourcesController extends Controller
             'additionalInfo' => __('Shown in confirmation and reminder templates when you map the Location variable.'),
         ];
 
-        // $fields[] = [
-        //     'class' => 'col-md-12',
-        //     'ftype' => 'info',
-        //     'id' => 'client_notifications_intro',
-        //     'name' => __('Client notifications'),
-        //     'text' => __('Use reminder-type WhatsApp templates. Map variables to Date, Time, and Location (and optional service/staff fields). Confirmation sends immediately on booking; before/after reminders are scheduled automatically.'),
-        //     'button' => [
-        //         'link' => route('reminders.reminders.index'),
-        //         'text' => __('View synced rules'),
-        //     ],
-        // ];
+        $fields[] = [
+            'class' => 'col-md-12',
+            'ftype' => 'info',
+            'id' => 'client_notifications_intro',
+            'name' => __('Client notifications'),
+            'text' => __('Use reminder-type WhatsApp templates. Map variables to Date, Time, and Location (and optional service/staff fields). Confirmation sends immediately on booking; before/after reminders are scheduled automatically.'),
+            'button' => [
+                'link' => route('reminders.reminders.index'),
+                'text' => __('View synced rules'),
+            ],
+        ];
 
         $fields[] = [
             'class' => $class,
@@ -487,7 +487,10 @@ class SourcesController extends Controller
         $query = AppointmentStaff::query()->where('is_active', true)->orderBy('name');
 
         if ($departmentId) {
-            $query->where('department_id', $departmentId);
+            $query->where(function ($builder) use ($departmentId) {
+                $builder->where('department_id', $departmentId)
+                    ->orWhereHas('departments', fn ($relation) => $relation->where('rem_departments.id', $departmentId));
+            });
         }
 
         return $query->pluck('name', 'id')->toArray();

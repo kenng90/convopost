@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Flowmaker\FaqConversationLoop;
+
 /**
  * Industry vertical flow templates (healthcare, real estate, banking, hospitality).
  *
@@ -9,13 +11,13 @@ return [
 
     'healthcare_clinic_bot' => [
         'name' => 'Healthcare Clinic Bot',
-        'description' => 'Appointments via WhatsApp Flow, triage AI, lab results lookup, and service menu.',
+        'description' => 'Appointments via WhatsApp Flow, triage AI conversation loop, lab results lookup, and service menu.',
         'category' => 'healthcare',
         'form_bundle' => 'healthcare_appointment',
         'video_url' => null,
-        'setup_hint' => 'Link WhatsApp Flow, lab API, OpenRouter key, Results team. Triage AI auto-sends replies. Save draft → Publish.',
+        'setup_hint' => 'Link WhatsApp Flow, lab API, OpenRouter key, Results team. Triage AI uses a multi-turn loop. Save draft → Publish.',
         'post_install_checklist' => ['WhatsApp Flow ID', 'Lab API URL & token', 'OpenRouter key', 'Results team group', 'Publish'],
-        'flow_data' => [
+        'flow_data' => FaqConversationLoop::mergeInto([
             'nodes' => [
                 [
                     'id' => 'keyword_trigger-1',
@@ -124,88 +126,6 @@ return [
                         'type' => 'pdf',
                         'settings' => [
                             'pdfUrl' => 'https://your-cdn.example.com/clinic/pre-visit-instructions.pdf',
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'incomingMessage-1',
-                    'type' => 'incomingMessage',
-                    'position' => ['x' => 760, 'y' => 520],
-                    'data' => [
-                        'label' => 'Doctor chat intake',
-                        'type' => 'incomingMessage',
-                        'settings' => [],
-                    ],
-                ],
-                [
-                    'id' => 'branch-1',
-                    'type' => 'branch',
-                    'position' => ['x' => 1140, 'y' => 520],
-                    'data' => [
-                        'label' => 'Urgent keywords',
-                        'type' => 'branch',
-                        'settings' => [
-                            'webhookVariables' => [],
-                            'conditions' => [
-                                [
-                                    'id' => 'cond-urgent',
-                                    'nodeId' => 'branch-1',
-                                    'variableId' => 'contact_last_message',
-                                    'operator' => 'contains',
-                                    'value' => 'urgent',
-                                ],
-                            ],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'counter-1',
-                    'type' => 'counter',
-                    'position' => ['x' => 1520, 'y' => 480],
-                    'data' => [
-                        'label' => 'Triage limit',
-                        'type' => 'counter',
-                        'settings' => [
-                            'counter' => [
-                                'maxExecutions' => 1,
-                                'period' => 'all_time',
-                            ],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'check_pricing-1',
-                    'type' => 'check_pricing',
-                    'position' => ['x' => 1900, 'y' => 480],
-                    'data' => [
-                        'label' => 'Check AI credits',
-                        'type' => 'check_pricing',
-                        'settings' => [
-                            'pricing' => ['freeExecutions' => 5],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'openai-1',
-                    'type' => 'openai',
-                    'position' => ['x' => 2280, 'y' => 480],
-                    'data' => [
-                        'label' => 'Medical triage AI',
-                        'type' => 'openai',
-                        'settings' => [
-                            'llm' => [
-                                'model' => 'openai/gpt-4o-mini',
-                                'systemPrompt' => 'You are a medical triage assistant. Assess urgency, ask one clarifying question at a time, and recommend next steps. Never diagnose. End with: For emergencies, call your local emergency number immediately.',
-                                'prompt' => '{{contact_last_message}}',
-                                'temperature' => 0.4,
-                                'maxTokens' => 600,
-                                'variableName' => 'triage_reply',
-                                'autoSendMessage' => true,
-                                'enableVectorSearch' => false,
-                                'vectorSearchLimit' => 3,
-                                'similarityThreshold' => 0.3,
-                                'intentions' => [],
-                            ],
                         ],
                     ],
                 ],
@@ -326,19 +246,11 @@ return [
                 ['id' => 'e-appt-qr', 'source' => 'keyword_trigger-1', 'target' => 'quick_replies-1', 'sourceHandle' => 'keyword-kw2'],
                 ['id' => 'e-list-end', 'source' => 'list_message-1', 'target' => 'end-1'],
                 ['id' => 'e-book-flow', 'source' => 'quick_replies-1', 'target' => 'whatsapp_flow-1', 'sourceHandle' => 'button-1'],
-                ['id' => 'e-talk-incoming', 'source' => 'quick_replies-1', 'target' => 'incomingMessage-1', 'sourceHandle' => 'button-2'],
+                ['id' => 'e-talk-faq', 'source' => 'quick_replies-1', 'target' => 'triage-faq-question-initial', 'sourceHandle' => 'button-2'],
                 ['id' => 'e-results-q', 'source' => 'quick_replies-1', 'target' => 'question-1', 'sourceHandle' => 'button-3'],
                 ['id' => 'e-flow-confirm', 'source' => 'whatsapp_flow-1', 'target' => 'message-1', 'sourceHandle' => 'condition_0'],
                 ['id' => 'e-confirm-pdf', 'source' => 'message-1', 'target' => 'pdf-1'],
                 ['id' => 'e-pdf-end', 'source' => 'pdf-1', 'target' => 'end-1'],
-                ['id' => 'e-incoming-branch', 'source' => 'incomingMessage-1', 'target' => 'branch-1'],
-                ['id' => 'e-urgent-counter', 'source' => 'branch-1', 'target' => 'counter-1', 'sourceHandle' => 'condition-cond-urgent-true'],
-                ['id' => 'e-branch-false-end', 'source' => 'branch-1', 'target' => 'end-1', 'sourceHandle' => 'condition-cond-urgent-false'],
-                ['id' => 'e-counter-pricing', 'source' => 'counter-1', 'target' => 'check_pricing-1', 'sourceHandle' => 'true'],
-                ['id' => 'e-counter-false-end', 'source' => 'counter-1', 'target' => 'end-1', 'sourceHandle' => 'false'],
-                ['id' => 'e-pricing-ai', 'source' => 'check_pricing-1', 'target' => 'openai-1', 'sourceHandle' => 'true'],
-                ['id' => 'e-pricing-false-end', 'source' => 'check_pricing-1', 'target' => 'end-1', 'sourceHandle' => 'false'],
-                ['id' => 'e-ai-end', 'source' => 'openai-1', 'target' => 'end-1'],
                 ['id' => 'e-q-store', 'source' => 'question-1', 'target' => 'datastore-1'],
                 ['id' => 'e-store-http', 'source' => 'datastore-1', 'target' => 'http-1'],
                 ['id' => 'e-http-agent', 'source' => 'http-1', 'target' => 'assign_agent-1'],
@@ -346,19 +258,38 @@ return [
                 ['id' => 'e-group-journey', 'source' => 'assign_group-1', 'target' => 'assign_journey_stage-1'],
                 ['id' => 'e-journey-msg', 'source' => 'assign_journey_stage-1', 'target' => 'message-2'],
                 ['id' => 'e-results-end', 'source' => 'message-2', 'target' => 'end-1'],
+                ['id' => 'e-triage-done-end', 'source' => 'message-3', 'target' => 'end-1'],
             ],
-        ],
+        ], [
+            'idPrefix' => 'triage-faq',
+            'basePosition' => ['x' => 760, 'y' => 520],
+            'questionInitial' => 'Please describe your symptoms or health concern. For emergencies, call your local emergency number immediately.',
+            'questionFollowup' => 'Any other symptoms or questions? Reply *done* when finished, *urgent* if this is urgent, or *doctor* / *agent* to speak with a clinician.',
+            'systemPrompt' => 'You are a medical triage assistant. Assess urgency, ask one clarifying question at a time, and recommend next steps. Never diagnose. Never repeat the patient question — always provide a helpful response. End with: For emergencies, call your local emergency number immediately.',
+            'llmVariableName' => 'triage_reply',
+            'llmLabel' => 'Medical triage AI',
+            'counterMax' => 3,
+            'freeExecutions' => 5,
+            'enableVectorSearch' => false,
+            'humanKeywords' => ['doctor', 'agent', 'human'],
+            'keywordExits' => [
+                ['id' => 'cond-urgent', 'keyword' => 'urgent', 'target' => 'message-3'],
+            ],
+            'doneTarget' => 'message-3',
+            'humanTarget' => 'message-3',
+            'limitTarget' => 'message-3',
+        ]),
     ],
 
     'real_estate_agency_bot' => [
         'name' => 'Real Estate Agency Bot',
-        'description' => 'Buy/rent property menus, AI lead qualification, CRM sync, catalog browsing, and commercial inquiries.',
+        'description' => 'Buy/rent property menus, AI lead qualification loop, CRM sync, catalog browsing, and commercial inquiries.',
         'category' => 'real_estate',
         'form_bundle' => 'real_estate_inquiry',
         'video_url' => null,
         'setup_hint' => 'Set listing-mode catalog ID on Listing Inquiry, CRM API, commercial WhatsApp Flow, OpenRouter key. Save draft → Publish.',
         'post_install_checklist' => ['Listing catalog ID', 'CRM API URL', 'Hot Leads group', 'OpenRouter key', 'Publish'],
-        'flow_data' => [
+        'flow_data' => FaqConversationLoop::mergeInto([
             'nodes' => [
                 [
                     'id' => 'keyword_trigger-1',
@@ -404,30 +335,6 @@ return [
                                         ['id' => 'row3', 'title' => '2+ Bedrooms', 'description' => 'Family-sized rentals'],
                                     ],
                                 ],
-                            ],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'openai-1',
-                    'type' => 'openai',
-                    'position' => ['x' => 760, 'y' => 80],
-                    'data' => [
-                        'label' => 'Buy assistant AI',
-                        'type' => 'openai',
-                        'settings' => [
-                            'llm' => [
-                                'model' => 'openai/gpt-4o-mini',
-                                'systemPrompt' => 'You are a real estate assistant. Ask the client about their budget, preferred location, number of bedrooms, and timeline. Be warm and professional. Collect all details before summarizing.',
-                                'prompt' => '{{contact_last_message}}',
-                                'temperature' => 0.6,
-                                'maxTokens' => 700,
-                                'variableName' => 'buy_lead_summary',
-                                'autoSendMessage' => true,
-                                'enableVectorSearch' => false,
-                                'vectorSearchLimit' => 3,
-                                'similarityThreshold' => 0.3,
-                                'intentions' => [],
                             ],
                         ],
                     ],
@@ -636,7 +543,7 @@ return [
             'edges' => [
                 ['id' => 'e-buy-list', 'source' => 'keyword_trigger-1', 'target' => 'list_message-1', 'sourceHandle' => 'keyword-kw1'],
                 ['id' => 'e-rent-list', 'source' => 'keyword_trigger-1', 'target' => 'list_message-1', 'sourceHandle' => 'keyword-kw2'],
-                ['id' => 'e-apt-ai', 'source' => 'list_message-1', 'target' => 'openai-1', 'sourceHandle' => 'section1-row1'],
+                ['id' => 'e-apt-faq', 'source' => 'list_message-1', 'target' => 'buy-faq-question-initial', 'sourceHandle' => 'section1-row1'],
                 ['id' => 'e-commercial-flow', 'source' => 'list_message-1', 'target' => 'whatsapp_flow-1', 'sourceHandle' => 'section1-row3'],
                 ['id' => 'e-studio-listing', 'source' => 'list_message-1', 'target' => 'listing_inquiry-1', 'sourceHandle' => 'section2-row1'],
                 ['id' => 'e-listing-group', 'source' => 'listing_inquiry-1', 'target' => 'assign_group-1', 'sourceHandle' => 'onListingInquiry'],
@@ -648,7 +555,6 @@ return [
                 ['id' => 'e-pricing-video', 'source' => 'check_pricing-1', 'target' => 'video-1', 'sourceHandle' => 'true'],
                 ['id' => 'e-pricing-false-end', 'source' => 'check_pricing-1', 'target' => 'end-1', 'sourceHandle' => 'false'],
                 ['id' => 'e-video-end', 'source' => 'video-1', 'target' => 'end-1'],
-                ['id' => 'e-ai-question', 'source' => 'openai-1', 'target' => 'question-1'],
                 ['id' => 'e-q-store', 'source' => 'question-1', 'target' => 'datastore-1'],
                 ['id' => 'e-store-http', 'source' => 'datastore-1', 'target' => 'http-1'],
                 ['id' => 'e-http-msg', 'source' => 'http-1', 'target' => 'message-1'],
@@ -658,7 +564,19 @@ return [
                 ['id' => 'e-flow-msg', 'source' => 'whatsapp_flow-1', 'target' => 'message-2', 'sourceHandle' => 'onFlowCompleted'],
                 ['id' => 'e-commercial-end', 'source' => 'message-2', 'target' => 'end-1'],
             ],
-        ],
+        ], [
+            'idPrefix' => 'buy-faq',
+            'basePosition' => ['x' => 760, 'y' => 80],
+            'questionInitial' => 'Tell me about the property you are looking for — budget, location, bedrooms, and timeline.',
+            'questionFollowup' => 'Anything else to add? Reply *done* when ready to schedule a viewing, or *agent* to speak with an advisor now.',
+            'systemPrompt' => 'You are a real estate assistant. Help the client clarify budget, preferred location, number of bedrooms, and timeline. Be warm and professional. Never repeat the customer question — always provide a helpful response.',
+            'llmVariableName' => 'buy_lead_summary',
+            'llmLabel' => 'Buy assistant AI',
+            'counterMax' => 6,
+            'enableVectorSearch' => false,
+            'doneTarget' => 'question-1',
+            'humanTarget' => 'assign_agent-1',
+        ]),
     ],
 
     'microfinance_banking_bot' => [
@@ -1060,429 +978,334 @@ return [
         'category' => 'hospitality',
         'form_bundle' => 'hospitality_booking',
         'video_url' => null,
-        'setup_hint' => 'Link booking WhatsApp Flows, listing catalog, M-Pesa deposits, VIP group. Itinerary AI auto-sends. Save draft → Publish.',
+        'setup_hint' => 'Link booking WhatsApp Flows, listing catalog, M-Pesa deposits, VIP group. FAQ paths use multi-turn AI loops. Save draft → Publish.',
         'post_install_checklist' => ['Suite WhatsApp Flow ID', 'Safari listing catalog ID', 'M-Pesa deposit settings', 'VIP Guests group', 'Publish'],
-        'flow_data' => [
-            'nodes' => [
-                [
-                    'id' => 'keyword_trigger-1',
-                    'type' => 'keyword_trigger',
-                    'position' => ['x' => 0, 'y' => 240],
-                    'data' => [
-                        'label' => 'On Keyword',
+        'flow_data' => FaqConversationLoop::mergeInto(
+            FaqConversationLoop::mergeInto([
+                'nodes' => [
+                    [
+                        'id' => 'keyword_trigger-1',
                         'type' => 'keyword_trigger',
-                        'keywords' => [
-                            ['id' => 'kw1', 'value' => 'book', 'matchType' => 'exact'],
-                            ['id' => 'kw2', 'value' => 'tour', 'matchType' => 'contains'],
+                        'position' => ['x' => 0, 'y' => 240],
+                        'data' => [
+                            'label' => 'On Keyword',
+                            'type' => 'keyword_trigger',
+                            'keywords' => [
+                                ['id' => 'kw1', 'value' => 'book', 'matchType' => 'exact'],
+                                ['id' => 'kw2', 'value' => 'tour', 'matchType' => 'contains'],
+                            ],
                         ],
                     ],
-                ],
-                [
-                    'id' => 'list_message-1',
-                    'type' => 'list_message',
-                    'position' => ['x' => 380, 'y' => 120],
-                    'data' => [
-                        'label' => 'Accommodation menu',
+                    [
+                        'id' => 'list_message-1',
                         'type' => 'list_message',
-                        'settings' => [
-                            'header' => 'Book Your Stay',
-                            'body' => 'Choose accommodation or a package.',
-                            'footer' => 'Reply *tour* to explore experiences.',
-                            'buttonText' => 'View options',
-                            'sections' => [
-                                [
-                                    'id' => 'section1',
-                                    'title' => 'Accommodation',
-                                    'rows' => [
-                                        ['id' => 'row1', 'title' => 'Standard Room', 'description' => 'Comfortable essentials'],
-                                        ['id' => 'row2', 'title' => 'Deluxe Room', 'description' => 'Upgraded amenities'],
-                                        ['id' => 'row3', 'title' => 'Suite', 'description' => 'Premium suite experience'],
+                        'position' => ['x' => 380, 'y' => 120],
+                        'data' => [
+                            'label' => 'Accommodation menu',
+                            'type' => 'list_message',
+                            'settings' => [
+                                'header' => 'Book Your Stay',
+                                'body' => 'Choose accommodation or a package.',
+                                'footer' => 'Reply *tour* to explore experiences.',
+                                'buttonText' => 'View options',
+                                'sections' => [
+                                    [
+                                        'id' => 'section1',
+                                        'title' => 'Accommodation',
+                                        'rows' => [
+                                            ['id' => 'row1', 'title' => 'Standard Room', 'description' => 'Comfortable essentials'],
+                                            ['id' => 'row2', 'title' => 'Deluxe Room', 'description' => 'Upgraded amenities'],
+                                            ['id' => 'row3', 'title' => 'Suite', 'description' => 'Premium suite experience'],
+                                        ],
                                     ],
-                                ],
-                                [
-                                    'id' => 'section2',
-                                    'title' => 'Packages',
-                                    'rows' => [
-                                        ['id' => 'row1', 'title' => 'Honeymoon Package', 'description' => 'Romantic getaway'],
-                                        ['id' => 'row2', 'title' => 'Family Package', 'description' => 'Fun for all ages'],
-                                        ['id' => 'row3', 'title' => 'Business Stay', 'description' => 'Work-friendly rates'],
+                                    [
+                                        'id' => 'section2',
+                                        'title' => 'Packages',
+                                        'rows' => [
+                                            ['id' => 'row1', 'title' => 'Honeymoon Package', 'description' => 'Romantic getaway'],
+                                            ['id' => 'row2', 'title' => 'Family Package', 'description' => 'Fun for all ages'],
+                                            ['id' => 'row3', 'title' => 'Business Stay', 'description' => 'Work-friendly rates'],
+                                        ],
                                     ],
                                 ],
                             ],
                         ],
                     ],
-                ],
-                [
-                    'id' => 'whatsapp_flow-1',
-                    'type' => 'whatsapp_flow',
-                    'position' => ['x' => 760, 'y' => 80],
-                    'data' => [
-                        'label' => 'Suite Reservation',
+                    [
+                        'id' => 'whatsapp_flow-1',
                         'type' => 'whatsapp_flow',
-                        'settings' => [
-                            'whatsappFlowId' => '',
-                            'header' => 'Suite Reservation',
-                            'footer' => 'Complimentary airport transfer included',
-                            'conditions' => [
-                                ['id' => 'cond-checkin', 'fieldName' => 'check_in_date', 'operator' => 'equals', 'value' => 'confirmed'],
-                                ['id' => 'cond-checkout', 'fieldName' => 'check_out_date', 'operator' => 'equals', 'value' => 'confirmed'],
-                                ['id' => 'cond-guests', 'fieldName' => 'guest_count', 'operator' => 'equals', 'value' => 'confirmed'],
-                                ['id' => 'cond-requests', 'fieldName' => 'special_requests', 'operator' => 'equals', 'value' => 'submitted'],
+                        'position' => ['x' => 760, 'y' => 80],
+                        'data' => [
+                            'label' => 'Suite Reservation',
+                            'type' => 'whatsapp_flow',
+                            'settings' => [
+                                'whatsappFlowId' => '',
+                                'header' => 'Suite Reservation',
+                                'footer' => 'Complimentary airport transfer included',
+                                'conditions' => [
+                                    ['id' => 'cond-checkin', 'fieldName' => 'check_in_date', 'operator' => 'equals', 'value' => 'confirmed'],
+                                    ['id' => 'cond-checkout', 'fieldName' => 'check_out_date', 'operator' => 'equals', 'value' => 'confirmed'],
+                                    ['id' => 'cond-guests', 'fieldName' => 'guest_count', 'operator' => 'equals', 'value' => 'confirmed'],
+                                    ['id' => 'cond-requests', 'fieldName' => 'special_requests', 'operator' => 'equals', 'value' => 'submitted'],
+                                ],
                             ],
                         ],
                     ],
-                ],
-                [
-                    'id' => 'image-1',
-                    'type' => 'image',
-                    'position' => ['x' => 1140, 'y' => 40],
-                    'data' => [
-                        'label' => 'Suite photos',
+                    [
+                        'id' => 'image-1',
                         'type' => 'image',
-                        'settings' => [
-                            'imageUrl' => 'https://your-cdn.example.com/hotel/suite-gallery.jpg',
+                        'position' => ['x' => 1140, 'y' => 40],
+                        'data' => [
+                            'label' => 'Suite photos',
+                            'type' => 'image',
+                            'settings' => [
+                                'imageUrl' => 'https://your-cdn.example.com/hotel/suite-gallery.jpg',
+                            ],
                         ],
                     ],
-                ],
-                [
-                    'id' => 'pdf-1',
-                    'type' => 'pdf',
-                    'position' => ['x' => 1520, 'y' => 40],
-                    'data' => [
-                        'label' => 'Amenities guide',
+                    [
+                        'id' => 'pdf-1',
                         'type' => 'pdf',
-                        'settings' => [
-                            'pdfUrl' => 'https://your-cdn.example.com/hotel/suite-amenities-guide.pdf',
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'openai-1',
-                    'type' => 'openai',
-                    'position' => ['x' => 760, 'y' => 280],
-                    'data' => [
-                        'label' => 'Honeymoon concierge',
-                        'type' => 'openai',
-                        'settings' => [
-                            'llm' => [
-                                'model' => 'openai/gpt-4o-mini',
-                                'systemPrompt' => "You are a luxury travel concierge. Ask about the couple's anniversary date, preferred room view, dietary restrictions, and any surprise arrangements needed. Be warm, romantic in tone, and suggest upgrades naturally.",
-                                'prompt' => '{{contact_last_message}}',
-                                'temperature' => 0.7,
-                                'maxTokens' => 700,
-                                'variableName' => 'honeymoon_details',
-                                'autoSendMessage' => true,
-                                'enableVectorSearch' => false,
-                                'vectorSearchLimit' => 3,
-                                'similarityThreshold' => 0.3,
-                                'intentions' => [],
+                        'position' => ['x' => 1520, 'y' => 40],
+                        'data' => [
+                            'label' => 'Amenities guide',
+                            'type' => 'pdf',
+                            'settings' => [
+                                'pdfUrl' => 'https://your-cdn.example.com/hotel/suite-amenities-guide.pdf',
                             ],
                         ],
                     ],
-                ],
-                [
-                    'id' => 'question-1',
-                    'type' => 'question',
-                    'position' => ['x' => 1140, 'y' => 280],
-                    'data' => [
-                        'label' => 'Guest count',
+                    [
+                        'id' => 'question-1',
                         'type' => 'question',
-                        'settings' => [
-                            'question' => 'Enter the number of guests',
-                            'variableName' => 'guest_count',
+                        'position' => ['x' => 1140, 'y' => 280],
+                        'data' => [
+                            'label' => 'Guest count',
+                            'type' => 'question',
+                            'settings' => [
+                                'question' => 'Enter the number of guests',
+                                'variableName' => 'guest_count',
+                            ],
                         ],
                     ],
-                ],
-                [
-                    'id' => 'datastore-1',
-                    'type' => 'datastore',
-                    'position' => ['x' => 1520, 'y' => 280],
-                    'data' => [
-                        'label' => 'Save booking data',
+                    [
+                        'id' => 'datastore-1',
                         'type' => 'datastore',
-                        'settings' => [
-                            'variableName' => 'guest_count',
-                            'variableValue' => '{{guest_count}} | Package: Honeymoon | Details: {{honeymoon_details}}',
-                            'dataStore' => [
-                                'name' => 'hotel_booking',
-                                'type' => 'database',
-                                'connectionDetails' => [],
+                        'position' => ['x' => 1520, 'y' => 280],
+                        'data' => [
+                            'label' => 'Save booking data',
+                            'type' => 'datastore',
+                            'settings' => [
+                                'variableName' => 'guest_count',
+                                'variableValue' => '{{guest_count}} | Package: Honeymoon | Details: {{honeymoon_details}}',
+                                'dataStore' => [
+                                    'name' => 'hotel_booking',
+                                    'type' => 'database',
+                                    'connectionDetails' => [],
+                                ],
                             ],
                         ],
                     ],
-                ],
-                [
-                    'id' => 'http-1',
-                    'type' => 'http',
-                    'position' => ['x' => 1900, 'y' => 280],
-                    'data' => [
-                        'label' => 'Booking API',
+                    [
+                        'id' => 'http-1',
                         'type' => 'http',
-                        'settings' => [
-                            'http' => [
-                                'method' => 'POST',
-                                'url' => 'https://your-pms.example.com/api/bookings',
-                                'headers' => [
-                                    ['id' => 'h-json', 'key' => 'Content-Type', 'value' => 'application/json'],
-                                    ['id' => 'h-auth', 'key' => 'Authorization', 'value' => 'Bearer YOUR_BOOKING_API_TOKEN'],
+                        'position' => ['x' => 1900, 'y' => 280],
+                        'data' => [
+                            'label' => 'Booking API',
+                            'type' => 'http',
+                            'settings' => [
+                                'http' => [
+                                    'method' => 'POST',
+                                    'url' => 'https://your-pms.example.com/api/bookings',
+                                    'headers' => [
+                                        ['id' => 'h-json', 'key' => 'Content-Type', 'value' => 'application/json'],
+                                        ['id' => 'h-auth', 'key' => 'Authorization', 'value' => 'Bearer YOUR_BOOKING_API_TOKEN'],
+                                    ],
+                                    'params' => [
+                                        ['id' => 'p-name', 'key' => 'guest_name', 'value' => '{{contact_name}}'],
+                                        ['id' => 'p-phone', 'key' => 'phone', 'value' => '{{contact_phone}}'],
+                                        ['id' => 'p-guests', 'key' => 'guest_count', 'value' => '{{guest_count}}'],
+                                        ['id' => 'p-package', 'key' => 'package', 'value' => 'honeymoon'],
+                                        ['id' => 'p-notes', 'key' => 'notes', 'value' => '{{honeymoon_details}}'],
+                                    ],
+                                    'responseVar' => 'booking_result',
                                 ],
-                                'params' => [
-                                    ['id' => 'p-name', 'key' => 'guest_name', 'value' => '{{contact_name}}'],
-                                    ['id' => 'p-phone', 'key' => 'phone', 'value' => '{{contact_phone}}'],
-                                    ['id' => 'p-guests', 'key' => 'guest_count', 'value' => '{{guest_count}}'],
-                                    ['id' => 'p-package', 'key' => 'package', 'value' => 'honeymoon'],
-                                    ['id' => 'p-notes', 'key' => 'notes', 'value' => '{{honeymoon_details}}'],
-                                ],
-                                'responseVar' => 'booking_result',
                             ],
                         ],
                     ],
-                ],
-                [
-                    'id' => 'mpesa_stk_push-1',
-                    'type' => 'mpesa_stk_push',
-                    'position' => ['x' => 2280, 'y' => 280],
-                    'data' => [
-                        'label' => '30% deposit',
+                    [
+                        'id' => 'mpesa_stk_push-1',
                         'type' => 'mpesa_stk_push',
-                        'settings' => [
-                            'mpesa' => [
-                                'amount' => '{{deposit_amount}}',
-                                'accountReference' => 'HOTEL-DEPOSIT',
-                                'transactionDesc' => 'Booking deposit (30%)',
-                                'responseVar' => 'deposit_result',
-                            ],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'assign_group-1',
-                    'type' => 'assign_group',
-                    'position' => ['x' => 2660, 'y' => 240],
-                    'data' => [
-                        'label' => 'VIP Guests',
-                        'type' => 'assign_group',
-                        'settings' => ['groupId' => '1', 'action' => 'add'],
-                    ],
-                ],
-                [
-                    'id' => 'assign_journey_stage-1',
-                    'type' => 'assign_journey_stage',
-                    'position' => ['x' => 3040, 'y' => 240],
-                    'data' => [
-                        'label' => 'Booking Confirmed',
-                        'type' => 'assign_journey_stage',
-                        'settings' => ['journeyId' => '1', 'stageId' => '1'],
-                    ],
-                ],
-                [
-                    'id' => 'template-1',
-                    'type' => 'template',
-                    'position' => ['x' => 3420, 'y' => 240],
-                    'data' => [
-                        'label' => 'Booking confirmation',
-                        'type' => 'template',
-                        'settings' => [
-                            'selectedTemplateId' => '',
-                            'parameters' => [
-                                'guest_name' => '{{contact_name}}',
-                                'booking_reference' => '{{booking_result.reference}}',
-                                'check_in_date' => '{{check_in_date}}',
-                            ],
-                            'fileUrl' => null,
-                            'videoUrl' => null,
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'quick_replies-1',
-                    'type' => 'quick_replies',
-                    'position' => ['x' => 380, 'y' => 520],
-                    'data' => [
-                        'label' => 'Tour menu',
-                        'type' => 'quick_replies',
-                        'settings' => [
-                            'header' => 'Tours & Experiences',
-                            'body' => 'Explore our experiences!',
-                            'footer' => null,
-                            'activeButtons' => 3,
-                            'button1' => 'Safari tours',
-                            'button2' => 'City tours',
-                            'button3' => 'Custom itinerary',
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'video-1',
-                    'type' => 'video',
-                    'position' => ['x' => 760, 'y' => 480],
-                    'data' => [
-                        'label' => 'Safari highlights',
-                        'type' => 'video',
-                        'settings' => [
-                            'videoUrl' => 'https://your-cdn.example.com/tours/safari-highlights.mp4',
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'listing_inquiry-2',
-                    'type' => 'listing_inquiry',
-                    'position' => ['x' => 1140, 'y' => 480],
-                    'data' => [
-                        'label' => 'Safari packages',
-                        'type' => 'listing_inquiry',
-                        'settings' => [
-                            'catalogId' => '',
-                            'header' => 'Safari packages',
-                            'footer' => 'Book a safari on WhatsApp.',
-                            'completionType' => 'booking',
-                            'bookingVariablePrefix' => 'safari_booking',
-                            'requirePreferredDateTime' => true,
-                            'bookingBackend' => 'whatsapp_only',
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'incomingMessage-1',
-                    'type' => 'incomingMessage',
-                    'position' => ['x' => 760, 'y' => 680],
-                    'data' => [
-                        'label' => 'Custom tour intake',
-                        'type' => 'incomingMessage',
-                        'settings' => [],
-                    ],
-                ],
-                [
-                    'id' => 'branch-1',
-                    'type' => 'branch',
-                    'position' => ['x' => 1140, 'y' => 680],
-                    'data' => [
-                        'label' => 'Budget mentioned',
-                        'type' => 'branch',
-                        'settings' => [
-                            'webhookVariables' => [],
-                            'conditions' => [
-                                [
-                                    'id' => 'cond-budget',
-                                    'nodeId' => 'branch-1',
-                                    'variableId' => 'contact_last_message',
-                                    'operator' => 'contains',
-                                    'value' => 'budget',
+                        'position' => ['x' => 2280, 'y' => 280],
+                        'data' => [
+                            'label' => '30% deposit',
+                            'type' => 'mpesa_stk_push',
+                            'settings' => [
+                                'mpesa' => [
+                                    'amount' => '{{deposit_amount}}',
+                                    'accountReference' => 'HOTEL-DEPOSIT',
+                                    'transactionDesc' => 'Booking deposit (30%)',
+                                    'responseVar' => 'deposit_result',
                                 ],
                             ],
                         ],
                     ],
-                ],
-                [
-                    'id' => 'counter-1',
-                    'type' => 'counter',
-                    'position' => ['x' => 1520, 'y' => 640],
-                    'data' => [
-                        'label' => 'Itinerary limit',
-                        'type' => 'counter',
-                        'settings' => [
-                            'counter' => ['maxExecutions' => 1, 'period' => 'all_time'],
+                    [
+                        'id' => 'assign_group-1',
+                        'type' => 'assign_group',
+                        'position' => ['x' => 2660, 'y' => 240],
+                        'data' => [
+                            'label' => 'VIP Guests',
+                            'type' => 'assign_group',
+                            'settings' => ['groupId' => '1', 'action' => 'add'],
                         ],
                     ],
-                ],
-                [
-                    'id' => 'check_pricing-1',
-                    'type' => 'check_pricing',
-                    'position' => ['x' => 1900, 'y' => 640],
-                    'data' => [
-                        'label' => 'Check AI credits',
-                        'type' => 'check_pricing',
-                        'settings' => ['pricing' => ['freeExecutions' => 5]],
+                    [
+                        'id' => 'assign_journey_stage-1',
+                        'type' => 'assign_journey_stage',
+                        'position' => ['x' => 3040, 'y' => 240],
+                        'data' => [
+                            'label' => 'Booking Confirmed',
+                            'type' => 'assign_journey_stage',
+                            'settings' => ['journeyId' => '1', 'stageId' => '1'],
+                        ],
                     ],
-                ],
-                [
-                    'id' => 'openai-2',
-                    'type' => 'openai',
-                    'position' => ['x' => 2280, 'y' => 640],
-                    'data' => [
-                        'label' => 'Itinerary planner',
-                        'type' => 'openai',
-                        'settings' => [
-                            'llm' => [
-                                'model' => 'openai/gpt-4o-mini',
-                                'systemPrompt' => 'You are a tour planning expert. Gather destination preferences, travel dates, group size, and budget. Build a detailed day-by-day itinerary.',
-                                'prompt' => '{{contact_last_message}}',
-                                'temperature' => 0.6,
-                                'maxTokens' => 900,
-                                'variableName' => 'custom_itinerary',
-                                'autoSendMessage' => true,
-                                'enableVectorSearch' => false,
-                                'vectorSearchLimit' => 3,
-                                'similarityThreshold' => 0.3,
-                                'intentions' => [],
+                    [
+                        'id' => 'template-1',
+                        'type' => 'template',
+                        'position' => ['x' => 3420, 'y' => 240],
+                        'data' => [
+                            'label' => 'Booking confirmation',
+                            'type' => 'template',
+                            'settings' => [
+                                'selectedTemplateId' => '',
+                                'parameters' => [
+                                    'guest_name' => '{{contact_name}}',
+                                    'booking_reference' => '{{booking_result.reference}}',
+                                    'check_in_date' => '{{check_in_date}}',
+                                ],
+                                'fileUrl' => null,
+                                'videoUrl' => null,
                             ],
                         ],
                     ],
-                ],
-                [
-                    'id' => 'message-1',
-                    'type' => 'message',
-                    'position' => ['x' => 2660, 'y' => 640],
-                    'data' => [
-                        'label' => 'Itinerary reply',
-                        'type' => 'message',
-                        'settings' => [
-                            'message' => '{{custom_itinerary}}',
+                    [
+                        'id' => 'quick_replies-1',
+                        'type' => 'quick_replies',
+                        'position' => ['x' => 380, 'y' => 520],
+                        'data' => [
+                            'label' => 'Tour menu',
+                            'type' => 'quick_replies',
+                            'settings' => [
+                                'header' => 'Tours & Experiences',
+                                'body' => 'Explore our experiences!',
+                                'footer' => null,
+                                'activeButtons' => 3,
+                                'button1' => 'Safari tours',
+                                'button2' => 'City tours',
+                                'button3' => 'Custom itinerary',
+                            ],
                         ],
                     ],
-                ],
-                [
-                    'id' => 'message-2',
-                    'type' => 'message',
-                    'position' => ['x' => 1900, 'y' => 480],
-                    'data' => [
-                        'label' => 'City tours info',
-                        'type' => 'message',
-                        'settings' => [
-                            'message' => 'Our city tours run daily at 9 AM and 2 PM. Reply *book* to reserve or ask about private guides.',
+                    [
+                        'id' => 'video-1',
+                        'type' => 'video',
+                        'position' => ['x' => 760, 'y' => 480],
+                        'data' => [
+                            'label' => 'Safari highlights',
+                            'type' => 'video',
+                            'settings' => [
+                                'videoUrl' => 'https://your-cdn.example.com/tours/safari-highlights.mp4',
+                            ],
                         ],
                     ],
+                    [
+                        'id' => 'listing_inquiry-2',
+                        'type' => 'listing_inquiry',
+                        'position' => ['x' => 1140, 'y' => 480],
+                        'data' => [
+                            'label' => 'Safari packages',
+                            'type' => 'listing_inquiry',
+                            'settings' => [
+                                'catalogId' => '',
+                                'header' => 'Safari packages',
+                                'footer' => 'Book a safari on WhatsApp.',
+                                'completionType' => 'booking',
+                                'bookingVariablePrefix' => 'safari_booking',
+                                'requirePreferredDateTime' => true,
+                                'bookingBackend' => 'whatsapp_only',
+                            ],
+                        ],
+                    ],
+                    [
+                        'id' => 'message-2',
+                        'type' => 'message',
+                        'position' => ['x' => 1900, 'y' => 480],
+                        'data' => [
+                            'label' => 'City tours info',
+                            'type' => 'message',
+                            'settings' => [
+                                'message' => 'Our city tours run daily at 9 AM and 2 PM. Reply *book* to reserve or ask about private guides.',
+                            ],
+                        ],
+                    ],
+                    [
+                        'id' => 'end-1',
+                        'type' => 'end',
+                        'position' => ['x' => 3800, 'y' => 400],
+                        'data' => ['label' => 'End', 'type' => 'end'],
+                    ],
                 ],
-                [
-                    'id' => 'end-1',
-                    'type' => 'end',
-                    'position' => ['x' => 3800, 'y' => 400],
-                    'data' => ['label' => 'End', 'type' => 'end'],
+                'edges' => [
+                    ['id' => 'e-book-list', 'source' => 'keyword_trigger-1', 'target' => 'list_message-1', 'sourceHandle' => 'keyword-kw1'],
+                    ['id' => 'e-tour-qr', 'source' => 'keyword_trigger-1', 'target' => 'quick_replies-1', 'sourceHandle' => 'keyword-kw2'],
+                    ['id' => 'e-suite-flow', 'source' => 'list_message-1', 'target' => 'whatsapp_flow-1', 'sourceHandle' => 'section1-row3'],
+                    ['id' => 'e-honeymoon-faq', 'source' => 'list_message-1', 'target' => 'honeymoon-faq-question-initial', 'sourceHandle' => 'section2-row1'],
+                    ['id' => 'e-flow-image', 'source' => 'whatsapp_flow-1', 'target' => 'image-1', 'sourceHandle' => 'condition_2'],
+                    ['id' => 'e-image-pdf', 'source' => 'image-1', 'target' => 'pdf-1'],
+                    ['id' => 'e-pdf-template', 'source' => 'pdf-1', 'target' => 'template-1'],
+                    ['id' => 'e-q-store', 'source' => 'question-1', 'target' => 'datastore-1'],
+                    ['id' => 'e-store-http', 'source' => 'datastore-1', 'target' => 'http-1'],
+                    ['id' => 'e-http-mpesa', 'source' => 'http-1', 'target' => 'mpesa_stk_push-1'],
+                    ['id' => 'e-mpesa-success', 'source' => 'mpesa_stk_push-1', 'target' => 'assign_group-1', 'sourceHandle' => 'mpesa-success'],
+                    ['id' => 'e-mpesa-failed-end', 'source' => 'mpesa_stk_push-1', 'target' => 'end-1', 'sourceHandle' => 'mpesa-failed'],
+                    ['id' => 'e-group-journey', 'source' => 'assign_group-1', 'target' => 'assign_journey_stage-1'],
+                    ['id' => 'e-journey-template', 'source' => 'assign_journey_stage-1', 'target' => 'template-1'],
+                    ['id' => 'e-template-end', 'source' => 'template-1', 'target' => 'end-1'],
+                    ['id' => 'e-safari-video', 'source' => 'quick_replies-1', 'target' => 'video-1', 'sourceHandle' => 'button-1'],
+                    ['id' => 'e-video-listing', 'source' => 'video-1', 'target' => 'listing_inquiry-2'],
+                    ['id' => 'e-listing-end', 'source' => 'listing_inquiry-2', 'target' => 'end-1', 'sourceHandle' => 'onListingInquiry'],
+                    ['id' => 'e-city-msg', 'source' => 'quick_replies-1', 'target' => 'message-2', 'sourceHandle' => 'button-2'],
+                    ['id' => 'e-city-end', 'source' => 'message-2', 'target' => 'end-1'],
+                    ['id' => 'e-custom-faq', 'source' => 'quick_replies-1', 'target' => 'tour-faq-question-initial', 'sourceHandle' => 'button-3'],
                 ],
-            ],
-            'edges' => [
-                ['id' => 'e-book-list', 'source' => 'keyword_trigger-1', 'target' => 'list_message-1', 'sourceHandle' => 'keyword-kw1'],
-                ['id' => 'e-tour-qr', 'source' => 'keyword_trigger-1', 'target' => 'quick_replies-1', 'sourceHandle' => 'keyword-kw2'],
-                ['id' => 'e-suite-flow', 'source' => 'list_message-1', 'target' => 'whatsapp_flow-1', 'sourceHandle' => 'section1-row3'],
-                ['id' => 'e-honeymoon-ai', 'source' => 'list_message-1', 'target' => 'openai-1', 'sourceHandle' => 'section2-row1'],
-                ['id' => 'e-flow-image', 'source' => 'whatsapp_flow-1', 'target' => 'image-1', 'sourceHandle' => 'condition_2'],
-                ['id' => 'e-image-pdf', 'source' => 'image-1', 'target' => 'pdf-1'],
-                ['id' => 'e-pdf-template', 'source' => 'pdf-1', 'target' => 'template-1'],
-                ['id' => 'e-ai-question', 'source' => 'openai-1', 'target' => 'question-1'],
-                ['id' => 'e-q-store', 'source' => 'question-1', 'target' => 'datastore-1'],
-                ['id' => 'e-store-http', 'source' => 'datastore-1', 'target' => 'http-1'],
-                ['id' => 'e-http-mpesa', 'source' => 'http-1', 'target' => 'mpesa_stk_push-1'],
-                ['id' => 'e-mpesa-success', 'source' => 'mpesa_stk_push-1', 'target' => 'assign_group-1', 'sourceHandle' => 'mpesa-success'],
-                ['id' => 'e-mpesa-failed-end', 'source' => 'mpesa_stk_push-1', 'target' => 'end-1', 'sourceHandle' => 'mpesa-failed'],
-                ['id' => 'e-group-journey', 'source' => 'assign_group-1', 'target' => 'assign_journey_stage-1'],
-                ['id' => 'e-journey-template', 'source' => 'assign_journey_stage-1', 'target' => 'template-1'],
-                ['id' => 'e-template-end', 'source' => 'template-1', 'target' => 'end-1'],
-                ['id' => 'e-safari-video', 'source' => 'quick_replies-1', 'target' => 'video-1', 'sourceHandle' => 'button-1'],
-                ['id' => 'e-video-listing', 'source' => 'video-1', 'target' => 'listing_inquiry-2'],
-                ['id' => 'e-listing-end', 'source' => 'listing_inquiry-2', 'target' => 'end-1', 'sourceHandle' => 'onListingInquiry'],
-                ['id' => 'e-city-msg', 'source' => 'quick_replies-1', 'target' => 'message-2', 'sourceHandle' => 'button-2'],
-                ['id' => 'e-city-end', 'source' => 'message-2', 'target' => 'end-1'],
-                ['id' => 'e-custom-incoming', 'source' => 'quick_replies-1', 'target' => 'incomingMessage-1', 'sourceHandle' => 'button-3'],
-                ['id' => 'e-incoming-branch', 'source' => 'incomingMessage-1', 'target' => 'branch-1'],
-                ['id' => 'e-budget-counter', 'source' => 'branch-1', 'target' => 'counter-1', 'sourceHandle' => 'condition-cond-budget-true'],
-                ['id' => 'e-branch-false-end', 'source' => 'branch-1', 'target' => 'end-1', 'sourceHandle' => 'condition-cond-budget-false'],
-                ['id' => 'e-counter-pricing', 'source' => 'counter-1', 'target' => 'check_pricing-1', 'sourceHandle' => 'true'],
-                ['id' => 'e-counter-false-end', 'source' => 'counter-1', 'target' => 'end-1', 'sourceHandle' => 'false'],
-                ['id' => 'e-pricing-openai', 'source' => 'check_pricing-1', 'target' => 'openai-2', 'sourceHandle' => 'true'],
-                ['id' => 'e-pricing-false-end', 'source' => 'check_pricing-1', 'target' => 'end-1', 'sourceHandle' => 'false'],
-                ['id' => 'e-openai-group', 'source' => 'openai-2', 'target' => 'assign_group-1'],
-            ],
-        ],
+            ], [
+                'idPrefix' => 'honeymoon-faq',
+                'basePosition' => ['x' => 760, 'y' => 280],
+                'questionInitial' => 'Tell me about your honeymoon plans — dates, room preferences, dietary needs, and any surprise arrangements.',
+                'questionFollowup' => 'Anything else for your romantic getaway? Reply *done* when ready to continue booking, or *concierge* for a human advisor.',
+                'systemPrompt' => 'You are a luxury travel concierge. Help with anniversary dates, room views, dietary restrictions, and surprise arrangements. Be warm and romantic. Never repeat the guest question — always provide a helpful response.',
+                'llmVariableName' => 'honeymoon_details',
+                'llmLabel' => 'Honeymoon concierge',
+                'counterMax' => 5,
+                'enableVectorSearch' => false,
+                'humanKeywords' => ['concierge', 'agent', 'human'],
+                'doneTarget' => 'question-1',
+                'humanTarget' => 'assign_group-1',
+            ]),
+            [
+                'idPrefix' => 'tour-faq',
+                'basePosition' => ['x' => 760, 'y' => 680],
+                'questionInitial' => 'Tell me about your dream trip — destinations, travel dates, group size, and budget.',
+                'questionFollowup' => 'Want to refine the itinerary? Ask another question, reply *done* when happy, or *agent* to book with our team.',
+                'systemPrompt' => 'You are a tour planning expert. Help gather destination preferences, travel dates, group size, and budget. Suggest day-by-day ideas. Never repeat the customer question — always provide a helpful response.',
+                'llmVariableName' => 'custom_itinerary',
+                'llmLabel' => 'Itinerary planner',
+                'counterMax' => 4,
+                'enableVectorSearch' => false,
+                'doneTarget' => 'assign_group-1',
+                'humanTarget' => 'assign_group-1',
+            ]),
     ],
 
 ];

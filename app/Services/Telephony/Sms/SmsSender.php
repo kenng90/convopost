@@ -3,26 +3,42 @@
 namespace App\Services\Telephony\Sms;
 
 use App\Models\Company;
-use App\Services\Telephony\TelephonyConfig;
-use App\Services\Telephony\TelephonyProvider;
+use App\Services\HostPinnacle\HostPinnacleClient;
+use App\Services\HostPinnacle\HostPinnacleCreditSync;
+use App\Services\Telephony\PhoneNormalizer;
 
 class SmsSender
 {
+    public function __construct(
+        private readonly HostPinnacleClient $hostPinnacleClient,
+        private readonly HostPinnacleCreditSync $hostPinnacleCreditSync,
+        private readonly PhoneNormalizer $normalizer,
+    ) {
+    }
+
     public function send(Company $company, string $to, string $body): SmsSendResult
     {
-        $config = TelephonyConfig::forCompany($company);
+        $config = SmsConfig::forCompany($company);
 
         if (! $config->smsReady()) {
-            return SmsSendResult::fail(
-                $config->isTelnyx()
-                    ? 'Telnyx SMS settings missing (API key and from number in App Settings).'
-                    : 'Twilio SMS settings missing (Account SID, Auth Token, and from number in App Settings).'
-            );
+            return SmsSendResult::fail($this->missingConfigurationMessage($config));
         }
 
         return match ($config->provider) {
-            TelephonyProvider::TWILIO => (new TwilioSmsSender($config))->send($to, $body),
-            default => (new TelnyxSmsSender($config))->send($to, $body),
+            SmsProvider::HOSTPINNACLE => (new HostPinnacleSmsSender(
+                $config,
+                $this->hostPinnacleClient,
+                $this->hostPinnacleCreditSync,
+                $this->normalizer,
+            ))->send($to, $body),
+            SmsProvider::TWILIO => (new TwilioSmsSender($config->telephonyConfig()))->send($to, $body),
+            SmsProvider::TELNYX => (new TelnyxSmsSender($config->telephonyConfig()))->send($to, $body),
+            default => SmsSendResult::fail(app(SmsAvailability::class)->statusMessage($company)),
         };
+    }
+
+    private function missingConfigurationMessage(SmsConfig $config): string
+    {
+        return app(SmsAvailability::class)->statusMessage($config->company);
     }
 }

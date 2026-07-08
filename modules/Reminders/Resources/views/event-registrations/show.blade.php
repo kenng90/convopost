@@ -70,7 +70,7 @@
     </div>
 </div>
 
-<!-- <div class="card shadow mb-4">
+<div class="card shadow mb-4">
     <div class="card-header">
         <h4 class="mb-0">{{ __('Client notification messages') }}</h4>
     </div>
@@ -112,5 +112,5 @@
             </div>
         @endif
     </div>
-</div> -->
+</div>
 @endsection

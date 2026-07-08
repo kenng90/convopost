@@ -120,6 +120,19 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject', 'org.route']
         Route::get('stopimpersonate', [App\Http\Controllers\CompaniesController::class, 'stopImpersonate'])->name('companies.stopImpersonate');
         Route::get('/share', [App\Http\Controllers\CompaniesController::class, 'share'])->name('share');
 
+        Route::controller(App\Http\Controllers\HostPinnacleAdminController::class)
+            ->prefix('convoconnect')
+            ->name('convoconnect.')
+            ->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::get('/companies/{company}', 'show')->name('show');
+                Route::post('/companies/{company}/provision', 'provision')->name('provision');
+                Route::post('/companies/{company}/resume-provision', 'resumeProvision')->name('resume-provision');
+                Route::post('/companies/{company}/approve-sender', 'approveSender')->name('approve-sender');
+                Route::post('/companies/{company}/sync-credits', 'syncCredits')->name('sync-credits');
+                Route::post('/companies/{company}/credentials', 'storeCredentials')->name('store-credentials');
+            });
+
         Route::resource('settings', 'App\Http\Controllers\SettingsController');
 
         // Backup
@@ -254,6 +267,9 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject', 'org.route']
     });
 
 });
+
+Route::post('/webhook/sms/convoconnect/dlr', [\App\Http\Controllers\HostPinnacleWebhookController::class, 'deliveryReport'])
+    ->name('convoconnect.webhook.dlr');
 
 //Verify
 Route::middleware('web')->group(function () {

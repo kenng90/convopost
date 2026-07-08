@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Flowmaker\FaqConversationLoop;
+
 /**
  * Curated flow templates for onboarding.
  *
@@ -233,7 +235,7 @@ $flowTemplates = [
         'video_url' => null,
         'setup_hint' => 'Set catalog ID, M-Pesa, Fulfillment group & journey stage. Delivery address/notes are for agent follow-up until checkout supports them. Save draft → Publish.',
         'post_install_checklist' => ['Catalog ID', 'M-Pesa credentials', 'Fulfillment group', 'OpenRouter key for FAQ', 'Publish'],
-        'flow_data' => [
+        'flow_data' => FaqConversationLoop::mergeInto([
             'nodes' => [
                 [
                     'id' => 'keyword_trigger-1',
@@ -245,7 +247,7 @@ $flowTemplates = [
                         'keywords' => [
                             ['id' => 'kw1', 'value' => 'shop', 'matchType' => 'contains'],
                             ['id' => 'kw2', 'value' => 'buy', 'matchType' => 'contains'],
-                            ['id' => 'kw3', 'value' => 'catalog', 'matchType' => 'contains'],
+                            // ['id' => 'kw3', 'value' => 'catalog', 'matchType' => 'contains'],
                         ],
                     ],
                 ],
@@ -327,7 +329,7 @@ $flowTemplates = [
                         'label' => 'Order summary',
                         'type' => 'message',
                         'settings' => [
-                            'message' => "Order summary 📦\n\nDelivery: {{delivery_address}}\nNotes: {{order_notes}}\n\nWe will send an M-Pesa payment request for the total. Adjust the amount on the payment node before publishing.",
+                            'message' => "Order summary 📦\n\nDelivery: {{delivery_address}}\nNotes: {{order_notes}}\n\nWe will send an M-Pesa payment request for the total.",
                         ],
                     ],
                 ],
@@ -340,7 +342,7 @@ $flowTemplates = [
                         'type' => 'mpesa_stk_push',
                         'settings' => [
                             'mpesa' => [
-                                'amount' => '1500',
+                                'amount' => '{{catalog_order_total_amount}}',
                                 'accountReference' => 'SHOP-ORDER',
                                 'transactionDesc' => 'Shop order',
                                 'responseVar' => 'shop_payment_result',
@@ -395,47 +397,6 @@ $flowTemplates = [
                         'type' => 'message',
                         'settings' => [
                             'message' => 'Payment was not completed. Reply *shop* to try again or choose *Talk to sales* for help.',
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'openai-1',
-                    'type' => 'openai',
-                    'position' => ['x' => 1520, 'y' => 320],
-                    'data' => [
-                        'label' => 'Shop FAQ bot',
-                        'type' => 'openai',
-                        'settings' => [
-                            'llm' => [
-                                'model' => 'openai/gpt-4o-mini',
-                                'systemPrompt' => 'You are a helpful shop assistant on WhatsApp. Answer product, shipping, and return questions concisely. If unsure, suggest the customer speak with sales.',
-                                'prompt' => '{{contact_last_message}}',
-                                'temperature' => 0.7,
-                                'maxTokens' => 500,
-                                'variableName' => 'shop_faq_reply',
-                                'autoSendMessage' => true,
-                                'enableVectorSearch' => true,
-                                'vectorSearchLimit' => 5,
-                                'similarityThreshold' => 0.3,
-                                'intentions' => [],
-                            ],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'quick_replies-2',
-                    'type' => 'quick_replies',
-                    'position' => ['x' => 1900, 'y' => 320],
-                    'data' => [
-                        'label' => 'FAQ follow-up',
-                        'type' => 'quick_replies',
-                        'settings' => [
-                            'header' => 'Did that help?',
-                            'body' => 'Let us know if you need anything else.',
-                            'footer' => null,
-                            'activeButtons' => 2,
-                            'button1' => 'Yes, thanks',
-                            'button2' => 'Need a human',
                         ],
                     ],
                 ],
@@ -502,7 +463,7 @@ $flowTemplates = [
                 ['id' => 'e-intro-catalog', 'source' => 'message-1', 'target' => 'whatsapp_catalog-1'],
                 ['id' => 'e-catalog-menu', 'source' => 'whatsapp_catalog-1', 'target' => 'quick_replies-1', 'sourceHandle' => 'onProductSelected'],
                 ['id' => 'e-menu-checkout', 'source' => 'quick_replies-1', 'target' => 'question-1', 'sourceHandle' => 'button-1'],
-                ['id' => 'e-menu-faq', 'source' => 'quick_replies-1', 'target' => 'openai-1', 'sourceHandle' => 'button-2'],
+                ['id' => 'e-menu-faq', 'source' => 'quick_replies-1', 'target' => 'shop-faq-message-intro', 'sourceHandle' => 'button-2'],
                 ['id' => 'e-menu-sales', 'source' => 'quick_replies-1', 'target' => 'assign_agent-1', 'sourceHandle' => 'button-3'],
                 ['id' => 'e-addr-notes', 'source' => 'question-1', 'target' => 'question-2'],
                 ['id' => 'e-notes-summary', 'source' => 'question-2', 'target' => 'message-2'],
@@ -513,15 +474,32 @@ $flowTemplates = [
                 ['id' => 'e-group-thanks', 'source' => 'assign_group-1', 'target' => 'message-3'],
                 ['id' => 'e-thanks-end', 'source' => 'message-3', 'target' => 'end-1'],
                 ['id' => 'e-fail-end', 'source' => 'message-4', 'target' => 'end-1'],
-                ['id' => 'e-faq-followup', 'source' => 'openai-1', 'target' => 'quick_replies-2'],
-                ['id' => 'e-faq-yes', 'source' => 'quick_replies-2', 'target' => 'message-5', 'sourceHandle' => 'button-1'],
-                ['id' => 'e-faq-human', 'source' => 'quick_replies-2', 'target' => 'assign_agent-1', 'sourceHandle' => 'button-2'],
                 ['id' => 'e-resolved-end', 'source' => 'message-5', 'target' => 'end-1'],
                 ['id' => 'e-agent-group', 'source' => 'assign_agent-1', 'target' => 'assign_group-2'],
                 ['id' => 'e-group-handoff', 'source' => 'assign_group-2', 'target' => 'message-6'],
                 ['id' => 'e-handoff-end', 'source' => 'message-6', 'target' => 'end-1'],
             ],
-        ],
+        ], [
+            'idPrefix' => 'shop-faq',
+            'basePosition' => ['x' => 1520, 'y' => 320],
+            'introMessage' => "I'm happy to help with product, shipping, and return questions.",
+            'questionInitial' => 'What would you like to know?',
+            'questionFollowup' => 'Anything else? Reply *checkout* to pay, *browse* or *shop* to see the catalog, *agent* for sales, or *done* when finished.',
+            'systemPrompt' => 'You are a helpful shop assistant on WhatsApp. Answer product, shipping, and return questions concisely using order context when available. Never repeat the customer question — always provide a helpful answer. If unsure, suggest speaking with sales.',
+            'prompt' => "Customer question:\n{{contact_last_message}}\n\nOrder items (if any): {{catalog_order_items}}",
+            'llmVariableName' => 'shop_faq_reply',
+            'llmLabel' => 'Shop FAQ bot',
+            'counterMax' => 8,
+            'freeExecutions' => 5,
+            'keywordExits' => [
+                ['id' => 'cond-checkout', 'keyword' => 'checkout', 'target' => 'question-1'],
+                ['id' => 'cond-browse', 'keyword' => 'browse', 'target' => 'message-1'],
+                ['id' => 'cond-shop', 'keyword' => 'shop', 'target' => 'message-1'],
+            ],
+            'doneTarget' => 'message-5',
+            'humanTarget' => 'assign_agent-1',
+            'hasIntro' => true,
+        ]),
     ],
 
     'lead_intake_routing' => [
@@ -531,7 +509,7 @@ $flowTemplates = [
         'video_url' => null,
         'setup_hint' => 'Configure team groups, agents, journey stages. Save draft → Publish before going live.',
         'post_install_checklist' => ['Sales/Intake/Support group IDs', 'Enterprise agent assignment', 'Publish'],
-        'flow_data' => [
+        'flow_data' => FaqConversationLoop::mergeInto([
             'nodes' => [
                 [
                     'id' => 'keyword_trigger-1',
@@ -748,47 +726,6 @@ $flowTemplates = [
                     ],
                 ],
                 [
-                    'id' => 'openai-1',
-                    'type' => 'openai',
-                    'position' => ['x' => 1140, 'y' => 560],
-                    'data' => [
-                        'label' => 'General FAQ',
-                        'type' => 'openai',
-                        'settings' => [
-                            'llm' => [
-                                'model' => 'openai/gpt-4o-mini',
-                                'systemPrompt' => 'You are a professional services assistant. Answer general questions about the business clearly and concisely.',
-                                'prompt' => '{{contact_last_message}}',
-                                'temperature' => 0.7,
-                                'maxTokens' => 500,
-                                'variableName' => 'general_faq_reply',
-                                'autoSendMessage' => true,
-                                'enableVectorSearch' => true,
-                                'vectorSearchLimit' => 5,
-                                'similarityThreshold' => 0.3,
-                                'intentions' => [],
-                            ],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'quick_replies-2',
-                    'type' => 'quick_replies',
-                    'position' => ['x' => 1520, 'y' => 560],
-                    'data' => [
-                        'label' => 'FAQ outcome',
-                        'type' => 'quick_replies',
-                        'settings' => [
-                            'header' => 'Did that answer your question?',
-                            'body' => 'Choose an option below.',
-                            'footer' => null,
-                            'activeButtons' => 2,
-                            'button1' => 'Yes, thanks',
-                            'button2' => 'Speak to someone',
-                        ],
-                    ],
-                ],
-                [
                     'id' => 'message-4',
                     'type' => 'message',
                     'position' => ['x' => 1900, 'y' => 520],
@@ -851,7 +788,7 @@ $flowTemplates = [
                 ['id' => 'e-welcome-menu', 'source' => 'message-1', 'target' => 'quick_replies-1'],
                 ['id' => 'e-menu-quote', 'source' => 'quick_replies-1', 'target' => 'list_message-1', 'sourceHandle' => 'button-1'],
                 ['id' => 'e-menu-existing', 'source' => 'quick_replies-1', 'target' => 'question-4', 'sourceHandle' => 'button-2'],
-                ['id' => 'e-menu-general', 'source' => 'quick_replies-1', 'target' => 'openai-1', 'sourceHandle' => 'button-3'],
+                ['id' => 'e-menu-general', 'source' => 'quick_replies-1', 'target' => 'lead-faq-question-initial', 'sourceHandle' => 'button-3'],
                 ['id' => 'e-list-consult', 'source' => 'list_message-1', 'target' => 'question-1', 'sourceHandle' => 'section1-row1'],
                 ['id' => 'e-list-install', 'source' => 'list_message-1', 'target' => 'question-1', 'sourceHandle' => 'section1-row2'],
                 ['id' => 'e-list-maint', 'source' => 'list_message-1', 'target' => 'question-1', 'sourceHandle' => 'section1-row3'],
@@ -867,25 +804,36 @@ $flowTemplates = [
                 ['id' => 'e-ref-accounts', 'source' => 'question-4', 'target' => 'assign_group-3'],
                 ['id' => 'e-accounts-ack', 'source' => 'assign_group-3', 'target' => 'message-3'],
                 ['id' => 'e-ack-end', 'source' => 'message-3', 'target' => 'end-1'],
-                ['id' => 'e-faq-followup', 'source' => 'openai-1', 'target' => 'quick_replies-2'],
-                ['id' => 'e-faq-yes', 'source' => 'quick_replies-2', 'target' => 'message-4', 'sourceHandle' => 'button-1'],
-                ['id' => 'e-faq-human', 'source' => 'quick_replies-2', 'target' => 'assign_agent-2', 'sourceHandle' => 'button-2'],
                 ['id' => 'e-thanks-end', 'source' => 'message-4', 'target' => 'end-1'],
                 ['id' => 'e-agent-support', 'source' => 'assign_agent-2', 'target' => 'assign_group-4'],
                 ['id' => 'e-support-handoff', 'source' => 'assign_group-4', 'target' => 'message-5'],
                 ['id' => 'e-handoff-end', 'source' => 'message-5', 'target' => 'end-1'],
             ],
-        ],
+        ], [
+            'idPrefix' => 'lead-faq',
+            'basePosition' => ['x' => 1140, 'y' => 560],
+            'questionInitial' => 'What would you like to know about our services?',
+            'questionFollowup' => 'Anything else? Reply *quote* to request a proposal, *agent* to speak with someone, or *done* when finished.',
+            'systemPrompt' => 'You are a professional services assistant. Answer general questions about the business clearly and concisely. Never repeat the customer question — always provide a helpful answer.',
+            'llmVariableName' => 'general_faq_reply',
+            'llmLabel' => 'General FAQ',
+            'counterMax' => 6,
+            'keywordExits' => [
+                ['id' => 'cond-quote', 'keyword' => 'quote', 'target' => 'list_message-1'],
+            ],
+            'doneTarget' => 'message-4',
+            'humanTarget' => 'assign_agent-2',
+        ]),
     ],
 
     'support_ai_escalation' => [
         'name' => 'Support Desk — AI Triage & Escalation',
-        'description' => 'Category-based support with LLM first response, then agent and journey escalation.',
+        'description' => 'Category-based support with conversational AI loop, then agent and journey escalation.',
         'category' => 'support',
         'video_url' => null,
-        'setup_hint' => 'Train FAQ docs, set Support group/agent/journey. LLM uses category intentions. Save draft → Publish.',
+        'setup_hint' => 'Train FAQ docs, set Support group/agent/journey. FAQ uses a multi-turn AI loop. Save draft → Publish.',
         'post_install_checklist' => ['OpenRouter key', 'Knowledge base trained', 'Support group & agent', 'Publish'],
-        'flow_data' => [
+        'flow_data' => FaqConversationLoop::mergeInto([
             'nodes' => [
                 [
                     'id' => 'keyword_trigger-1',
@@ -942,54 +890,6 @@ $flowTemplates = [
                     ],
                 ],
                 [
-                    'id' => 'openai-1',
-                    'type' => 'openai',
-                    'position' => ['x' => 1140, 'y' => 200],
-                    'data' => [
-                        'label' => 'Support AI',
-                        'type' => 'openai',
-                        'settings' => [
-                            'llm' => [
-                                'model' => 'openai/gpt-4o-mini',
-                                'systemPrompt' => 'You are a customer support agent on WhatsApp. Use the knowledge base when available. Be empathetic, concise, and actionable. Escalate politely if the issue needs a human.',
-                                'prompt' => '{{contact_last_message}}',
-                                'temperature' => 0.6,
-                                'maxTokens' => 600,
-                                'variableName' => 'support_ai_reply',
-                                'autoSendMessage' => true,
-                                'enableVectorSearch' => true,
-                                'vectorSearchLimit' => 5,
-                                'similarityThreshold' => 0.3,
-                                'intentions' => [
-                                    ['id' => 'int-orders', 'name' => 'orders', 'description' => 'Orders, delivery, returns, wrong items'],
-                                    ['id' => 'int-billing', 'name' => 'billing', 'description' => 'Invoices, refunds, payments, M-Pesa'],
-                                    ['id' => 'int-technical', 'name' => 'technical', 'description' => 'App, login, or product technical problems'],
-                                    ['id' => 'int-account', 'name' => 'account', 'description' => 'Profile, access, credentials'],
-                                    ['id' => 'int-general', 'name' => 'general', 'description' => 'General enquiries'],
-                                ],
-                            ],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'quick_replies-1',
-                    'type' => 'quick_replies',
-                    'position' => ['x' => 1520, 'y' => 200],
-                    'data' => [
-                        'label' => 'Resolution check',
-                        'type' => 'quick_replies',
-                        'settings' => [
-                            'header' => 'Did we solve it?',
-                            'body' => 'Let us know how you would like to proceed.',
-                            'footer' => null,
-                            'activeButtons' => 3,
-                            'button1' => 'Resolved',
-                            'button2' => 'Still need help',
-                            'button3' => 'Talk to agent',
-                        ],
-                    ],
-                ],
-                [
                     'id' => 'message-2',
                     'type' => 'message',
                     'position' => ['x' => 1900, 'y' => 120],
@@ -998,70 +898,6 @@ $flowTemplates = [
                         'type' => 'message',
                         'settings' => [
                             'message' => 'Glad we could help! Reply *help* anytime if you need further assistance.',
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'question-1',
-                    'type' => 'question',
-                    'position' => ['x' => 1900, 'y' => 280],
-                    'data' => [
-                        'label' => 'Issue details',
-                        'type' => 'question',
-                        'settings' => [
-                            'question' => 'Please describe the issue in a bit more detail so we can assist you.',
-                            'variableName' => 'support_issue_detail',
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'counter-1',
-                    'type' => 'counter',
-                    'position' => ['x' => 2280, 'y' => 280],
-                    'data' => [
-                        'label' => 'Limit AI loops',
-                        'type' => 'counter',
-                        'settings' => [
-                            'counter' => [
-                                'maxExecutions' => 2,
-                                'period' => 'all_time',
-                            ],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'openai-2',
-                    'type' => 'openai',
-                    'position' => ['x' => 2660, 'y' => 200],
-                    'data' => [
-                        'label' => 'Follow-up AI',
-                        'type' => 'openai',
-                        'settings' => [
-                            'llm' => [
-                                'model' => 'openai/gpt-4o-mini',
-                                'systemPrompt' => 'The customer still needs help. Review their detailed issue and provide one more helpful response before human escalation.',
-                                'prompt' => 'Issue details: {{support_issue_detail}}',
-                                'temperature' => 0.6,
-                                'maxTokens' => 500,
-                                'variableName' => 'support_followup_reply',
-                                'autoSendMessage' => true,
-                                'enableVectorSearch' => true,
-                                'vectorSearchLimit' => 3,
-                                'similarityThreshold' => 0.3,
-                                'intentions' => [],
-                            ],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'message-3',
-                    'type' => 'message',
-                    'position' => ['x' => 2660, 'y' => 400],
-                    'data' => [
-                        'label' => 'Escalating',
-                        'type' => 'message',
-                        'settings' => [
-                            'message' => 'Connecting you with a support agent now. Please hold — average wait under 10 minutes.',
                         ],
                     ],
                 ],
@@ -1111,7 +947,7 @@ $flowTemplates = [
                         'label' => 'Agent SLA',
                         'type' => 'message',
                         'settings' => [
-                            'message' => "You're in the queue. Ticket reference: {{support_issue_detail}}\n\nOur team will reply here on WhatsApp.",
+                            'message' => "You're in the queue. Reference: {{faq_question}}\n\nOur team will reply here on WhatsApp.",
                         ],
                     ],
                 ],
@@ -1127,27 +963,30 @@ $flowTemplates = [
                 ['id' => 'e-kw2', 'source' => 'keyword_trigger-1', 'target' => 'message-1', 'sourceHandle' => 'keyword-kw2'],
                 ['id' => 'e-kw3', 'source' => 'keyword_trigger-1', 'target' => 'message-1', 'sourceHandle' => 'keyword-kw3'],
                 ['id' => 'e-greet-list', 'source' => 'message-1', 'target' => 'list_message-1'],
-                ['id' => 'e-cat1-ai', 'source' => 'list_message-1', 'target' => 'openai-1', 'sourceHandle' => 'section1-row1'],
-                ['id' => 'e-cat2-ai', 'source' => 'list_message-1', 'target' => 'openai-1', 'sourceHandle' => 'section1-row2'],
-                ['id' => 'e-cat3-ai', 'source' => 'list_message-1', 'target' => 'openai-1', 'sourceHandle' => 'section1-row3'],
-                ['id' => 'e-cat4-ai', 'source' => 'list_message-1', 'target' => 'openai-1', 'sourceHandle' => 'section1-row4'],
-                ['id' => 'e-cat5-ai', 'source' => 'list_message-1', 'target' => 'openai-1', 'sourceHandle' => 'section1-row5'],
-                ['id' => 'e-ai-menu', 'source' => 'openai-1', 'target' => 'quick_replies-1'],
-                ['id' => 'e-resolved', 'source' => 'quick_replies-1', 'target' => 'message-2', 'sourceHandle' => 'button-1'],
-                ['id' => 'e-still-help', 'source' => 'quick_replies-1', 'target' => 'question-1', 'sourceHandle' => 'button-2'],
-                ['id' => 'e-agent-now', 'source' => 'quick_replies-1', 'target' => 'assign_group-1', 'sourceHandle' => 'button-3'],
+                ['id' => 'e-cat1-faq', 'source' => 'list_message-1', 'target' => 'support-faq-question-initial', 'sourceHandle' => 'section1-row1'],
+                ['id' => 'e-cat2-faq', 'source' => 'list_message-1', 'target' => 'support-faq-question-initial', 'sourceHandle' => 'section1-row2'],
+                ['id' => 'e-cat3-faq', 'source' => 'list_message-1', 'target' => 'support-faq-question-initial', 'sourceHandle' => 'section1-row3'],
+                ['id' => 'e-cat4-faq', 'source' => 'list_message-1', 'target' => 'support-faq-question-initial', 'sourceHandle' => 'section1-row4'],
+                ['id' => 'e-cat5-faq', 'source' => 'list_message-1', 'target' => 'support-faq-question-initial', 'sourceHandle' => 'section1-row5'],
                 ['id' => 'e-resolved-end', 'source' => 'message-2', 'target' => 'end-1'],
-                ['id' => 'e-detail-counter', 'source' => 'question-1', 'target' => 'counter-1'],
-                ['id' => 'e-counter-true', 'source' => 'counter-1', 'target' => 'openai-2', 'sourceHandle' => 'true'],
-                ['id' => 'e-counter-false', 'source' => 'counter-1', 'target' => 'message-3', 'sourceHandle' => 'false'],
-                ['id' => 'e-followup-escalate', 'source' => 'openai-2', 'target' => 'assign_group-1'],
-                ['id' => 'e-escalate-msg', 'source' => 'message-3', 'target' => 'assign_group-1'],
                 ['id' => 'e-agent-path-group', 'source' => 'assign_group-1', 'target' => 'assign_agent-1'],
                 ['id' => 'e-group-journey', 'source' => 'assign_agent-1', 'target' => 'assign_journey_stage-1'],
                 ['id' => 'e-journey-sla', 'source' => 'assign_journey_stage-1', 'target' => 'message-4'],
                 ['id' => 'e-sla-end', 'source' => 'message-4', 'target' => 'end-1'],
             ],
-        ],
+        ], [
+            'idPrefix' => 'support-faq',
+            'basePosition' => ['x' => 1140, 'y' => 200],
+            'questionInitial' => 'Please describe your issue in detail (include order or account references if relevant).',
+            'questionFollowup' => 'Did that help? Reply *done* if resolved, or *agent* / *human* to speak with support. Ask another question to continue.',
+            'systemPrompt' => 'You are a customer support agent on WhatsApp. Use the knowledge base when available. Be empathetic, concise, and actionable. Never repeat the customer question — always provide a helpful answer. Escalate politely if the issue needs a human.',
+            'llmVariableName' => 'support_ai_reply',
+            'llmLabel' => 'Support AI',
+            'counterMax' => 5,
+            'doneTarget' => 'message-2',
+            'humanTarget' => 'assign_group-1',
+            'limitTarget' => 'assign_group-1',
+        ]),
     ],
 
 ];

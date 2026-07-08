@@ -39,8 +39,11 @@
                 @endif
             </td>
             <td>{{ isset($plans) && isset($company->user) && isset($company->user->plan_id) && isset($plans[$company->user->plan_id]) ? $plans[$company->user->plan_id] : '' }}</td>
-            <td>
-                <a class="btn btn-sm btn-outline-primary me-2" href="{{ route('admin.companies.edit', $company) }}">{{ __('Edit') }}</a>
+                <td>
+                    <a class="btn btn-sm btn-outline-primary me-2" href="{{ route('admin.companies.edit', $company) }}">{{ __('Edit') }}</a>
+                    @if(config('hostpinnacle.enabled', false))
+                        <a class="btn btn-sm btn-outline-success me-2" href="{{ route('admin.convoconnect.show', $company) }}">{{ __('ConvoConnect') }}</a>
+                    @endif
                 <a class="btn btn-sm btn-outline-info me-2" href="{{ route('admin.companies.loginas', $company) }}">{{ __('Login as') }}</a>
                 @if ($hasCloner)
                     <a class="btn btn-sm btn-outline-secondary me-2" href="{{ route('admin.companies.create')."?cloneWith=".$company->id }}">{{ __('Clone it') }}</a>

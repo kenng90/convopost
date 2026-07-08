@@ -57,4 +57,35 @@ class OpenRouterService
             'usage' => $data['usage'] ?? [],
         ];
     }
+
+    /**
+     * @return array<int, float>|null
+     */
+    public function createEmbedding(string $apiKey, string $text, string $model): ?array
+    {
+        $response = Http::timeout(60)
+            ->withHeaders([
+                'Authorization' => 'Bearer '.$apiKey,
+                'Content-Type' => 'application/json',
+                'HTTP-Referer' => config('app.url'),
+                'X-Title' => config('app.name', 'Convocon'),
+            ])
+            ->post('https://openrouter.ai/api/v1/embeddings', [
+                'input' => $text,
+                'model' => $model,
+            ]);
+
+        if (! $response->successful()) {
+            Log::error('OpenRouter embedding API error', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            throw new \RuntimeException('OpenRouter embedding API call failed: '.$response->status());
+        }
+
+        $data = $response->json();
+
+        return $data['data'][0]['embedding'] ?? null;
+    }
 }

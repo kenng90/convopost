@@ -103,6 +103,39 @@ class CatalogListingModeTest extends TestCase
         $response->assertDontSee('Add to Cart', false);
     }
 
+    public function test_listing_card_renders_valid_booking_onclick_handler(): void
+    {
+        [, $company] = $this->actingOwner();
+
+        $catalog = ListCatalog::withoutGlobalScope(CompanyScope::class)->create([
+            'company_id' => $company->id,
+            'name' => 'Quote Homes',
+            'slug' => 'quote-homes',
+            'catalog_mode' => CatalogMode::LISTING,
+            'vertical' => 'real_estate',
+            'version' => 1,
+            'items' => [[
+                'id' => 'home-1',
+                'title' => 'Bob\'s "Deluxe" Villa',
+                'description' => 'Sea view',
+                'price' => 15000000,
+                'metadata' => ['listing_status' => 'Available'],
+            ]],
+            'columns' => [],
+            'source' => 'manual',
+        ]);
+
+        $response = $this->get(route('catalog.public', $catalog->id));
+
+        $response->assertOk();
+
+        // The @js directive must escape quotes so the double-quoted onclick attribute is not broken.
+        $response->assertSee('onclick="openBookingPanel(\'home-1\', \'Bob\u0027s \u0022Deluxe\u0022 Villa\')"', false);
+
+        // Guard against the regression where a raw JSON string terminated the attribute early.
+        $response->assertDontSee('openBookingPanel(\'home-1\', "', false);
+    }
+
     public function test_generate_inquiry_endpoint_returns_whatsapp_message(): void
     {
         [, $company] = $this->actingOwner();

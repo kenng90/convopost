@@ -335,8 +335,9 @@ class WhatsAppCatalog extends Node
 
     private function resolveProductIdFromExtra(string $extraData): string
     {
-        if (preg_match('/^catalog_(.+)_id[^_]+_flow\d+$/', $extraData, $matches)) {
-            return $matches[1];
+        $suffix = '_id'.$this->id.'_flow'.$this->flow_id;
+        if (str_starts_with($extraData, 'catalog_') && str_ends_with($extraData, $suffix)) {
+            return substr($extraData, strlen('catalog_'), -strlen($suffix));
         }
 
         return $extraData;

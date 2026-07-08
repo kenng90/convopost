@@ -17,7 +17,7 @@
  * - similarityThreshold: minimum similarity score (default: 0.3)
  *
  * How it works:
- * 1. User message/prompt is converted to embedding vector
+ * 1. User message/prompt is converted to an embedding vector via OpenRouter
  * 2. Cosine similarity calculated against all flow document chunks
  * 3. Most relevant chunks above threshold are selected
  * 4. Formatted context is injected into OpenRouter API call
