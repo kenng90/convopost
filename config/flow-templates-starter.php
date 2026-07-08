@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Flowmaker\FaqConversationLoop;
+
 /**
  * Starter templates aligned with draft/publish, LLM auto-send, listing booking, and voice AI.
  */
@@ -7,7 +9,7 @@ return [
 
     'ai_faq_minimal' => [
         'name' => 'AI FAQ — Minimal',
-        'description' => 'Keyword-triggered AI answers with optional human escalation. Ideal first bot.',
+        'description' => 'Keyword-triggered conversational AI FAQ loop with optional human escalation. Ideal first bot.',
         'category' => 'general',
         'video_url' => null,
         'setup_hint' => 'Add OpenRouter API key, train knowledge base on this flow, then Save draft → Publish. Set Support group ID before going live.',
@@ -17,7 +19,7 @@ return [
             'Support group ID set on escalation node',
             'Click Publish in flow editor',
         ],
-        'flow_data' => [
+        'flow_data' => FaqConversationLoop::mergeInto([
             'nodes' => [
                 [
                     'id' => 'keyword_trigger-1',
@@ -30,47 +32,6 @@ return [
                             ['id' => 'kw1', 'value' => 'help', 'matchType' => 'contains'],
                             ['id' => 'kw2', 'value' => 'faq', 'matchType' => 'contains'],
                             ['id' => 'kw3', 'value' => 'info', 'matchType' => 'contains'],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'openai-1',
-                    'type' => 'openai',
-                    'position' => ['x' => 380, 'y' => 200],
-                    'data' => [
-                        'label' => 'FAQ assistant',
-                        'type' => 'openai',
-                        'settings' => [
-                            'llm' => [
-                                'model' => 'openai/gpt-4o-mini',
-                                'systemPrompt' => 'You are a helpful FAQ assistant on WhatsApp. Answer from the knowledge base when possible. Be concise. If you cannot help, suggest speaking with a human.',
-                                'prompt' => '{{contact_last_message}}',
-                                'temperature' => 0.5,
-                                'maxTokens' => 500,
-                                'variableName' => 'faq_reply',
-                                'autoSendMessage' => true,
-                                'enableVectorSearch' => true,
-                                'vectorSearchLimit' => 5,
-                                'similarityThreshold' => 0.3,
-                                'intentions' => [],
-                            ],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'quick_replies-1',
-                    'type' => 'quick_replies',
-                    'position' => ['x' => 760, 'y' => 200],
-                    'data' => [
-                        'label' => 'Was this helpful?',
-                        'type' => 'quick_replies',
-                        'settings' => [
-                            'header' => 'Did that help?',
-                            'body' => 'Let us know if you need more assistance.',
-                            'footer' => null,
-                            'activeButtons' => 2,
-                            'button1' => 'Yes, thanks',
-                            'button2' => 'Talk to human',
                         ],
                     ],
                 ],
@@ -116,17 +77,25 @@ return [
                 ],
             ],
             'edges' => [
-                ['id' => 'e-kw1', 'source' => 'keyword_trigger-1', 'target' => 'openai-1', 'sourceHandle' => 'keyword-kw1'],
-                ['id' => 'e-kw2', 'source' => 'keyword_trigger-1', 'target' => 'openai-1', 'sourceHandle' => 'keyword-kw2'],
-                ['id' => 'e-kw3', 'source' => 'keyword_trigger-1', 'target' => 'openai-1', 'sourceHandle' => 'keyword-kw3'],
-                ['id' => 'e-ai-qr', 'source' => 'openai-1', 'target' => 'quick_replies-1'],
-                ['id' => 'e-yes-end', 'source' => 'quick_replies-1', 'target' => 'message-1', 'sourceHandle' => 'button-1'],
-                ['id' => 'e-human-group', 'source' => 'quick_replies-1', 'target' => 'assign_group-1', 'sourceHandle' => 'button-2'],
+                ['id' => 'e-kw1', 'source' => 'keyword_trigger-1', 'target' => 'minimal-faq-question-initial', 'sourceHandle' => 'keyword-kw1'],
+                ['id' => 'e-kw2', 'source' => 'keyword_trigger-1', 'target' => 'minimal-faq-question-initial', 'sourceHandle' => 'keyword-kw2'],
+                ['id' => 'e-kw3', 'source' => 'keyword_trigger-1', 'target' => 'minimal-faq-question-initial', 'sourceHandle' => 'keyword-kw3'],
                 ['id' => 'e-thanks-end', 'source' => 'message-1', 'target' => 'end-1'],
                 ['id' => 'e-handoff-end', 'source' => 'message-2', 'target' => 'end-1'],
                 ['id' => 'e-group-msg', 'source' => 'assign_group-1', 'target' => 'message-2'],
             ],
-        ],
+        ], [
+            'idPrefix' => 'minimal-faq',
+            'basePosition' => ['x' => 380, 'y' => 200],
+            'questionInitial' => 'How can I help you today?',
+            'questionFollowup' => 'Anything else? Reply *done* when finished or *human* / *agent* to speak with our team.',
+            'systemPrompt' => 'You are a helpful FAQ assistant on WhatsApp. Answer from the knowledge base when possible. Be concise. Never repeat the customer question — always provide a helpful answer. If you cannot help, suggest speaking with a human.',
+            'llmVariableName' => 'faq_reply',
+            'llmLabel' => 'FAQ assistant',
+            'counterMax' => 10,
+            'doneTarget' => 'message-1',
+            'humanTarget' => 'assign_group-1',
+        ]),
     ],
 
     'services_listing_booking' => [
@@ -228,7 +197,7 @@ return [
 
     'catalog_listings_showcase' => [
         'name' => 'Catalog — Listings Showcase',
-        'description' => 'Non-commerce catalog in listing mode: properties, classes, or packages with inquiry capture.',
+        'description' => 'Non-commerce catalog in listing mode: properties, classes, or packages with inquiry capture and AI FAQ loop.',
         'category' => 'commerce',
         'video_url' => null,
         'setup_hint' => 'Use a listing-mode catalog (not product checkout). Set catalog ID, train AI optional FAQ path, Publish when ready.',
@@ -238,7 +207,7 @@ return [
             'Sales group configured',
             'Published live',
         ],
-        'flow_data' => [
+        'flow_data' => FaqConversationLoop::mergeInto([
             'nodes' => [
                 [
                     'id' => 'keyword_trigger-1',
@@ -272,30 +241,6 @@ return [
                     ],
                 ],
                 [
-                    'id' => 'openai-1',
-                    'type' => 'openai',
-                    'position' => ['x' => 760, 'y' => 200],
-                    'data' => [
-                        'label' => 'Listing FAQ',
-                        'type' => 'openai',
-                        'settings' => [
-                            'llm' => [
-                                'model' => 'openai/gpt-4o-mini',
-                                'systemPrompt' => 'You help customers understand listings. Use catalog knowledge when available.',
-                                'prompt' => '{{contact_last_message}}',
-                                'temperature' => 0.6,
-                                'maxTokens' => 500,
-                                'variableName' => 'listing_faq_reply',
-                                'autoSendMessage' => true,
-                                'enableVectorSearch' => true,
-                                'vectorSearchLimit' => 5,
-                                'similarityThreshold' => 0.3,
-                                'intentions' => [],
-                            ],
-                        ],
-                    ],
-                ],
-                [
                     'id' => 'assign_group-1',
                     'type' => 'assign_group',
                     'position' => ['x' => 1140, 'y' => 200],
@@ -315,16 +260,30 @@ return [
             'edges' => [
                 ['id' => 'e-kw1', 'source' => 'keyword_trigger-1', 'target' => 'listing_inquiry-1', 'sourceHandle' => 'keyword-kw1'],
                 ['id' => 'e-kw2', 'source' => 'keyword_trigger-1', 'target' => 'listing_inquiry-1', 'sourceHandle' => 'keyword-kw2'],
-                ['id' => 'e-listing-ai', 'source' => 'listing_inquiry-1', 'target' => 'openai-1', 'sourceHandle' => 'onListingInquiry'],
-                ['id' => 'e-ai-group', 'source' => 'openai-1', 'target' => 'assign_group-1'],
+                ['id' => 'e-listing-faq', 'source' => 'listing_inquiry-1', 'target' => 'listing-faq-question-initial', 'sourceHandle' => 'onListingInquiry'],
                 ['id' => 'e-group-end', 'source' => 'assign_group-1', 'target' => 'end-1'],
             ],
-        ],
+        ], [
+            'idPrefix' => 'listing-faq',
+            'basePosition' => ['x' => 760, 'y' => 200],
+            'questionInitial' => 'What would you like to know about {{listing_inquiry_item_title}} or our other listings?',
+            'questionFollowup' => 'More questions? Reply *done* when finished, *browse* to see listings again, or *agent* / *human* for sales.',
+            'systemPrompt' => 'You help customers understand listings. Use catalog knowledge when available. Never repeat the customer question — always provide a helpful answer.',
+            'prompt' => "Listing context: {{listing_inquiry_item_title}}\n\nCustomer question:\n{{contact_last_message}}",
+            'llmVariableName' => 'listing_faq_reply',
+            'llmLabel' => 'Listing FAQ',
+            'counterMax' => 6,
+            'keywordExits' => [
+                ['id' => 'cond-browse', 'keyword' => 'browse', 'target' => 'listing_inquiry-1'],
+            ],
+            'doneTarget' => 'end-1',
+            'humanTarget' => 'assign_group-1',
+        ]),
     ],
 
     'whatsapp_voice_ai_agent' => [
         'name' => 'WhatsApp Voice AI Agent',
-        'description' => 'Conversational AI for always-on chat: rate-limited LLM with knowledge base and human escalation.',
+        'description' => 'Conversational AI for always-on chat: rate-limited multi-turn LLM loop with knowledge base and human escalation.',
         'category' => 'ai',
         'video_url' => null,
         'setup_hint' => 'Assign this flow as your company Voice/AI flow (whatsapp_ai_flow_id). Train knowledge base, set OpenRouter key, configure counter limits, then Publish.',
@@ -336,7 +295,7 @@ return [
             'Support agent/group for escalation',
             'Publish flow',
         ],
-        'flow_data' => [
+        'flow_data' => FaqConversationLoop::mergeInto([
             'nodes' => [
                 [
                     'id' => 'incomingMessage-1',
@@ -358,58 +317,6 @@ return [
                         'keywords' => [
                             ['id' => 'kw1', 'value' => 'agent', 'matchType' => 'contains'],
                             ['id' => 'kw2', 'value' => 'human', 'matchType' => 'contains'],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'counter-1',
-                    'type' => 'counter',
-                    'position' => ['x' => 380, 'y' => 240],
-                    'data' => [
-                        'label' => 'Rate limit',
-                        'type' => 'counter',
-                        'settings' => [
-                            'counter' => ['maxExecutions' => 20, 'period' => 'last_30_days'],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'check_pricing-1',
-                    'type' => 'check_pricing',
-                    'position' => ['x' => 760, 'y' => 240],
-                    'data' => [
-                        'label' => 'AI credits',
-                        'type' => 'check_pricing',
-                        'settings' => [
-                            'pricing' => ['freeExecutions' => 10],
-                        ],
-                    ],
-                ],
-                [
-                    'id' => 'openai-1',
-                    'type' => 'openai',
-                    'position' => ['x' => 1140, 'y' => 240],
-                    'data' => [
-                        'label' => 'Voice AI',
-                        'type' => 'openai',
-                        'settings' => [
-                            'llm' => [
-                                'model' => 'openai/gpt-4o-mini',
-                                'systemPrompt' => 'You are the voice of this business on WhatsApp. Be warm, concise, and helpful. Use the knowledge base. Never invent prices or policies. For emergencies or account access issues, tell the user to type *agent*.',
-                                'prompt' => '{{contact_last_message}}',
-                                'temperature' => 0.6,
-                                'maxTokens' => 700,
-                                'variableName' => 'voice_ai_reply',
-                                'autoSendMessage' => true,
-                                'enableVectorSearch' => true,
-                                'vectorSearchLimit' => 6,
-                                'similarityThreshold' => 0.3,
-                                'intentions' => [
-                                    ['id' => 'int-sales', 'name' => 'sales', 'description' => 'Pricing, products, purchasing'],
-                                    ['id' => 'int-support', 'name' => 'support', 'description' => 'Help, issues, complaints'],
-                                    ['id' => 'int-general', 'name' => 'general', 'description' => 'General questions'],
-                                ],
-                            ],
                         ],
                     ],
                 ],
@@ -455,19 +362,27 @@ return [
                 ],
             ],
             'edges' => [
-                ['id' => 'e-incoming-counter', 'source' => 'incomingMessage-1', 'target' => 'counter-1'],
+                ['id' => 'e-incoming-counter', 'source' => 'incomingMessage-1', 'target' => 'voice-faq-counter'],
                 ['id' => 'e-kw1-agent', 'source' => 'keyword_trigger-1', 'target' => 'assign_agent-1', 'sourceHandle' => 'keyword-kw1'],
                 ['id' => 'e-kw2-agent', 'source' => 'keyword_trigger-1', 'target' => 'assign_agent-1', 'sourceHandle' => 'keyword-kw2'],
                 ['id' => 'e-agent-msg', 'source' => 'assign_agent-1', 'target' => 'message-1'],
                 ['id' => 'e-handoff-end', 'source' => 'message-1', 'target' => 'end-1'],
-                ['id' => 'e-counter-true', 'source' => 'counter-1', 'target' => 'check_pricing-1', 'sourceHandle' => 'true'],
-                ['id' => 'e-counter-false', 'source' => 'counter-1', 'target' => 'message-2', 'sourceHandle' => 'false'],
-                ['id' => 'e-pricing-ai', 'source' => 'check_pricing-1', 'target' => 'openai-1', 'sourceHandle' => 'true'],
-                ['id' => 'e-pricing-false', 'source' => 'check_pricing-1', 'target' => 'message-2', 'sourceHandle' => 'false'],
-                ['id' => 'e-ai-end', 'source' => 'openai-1', 'target' => 'end-1', 'sourceHandle' => 'default'],
                 ['id' => 'e-limit-end', 'source' => 'message-2', 'target' => 'end-1'],
             ],
-        ],
+        ], [
+            'idPrefix' => 'voice-faq',
+            'basePosition' => ['x' => 380, 'y' => 240],
+            'mode' => 'incoming',
+            'questionFollowup' => 'Anything else I can help with? Reply *done* to end, or *agent* / *human* for a team member.',
+            'systemPrompt' => 'You are the voice of this business on WhatsApp. Be warm, concise, and helpful. Use the knowledge base. Never invent prices or policies. Never repeat the customer question — always provide a helpful answer. For emergencies, tell the user to type *agent*.',
+            'llmVariableName' => 'voice_ai_reply',
+            'llmLabel' => 'Voice AI',
+            'counterMax' => 20,
+            'freeExecutions' => 10,
+            'doneTarget' => 'end-1',
+            'humanTarget' => 'assign_agent-1',
+            'limitTarget' => 'message-2',
+        ]),
     ],
 
 ];

@@ -114,10 +114,12 @@ class CatalogCheckoutVariableService
     ): array {
         $currencyService = app(CatalogCurrencyService::class);
         $formattedTotal = $currencyService->formatAmount($company, $enriched['total']);
+        $bareTotal = number_format($enriched['total'], 2, '.', ',');
 
         return [
             $prefix.'_items' => $enriched['items_text'],
             $prefix.'_total' => $formattedTotal,
+            $prefix.'_total_amount' => $bareTotal,
             $prefix.'_item_count' => (string) $enriched['item_count'],
             $prefix.'_json' => json_encode($enriched['items'], JSON_THROW_ON_ERROR),
             $prefix.'_message' => $orderMessage ?? '',

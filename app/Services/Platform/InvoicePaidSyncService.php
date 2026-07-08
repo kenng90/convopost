@@ -3,11 +3,11 @@
 namespace App\Services\Platform;
 
 use Illuminate\Support\Facades\Log;
-use Modules\Contacts\Models\Contact;
 use Modules\Invoice\Models\Invoice;
 use Modules\Journies\Models\Journey;
 use Modules\Journies\Models\JourneyStage;
 use Modules\Journies\Services\JourneyContactService;
+use Modules\Wpbox\Models\Contact;
 
 class InvoicePaidSyncService
 {
@@ -46,9 +46,7 @@ class InvoicePaidSyncService
             'currency' => $invoice->currency,
         ]);
 
-        $existing = $contact->note ?? '';
-        $contact->note = trim($existing."\n".$note);
-        $contact->save();
+        $contact->addNote($note);
     }
 
     private function moveToPaidStage(Contact $contact, Invoice $invoice): void

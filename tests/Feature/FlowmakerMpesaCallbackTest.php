@@ -6,6 +6,8 @@ use App\Models\Company;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Modules\Invoice\Models\Invoice;
 use Modules\Invoice\Models\InvoicePayment;
+use Modules\Wpbox\Models\Contact;
+use Modules\Wpbox\Models\Message;
 use Tests\TestCase;
 
 class FlowmakerMpesaCallbackTest extends TestCase
@@ -16,13 +18,19 @@ class FlowmakerMpesaCallbackTest extends TestCase
     {
         $company = Company::factory()->create();
 
+        $contact = Contact::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'name' => 'Jane Doe',
+            'phone' => '254712345678',
+        ]);
+
         $records = Invoice::createForFlowStkPush(
             company: $company,
             customerName: 'Jane Doe',
             customerPhone: '254712345678',
             flowId: 99,
             nodeId: 'node-1',
-            contactId: 42,
+            contactId: $contact->id,
             amount: 250.00,
             transactionDesc: 'Order payment',
             accountReference: 'ORDER-1',
@@ -67,6 +75,15 @@ class FlowmakerMpesaCallbackTest extends TestCase
         $this->assertSame('success', $payment->status);
         $this->assertSame('QAB999XYZ', $payment->mpesa_receipt_number);
         $this->assertSame('paid', $records['invoice']->status);
+
+        $this->assertTrue(
+            Message::query()
+                ->where('contact_id', $contact->id)
+                ->where('is_note', true)
+                ->where('value', 'like', '%'.$records['invoice']->invoice_number.'%')
+                ->exists(),
+            'Expected a contact note after successful M-Pesa payment sync.'
+        );
     }
 
     public function test_flow_mpesa_callback_marks_invoice_payment_failed(): void

@@ -96,6 +96,7 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
   const checkoutVariables = [
     `${variablePrefix}_items`,
     `${variablePrefix}_total`,
+    `${variablePrefix}_total_amount`,
     `${variablePrefix}_item_count`,
     `${variablePrefix}_message`,
     `${variablePrefix}_json`,
