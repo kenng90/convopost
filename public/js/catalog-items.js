@@ -79,8 +79,10 @@ function buildItemPayload(base, scope = 'new') {
     }
 
     const bookingSourceEl = document.getElementById(scope === 'edit' ? 'editItemBookingSource' : 'newItemBookingSource');
-    if (bookingSourceEl && bookingSourceEl.value) {
-        payload.booking_source_id = parseInt(bookingSourceEl.value, 10);
+    if (bookingSourceEl) {
+        payload.booking_source_id = bookingSourceEl.value
+            ? parseInt(bookingSourceEl.value, 10)
+            : null;
     }
 
     return payload;
@@ -386,6 +388,12 @@ function editItemModal(itemId) {
             }
             document.getElementById('editItemTags').value = Array.isArray(fullItem.tags) ? fullItem.tags.join(', ') : '';
             fillVerticalFieldValues(fullItem, 'edit');
+
+            const editBookingSource = document.getElementById('editItemBookingSource');
+            if (editBookingSource) {
+                const sourceId = fullItem.metadata?.booking_source_id ?? fullItem.booking_source_id ?? '';
+                editBookingSource.value = sourceId ? String(sourceId) : '';
+            }
 
             if (window.$ && window.$.fn.modal) {
                 window.jQuery('#editItemModal').modal('show');

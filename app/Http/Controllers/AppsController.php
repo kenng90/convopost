@@ -41,7 +41,7 @@ class AppsController extends Controller
         try {
             foreach ($appFields as $key => $field) {
                 if ($field['separator']) {
-                    $snake = Str::snake($field['separator']);
+                    $snake = Str::slug($field['separator'], '_');
                     if (isset($field['icon'])) {
                         $icon = $field['icon'];
                         $icons[$snake] = $icon;
@@ -62,10 +62,12 @@ class AppsController extends Controller
                         ];
                     }
 
+                    $field['separator'] = null;
                     $separators[$separatorIndex[$snake]]['fields'][] = $field;
                 } else {
                     $snake = $separators[count($separators) - 1]['snake'];
                     $field['snake'] = $snake;
+                    $field['separator'] = null;
                     $separators[$separatorIndex[$snake]]['fields'][] = $field;
                 }
             }

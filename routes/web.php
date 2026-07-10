@@ -56,6 +56,11 @@ Route::controller(PublicCatalogController::class)->group(function () {
         Route::post('/{catalogId}/generate-order', 'generateOrder')->name('catalog.generate-order');
         Route::post('/{catalogId}/generate-inquiry', 'generateInquiry')->name('catalog.generate-inquiry');
         Route::post('/{catalogId}/generate-booking', 'generateBooking')->name('catalog.generate-booking');
+        Route::get('/{catalogId}/items/{itemId}/booking-config', 'itemBookingConfig')->name('catalog.item.booking-config');
+        Route::get('/{catalogId}/items/{itemId}/availability/dates', 'itemAvailabilityDates')->name('catalog.item.availability.dates');
+        Route::get('/{catalogId}/items/{itemId}/availability/slots', 'itemAvailabilitySlots')->name('catalog.item.availability.slots');
+        Route::post('/{catalogId}/items/{itemId}/book', 'bookItem')->name('catalog.item.book');
+        Route::get('/{catalogId}/booking-payment/{invoicePublicUuid}', 'bookingPaymentStatus')->name('catalog.booking-payment.status');
         Route::post('/{catalogId}/create-invoice', 'createInvoice')->name('catalog.create-invoice');
 
         Route::get('/{catalogId}', 'show')->name('catalog.public');

@@ -258,6 +258,8 @@ class CatalogTemplateRegistry
             'fuel_type' => ['fueltype', 'fuel'],
             'duration' => ['duration', 'length'],
             'availability' => ['availability', 'available'],
+            'booking_source_name' => ['bookableservice', 'bookingservice', 'remindersservice', 'bookingsourcename', 'bookingsource'],
+            'booking_source_id' => ['bookableserviceid', 'bookingsourceid', 'reminderssourceid', 'serviceid'],
         ];
 
         if ($vertical === null || ! $this->verticalExists($vertical)) {

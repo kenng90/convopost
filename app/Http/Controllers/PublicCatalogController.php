@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PublicCatalogBookItemRequest;
 use App\Http\Requests\PublicCatalogBrowseRequest;
 use App\Models\CatalogCollection;
 use App\Models\Company;
@@ -18,6 +19,7 @@ use App\Services\Catalog\CatalogItemRepository;
 use App\Services\Catalog\CatalogListingBookingReservationService;
 use App\Services\Catalog\CatalogListingBookingService;
 use App\Services\Catalog\CatalogListingInquiryService;
+use App\Services\Catalog\CatalogListingSlotBookingService;
 use App\Services\Catalog\CatalogUrlService;
 use App\Services\Catalog\CatalogWhatsAppOrderService;
 use App\Services\CatalogItemFilterService;
@@ -26,6 +28,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Modules\Invoice\Models\Invoice;
+use Modules\Reminders\Services\BookingPaymentService;
 use RuntimeException;
 
 class PublicCatalogController extends Controller
@@ -46,6 +49,8 @@ class PublicCatalogController extends Controller
         protected CatalogBookingPendingService $catalogBookingPendingService,
         protected CatalogFlowNodeSettingsService $catalogFlowNodeSettingsService,
         protected CatalogListingBookingReservationService $catalogListingBookingReservationService,
+        protected CatalogListingSlotBookingService $catalogListingSlotBookingService,
+        protected BookingPaymentService $bookingPaymentService,
     ) {
     }
 
@@ -666,6 +671,182 @@ class PublicCatalogController extends Controller
                     'name' => $invoice->company->name,
                 ],
             ],
+        ]);
+    }
+
+    /**
+     * Booking capability for a catalog listing item (slots vs WhatsApp fallback).
+     */
+    public function itemBookingConfig(Request $request, $catalogId, string $itemId)
+    {
+        $catalog = ListCatalog::withoutGlobalScopes()->find($catalogId);
+
+        if (! $catalog || $catalog->isCommerce()) {
+            return response()->json(['success' => false, 'message' => 'Catalog not found'], 404);
+        }
+
+        $item = $this->findProductInCatalog($catalog->items, $itemId);
+        if (! $item) {
+            return response()->json(['success' => false, 'message' => 'Item not found in catalog.'], 404);
+        }
+
+        $config = $this->catalogListingSlotBookingService->bookingConfig(
+            $catalog,
+            $item,
+            $request->query('flow_token')
+        );
+
+        return response()->json([
+            'success' => true,
+            ...$config,
+        ]);
+    }
+
+    /**
+     * Available booking dates for a catalog listing item.
+     */
+    public function itemAvailabilityDates(Request $request, $catalogId, string $itemId)
+    {
+        $catalog = ListCatalog::withoutGlobalScopes()->find($catalogId);
+
+        if (! $catalog || $catalog->isCommerce()) {
+            return response()->json(['success' => false, 'message' => 'Catalog not found'], 404);
+        }
+
+        $item = $this->findProductInCatalog($catalog->items, $itemId);
+        if (! $item) {
+            return response()->json(['success' => false, 'message' => 'Item not found in catalog.'], 404);
+        }
+
+        try {
+            $dates = $this->catalogListingSlotBookingService->availableDates(
+                $catalog,
+                $item,
+                $request->filled('duration_minutes') ? (int) $request->duration_minutes : null
+            );
+
+            return response()->json([
+                'success' => true,
+                'dates' => $dates,
+            ]);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Available booking slots for a catalog listing item on a given date.
+     */
+    public function itemAvailabilitySlots(Request $request, $catalogId, string $itemId)
+    {
+        $catalog = ListCatalog::withoutGlobalScopes()->find($catalogId);
+
+        if (! $catalog || $catalog->isCommerce()) {
+            return response()->json(['success' => false, 'message' => 'Catalog not found'], 404);
+        }
+
+        $item = $this->findProductInCatalog($catalog->items, $itemId);
+        if (! $item) {
+            return response()->json(['success' => false, 'message' => 'Item not found in catalog.'], 404);
+        }
+
+        $validated = $request->validate([
+            'date' => 'required|date_format:Y-m-d',
+            'duration_minutes' => 'nullable|integer|min:5|max:480',
+        ]);
+
+        try {
+            $payload = $this->catalogListingSlotBookingService->slotsForDate(
+                $catalog,
+                $item,
+                $validated['date'],
+                $validated['duration_minutes'] ?? null
+            );
+
+            return response()->json([
+                'success' => true,
+                ...$payload,
+            ]);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Confirm a catalog listing booking using a selected slot.
+     */
+    public function bookItem(PublicCatalogBookItemRequest $request, $catalogId, string $itemId)
+    {
+        $catalog = ListCatalog::withoutGlobalScopes()->find($catalogId);
+
+        if (! $catalog || $catalog->isCommerce()) {
+            return response()->json(['success' => false, 'message' => 'Catalog not found'], 404);
+        }
+
+        $item = $this->findProductInCatalog($catalog->items, $itemId);
+        if (! $item) {
+            return response()->json(['success' => false, 'message' => 'Item not found in catalog.'], 404);
+        }
+
+        $validated = $request->validated();
+
+        try {
+            $result = $this->catalogListingSlotBookingService->bookSlot(
+                $catalog,
+                $item,
+                $validated['slot_id'],
+                $validated['customerPhone'],
+                $validated['customerName'] ?? null,
+                $validated['notes'] ?? null,
+                $validated['duration_minutes'] ?? null,
+                $validated['flow_token'] ?? null
+            );
+
+            $this->catalogAnalyticsService->record(
+                $catalog->company_id,
+                $catalog->id,
+                'listing_booking',
+                [
+                    'item_id' => $itemId,
+                    'reservation_id' => $result['reservation']['id'] ?? null,
+                    'requires_payment' => $result['requires_action'],
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                ...$result,
+            ]);
+        } catch (RuntimeException $exception) {
+            $status = $exception->getCode() === 409 ? 409 : 422;
+
+            return response()->json([
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ], $status);
+        }
+    }
+
+    /**
+     * Poll M-Pesa payment status for a catalog slot booking.
+     */
+    public function bookingPaymentStatus(Request $request, $catalogId, string $invoicePublicUuid)
+    {
+        $catalog = ListCatalog::withoutGlobalScopes()->find($catalogId);
+
+        if (! $catalog) {
+            return response()->json(['success' => false, 'message' => 'Catalog not found'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'payment' => $this->bookingPaymentService->paymentStatus($catalog->company, $invoicePublicUuid),
         ]);
     }
 
