@@ -215,11 +215,15 @@ class ReservationBookingService
             : null;
 
         if ($updating && $calendarUser && ($reservation->google_event_id || $reservation->external_id)) {
+            $attendeeEmail = $member->email && $calendarUser
+                ? $this->googleCalendarService->attendeeEmailForMember($member, $calendarUser)
+                : $member->email;
+
             $this->googleCalendarService->updateEventForReservation(
                 $calendarUser,
                 $reservation,
                 $source,
-                $member->calendarUser() ? null : $member->email
+                $attendeeEmail
             );
 
             return;
@@ -233,12 +237,26 @@ class ReservationBookingService
             $company?->user_id ? User::find($company->user_id) : null
         );
 
-        if ($result) {
+        if ($result && ! empty($result['event_id'])) {
             $reservation->update([
                 'google_event_id' => $result['event_id'],
                 'google_calendar_user_id' => $result['calendar_user_id'],
+                'google_calendar_id' => $result['google_calendar_id'],
+                'google_calendar_sync_error' => null,
             ]);
+
+            return;
         }
+
+        $error = is_array($result) ? ($result['error'] ?? null) : null;
+        if (! $error) {
+            $syncInfo = $this->googleCalendarService->calendarSyncInfoForMember($member);
+            $error = $syncInfo['connected']
+                ? __('Could not create Google Calendar event.')
+                : __('No Google Calendar connected for this team member.');
+        }
+
+        $reservation->update(['google_calendar_sync_error' => $error]);
     }
 
     private function deleteCalendarEvent(Reservation $reservation): void
@@ -249,7 +267,11 @@ class ReservationBookingService
 
         $calendarUser = User::find($reservation->google_calendar_user_id);
         if ($calendarUser) {
-            $this->googleCalendarService->deleteEventForReservation($calendarUser, $reservation);
+            $this->googleCalendarService->deleteEventForReservation(
+                $calendarUser,
+                $reservation,
+                $reservation->source
+            );
         }
     }
 

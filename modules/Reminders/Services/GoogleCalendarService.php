@@ -27,6 +27,83 @@ class GoogleCalendarService
         return $user->getConfig('google_calendar_id', 'primary') ?: 'primary';
     }
 
+    public function resolvedCalendarId(User $user, ?string $override = null): string
+    {
+        if ($override !== null && $override !== '') {
+            return $override;
+        }
+
+        return $this->calendarId($user);
+    }
+
+    public function calendarIdForReservation(User $user, Reservation $reservation, ?Source $source = null): string
+    {
+        if ($reservation->google_calendar_id) {
+            return $reservation->google_calendar_id;
+        }
+
+        if ($source?->google_calendar_id) {
+            return $source->google_calendar_id;
+        }
+
+        return $this->calendarId($user);
+    }
+
+    /**
+     * @return array<int, array{id: string, summary: string, label: string, primary: bool}>
+     */
+    public function listCalendars(User $user): array
+    {
+        if (! $this->isConnected($user)) {
+            return [];
+        }
+
+        $accessToken = $this->accessToken($user);
+        if (! $accessToken) {
+            return [];
+        }
+
+        $response = Http::withToken($accessToken)->get(self::CALENDAR_BASE.'/users/me/calendarList', [
+            'minAccessRole' => 'writer',
+        ]);
+
+        if (! $response->successful()) {
+            Log::warning('Google Calendar list failed', [
+                'user_id' => $user->id,
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+
+            return [];
+        }
+
+        return collect($response->json('items', []))
+            ->map(function (array $item) {
+                $summary = $item['summary'] ?? $item['id'];
+                $primary = ! empty($item['primary']);
+
+                return [
+                    'id' => $item['id'],
+                    'summary' => $summary,
+                    'label' => $primary ? "{$summary} (".__('Primary').')' : $summary,
+                    'primary' => $primary,
+                ];
+            })
+            ->sortByDesc('primary')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function calendarSelectOptions(User $user): array
+    {
+        return collect($this->listCalendars($user))
+            ->mapWithKeys(fn (array $calendar) => [$calendar['id'] => $calendar['label']])
+            ->all();
+    }
+
     /**
      * @return array<int, array{start: Carbon, end: Carbon}>
      */
@@ -70,6 +147,80 @@ class GoogleCalendarService
         })->all();
     }
 
+    /**
+     * @return array{
+     *     connected: bool,
+     *     mode: string,
+     *     calendar_user_name: ?string,
+     *     calendar_user_email: ?string,
+     *     calendar_id: ?string,
+     *     attendee_email: ?string
+     * }
+     */
+    public function calendarSyncInfoForMember(AppointmentStaff $member): array
+    {
+        $calendarUser = $member->calendarUser();
+
+        if ($calendarUser && $this->isConnected($calendarUser)) {
+            return [
+                'connected' => true,
+                'mode' => 'linked_user',
+                'calendar_user_name' => $calendarUser->name,
+                'calendar_user_email' => $calendarUser->email,
+                'calendar_id' => $this->calendarId($calendarUser),
+                'attendee_email' => $this->attendeeEmailForMember($member, $calendarUser),
+            ];
+        }
+
+        $host = $this->resolveCompanyCalendarHost($member->company_id);
+        if ($host && $this->isConnected($host) && $member->email) {
+            return [
+                'connected' => true,
+                'mode' => 'company_invite',
+                'calendar_user_name' => $host->name,
+                'calendar_user_email' => $host->email,
+                'calendar_id' => $this->calendarId($host),
+                'attendee_email' => $member->email,
+            ];
+        }
+
+        return [
+            'connected' => false,
+            'mode' => 'none',
+            'calendar_user_name' => $calendarUser?->name,
+            'calendar_user_email' => $calendarUser?->email,
+            'calendar_id' => null,
+            'attendee_email' => $member->email ?: null,
+        ];
+    }
+
+    public function calendarSyncLabelForMember(AppointmentStaff $member): string
+    {
+        $info = $this->calendarSyncInfoForMember($member);
+
+        if (! $info['connected']) {
+            return __('Not connected');
+        }
+
+        return $info['calendar_user_email'] ?: __('Connected');
+    }
+
+    public function attendeeEmailForMember(AppointmentStaff $member, User $calendarUser): ?string
+    {
+        if (! $member->email) {
+            return null;
+        }
+
+        if (strcasecmp($member->email, (string) $calendarUser->email) === 0) {
+            return null;
+        }
+
+        return $member->email;
+    }
+
+    /**
+     * @return array{event_id: ?string, calendar_user_id: ?int, error: ?string}|null
+     */
     public function createEventForAppointmentStaff(
         AppointmentStaff $member,
         Reservation $reservation,
@@ -78,9 +229,16 @@ class GoogleCalendarService
     ): ?array {
         $calendarUser = $member->calendarUser();
         if ($calendarUser && $this->isConnected($calendarUser)) {
-            $eventId = $this->createEvent($calendarUser, $reservation, $source);
+            $calendarId = $this->resolvedCalendarId($calendarUser, $source->google_calendar_id);
+            $result = $this->createEvent(
+                $calendarUser,
+                $reservation,
+                $source,
+                $this->attendeeEmailForMember($member, $calendarUser),
+                $member->name
+            );
 
-            return $eventId ? ['event_id' => $eventId, 'calendar_user_id' => $calendarUser->id] : null;
+            return $this->normalizeSyncResult($result, $calendarUser->id, $calendarId);
         }
 
         $host = $fallbackHost ?? $this->resolveCompanyCalendarHost($member->company_id);
@@ -88,9 +246,10 @@ class GoogleCalendarService
             return null;
         }
 
-        $eventId = $this->createEventWithAttendee($host, $reservation, $source, $member->email, $member->name);
+        $calendarId = $this->resolvedCalendarId($host, $source->google_calendar_id);
+        $result = $this->createEventWithAttendee($host, $reservation, $source, $member->email, $member->name);
 
-        return $eventId ? ['event_id' => $eventId, 'calendar_user_id' => $host->id] : null;
+        return $this->normalizeSyncResult($result, $host->id, $calendarId);
     }
 
     public function updateEventForReservation(User $calendarUser, Reservation $reservation, Source $source, ?string $attendeeEmail = null): bool
@@ -123,40 +282,48 @@ class GoogleCalendarService
         }
 
         $response = Http::withToken($accessToken)->patch(
-            self::CALENDAR_BASE.'/calendars/'.urlencode($this->calendarId($calendarUser)).'/events/'.urlencode($eventId),
+            self::CALENDAR_BASE.'/calendars/'.urlencode($this->calendarIdForReservation($calendarUser, $reservation, $source)).'/events/'.urlencode($eventId),
             $payload
         );
 
         return $response->successful();
     }
 
-    public function deleteEventForReservation(User $calendarUser, Reservation $reservation): bool
+    public function deleteEventForReservation(User $calendarUser, Reservation $reservation, ?Source $source = null): bool
     {
         $eventId = $reservation->google_event_id ?: $reservation->external_id;
 
-        return $this->deleteEvent($calendarUser, $eventId);
+        return $this->deleteEvent(
+            $calendarUser,
+            $eventId,
+            $this->calendarIdForReservation($calendarUser, $reservation, $source)
+        );
     }
 
+    /**
+     * @return array{event_id: ?string, error: ?string}
+     */
     public function createEventWithAttendee(
         User $host,
         Reservation $reservation,
         Source $source,
         string $attendeeEmail,
         ?string $attendeeName = null
-    ): ?string {
+    ): array {
         if (! $this->isConnected($host)) {
-            return null;
+            return ['event_id' => null, 'error' => __('Google Calendar is not connected.')];
         }
 
         $accessToken = $this->accessToken($host);
         if (! $accessToken) {
-            return null;
+            return ['event_id' => null, 'error' => __('Could not refresh Google Calendar access token.')];
         }
 
         $contactName = $reservation->contact?->name ?? 'Customer';
 
-        $response = Http::withToken($accessToken)->post(
-            self::CALENDAR_BASE.'/calendars/'.urlencode($this->calendarId($host)).'/events',
+        return $this->postCalendarEvent(
+            $host,
+            $accessToken,
             [
                 'summary' => "{$source->name} — {$contactName}",
                 'description' => 'Reservation #'.$reservation->id.($attendeeName ? " with {$attendeeName}" : ''),
@@ -176,20 +343,11 @@ class GoogleCalendarService
                         'convocon_reservation_id' => (string) $reservation->id,
                     ],
                 ],
-            ]
+            ],
+            $reservation->id,
+            'Google Calendar attendee event create failed',
+            $this->resolvedCalendarId($host, $source->google_calendar_id)
         );
-
-        if (! $response->successful()) {
-            Log::warning('Google Calendar attendee event create failed', [
-                'reservation_id' => $reservation->id,
-                'status' => $response->status(),
-                'body' => $response->json(),
-            ]);
-
-            return null;
-        }
-
-        return $response->json('id');
     }
 
     public function resolveCompanyCalendarHost(int $companyId): ?User
@@ -210,52 +368,57 @@ class GoogleCalendarService
             ->first(fn (User $user) => $this->isConnected($user));
     }
 
-    public function createEvent(User $user, Reservation $reservation, Source $source): ?string
-    {
+    /**
+     * @return array{event_id: ?string, error: ?string}
+     */
+    public function createEvent(
+        User $user,
+        Reservation $reservation,
+        Source $source,
+        ?string $attendeeEmail = null,
+        ?string $attendeeName = null
+    ): array {
         if (! $this->isConnected($user)) {
-            return null;
+            return ['event_id' => null, 'error' => __('Google Calendar is not connected.')];
         }
 
         $accessToken = $this->accessToken($user);
         if (! $accessToken) {
-            return null;
+            return ['event_id' => null, 'error' => __('Could not refresh Google Calendar access token.')];
         }
 
         $contactName = $reservation->contact?->name ?? 'Customer';
         $sourceName = $source->name;
-
-        $response = Http::withToken($accessToken)->post(
-            self::CALENDAR_BASE.'/calendars/'.urlencode($this->calendarId($user)).'/events',
-            [
-                'summary' => "{$sourceName} — {$contactName}",
-                'description' => 'Reservation #'.$reservation->id,
-                'start' => [
-                    'dateTime' => Carbon::parse($reservation->start_date)->toRfc3339String(),
-                    'timeZone' => $source->timezone,
-                ],
-                'end' => [
-                    'dateTime' => Carbon::parse($reservation->end_date)->toRfc3339String(),
-                    'timeZone' => $source->timezone,
-                ],
-                'extendedProperties' => [
-                    'private' => [
-                        'convocon_reservation_id' => (string) $reservation->id,
-                    ],
-                ],
-            ]
-        );
-
-        if (! $response->successful()) {
-            Log::warning('Google Calendar event create failed', [
-                'reservation_id' => $reservation->id,
-                'status' => $response->status(),
-                'body' => $response->json(),
-            ]);
-
-            return null;
+        $description = 'Reservation #'.$reservation->id;
+        if ($attendeeName) {
+            $description .= " with {$attendeeName}";
         }
 
-        return $response->json('id');
+        $payload = [
+            'summary' => "{$sourceName} — {$contactName}",
+            'description' => $description,
+            'start' => [
+                'dateTime' => Carbon::parse($reservation->start_date)->toRfc3339String(),
+                'timeZone' => $source->timezone,
+            ],
+            'end' => [
+                'dateTime' => Carbon::parse($reservation->end_date)->toRfc3339String(),
+                'timeZone' => $source->timezone,
+            ],
+            'extendedProperties' => [
+                'private' => [
+                    'convocon_reservation_id' => (string) $reservation->id,
+                ],
+            ],
+        ];
+
+        if ($attendeeEmail) {
+            $payload['attendees'] = [['email' => $attendeeEmail]];
+        }
+
+        $calendarId = $this->resolvedCalendarId($user, $source->google_calendar_id);
+
+        return $this->postCalendarEvent($user, $accessToken, $payload, $reservation->id, 'Google Calendar event create failed', $calendarId);
     }
 
     public function updateEvent(User $user, Reservation $reservation, Source $source): bool
@@ -290,7 +453,7 @@ class GoogleCalendarService
         return $response->successful();
     }
 
-    public function deleteEvent(User $user, ?string $eventId): bool
+    public function deleteEvent(User $user, ?string $eventId, ?string $calendarId = null): bool
     {
         if (! $eventId || ! $this->isConnected($user)) {
             return false;
@@ -302,7 +465,7 @@ class GoogleCalendarService
         }
 
         $response = Http::withToken($accessToken)->delete(
-            self::CALENDAR_BASE.'/calendars/'.urlencode($this->calendarId($user)).'/events/'.urlencode($eventId)
+            self::CALENDAR_BASE.'/calendars/'.urlencode($this->resolvedCalendarId($user, $calendarId)).'/events/'.urlencode($eventId)
         );
 
         return $response->successful() || $response->status() === 404 || $response->status() === 410;
@@ -337,6 +500,60 @@ class GoogleCalendarService
         ] as $key) {
             $user->setConfig($key, '');
         }
+    }
+
+    /**
+     * @return array{event_id: ?string, calendar_user_id: ?int, google_calendar_id: ?string, error: ?string}
+     */
+    private function normalizeSyncResult(array $result, int $calendarUserId, string $calendarId): array
+    {
+        if (! empty($result['event_id'])) {
+            return [
+                'event_id' => $result['event_id'],
+                'calendar_user_id' => $calendarUserId,
+                'google_calendar_id' => $calendarId,
+                'error' => null,
+            ];
+        }
+
+        return [
+            'event_id' => null,
+            'calendar_user_id' => null,
+            'google_calendar_id' => null,
+            'error' => $result['error'] ?? __('Could not create Google Calendar event.'),
+        ];
+    }
+
+    /**
+     * @return array{event_id: ?string, error: ?string}
+     */
+    private function postCalendarEvent(User $user, string $accessToken, array $payload, int $reservationId, string $logContext, ?string $calendarId = null): array
+    {
+        $resolvedCalendarId = $this->resolvedCalendarId($user, $calendarId);
+        $url = self::CALENDAR_BASE.'/calendars/'.urlencode($resolvedCalendarId).'/events';
+        if (! empty($payload['attendees'])) {
+            $url .= '?sendUpdates=all';
+        }
+
+        $response = Http::withToken($accessToken)->post($url, $payload);
+
+        if (! $response->successful()) {
+            Log::warning($logContext, [
+                'reservation_id' => $reservationId,
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+
+            return [
+                'event_id' => null,
+                'error' => $response->json('error.message') ?? __('Could not create Google Calendar event.'),
+            ];
+        }
+
+        return [
+            'event_id' => $response->json('id'),
+            'error' => null,
+        ];
     }
 
     private function accessToken(User $user): ?string

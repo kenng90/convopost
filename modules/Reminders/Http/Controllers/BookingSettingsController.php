@@ -5,6 +5,7 @@ namespace Modules\Reminders\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Modules\Reminders\Models\Source;
 use Modules\Reminders\Services\BookingCatalogService;
 use Modules\Reminders\Services\BookingPaymentService;
@@ -42,6 +43,9 @@ class BookingSettingsController extends Controller
             ],
             'connected' => $this->googleCalendarService->isConnected($user),
             'calendarId' => $this->googleCalendarService->calendarId($user),
+            'calendars' => $this->googleCalendarService->isConnected($user)
+                ? $this->googleCalendarService->listCalendars($user)
+                : [],
             'connectedAt' => $user->getConfig('google_calendar_connected_at'),
             'redirectUri' => route('reminders.google.callback', [], true),
             'catalogUrl' => $company ? route('reminders.booking.catalog', ['subdomain' => $company->subdomain]) : null,
@@ -93,15 +97,24 @@ class BookingSettingsController extends Controller
     {
         $this->ownerAndStaffOnly();
 
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+        $allowedCalendarIds = array_keys($this->googleCalendarService->calendarSelectOptions($user));
+
         $request->validate([
-            'google_calendar_id' => 'required|string|max:255',
+            'google_calendar_id' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::in($allowedCalendarIds ?: ['primary']),
+            ],
         ]);
 
-        auth()->user()->setConfig('google_calendar_id', $request->google_calendar_id);
+        $user->setConfig('google_calendar_id', $request->google_calendar_id);
 
         return redirect()
             ->route('reminders.booking-settings.index')
-            ->withStatus(__('Calendar ID updated.'));
+            ->withStatus(__('Default calendar updated.'));
     }
 
     public function widgetCatalog(Request $request, string $subdomain)
