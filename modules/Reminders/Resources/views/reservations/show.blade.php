@@ -58,8 +58,17 @@
                     <dd class="col-sm-8">
                         @if ($reservation->google_event_id)
                             <span class="badge badge-success">{{ __('Linked') }}</span>
+                            @if ($reservation->googleCalendarUser)
+                                <small class="text-muted d-block">{{ __('Calendar account') }}: {{ $reservation->googleCalendarUser->name }} ({{ $reservation->googleCalendarUser->email }})</small>
+                            @endif
+                            @if ($reservation->google_calendar_id)
+                                <small class="text-muted d-block">{{ __('Calendar') }}: {{ $reservation->google_calendar_id }}</small>
+                            @endif
                         @else
                             <span class="badge badge-secondary">{{ __('Not linked') }}</span>
+                        @endif
+                        @if ($reservation->google_calendar_sync_error)
+                            <small class="text-danger d-block mt-1">{{ $reservation->google_calendar_sync_error }}</small>
                         @endif
                     </dd>
                 </dl>

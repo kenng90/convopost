@@ -333,6 +333,7 @@ class ReservationsController extends Controller
             'source.department',
             'appointmentStaffMember.department',
             'staff',
+            'googleCalendarUser',
         ]);
 
         return view($this->view_path.'show', [

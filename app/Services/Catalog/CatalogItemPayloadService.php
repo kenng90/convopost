@@ -57,8 +57,12 @@ class CatalogItemPayloadService
             }
         }
 
-        if (! empty($input['booking_source_id'])) {
-            $metadata['booking_source_id'] = (int) $input['booking_source_id'];
+        if (array_key_exists('booking_source_id', $input)) {
+            if ($input['booking_source_id'] === null || $input['booking_source_id'] === '' || (int) $input['booking_source_id'] <= 0) {
+                unset($metadata['booking_source_id']);
+            } else {
+                $metadata['booking_source_id'] = (int) $input['booking_source_id'];
+            }
         }
 
         $payload = [

@@ -180,5 +180,48 @@ class ExcelImportServiceTest extends TestCase
         }
 
         $this->assertSame($expected, $headers);
+        $this->assertContains('Bookable service', $headers);
+    }
+
+    public function test_transform_items_maps_bookable_service_name_into_metadata(): void
+    {
+        $items = [[
+            'Item ID' => 'SVC_001',
+            'Title' => 'Home Deep Cleaning',
+            'Bookable service' => 'Home Deep Cleaning',
+        ]];
+
+        $mapping = $this->service->buildColumnMappingFromHeaders(array_keys($items[0]), 'general_service');
+        $transformed = $this->service->transformItems($items, $mapping, 'general_service');
+
+        $this->assertSame('Home Deep Cleaning', $transformed[0]['metadata']['booking_source_name']);
+    }
+
+    public function test_transform_items_maps_numeric_bookable_service_to_source_id(): void
+    {
+        $items = [[
+            'Item ID' => 'SVC_001',
+            'Title' => 'Home Deep Cleaning',
+            'Bookable service' => '42',
+        ]];
+
+        $mapping = $this->service->buildColumnMappingFromHeaders(array_keys($items[0]), 'general_service');
+        $transformed = $this->service->transformItems($items, $mapping, 'general_service');
+
+        $this->assertSame(42, $transformed[0]['metadata']['booking_source_id']);
+        $this->assertArrayNotHasKey('booking_source_name', $transformed[0]['metadata']);
+    }
+
+    public function test_template_sample_rows_include_bookable_service_for_service_vertical(): void
+    {
+        $registry = app(\App\Services\Catalog\CatalogTemplateRegistry::class);
+        $headers = $registry->excelHeadersForVertical('general_service');
+        $bookableColumn = array_search('Bookable service', $headers, true);
+        $this->assertNotFalse($bookableColumn);
+
+        $sheet = $this->service->createTemplateSpreadsheet('general_service')->getActiveSheet();
+        $sampleValue = (string) $sheet->getCell([$bookableColumn + 1, 2])->getValue();
+
+        $this->assertSame('Home Deep Cleaning', $sampleValue);
     }
 }

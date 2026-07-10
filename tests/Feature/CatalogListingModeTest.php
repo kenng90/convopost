@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Scopes\CompanyScope;
 use App\Services\Catalog\CatalogMode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Modules\Reminders\Models\Source;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -321,6 +322,58 @@ class CatalogListingModeTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('item.images.0', 'https://example.com/cover.jpg');
         $this->assertCount(3, $response->json('item.images'));
+    }
+
+    public function test_owner_can_update_listing_item_booking_source(): void
+    {
+        [$owner, $company] = $this->actingOwner();
+
+        $source = Source::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'name' => 'AC Service',
+            'is_bookable' => true,
+            'default_duration_minutes' => 30,
+            'duration_options' => [30],
+            'timezone' => 'UTC',
+            'working_hours' => collect(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])
+                ->mapWithKeys(fn ($day) => [$day => ['enabled' => true, 'start' => '09:00', 'end' => '17:00']])
+                ->all(),
+        ]);
+
+        $catalog = ListCatalog::withoutGlobalScope(CompanyScope::class)->create([
+            'company_id' => $company->id,
+            'name' => 'Services',
+            'slug' => 'services',
+            'catalog_mode' => CatalogMode::SERVICE,
+            'vertical' => 'general_service',
+            'version' => 1,
+            'items' => [[
+                'id' => 'svc-1',
+                'title' => 'AC Repair',
+                'price' => 3000,
+            ]],
+            'columns' => [],
+            'source' => 'manual',
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->withSession(['company_id' => $company->id])
+            ->putJson(route('catalogs.items.update', [$catalog->id, 'svc-1']), [
+                'title' => 'AC Repair',
+                'booking_source_id' => $source->id,
+            ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('item.metadata.booking_source_id', $source->id);
+
+        $this->actingAs($owner)
+            ->withSession(['company_id' => $company->id])
+            ->putJson(route('catalogs.items.update', [$catalog->id, 'svc-1']), [
+                'title' => 'AC Repair',
+                'booking_source_id' => null,
+            ])
+            ->assertOk()
+            ->assertJsonMissingPath('item.metadata.booking_source_id');
     }
 
     /**

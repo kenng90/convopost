@@ -202,7 +202,13 @@ class ExcelImportService
 
                         $value = $this->cellValue($item, $columnMapping, $key);
                         if ($value !== '') {
-                            $metadata[$key] = $value;
+                            if ($key === 'booking_source_id' && is_numeric($value)) {
+                                $metadata[$key] = (int) $value;
+                            } elseif ($key === 'booking_source_name' && is_numeric($value)) {
+                                $metadata['booking_source_id'] = (int) $value;
+                            } else {
+                                $metadata[$key] = $value;
+                            }
                         }
                     }
 
@@ -415,6 +421,7 @@ class ExcelImportService
                     'Area (m²)' => '145',
                     'Status' => 'Available',
                     'Property type' => 'Apartment',
+                    'Bookable service' => 'Property Viewing',
                 ],
                 [
                     'Item ID' => 'HOME_002',
@@ -505,6 +512,7 @@ class ExcelImportService
                     'Mileage (km)' => '45000',
                     'Fuel' => 'Petrol',
                     'Status' => 'Available',
+                    'Bookable service' => 'Vehicle Test Drive',
                 ],
                 [
                     'Item ID' => 'AUTO_002',
@@ -585,6 +593,7 @@ class ExcelImportService
                     'Latitude' => '-1.2921',
                     'Longitude' => '36.8219',
                     'Status' => 'Available',
+                    'Bookable service' => 'Conference Room Hire',
                 ],
                 [
                     'Item ID' => 'LIST_002',
@@ -627,6 +636,7 @@ class ExcelImportService
                     'Latitude' => '-0.7167',
                     'Longitude' => '36.4333',
                     'Status' => 'Available',
+                    'Bookable service' => 'Boat Charter - Lake Naivasha',
                 ],
                 [
                     'Item ID' => 'LIST_005',
@@ -655,6 +665,7 @@ class ExcelImportService
                     'Tags' => 'Popular',
                     'Duration' => '4 hours',
                     'Availability' => 'Available',
+                    'Bookable service' => 'Home Deep Cleaning',
                 ],
                 [
                     'Item ID' => 'SVC_002',
@@ -667,6 +678,7 @@ class ExcelImportService
                     'Tags' => '',
                     'Duration' => '2 hours',
                     'Availability' => 'Available',
+                    'Bookable service' => 'AC Service & Gas Refill',
                 ],
                 [
                     'Item ID' => 'SVC_003',
@@ -679,6 +691,7 @@ class ExcelImportService
                     'Tags' => 'Wedding',
                     'Duration' => '3 hours',
                     'Availability' => 'Fully Booked',
+                    'Bookable service' => 'Bridal Makeup Package',
                 ],
                 [
                     'Item ID' => 'SVC_004',
@@ -691,6 +704,7 @@ class ExcelImportService
                     'Tags' => 'Digital',
                     'Duration' => '1 week',
                     'Availability' => 'Available',
+                    'Bookable service' => 'Website Audit',
                 ],
                 [
                     'Item ID' => 'SVC_005',
@@ -703,6 +717,7 @@ class ExcelImportService
                     'Tags' => '',
                     'Duration' => '90 minutes',
                     'Availability' => 'Available',
+                    'Bookable service' => 'Garden Landscaping Visit',
                 ],
             ],
         ];

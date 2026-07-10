@@ -5,7 +5,6 @@ namespace App\Services\Catalog;
 use App\Models\Company;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
-use Modules\Reminders\Models\Source;
 use Modules\Reminders\Services\ReservationBookingService;
 use Modules\Reminders\Services\StaffAssignmentService;
 
@@ -36,7 +35,7 @@ class CatalogListingBookingReservationService
             return null;
         }
 
-        $source = $this->resolveSource($company, $item);
+        $source = app(CatalogListingSlotBookingService::class)->resolveBookableSource($company, $item);
         if (! $source) {
             Log::info('Catalog booking: no reminders source linked to listing item', [
                 'item_id' => $item['id'] ?? null,
@@ -90,33 +89,5 @@ class CatalogListingBookingReservationService
 
             return null;
         }
-    }
-
-    /**
-     * @param  array<string, mixed>  $item
-     */
-    private function resolveSource(Company $company, array $item): ?Source
-    {
-        $metadata = is_array($item['metadata'] ?? null) ? $item['metadata'] : [];
-        $sourceRef = $metadata['booking_source_id']
-            ?? $metadata['reminders_source_id']
-            ?? $item['booking_source_id']
-            ?? $item['reminders_source_id']
-            ?? $metadata['booking_source_name']
-            ?? $item['booking_source_name']
-            ?? null;
-
-        if ($sourceRef === null || $sourceRef === '') {
-            return null;
-        }
-
-        $query = Source::queryForCompany($company->id)
-            ->where('is_bookable', true);
-
-        if (is_numeric($sourceRef)) {
-            return $query->where('id', (int) $sourceRef)->first();
-        }
-
-        return $query->where('name', (string) $sourceRef)->first();
     }
 }

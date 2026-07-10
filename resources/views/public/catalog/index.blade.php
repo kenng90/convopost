@@ -309,6 +309,90 @@
             background-color: #ccc;
             cursor: not-allowed;
         }
+
+        .booking-slot-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            max-height: 220px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+        }
+
+        .booking-slot-btn {
+            width: 100%;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: #fff;
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 14px;
+            font-weight: 600;
+            color: #212529;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .booking-slot-btn:hover {
+            border-color: #25D366;
+            background: #f3fff7;
+        }
+
+        .booking-slot-btn.selected {
+            border-color: #25D366;
+            background: #e8f9ee;
+            box-shadow: 0 0 0 1px #25D366;
+        }
+
+        .booking-slot-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .booking-loading-text {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .booking-summary-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .booking-summary-card dt {
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .booking-summary-card dd {
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .booking-view-hidden {
+            display: none !important;
+        }
+
+        .booking-panel-loader {
+            padding: 48px 20px;
+            text-align: center;
+        }
+
+        .booking-panel-loader .spinner-border {
+            width: 2.5rem;
+            height: 2.5rem;
+            color: #25D366;
+        }
+
+        .add-to-cart-btn.is-loading {
+            opacity: 0.85;
+            cursor: wait;
+        }
         
         .cart-sidebar {
             position: fixed;
@@ -848,12 +932,73 @@
             <i class="fas fa-calendar-check mr-2"></i><span id="bookingPanelTitle">Book</span>
             <button type="button" onclick="closeBookingPanel()" style="position: absolute; right: 15px; top: 15px; background: none; border: none; font-size: 20px; cursor: pointer;">×</button>
         </div>
-        <div class="cart-items" style="padding: 20px;">
+
+        <div id="bookingLoadingView" class="cart-items booking-view-hidden booking-panel-loader">
+            <div class="spinner-border mb-3" role="status" aria-hidden="true"></div>
+            <p class="font-weight-bold mb-1" id="bookingLoadingTitle">Preparing booking</p>
+            <p class="text-muted small mb-0" id="bookingLoadingHint">Loading available times...</p>
+        </div>
+
+        <div id="bookingSuccessView" class="cart-items booking-view-hidden" style="padding: 20px;">
+            <div class="text-center mb-3">
+                <div class="mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 64px; height: 64px; border-radius: 50%; background: #d4edda; color: #28a745;">
+                    <i class="fas fa-check fa-2x"></i>
+                </div>
+                <h5 class="font-weight-bold mb-1">Booking confirmed</h5>
+                <p class="text-muted small mb-0">Your appointment has been scheduled.</p>
+            </div>
+            <dl class="booking-summary-card mb-0" id="bookingConfirmationSummary"></dl>
+            <p class="delivery-details-hint mt-3 mb-0">You may receive a WhatsApp confirmation if reminders are configured for this service.</p>
+            <button type="button" class="checkout-btn mt-3" onclick="resetBookingPanel()" style="background-color: #6c757d; width: 100%;">
+                Book another
+            </button>
+        </div>
+
+        <div id="bookingPayingView" class="cart-items booking-view-hidden text-center" style="padding: 30px 20px;">
+            <div class="mb-3" style="font-size: 42px; color: #007bff;">
+                <i class="fas fa-mobile-alt"></i>
+            </div>
+            <h5 class="font-weight-bold">Complete payment on your phone</h5>
+            <p class="text-muted small">We sent an M-Pesa prompt. Enter your PIN to confirm your booking.</p>
+            <p class="booking-loading-text mt-3">Waiting for payment confirmation...</p>
+        </div>
+
+        <div id="bookingFormView" class="cart-items" style="padding: 20px;">
             <div id="bookingSuccessBanner" class="cart-success-banner" style="display: none;" role="status"></div>
             <div id="bookingErrorBanner" class="cart-error-banner" style="display: none;" role="alert"></div>
 
-            <div class="delivery-details-section" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
-                <div class="delivery-details-title">Booking details</div>
+            <div id="bookingSlotSection" class="delivery-details-section booking-view-hidden" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+                <div class="delivery-details-title">Choose a time</div>
+                <p class="delivery-details-hint" id="bookingSlotHint">Select an available date and time for your appointment.</p>
+                <p class="delivery-details-hint booking-view-hidden" id="bookingTimezoneHint"></p>
+
+                <div class="delivery-field" id="fieldBookingDuration">
+                    <label for="bookingDuration">Duration</label>
+                    <select id="bookingDuration" class="form-control form-control-sm" onchange="onBookingDurationChange()"></select>
+                </div>
+
+                <div class="delivery-field">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label for="bookingDate" class="mb-0">Date</label>
+                        <span id="bookingDatesLoading" class="booking-loading-text booking-view-hidden">Loading dates...</span>
+                    </div>
+                    <select id="bookingDate" class="form-control form-control-sm" onchange="loadBookingSlots()">
+                        <option value="">Select a date</option>
+                    </select>
+                </div>
+
+                <div class="delivery-field">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="mb-0">Available times</label>
+                        <span id="bookingSlotsLoading" class="booking-loading-text booking-view-hidden">Loading times...</span>
+                    </div>
+                    <div id="bookingSlotsEmpty" class="text-muted small booking-view-hidden">No times available for this date. Please choose another day.</div>
+                    <div id="bookingSlotGrid" class="booking-slot-grid"></div>
+                </div>
+            </div>
+
+            <div id="bookingLegacySection" class="delivery-details-section" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+                <div class="delivery-details-title" id="bookingDetailsTitle">Booking details</div>
                 <p class="delivery-details-hint" id="bookingDetailsHint">Required to send your booking request on WhatsApp.</p>
 
                 <div class="delivery-field" id="fieldBookingCustomerName">
@@ -881,9 +1026,10 @@
                 </div>
             </div>
         </div>
-        <div class="cart-footer">
+
+        <div class="cart-footer" id="bookingFooter">
             <button class="checkout-btn" id="bookingSubmitBtn" onclick="submitBookingRequest()" style="background-color: #25D366; width: 100%;">
-                <i class="fab fa-whatsapp mr-2"></i><span id="bookingSubmitLabel">Book on WhatsApp</span>
+                <i class="fas fa-calendar-check mr-2" id="bookingSubmitIcon"></i><span id="bookingSubmitLabel">Confirm booking</span>
             </button>
         </div>
     </div>
@@ -1338,9 +1484,80 @@
         @else
         let selectedBookingItemId = null;
         let selectedBookingItemTitle = '';
+        let bookingMode = 'whatsapp';
+        let bookingSourceConfig = null;
+        let bookingDates = [];
+        let bookingSlots = [];
+        let selectedBookingSlotId = '';
+        let selectedBookingSlotLabel = '';
+        let bookingPanelOpening = false;
+        let activeBookingCardButton = null;
         const bookingStorageKey = 'catalog_{{ $catalog->id }}_booking';
         const completionType = flowNodeSettings.completionType || 'booking';
         const requirePreferredDateTime = !!flowNodeSettings.requirePreferredDateTime;
+
+        function bookingView(name) {
+            const views = {
+                form: document.getElementById('bookingFormView'),
+                success: document.getElementById('bookingSuccessView'),
+                paying: document.getElementById('bookingPayingView'),
+                loading: document.getElementById('bookingLoadingView'),
+            };
+            Object.entries(views).forEach(([key, element]) => {
+                if (!element) {
+                    return;
+                }
+                element.classList.toggle('booking-view-hidden', key !== name);
+            });
+            const footer = document.getElementById('bookingFooter');
+            if (footer) {
+                footer.classList.toggle('booking-view-hidden', name !== 'form');
+            }
+        }
+
+        function setBookingCardButtonLoading(button, isLoading) {
+            if (!button) {
+                return;
+            }
+
+            if (isLoading) {
+                if (!button.dataset.originalHtml) {
+                    button.dataset.originalHtml = button.innerHTML;
+                }
+                button.disabled = true;
+                button.classList.add('is-loading');
+                button.innerHTML = '<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Opening...';
+                activeBookingCardButton = button;
+                return;
+            }
+
+            button.disabled = false;
+            button.classList.remove('is-loading');
+            if (button.dataset.originalHtml) {
+                button.innerHTML = button.dataset.originalHtml;
+            }
+
+            if (activeBookingCardButton === button) {
+                activeBookingCardButton = null;
+            }
+        }
+
+        function resetActiveBookingCardButton() {
+            if (activeBookingCardButton) {
+                setBookingCardButtonLoading(activeBookingCardButton, false);
+            }
+        }
+
+        function setBookingPanelLoading(isLoading, hint) {
+            const hintEl = document.getElementById('bookingLoadingHint');
+            if (hintEl && hint) {
+                hintEl.textContent = hint;
+            }
+
+            if (isLoading) {
+                bookingView('loading');
+            }
+        }
 
         function loadBookingDetails() {
             try {
@@ -1407,17 +1624,257 @@
             banner.style.display = 'block';
         }
 
+        function formatBookingDateLabel(dateString) {
+            const date = new Date(dateString + 'T12:00:00');
+            return date.toLocaleDateString(undefined, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+            });
+        }
+
+        function setBookingLoadingState(target, isLoading) {
+            const element = document.getElementById(target);
+            if (element) {
+                element.classList.toggle('booking-view-hidden', !isLoading);
+            }
+        }
+
+        function resetBookingSlotState() {
+            bookingDates = [];
+            bookingSlots = [];
+            selectedBookingSlotId = '';
+            selectedBookingSlotLabel = '';
+            document.getElementById('bookingDate').innerHTML = '<option value="">Select a date</option>';
+            document.getElementById('bookingSlotGrid').innerHTML = '';
+            document.getElementById('bookingSlotsEmpty').classList.add('booking-view-hidden');
+        }
+
+        function configureBookingUiForMode(mode) {
+            bookingMode = mode;
+            const slotSection = document.getElementById('bookingSlotSection');
+            const legacySection = document.getElementById('bookingLegacySection');
+            const submitLabel = document.getElementById('bookingSubmitLabel');
+            const submitIcon = document.getElementById('bookingSubmitIcon');
+            const detailsTitle = document.getElementById('bookingDetailsTitle');
+            const detailsHint = document.getElementById('bookingDetailsHint');
+            const phoneField = document.getElementById('fieldBookingCustomerPhone');
+            const dateField = document.getElementById('fieldBookingPreferredDateTime');
+            const durationField = document.getElementById('fieldBookingDuration');
+
+            if (mode === 'slots') {
+                slotSection.classList.remove('booking-view-hidden');
+                legacySection.classList.remove('booking-view-hidden');
+                detailsTitle.textContent = 'Your details';
+                detailsHint.textContent = 'Enter your contact details to confirm the booking.';
+                submitLabel.textContent = bookingSourceConfig?.payment_required ? 'Confirm & pay' : 'Confirm booking';
+                submitIcon.className = 'fas fa-calendar-check mr-2';
+                phoneField.style.display = 'block';
+                dateField.style.display = 'none';
+                durationField.style.display = (bookingSourceConfig?.duration_options || []).length > 1 ? 'block' : 'none';
+
+                const timezoneHint = document.getElementById('bookingTimezoneHint');
+                if (bookingSourceConfig?.timezone) {
+                    timezoneHint.textContent = 'Times shown in ' + bookingSourceConfig.timezone + '.';
+                    timezoneHint.classList.remove('booking-view-hidden');
+                } else {
+                    timezoneHint.classList.add('booking-view-hidden');
+                }
+
+                return;
+            }
+
+            slotSection.classList.add('booking-view-hidden');
+            legacySection.classList.remove('booking-view-hidden');
+            detailsTitle.textContent = mode === 'inquiry' ? 'Inquiry details' : 'Booking details';
+            detailsHint.textContent = mode === 'inquiry'
+                ? 'Required to send your inquiry on WhatsApp.'
+                : 'Required to send your booking request on WhatsApp.';
+            submitLabel.textContent = mode === 'inquiry' ? 'Inquire on WhatsApp' : @json($presentation['cta_label'] ?? 'Book on WhatsApp');
+            submitIcon.className = 'fab fa-whatsapp mr-2';
+            phoneField.style.display = mode === 'inquiry' ? 'none' : 'block';
+            dateField.style.display = mode === 'inquiry' ? 'none' : 'block';
+
+            const dateOptional = document.getElementById('bookingDateOptional');
+            if (dateOptional) {
+                dateOptional.textContent = requirePreferredDateTime ? '' : '(optional)';
+            }
+        }
+
+        async function loadBookingConfig(itemId) {
+            const params = new URLSearchParams();
+            if (flowToken) {
+                params.set('flow_token', flowToken);
+            }
+
+            const response = await fetch(`/catalog/${catalogId}/items/${encodeURIComponent(itemId)}/booking-config?` + params.toString());
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Could not load booking options.');
+            }
+
+            bookingSourceConfig = data.source || null;
+            configureBookingUiForMode(data.mode || 'whatsapp');
+
+            if (data.mode === 'slots') {
+                populateBookingDurationOptions();
+                setBookingPanelLoading(true, 'Loading available dates...');
+                await loadBookingDates();
+            }
+        }
+
+        function populateBookingDurationOptions() {
+            const select = document.getElementById('bookingDuration');
+            const options = bookingSourceConfig?.duration_options || [bookingSourceConfig?.default_duration_minutes || 30];
+            select.innerHTML = '';
+
+            options.forEach((minutes) => {
+                const option = document.createElement('option');
+                option.value = minutes;
+                option.textContent = minutes + ' minutes';
+                select.appendChild(option);
+            });
+        }
+
+        function currentBookingDurationMinutes() {
+            const select = document.getElementById('bookingDuration');
+            if (!select || select.options.length === 0) {
+                return bookingSourceConfig?.default_duration_minutes || 30;
+            }
+
+            return parseInt(select.value, 10) || bookingSourceConfig?.default_duration_minutes || 30;
+        }
+
+        async function loadBookingDates() {
+            if (!selectedBookingItemId || bookingMode !== 'slots') {
+                return;
+            }
+
+            resetBookingSlotState();
+            setBookingLoadingState('bookingDatesLoading', true);
+
+            try {
+                const params = new URLSearchParams({
+                    duration_minutes: String(currentBookingDurationMinutes()),
+                });
+                const response = await fetch(`/catalog/${catalogId}/items/${encodeURIComponent(selectedBookingItemId)}/availability/dates?` + params.toString());
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Could not load available dates.');
+                }
+
+                bookingDates = data.dates || [];
+                const dateSelect = document.getElementById('bookingDate');
+                dateSelect.innerHTML = '<option value="">' + (bookingDates.length ? 'Select a date' : 'No dates available') + '</option>';
+                bookingDates.forEach((date) => {
+                    const option = document.createElement('option');
+                    option.value = date;
+                    option.textContent = formatBookingDateLabel(date);
+                    dateSelect.appendChild(option);
+                });
+            } catch (error) {
+                showBookingErrorBanner(error.message || 'Could not load available dates.');
+            } finally {
+                setBookingLoadingState('bookingDatesLoading', false);
+            }
+        }
+
+        async function loadBookingSlots() {
+            const selectedDate = document.getElementById('bookingDate').value;
+            selectedBookingSlotId = '';
+            selectedBookingSlotLabel = '';
+            document.getElementById('bookingSlotGrid').innerHTML = '';
+            document.getElementById('bookingSlotsEmpty').classList.add('booking-view-hidden');
+
+            if (!selectedDate || !selectedBookingItemId || bookingMode !== 'slots') {
+                return;
+            }
+
+            setBookingLoadingState('bookingSlotsLoading', true);
+
+            try {
+                const params = new URLSearchParams({
+                    date: selectedDate,
+                    duration_minutes: String(currentBookingDurationMinutes()),
+                });
+                const response = await fetch(`/catalog/${catalogId}/items/${encodeURIComponent(selectedBookingItemId)}/availability/slots?` + params.toString());
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Could not load available times.');
+                }
+
+                bookingSlots = data.slots || [];
+                renderBookingSlots();
+            } catch (error) {
+                showBookingErrorBanner(error.message || 'Could not load available times.');
+            } finally {
+                setBookingLoadingState('bookingSlotsLoading', false);
+            }
+        }
+
+        function renderBookingSlots() {
+            const grid = document.getElementById('bookingSlotGrid');
+            grid.innerHTML = '';
+
+            if (!bookingSlots.length) {
+                document.getElementById('bookingSlotsEmpty').classList.remove('booking-view-hidden');
+                return;
+            }
+
+            document.getElementById('bookingSlotsEmpty').classList.add('booking-view-hidden');
+
+            bookingSlots.forEach((slot) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'booking-slot-btn' + (selectedBookingSlotId === slot.id ? ' selected' : '');
+                button.textContent = slot.title || slot.label || 'Available slot';
+                button.onclick = () => selectBookingSlot(slot);
+                grid.appendChild(button);
+            });
+        }
+
+        function selectBookingSlot(slot) {
+            selectedBookingSlotId = slot.id;
+            selectedBookingSlotLabel = slot.title || slot.label || '';
+            renderBookingSlots();
+            hideBookingBanners();
+        }
+
+        function onBookingDurationChange() {
+            loadBookingDates();
+        }
+
         function validateBookingDetails() {
             clearBookingFieldErrors();
             const details = getBookingFormValues();
             let valid = true;
 
-            if (completionType !== 'inquiry' && !details.customerPhone) {
+            if (bookingMode === 'slots') {
+                if (!selectedBookingSlotId) {
+                    showBookingErrorBanner('Please select an available time slot.');
+                    return null;
+                }
+
+                if (!details.customerPhone) {
+                    setBookingFieldError('fieldBookingCustomerPhone', 'errorBookingCustomerPhone', 'Phone is required.');
+                    valid = false;
+                } else if (details.customerPhone.replace(/\D/g, '').length < 9) {
+                    setBookingFieldError('fieldBookingCustomerPhone', 'errorBookingCustomerPhone', 'Enter a valid phone number (e.g. 254712345678).');
+                    valid = false;
+                }
+
+                return valid ? details : null;
+            }
+
+            if (completionType !== 'inquiry' && bookingMode !== 'inquiry' && !details.customerPhone) {
                 setBookingFieldError('fieldBookingCustomerPhone', 'errorBookingCustomerPhone', 'Phone is required.');
                 valid = false;
             }
 
-            if (requirePreferredDateTime && !details.preferredDateTime) {
+            if (requirePreferredDateTime && bookingMode === 'whatsapp' && !details.preferredDateTime) {
                 setBookingFieldError('fieldBookingPreferredDateTime', 'errorBookingPreferredDateTime', 'Preferred date and time is required.');
                 valid = false;
             }
@@ -1432,39 +1889,105 @@
             return valid ? details : null;
         }
 
-        function openBookingPanel(itemId, itemTitle) {
+        function showBookingConfirmation(reservation) {
+            const start = reservation?.start_date ? new Date(reservation.start_date) : null;
+            const end = reservation?.end_date ? new Date(reservation.end_date) : null;
+            const summary = document.getElementById('bookingConfirmationSummary');
+            const timeLabel = reservation.time_label
+                || selectedBookingSlotLabel
+                || (start && end
+                    ? start.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + ' – ' + end.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+                    : '');
+
+            summary.innerHTML = `
+                <dt>Service</dt><dd>${reservation.service || reservation.source?.name || selectedBookingItemTitle}</dd>
+                <dt>Date</dt><dd>${reservation.date_label || (start ? start.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '')}</dd>
+                <dt>Time</dt><dd>${timeLabel}</dd>
+                <dt>Reference</dt><dd>#${reservation.id || ''}</dd>
+            `;
+            bookingView('success');
+        }
+
+        function resetBookingPanel() {
+            bookingView('form');
+            hideBookingBanners();
+            resetBookingSlotState();
+            if (selectedBookingItemId) {
+                loadBookingConfig(selectedBookingItemId).catch(() => configureBookingUiForMode('whatsapp'));
+            }
+        }
+
+        async function openBookingPanel(itemId, itemTitle, triggerButton) {
+            if (bookingPanelOpening) {
+                return;
+            }
+
+            bookingPanelOpening = true;
+            setBookingCardButtonLoading(triggerButton, true);
+
             selectedBookingItemId = itemId;
             selectedBookingItemTitle = itemTitle || 'Listing';
             document.getElementById('bookingPanelTitle').textContent = completionType === 'inquiry'
                 ? 'Inquire: ' + selectedBookingItemTitle
                 : 'Book: ' + selectedBookingItemTitle;
 
-            const submitLabel = document.getElementById('bookingSubmitLabel');
-            submitLabel.textContent = completionType === 'inquiry' ? 'Inquire on WhatsApp' : @json($presentation['cta_label'] ?? 'Book on WhatsApp');
-
-            const dateOptional = document.getElementById('bookingDateOptional');
-            if (dateOptional) {
-                dateOptional.textContent = requirePreferredDateTime ? '' : '(optional)';
-            }
-
-            const phoneField = document.getElementById('fieldBookingCustomerPhone');
-            const dateField = document.getElementById('fieldBookingPreferredDateTime');
-            if (phoneField) {
-                phoneField.style.display = completionType === 'inquiry' ? 'none' : 'block';
-            }
-            if (dateField) {
-                dateField.style.display = completionType === 'inquiry' ? 'none' : 'block';
-            }
-
             loadBookingDetails();
             hideBookingBanners();
+            resetBookingSlotState();
+
             document.getElementById('bookingSidebar').classList.add('open');
             document.getElementById('bookingOverlay').classList.add('visible');
+            setBookingPanelLoading(true, 'Loading booking options...');
+
+            try {
+                await loadBookingConfig(itemId);
+                bookingView('form');
+            } catch (error) {
+                configureBookingUiForMode('whatsapp');
+                bookingView('form');
+                showBookingErrorBanner(error.message || 'Could not load booking options.');
+            } finally {
+                bookingPanelOpening = false;
+                resetActiveBookingCardButton();
+            }
         }
 
         function closeBookingPanel() {
+            bookingPanelOpening = false;
+            resetActiveBookingCardButton();
             document.getElementById('bookingSidebar').classList.remove('open');
             document.getElementById('bookingOverlay').classList.remove('visible');
+        }
+
+        async function pollBookingPayment(invoicePublicUuid) {
+            bookingView('paying');
+
+            for (let attempt = 0; attempt < 45; attempt++) {
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+
+                const response = await fetch(`/catalog/${catalogId}/booking-payment/${encodeURIComponent(invoicePublicUuid)}`);
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    continue;
+                }
+
+                const payment = data.payment || {};
+                if (payment.status === 'success' && payment.fulfilled && payment.reservation) {
+                    showBookingConfirmation(payment.reservation);
+                    trackCatalogEvent('listing_booking', { item_id: selectedBookingItemId, reservation_id: payment.reservation.id });
+                    return;
+                }
+
+                if (payment.status === 'failed') {
+                    bookingView('form');
+                    showBookingErrorBanner('Payment failed or was cancelled. Please try again.');
+                    return;
+                }
+            }
+
+            bookingView('form');
+            showBookingErrorBanner('Payment is taking longer than expected. If you completed M-Pesa, contact the business with your receipt.');
         }
 
         function submitBookingRequest() {
@@ -1474,13 +1997,80 @@
 
             const details = validateBookingDetails();
             if (!details) {
-                showBookingErrorBanner('Please complete the required booking details.');
+                if (!document.getElementById('bookingErrorBanner').style.display || document.getElementById('bookingErrorBanner').style.display === 'none') {
+                    showBookingErrorBanner('Please complete the required booking details.');
+                }
                 return;
             }
 
             saveBookingDetails();
 
-            const endpoint = completionType === 'inquiry'
+            if (bookingMode === 'slots') {
+                submitSlotBooking(details);
+                return;
+            }
+
+            submitWhatsAppBooking(details);
+        }
+
+        function submitSlotBooking(details) {
+            const button = document.getElementById('bookingSubmitBtn');
+            const originalHtml = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Confirming...';
+
+            fetch(`/catalog/${catalogId}/items/${encodeURIComponent(selectedBookingItemId)}/book`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    slot_id: selectedBookingSlotId,
+                    customerName: details.customerName || null,
+                    customerPhone: details.customerPhone,
+                    notes: details.notes || null,
+                    duration_minutes: currentBookingDurationMinutes(),
+                    flow_token: flowToken,
+                }),
+            })
+            .then(async (response) => {
+                const data = await response.json();
+                button.disabled = false;
+                button.innerHTML = originalHtml;
+
+                if (!response.ok || !data.success) {
+                    if (response.status === 409) {
+                        showBookingErrorBanner(data.message || 'That time was just taken. Please choose another slot.');
+                        loadBookingSlots();
+                        return;
+                    }
+
+                    showBookingErrorBanner(data.message || 'Could not confirm booking.');
+                    return;
+                }
+
+                if (data.requires_action && data.invoice_public_uuid) {
+                    pollBookingPayment(data.invoice_public_uuid);
+                    return;
+                }
+
+                trackCatalogEvent('listing_booking', {
+                    item_id: selectedBookingItemId,
+                    reservation_id: data.reservation?.id || null,
+                });
+
+                showBookingConfirmation(data.reservation || {});
+            })
+            .catch(() => {
+                button.disabled = false;
+                button.innerHTML = originalHtml;
+                showBookingErrorBanner('Could not confirm booking. Please try again.');
+            });
+        }
+
+        function submitWhatsAppBooking(details) {
+            const endpoint = (bookingMode === 'inquiry' || completionType === 'inquiry')
                 ? `/catalog/${catalogId}/generate-inquiry`
                 : `/catalog/${catalogId}/generate-booking`;
 
@@ -1491,7 +2081,7 @@
                 flow_token: flowToken,
             };
 
-            if (completionType !== 'inquiry') {
+            if (bookingMode !== 'inquiry' && completionType !== 'inquiry') {
                 payload.customerPhone = details.customerPhone;
                 payload.preferredDateTime = details.preferredDateTime || null;
             }
@@ -1519,7 +2109,7 @@
                     return;
                 }
 
-                trackCatalogEvent(completionType === 'inquiry' ? 'listing_inquiry' : 'listing_booking', {
+                trackCatalogEvent((bookingMode === 'inquiry' || completionType === 'inquiry') ? 'listing_inquiry' : 'listing_booking', {
                     item_id: selectedBookingItemId,
                 });
 

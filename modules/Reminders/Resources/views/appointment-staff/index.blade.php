@@ -14,7 +14,7 @@
             <td>{{ $item->departmentNamesLabel() ?: '—' }}</td>
             <td>{{ $item->email }}</td>
             <td>{{ $item->whatsapp_phone ?: '—' }}</td>
-            <td>{{ $item->hasConnectedCalendar() ? __('Connected') : __('Not connected') }}</td>
+            <td>{{ app(\Modules\Reminders\Services\GoogleCalendarService::class)->calendarSyncLabelForMember($item) }}</td>
             <td>
                 <a href="{{ route($setup['webroute_path'].'edit', [$setup['parameter_name'] => $item->id]) }}" class="btn btn-primary btn-sm">
                     <i class="ni ni-ruler-pencil"></i>

@@ -23,11 +23,23 @@
             <form method="POST" action="{{ route('reminders.booking-settings.calendar') }}" class="mb-4">
                 @csrf
                 <div class="form-group">
-                    <label for="google_calendar_id">{{ __('Calendar ID') }}</label>
-                    <input type="text" class="form-control" id="google_calendar_id" name="google_calendar_id" value="{{ old('google_calendar_id', $calendarId) }}" required>
-                    <small class="form-text text-muted">{{ __('Use primary or a dedicated calendar email/ID.') }}</small>
+                    <label for="google_calendar_id">{{ __('Default calendar') }}</label>
+                    @if (! empty($calendars))
+                        <select class="form-control" id="google_calendar_id" name="google_calendar_id" required>
+                            @foreach ($calendars as $calendar)
+                                <option value="{{ $calendar['id'] }}" @selected(old('google_calendar_id', $calendarId) === $calendar['id'])>
+                                    {{ $calendar['label'] }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="form-text text-muted">{{ __('Used when a service does not specify its own calendar.') }}</small>
+                    @else
+                        <div class="alert alert-warning mb-0">{{ __('Could not load calendars from Google. Try reconnecting your account.') }}</div>
+                    @endif
                 </div>
-                <button type="submit" class="btn btn-primary">{{ __('Save calendar ID') }}</button>
+                @if (! empty($calendars))
+                    <button type="submit" class="btn btn-primary">{{ __('Save default calendar') }}</button>
+                @endif
             </form>
 
             <a href="{{ route('reminders.google.disconnect') }}" class="btn btn-outline-danger">{{ __('Disconnect Google Calendar') }}</a>

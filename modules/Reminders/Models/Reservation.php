@@ -49,6 +49,11 @@ class Reservation extends Model
         return $this->belongsTo(AppointmentStaff::class, 'appointment_staff_id');
     }
 
+    public function googleCalendarUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'google_calendar_user_id');
+    }
+
     public function displayStatus(): string
     {
         if ($this->cancelled_at !== null || (int) $this->status === 2) {

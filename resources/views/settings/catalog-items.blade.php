@@ -335,6 +335,20 @@
                     <div class="col-12">
                         <div class="row" id="editVerticalFields">
                             @include('settings.partials.catalog-item-extra-fields', ['presentation' => $presentation, 'prefix' => 'edit'])
+                            @if(!empty($bookingServices))
+                                <div class="col-md-4 col-lg-3">
+                                    <div class="form-group">
+                                        <label for="editItemBookingSource">{{ __('Bookable service (Reminders)') }}</label>
+                                        <select id="editItemBookingSource" class="form-control">
+                                            <option value="">{{ __('None') }}</option>
+                                            @foreach($bookingServices as $service)
+                                                <option value="{{ $service['id'] }}">{{ $service['name'] }}</option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted">{{ __('Links listing bookings to calendar availability') }}</small>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
                     <div class="col-md-12">

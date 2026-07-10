@@ -8,6 +8,7 @@ use Modules\Reminders\Models\AppointmentStaff;
 use Modules\Reminders\Models\Department;
 use Modules\Reminders\Models\Source;
 use Modules\Reminders\Models\SourceStaff;
+use Modules\Reminders\Services\GoogleCalendarService;
 use Modules\Reminders\Services\SourceArchiveService;
 use Modules\Reminders\Services\SourceReminderSyncService;
 use Modules\Reminders\Support\BookingPaymentConfig;
@@ -31,6 +32,7 @@ class SourcesController extends Controller
     public function __construct(
         private readonly SourceReminderSyncService $sourceReminderSync,
         private readonly SourceArchiveService $sourceArchive,
+        private readonly GoogleCalendarService $googleCalendarService,
     ) {
     }
 
@@ -163,6 +165,32 @@ class SourcesController extends Controller
             'data' => $this->appointmentStaffOptions($source?->department_id),
             'additionalInfo' => __('Who can receive bookings and calendar notifications for this service.'),
         ];
+
+        $calendarOptions = $this->googleCalendarOptionsForService();
+        if ($calendarOptions !== null) {
+            $fields[] = [
+                'class' => $class,
+                'ftype' => 'select',
+                'name' => __('Google Calendar'),
+                'id' => 'google_calendar_id',
+                'required' => false,
+                'value' => $source?->google_calendar_id ?: '',
+                'data' => ['' => __('Default account calendar')] + $calendarOptions,
+                'additionalInfo' => __('Choose which calendar on the connected company account receives appointments for this service.'),
+            ];
+        } else {
+            $fields[] = [
+                'class' => 'col-md-12',
+                'ftype' => 'info',
+                'id' => 'google_calendar_intro',
+                'name' => __('Google Calendar'),
+                'text' => __('Connect Google Calendar in booking settings to choose a calendar per service.'),
+                'button' => [
+                    'link' => route('reminders.booking-settings.index'),
+                    'text' => __('Open booking settings'),
+                ],
+            ];
+        }
 
         $campaignOptions = ['' => __('— None —')] + $this->reminderCampaignOptions($source);
 
@@ -433,6 +461,7 @@ class SourcesController extends Controller
             'staff_assignment_mode' => $mode,
             'working_hours' => $existing?->working_hours ?: WorkingHours::default(),
             'location' => $request->input('location') ?: null,
+            'google_calendar_id' => $this->validatedServiceCalendarId($request->input('google_calendar_id')),
             'confirmation_campaign_id' => $request->input('confirmation_campaign_id') ?: null,
             'reminder_before_campaign_id' => $request->input('reminder_before_campaign_id') ?: null,
             'reminder_after_campaign_id' => $request->input('reminder_after_campaign_id') ?: null,
@@ -523,5 +552,40 @@ class SourcesController extends Controller
             ->orderBy('name')
             ->pluck('name', 'id')
             ->toArray();
+    }
+
+    /**
+     * @return array<string, string>|null
+     */
+    private function googleCalendarOptionsForService(): ?array
+    {
+        $companyId = $this->activeCompanyId();
+        if (! $companyId) {
+            return null;
+        }
+
+        $host = $this->googleCalendarService->resolveCompanyCalendarHost($companyId);
+        if (! $host || ! $this->googleCalendarService->isConnected($host)) {
+            return null;
+        }
+
+        $options = $this->googleCalendarService->calendarSelectOptions($host);
+
+        return $options === [] ? null : $options;
+    }
+
+    private function validatedServiceCalendarId(mixed $calendarId): ?string
+    {
+        $calendarId = is_string($calendarId) ? trim($calendarId) : '';
+        if ($calendarId === '') {
+            return null;
+        }
+
+        $options = $this->googleCalendarOptionsForService();
+        if ($options === null) {
+            return null;
+        }
+
+        return array_key_exists($calendarId, $options) ? $calendarId : null;
     }
 }

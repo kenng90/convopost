@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Modules\Reminders\Models\AppointmentStaff;
 use Modules\Reminders\Models\Department;
+use Modules\Reminders\Services\GoogleCalendarService;
 
 class AppointmentStaffController extends Controller
 {
@@ -53,7 +54,7 @@ class AppointmentStaffController extends Controller
         $this->ownerAndStaffOnly();
 
         $items = AppointmentStaff::query()
-            ->with(['department', 'departments'])
+            ->with(['department', 'departments', 'user'])
             ->orderBy('name')
             ->paginate(config('settings.paginate'));
 
@@ -114,7 +115,9 @@ class AppointmentStaffController extends Controller
             ],
             'fields' => $this->fields($appointmentStaff),
             'member' => $appointmentStaff,
-            'calendarConnected' => $appointmentStaff->hasConnectedCalendar(),
+            'calendarSyncInfo' => app(GoogleCalendarService::class)->calendarSyncInfoForMember(
+                $appointmentStaff->load('user')
+            ),
         ]);
     }
 
