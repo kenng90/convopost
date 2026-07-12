@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { useFlowActions } from "@/hooks/useFlowActions";
-import { Webhook, Globe, Users, UserPlus, Smartphone, Route } from "lucide-react";
+import { Webhook, Globe, Users, UserPlus, Smartphone, Route, CreditCard } from "lucide-react";
 
 interface WebSectionProps {
   searchQuery: string;
 }
 
 export const WebSection = ({ searchQuery }: WebSectionProps) => {
-  const { createNodeWebhook, createNodeHTTP, createNodeAssignAgent, createNodeAssignGroup, createNodeAssignJourneyStage, createNodeMpesaStkPush } = useFlowActions();
+  const { createNodeWebhook, createNodeHTTP, createNodeAssignAgent, createNodeAssignGroup, createNodeAssignJourneyStage, createNodeMpesaStkPush, createNodeRequestPayment } = useFlowActions();
 
   const webOptions = [
     /*{
@@ -30,6 +30,13 @@ export const WebSection = ({ searchQuery }: WebSectionProps) => {
       bgColor: "bg-green-100",
       textColor: "text-green-700",
       onClick: () => createNodeMpesaStkPush({ x: 0, y: 0 }),
+    },
+    {
+      icon: CreditCard,
+      label: "Request Payment",
+      bgColor: "bg-blue-100",
+      textColor: "text-blue-700",
+      onClick: () => createNodeRequestPayment({ x: 0, y: 0 }),
     },
     {
       icon: UserPlus,

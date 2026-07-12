@@ -2,6 +2,7 @@
 
 namespace Modules\Flowmaker\Models\Nodes;
 
+use App\Models\Company;
 use App\Models\ListCatalog;
 use App\Services\Catalog\CatalogBookingPendingService;
 use App\Services\Catalog\CatalogBookingVariableService;
@@ -11,6 +12,7 @@ use App\Services\Catalog\CatalogListingBookingReservationService;
 use App\Services\Catalog\CatalogListingBookingService;
 use App\Services\Catalog\CatalogUrlService;
 use App\Services\Flowmaker\FlowRunLogger;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Flowmaker\Models\Flow;
@@ -90,6 +92,7 @@ class ListingInquiry extends Node
     public function process($message, $data)
     {
         if ($this->isStartNode) {
+            $extraData = is_object($data) ? ($data->extra ?? null) : ($data['extra'] ?? null);
             $messageText = is_object($data) ? ($data->value ?? '') : ($data['value'] ?? '');
             $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
             $contact = Contact::find($contactId);
@@ -97,7 +100,8 @@ class ListingInquiry extends Node
             $bookingService = app(CatalogListingBookingService::class);
 
             if ($contact && (
-                $pendingService->isConfirmationMessage($contact, $this->flow_id, $messageText)
+                (! empty($extraData))
+                || $pendingService->isConfirmationMessage($contact, $this->flow_id, $messageText)
                 || $bookingService->messageLooksLikeBookingRequest($messageText)
                 || $bookingService->messageLooksLikeInquiry($messageText)
             )) {
@@ -134,12 +138,20 @@ class ListingInquiry extends Node
         app(CatalogBookingPendingService::class)->clearPending($contact, $this->flow_id);
         $contact->setContactState($this->flow_id, 'catalog_id', $catalogId);
 
+        $displayMode = $settings['displayMode'] ?? 'link';
+        $items = $catalog->items ?? [];
+
+        if ($displayMode === 'interactive_list' && count($items) > 0 && count($items) <= 10) {
+            return $this->sendInteractiveList($contact, $catalog, $settings);
+        }
+
         try {
-            $header = $contact->changeVariables($settings['header'] ?? 'Browse our listings', $this->flow_id);
-            $footer = $contact->changeVariables(
-                $settings['footer'] ?? 'Tap the link to view listings and book on WhatsApp.',
-                $this->flow_id
-            );
+            $defaultHeader = $catalog->isService() ? 'Book our services' : 'Browse our listings';
+            $defaultFooter = $catalog->isService()
+                ? 'Tap the link to view services and book on WhatsApp.'
+                : 'Tap the link to view listings and book on WhatsApp.';
+            $header = $contact->changeVariables($settings['header'] ?? $defaultHeader, $this->flow_id);
+            $footer = $contact->changeVariables($settings['footer'] ?? $defaultFooter, $this->flow_id);
 
             $flowCallback = app(CatalogFlowCallbackService::class);
             $catalogUrl = app(CatalogUrlService::class)->publicUrl(
@@ -169,6 +181,78 @@ class ListingInquiry extends Node
         }
 
         return ['success' => true];
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    private function sendInteractiveList(Contact $contact, ListCatalog $catalog, array $settings): array
+    {
+        $company = Company::find($contact->company_id);
+        $token = $company?->getConfig('plain_token', '') ?? '';
+        $defaultHeader = $catalog->isService() ? 'Book our services' : 'Browse our listings';
+        $defaultFooter = $catalog->isService()
+            ? 'Select a service from the list below'
+            : 'Select a listing from the list below';
+        $header = $contact->changeVariables($settings['header'] ?? $defaultHeader, $this->flow_id);
+        $footer = $contact->changeVariables($settings['footer'] ?? $defaultFooter, $this->flow_id);
+        $buttonText = $contact->changeVariables($settings['buttonText'] ?? 'View listings', $this->flow_id);
+
+        $rows = [];
+        foreach (array_slice($catalog->items ?? [], 0, 10) as $item) {
+            $itemId = (string) ($item['id'] ?? '');
+            if ($itemId === '') {
+                continue;
+            }
+
+            $price = isset($item['price']) ? ' — '.$item['price'] : '';
+            $rows[] = [
+                'id' => $this->listRowId($itemId),
+                'title' => mb_substr((string) ($item['title'] ?? 'Listing'), 0, 24),
+                'description' => mb_substr(((string) ($item['description'] ?? '')).$price, 0, 72),
+            ];
+        }
+
+        if ($rows === []) {
+            return ['success' => false];
+        }
+
+        $payload = [
+            'token' => $token,
+            'phone' => $contact->phone,
+            'message' => $header,
+            'header' => $catalog->name,
+            'footer' => $footer,
+            'action' => [
+                'button' => $buttonText,
+                'sections' => [[
+                    'title' => $catalog->name,
+                    'rows' => $rows,
+                ]],
+            ],
+        ];
+
+        $contact->setContactState($this->flow_id, 'current_node', $this->id);
+
+        try {
+            $response = Http::post(config('app.url').'/api/wpbox/sendlistmessage', $payload);
+            if (! $response->successful()) {
+                Log::error('Listing Inquiry: interactive list failed', ['body' => $response->body()]);
+
+                return ['success' => false];
+            }
+        } catch (\Exception $e) {
+            Log::error('Listing Inquiry: interactive list exception', ['error' => $e->getMessage()]);
+
+            return ['success' => false];
+        }
+
+        return ['success' => true];
+    }
+
+    private function listRowId(string $itemId): string
+    {
+        return 'listing_'.$itemId.'_id'.$this->id.'_flow'.$this->flow_id;
     }
 
     private function advanceAfterCompletion($message, $data, Contact $contact): void
@@ -279,6 +363,11 @@ class ListingInquiry extends Node
     {
         if (app(CatalogFlowCallbackService::class)->isListingInquiryExtra($extra)) {
             return app(CatalogFlowCallbackService::class)->itemIdFromListingInquiryExtra($extra);
+        }
+
+        $suffix = '_id'.$this->id.'_flow'.$this->flow_id;
+        if (str_starts_with($extra, 'listing_') && str_ends_with($extra, $suffix)) {
+            return substr($extra, strlen('listing_'), -strlen($suffix));
         }
 
         if (str_starts_with($extra, 'listing:')) {

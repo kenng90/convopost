@@ -123,6 +123,23 @@ export interface NodeData {
     catalogId?: number | string;
     displayMode?: 'link' | 'interactive_list';
     checkoutVariablePrefix?: string;
+    autoResumeFlow?: boolean;
+    searchPrompt?: string;
+    maxResults?: number;
+    payment?: {
+      amount?: string;
+      accountReference?: string;
+      description?: string;
+      provider?: 'auto' | 'paystack' | 'mpesa';
+      email?: string;
+      responseVar?: string;
+    };
+    mpesa?: {
+      amount?: string;
+      accountReference?: string;
+      transactionDesc?: string;
+      responseVar?: string;
+    };
   };
   [key: string]: any;
 }

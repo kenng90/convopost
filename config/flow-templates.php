@@ -233,7 +233,7 @@ $flowTemplates = [
         'description' => 'Browse catalog, checkout with M-Pesa, route to fulfillment, or escalate to sales / AI FAQ.',
         'category' => 'commerce',
         'video_url' => null,
-        'setup_hint' => 'Set catalog ID, M-Pesa, Fulfillment group & journey stage. Delivery address/notes are for agent follow-up until checkout supports them. Save draft → Publish.',
+        'setup_hint' => 'Set catalog ID, M-Pesa, Fulfillment group & journey stage. Auto-resume after web checkout is on by default. Delivery address/notes are for agent follow-up until checkout supports them. Save draft → Publish.',
         'post_install_checklist' => ['Catalog ID', 'M-Pesa credentials', 'Fulfillment group', 'OpenRouter key for FAQ', 'Publish'],
         'flow_data' => FaqConversationLoop::mergeInto([
             'nodes' => [
@@ -274,6 +274,7 @@ $flowTemplates = [
                             'catalogId' => '1',
                             'header' => 'Browse our products',
                             'displayMode' => 'link',
+                            'autoResumeFlow' => true,
                         ],
                     ],
                 ],

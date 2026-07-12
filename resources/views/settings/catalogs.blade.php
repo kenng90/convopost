@@ -21,6 +21,9 @@
                 <button type="button" class="btn btn-outline-primary mr-2 mb-2" data-toggle="modal" data-target="#catalogImportModal">
                     <i class="ni ni-cloud-upload-96 mr-2"></i>{{ __('Import Excel') }}
                 </button>
+                <button type="button" class="btn btn-outline-secondary mr-2 mb-2" onclick="openGoLiveWizard()">
+                    <i class="ni ni-check-bold mr-2"></i>{{ __('Go live checklist') }}
+                </button>
                 <button type="button" id="importShopifyBtn" class="btn btn-outline-success mr-2 mb-2" style="display:none" onclick="importFromStore('shopify')">
                     {{ __('Import from Shopify') }}
                 </button>

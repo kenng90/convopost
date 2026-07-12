@@ -436,6 +436,7 @@ function submitCreateEmptyCatalog() {
                 loadCatalogs();
                 showSuccess(data.message);
                 showPostImportChecklist(data.catalog);
+                openGoLiveWizard(data.catalog?.id);
             } else {
                 showError(data.message || 'Failed to create catalog');
             }
@@ -465,6 +466,7 @@ function importFromStore(source) {
                 loadCatalogs();
                 showSuccess(data.message);
                 showPostImportChecklist(data.catalog);
+                openGoLiveWizard(data.catalog?.id);
             } else {
                 showError(data.message || 'Import failed');
             }
@@ -609,6 +611,7 @@ function submitImportForm() {
                 document.getElementById('fileName').textContent = '';
                 loadCatalogs();
                 showPostImportChecklist(data.catalog);
+                openGoLiveWizard(data.catalog?.id);
             } else {
                 showError(data.message || 'Failed to import catalog');
             }
@@ -716,6 +719,97 @@ function showPostImportChecklist(catalog) {
     document.getElementById('postImportQr').innerHTML = `<img src="${qrUrl}" alt="QR code" class="img-fluid" style="max-width:180px"><p class="small text-muted mt-2">Scan to open shop</p>`;
 
     $('#postImportChecklistModal').modal('show');
+}
+
+function openGoLiveWizard(catalogId) {
+    const list = document.getElementById('goLiveChecklist');
+    const progressBar = document.getElementById('goLiveProgressBar');
+    const progressLabel = document.getElementById('goLiveProgressLabel');
+    const percentLabel = document.getElementById('goLivePercentLabel');
+
+    if (!list || !progressBar) {
+        return;
+    }
+
+    list.innerHTML = '<li class="list-group-item text-muted">Loading checklist...</li>';
+    progressBar.style.width = '0%';
+    progressBar.setAttribute('aria-valuenow', '0');
+    if (progressLabel) {
+        progressLabel.textContent = 'Loading...';
+    }
+    if (percentLabel) {
+        percentLabel.textContent = '0%';
+    }
+
+    $('#catalogGoLiveWizardModal').modal('show');
+
+    const params = new URLSearchParams();
+    if (catalogId) {
+        params.set('catalog_id', catalogId);
+    }
+
+    const url = '/api/list-catalogs/go-live' + (params.toString() ? '?' + params.toString() : '');
+
+    fetch(url, {
+        headers: {
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfToken(),
+        },
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                list.innerHTML = `<li class="list-group-item text-danger">${escapeHtml(data.message || 'Failed to load checklist')}</li>`;
+                return;
+            }
+
+            const percent = data.percent || 0;
+            progressBar.style.width = percent + '%';
+            progressBar.setAttribute('aria-valuenow', String(percent));
+            if (percentLabel) {
+                percentLabel.textContent = percent + '%';
+            }
+            if (progressLabel) {
+                const catalogName = data.catalog?.name ? ` — ${data.catalog.name}` : '';
+                progressLabel.textContent = `${data.completed || 0} of ${data.total || 0} required steps complete${catalogName}`;
+            }
+
+            const steps = data.steps || [];
+            if (!steps.length) {
+                list.innerHTML = '<li class="list-group-item text-muted">No steps available.</li>';
+                return;
+            }
+
+            list.innerHTML = steps.map(step => {
+                const done = !!step.completed;
+                const optional = !!step.optional;
+                const icon = done
+                    ? '<i class="ni ni-check-bold text-success mr-2"></i>'
+                    : '<i class="ni ni-fat-add text-muted mr-2"></i>';
+                const badge = optional
+                    ? '<span class="badge badge-light text-muted ml-2">Optional</span>'
+                    : '';
+                const action = (!done && step.action_url)
+                    ? `<a href="${escapeAttr(step.action_url)}" class="btn btn-sm btn-outline-primary ml-auto" target="_blank" rel="noopener">${escapeHtml(step.action_label || 'Open')}</a>`
+                    : (!done && step.action_label)
+                        ? `<span class="text-muted small ml-auto">${escapeHtml(step.action_label)}</span>`
+                        : '';
+
+                return `
+                    <li class="list-group-item d-flex align-items-start">
+                        <div class="mr-2 mt-1">${icon}</div>
+                        <div class="flex-grow-1">
+                            <div class="font-weight-bold">${escapeHtml(step.title || '')}${badge}</div>
+                            <div class="small text-muted">${escapeHtml(step.description || '')}</div>
+                        </div>
+                        ${action}
+                    </li>
+                `;
+            }).join('');
+        })
+        .catch(err => {
+            list.innerHTML = `<li class="list-group-item text-danger">${escapeHtml(err.message || 'Failed to load checklist')}</li>`;
+        });
 }
 
 function copyCatalogLink(url) {

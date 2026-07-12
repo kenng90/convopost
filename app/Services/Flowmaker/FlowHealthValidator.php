@@ -9,8 +9,8 @@ class FlowHealthValidator
     private const EXECUTABLE_TYPES = [
         'keyword_trigger', 'incomingMessage', 'incoming_message', 'message', 'image', 'pdf', 'video',
         'template', 'quick_replies', 'list_message', 'branch', 'openai', 'question', 'http',
-        'whatsapp_catalog', 'listing_inquiry', 'whatsapp_flow', 'counter', 'check_pricing',
-        'assign_agent', 'assign_group', 'assign_journey_stage', 'mpesa_stk_push', 'set_variable',
+        'whatsapp_catalog', 'listing_inquiry', 'catalog_search', 'whatsapp_flow', 'counter', 'check_pricing',
+        'assign_agent', 'assign_group', 'assign_journey_stage', 'mpesa_stk_push', 'request_payment', 'set_variable',
         'book_appointment', 'booking_events_list', 'booking_event_register', 'send_booking_link', 'manage_booking', 'opening_hours', 'webhook', 'wait',
     ];
 

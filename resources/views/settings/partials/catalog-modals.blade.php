@@ -136,6 +136,33 @@
     </div>
 </div>
 
+<!-- Go-live wizard -->
+<div class="modal fade" id="catalogGoLiveWizardModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">{{ __('Go live checklist') }}</h6>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="text-muted" id="goLiveProgressLabel">{{ __('Loading...') }}</small>
+                        <small class="font-weight-bold" id="goLivePercentLabel">0%</small>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div id="goLiveProgressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                <ul class="list-group list-group-flush" id="goLiveChecklist"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Close') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- QR modal -->
 <div class="modal fade" id="catalogQrModal" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-dialog-centered modal-sm">

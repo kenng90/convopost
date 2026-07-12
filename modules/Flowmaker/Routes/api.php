@@ -17,7 +17,12 @@ use Illuminate\Http\Request;
 Route::post('/flowmaker/mpesa/callback', [\Modules\Flowmaker\Http\Controllers\MpesaController::class, 'stkCallback'])
     ->name('flowmaker.mpesa.callback');
 
+Route::get('/flowmaker/paystack/callback', [\Modules\Flowmaker\Http\Controllers\PaystackController::class, 'callback'])
+    ->name('flowmaker.paystack.callback');
+
+Route::post('/flowmaker/paystack/webhook', [\Modules\Flowmaker\Http\Controllers\PaystackController::class, 'webhook'])
+    ->name('flowmaker.paystack.webhook');
+
 Route::middleware('auth:api')->get('/flowmaker', function (Request $request) {
     return $request->user();
 });
-

@@ -62,6 +62,8 @@ Route::controller(PublicCatalogController::class)->group(function () {
         Route::post('/{catalogId}/items/{itemId}/book', 'bookItem')->name('catalog.item.book');
         Route::get('/{catalogId}/booking-payment/{invoicePublicUuid}', 'bookingPaymentStatus')->name('catalog.booking-payment.status');
         Route::post('/{catalogId}/create-invoice', 'createInvoice')->name('catalog.create-invoice');
+        Route::post('/{catalogId}/cart/sync', 'syncCart')->name('catalog.cart.sync');
+        Route::post('/{catalogId}/cart/abandon', 'abandonCart')->name('catalog.cart.abandon');
 
         Route::get('/{catalogId}', 'show')->name('catalog.public');
     });
@@ -192,6 +194,7 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject', 'org.route']
             Route::post('/api/list-catalogs/import-excel', 'importExcel')->name('catalogs.import-excel');
             Route::post('/api/list-catalogs/create-empty', 'createEmpty')->name('catalogs.create-empty');
             Route::get('/api/list-catalogs/templates', 'listTemplates')->name('catalogs.templates');
+            Route::get('/api/list-catalogs/go-live', 'goLiveStatus')->name('catalogs.go-live');
             Route::post('/api/list-catalogs/import-shopify', 'importShopify')->name('catalogs.import-shopify');
             Route::post('/api/list-catalogs/import-woocommerce', 'importWooCommerce')->name('catalogs.import-woocommerce');
             Route::post('/api/list-catalogs/{id}/reimport-excel', 'reimportExcel')->name('catalogs.reimport-excel');
@@ -212,6 +215,7 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject', 'org.route']
             Route::post('/api/list-catalogs/{id}/manage/items/{itemId}/image', 'uploadItemImage')->name('catalogs.items.image');
             Route::post('/api/list-catalogs/{id}/import-api', 'importFromApi')->name('catalogs.import-api');
             Route::post('/api/list-catalogs/{id}/sync', 'syncStore')->name('catalogs.sync');
+            Route::post('/api/list-catalogs/{id}/sync-availability', 'syncAvailability')->name('catalogs.sync-availability');
             Route::post('/api/list-catalogs/register-webhooks', 'registerStoreWebhooks')->name('catalogs.register-webhooks');
             Route::get('/api/catalog-collections', 'listCollections')->name('catalogs.collections.list');
             Route::post('/api/catalog-collections', 'createCollection')->name('catalogs.collections.create');

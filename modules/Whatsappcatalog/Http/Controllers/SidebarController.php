@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ListCatalog;
 use App\Services\Catalog\CatalogItemRepository;
 use App\Services\Catalog\CatalogUrlService;
+use App\Services\Catalog\StoreProductFetcher;
 use Illuminate\Http\Request;
 
 class SidebarController extends Controller
@@ -13,6 +14,7 @@ class SidebarController extends Controller
     public function __construct(
         protected CatalogItemRepository $catalogItemRepository,
         protected CatalogUrlService $catalogUrlService,
+        protected StoreProductFetcher $storeProductFetcher,
     ) {
     }
 
@@ -27,11 +29,43 @@ class SidebarController extends Controller
             ->map(fn (ListCatalog $catalog) => [
                 'id' => $catalog->id,
                 'name' => $catalog->name,
+                'catalog_mode' => $catalog->resolvedCatalogMode(),
+                'vertical' => $catalog->resolvedVertical(),
                 'item_count' => count($this->catalogItemRepository->getItemsArray($catalog)),
                 'public_url' => $this->catalogUrlService->publicUrl($catalog, $company),
             ]);
 
-        return response()->json(['success' => true, 'catalogs' => $catalogs]);
+        $recentOrders = \App\Models\CatalogOrder::query()
+            ->where('company_id', $company->id)
+            ->with('items')
+            ->orderByDesc('id')
+            ->limit(8)
+            ->get()
+            ->map(fn (\App\Models\CatalogOrder $order) => [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'status' => $order->status,
+                'customer_name' => $order->customer_name,
+                'customer_phone' => $order->customer_phone,
+                'total_amount' => $order->total_amount,
+                'currency' => $order->currency,
+                'checkout_channel' => $order->checkout_channel,
+                'item_count' => $order->items->count(),
+                'created_at' => optional($order->created_at)?->toDateTimeString(),
+            ]);
+
+        $storeSource = $this->storeProductFetcher->resolveSource($company, 'auto');
+        $storeProducts = $storeSource
+            ? $this->storeProductFetcher->fetch($company, 'auto')
+            : [];
+
+        return response()->json([
+            'success' => true,
+            'catalogs' => $catalogs,
+            'recent_orders' => $recentOrders,
+            'store_products' => $storeProducts,
+            'store_source' => $storeSource,
+        ]);
     }
 
     public function searchProducts(Request $request)

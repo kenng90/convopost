@@ -33,12 +33,17 @@ class CatalogItemRepository
         if (! self::relationalTableExists()) {
             return $this->itemsFromJsonColumn($catalog);
         }
+
         if ($catalog->relationLoaded('catalogItems')) {
-            return $catalog->catalogItems
+            $loaded = $catalog->catalogItems
                 ->where('is_active', true)
                 ->map(fn (CatalogItem $item) => $item->toCatalogArray())
                 ->values()
                 ->all();
+
+            if ($loaded !== []) {
+                return $loaded;
+            }
         }
 
         $relational = CatalogItem::withoutGlobalScopes()
@@ -51,7 +56,50 @@ class CatalogItemRepository
             return $relational->map(fn (CatalogItem $item) => $item->toCatalogArray())->all();
         }
 
-        return $this->itemsFromJsonColumn($catalog);
+        // One-time backfill: JSON is legacy source only until relational rows exist.
+        $fromJson = $this->itemsFromJsonColumn($catalog);
+        if ($fromJson !== []) {
+            $this->replaceAllFromArray($catalog, $fromJson, true);
+
+            return $fromJson;
+        }
+
+        return [];
+    }
+
+    /**
+     * Force-migrate all catalogs for a company so relational catalog_items is canonical.
+     */
+    public function canonicalizeCompany(int $companyId): int
+    {
+        if (! self::relationalTableExists()) {
+            return 0;
+        }
+
+        $count = 0;
+        ListCatalog::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->orderBy('id')
+            ->each(function (ListCatalog $catalog) use (&$count) {
+                $existing = CatalogItem::withoutGlobalScopes()
+                    ->where('catalog_id', $catalog->id)
+                    ->count();
+
+                if ($existing > 0) {
+                    $this->syncJsonColumn($catalog);
+                    $count++;
+
+                    return;
+                }
+
+                $fromJson = $this->itemsFromJsonColumn($catalog);
+                if ($fromJson !== []) {
+                    $this->replaceAllFromArray($catalog, $fromJson, true);
+                    $count++;
+                }
+            });
+
+        return $count;
     }
 
     /**

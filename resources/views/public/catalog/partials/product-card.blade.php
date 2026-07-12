@@ -24,7 +24,7 @@
             @endif
 
             @if(isset($item['price']))
-                <div class="product-price">KSh {{ number_format((float) $item['price'], 2) }}</div>
+                <div class="product-price">{{ $currencySymbol ?? 'KES' }} {{ number_format((float) $item['price'], 2) }}</div>
             @endif
 
             @if(!empty($item['variants']) && is_array($item['variants']))

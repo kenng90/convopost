@@ -544,6 +544,30 @@ function syncListingFeed(replaceMissing) {
         .catch((error) => showError('Feed sync error: ' + error.message));
 }
 
+function syncAvailabilityFromReminders() {
+    const catalogId = document.getElementById('currentCatalogId').value;
+
+    fetch(`/api/list-catalogs/${catalogId}/sync-availability`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        },
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            if (!data.success) {
+                showError(data.message || 'Availability sync failed');
+                return;
+            }
+
+            showSuccess(data.message || 'Availability synced');
+            loadItems(catalogId, 1);
+        })
+        .catch((error) => showError('Availability sync error: ' + error.message));
+}
+
 function showSuccess(message) {
     showAlert(message, 'success');
 }

@@ -69,6 +69,8 @@ export const useFlowActions = () => {
             type === 'counter' ? 'counter' :
             type === 'check_pricing' ? 'check_pricing' :
             type === 'mpesa_stk_push' ? 'mpesa_stk_push' :
+            type === 'request_payment' ? 'request_payment' :
+            type === 'catalog_search' ? 'catalog_search' :
             type === 'book_appointment' ? 'book_appointment' :
             type === 'booking_events_list' ? 'booking_events_list' :
             type === 'booking_event_register' ? 'booking_event_register' :
@@ -98,6 +100,8 @@ export const useFlowActions = () => {
                type === 'counter' ? 'Counter' :
                type === 'check_pricing' ? 'Check User Pricing' :
                type === 'mpesa_stk_push' ? 'MPesa STK Push' :
+               type === 'request_payment' ? 'Request Payment' :
+               type === 'catalog_search' ? 'Catalog Search' :
                type === 'book_appointment' ? 'Book appointment' :
                type === 'booking_events_list' ? 'List events' :
                type === 'booking_event_register' ? 'Register for event' :
@@ -147,6 +151,10 @@ export const useFlowActions = () => {
           ? { pricing: { freeExecutions: 0 } }
           : type === 'mpesa_stk_push'
           ? { mpesa: { amount: '', accountReference: 'Payment', transactionDesc: 'Payment', responseVar: 'mpesa_result' } }
+          : type === 'request_payment'
+          ? { payment: { amount: '{{catalog_order_total_amount}}', provider: 'auto', accountReference: 'ORDER', description: 'Order payment', responseVar: 'payment_result' } }
+          : type === 'catalog_search'
+          ? { searchPrompt: 'What are you looking for?', maxResults: 5, header: 'Search results' }
           : type === 'book_appointment'
           ? {
               source_name: '',
@@ -171,11 +179,20 @@ export const useFlowActions = () => {
               party_size: '1',
               success_message: 'You are registered for {{booking_event_title}} on {{booking_event_date}} at {{booking_event_time}}.',
             }
+          : type === 'whatsapp_catalog'
+          ? {
+              catalogId: '',
+              header: 'Browse our products',
+              displayMode: 'link',
+              checkoutVariablePrefix: 'catalog_order',
+              autoResumeFlow: true,
+            }
           : type === 'listing_inquiry'
           ? {
               catalogId: '',
               header: 'Browse our listings',
               footer: 'Tap the link to view listings and book on WhatsApp.',
+              displayMode: 'link',
               completionType: 'booking',
               bookingVariablePrefix: 'listing_booking',
               requirePreferredDateTime: false,
@@ -363,6 +380,34 @@ export const useFlowActions = () => {
     });
   }, [createNodeBase]);
 
+  const createNodeRequestPayment = useCallback((position: { x: number; y: number }) => {
+    return createNodeBase('request_payment', position, {
+      label: 'Request Payment',
+      type: 'request_payment',
+      settings: {
+        payment: {
+          amount: '{{catalog_order_total_amount}}',
+          provider: 'auto',
+          accountReference: 'ORDER',
+          description: 'Order payment',
+          responseVar: 'payment_result',
+        },
+      },
+    });
+  }, [createNodeBase]);
+
+  const createNodeCatalogSearch = useCallback((position: { x: number; y: number }) => {
+    return createNodeBase('catalog_search', position, {
+      label: 'Catalog Search',
+      type: 'catalog_search',
+      settings: {
+        searchPrompt: 'What are you looking for?',
+        maxResults: 5,
+        header: 'Search results',
+      },
+    });
+  }, [createNodeBase]);
+
   const createNodeAssignGroup = useCallback((position: { x: number; y: number }) => {
     return createNodeBase('assign_group', position, {
       label: "Assign to Group",
@@ -442,6 +487,8 @@ export const useFlowActions = () => {
     createNodeAssignGroup,
     createNodeAssignJourneyStage,
     createNodeMpesaStkPush,
+    createNodeRequestPayment,
+    createNodeCatalogSearch,
     deleteNode,
     updateNode
   };

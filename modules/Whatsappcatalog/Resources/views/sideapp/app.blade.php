@@ -8,12 +8,45 @@
     {{ __('Loading catalogs...') }}
 </div>
 
+<div v-if="dynamicProperties.catalogSidebarRecentOrders && dynamicProperties.catalogSidebarRecentOrders.length > 0" class="mb-3">
+    <h6 class="text-muted">{{ __('Recent orders') }}</h6>
+    <div v-for="order in dynamicProperties.catalogSidebarRecentOrders" :key="'order-' + order.id" class="card mb-2 border p-3">
+        <div class="fw-bold">@{{ order.order_number }}</div>
+        <small class="text-muted">
+            @{{ order.customer_name || order.customer_phone || '—' }} · @{{ order.status }}
+        </small>
+        <div class="mt-1 small">@{{ order.currency }} @{{ order.total_amount }} · @{{ order.item_count }} {{ __('items') }}</div>
+        <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary mt-2 w-100"
+            v-if="order.customer_phone"
+            @click="sendOrderSummary(order)"
+        >
+            {{ __('Mention order in chat') }}
+        </button>
+    </div>
+</div>
+
 <div v-if="dynamicProperties.catalogSidebarCatalogs.length > 0" class="mb-3">
     <div v-for="catalog in dynamicProperties.catalogSidebarCatalogs" :key="catalog.id" class="card mb-2 border p-3">
         <div class="fw-bold">@{{ catalog.name }}</div>
-        <small class="text-muted">@{{ catalog.item_count }} {{ __('products') }}</small>
+        <small class="text-muted">@{{ catalog.item_count }} {{ __('products') }} <span v-if="catalog.catalog_mode">(@{{ catalog.catalog_mode }})</span></small>
         <button type="button" class="btn btn-sm btn-primary mt-2 w-100" @click="sendCatalogLink(catalog.public_url)">
             {{ __('Send shop link') }}
+        </button>
+    </div>
+</div>
+
+<div v-if="dynamicProperties.catalogSidebarStoreProducts && dynamicProperties.catalogSidebarStoreProducts.length > 0" class="mb-3">
+    <h6 class="text-muted">
+        {{ __('Store products') }}
+        <span v-if="dynamicProperties.catalogSidebarStoreSource" class="text-capitalize">(@{{ dynamicProperties.catalogSidebarStoreSource }})</span>
+    </h6>
+    <div v-for="(product, index) in dynamicProperties.catalogSidebarStoreProducts" :key="'store-' + index" class="card mb-2 border p-3">
+        <div class="fw-bold">@{{ product.title }}</div>
+        <small class="text-muted" v-if="product.description">@{{ product.description }}</small>
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2 w-100" @click="sendStoreProductLink(product)">
+            {{ __('Send link') }}
         </button>
     </div>
 </div>

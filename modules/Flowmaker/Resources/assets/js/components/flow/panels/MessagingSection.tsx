@@ -1,4 +1,4 @@
-import { MessageCircle, Image, FileText, MessageSquare, FileVideo, File, List, Database } from "lucide-react";
+import { MessageCircle, Image, FileText, MessageSquare, FileVideo, File, List, Database, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFlowActions } from "@/hooks/useFlowActions";
 import { NodeData } from "@/types/flow";
@@ -153,10 +153,22 @@ const messagingActions = [
         type: "whatsapp_catalog",
         settings: {
           catalogId: undefined,
-          header: "Browse our products"
+          header: "Browse our products",
+          displayMode: 'link',
+          autoResumeFlow: true,
         }
       };
       return actions.createNodeBase('whatsapp_catalog', position, data);
+    }
+  },
+  {
+    type: 'catalog_search',
+    icon: Search,
+    label: "Catalog Search",
+    bgColor: "bg-violet-100",
+    textColor: "text-violet-600",
+    onClick: (actions: ReturnType<typeof useFlowActions>) => {
+      return actions.createNodeCatalogSearch({ x: 250, y: 100 });
     }
   },
   {
@@ -173,7 +185,8 @@ const messagingActions = [
         settings: {
           catalogId: undefined,
           header: "Browse our listings",
-          footer: "Tap the link to view listings and inquire on WhatsApp."
+          footer: "Tap the link to view listings and inquire on WhatsApp.",
+          displayMode: 'link',
         }
       };
       return actions.createNodeBase('listing_inquiry', position, data);
@@ -219,6 +232,9 @@ export const MessagingSection = ({ searchQuery }: MessagingSectionProps) => {
 
   const filteredActions = messagingActions.filter(action => {
     if (action.type === 'whatsapp_catalog' && !planPlugins.whatsappcatalog) {
+      return false;
+    }
+    if (action.type === 'catalog_search' && !planPlugins.whatsappcatalog) {
       return false;
     }
     if (action.type === 'listing_inquiry' && !planPlugins.whatsappcatalog) {

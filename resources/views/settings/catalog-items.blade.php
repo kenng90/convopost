@@ -175,8 +175,13 @@
 
             @if(!$supportsInventory)
             <div class="card mb-4">
-                <div class="card-header bg-light">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">{{ __('Listing feed (API)') }}</h6>
+                    @if(in_array($catalog->resolvedCatalogMode(), ['service', 'listing'], true))
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="syncAvailabilityFromReminders()">
+                            <i class="ni ni-calendar-grid-58 mr-1"></i>{{ __('Sync availability from Reminders') }}
+                        </button>
+                    @endif
                 </div>
                 <div class="card-body">
                     <p class="text-muted small mb-3">
@@ -204,6 +209,12 @@
                         @endif
                     </div>
                 </div>
+            </div>
+            @elseif(in_array($catalog->resolvedCatalogMode(), ['service', 'listing'], true))
+            <div class="mb-3">
+                <button type="button" class="btn btn-outline-info" onclick="syncAvailabilityFromReminders()">
+                    <i class="ni ni-calendar-grid-58 mr-1"></i>{{ __('Sync availability from Reminders') }}
+                </button>
             </div>
             @endif
 

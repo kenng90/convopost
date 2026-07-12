@@ -79,7 +79,8 @@
         }
 
         .stock-sold,
-        .stock-leased {
+        .stock-leased,
+        .stock-fullybooked {
             background-color: #6c757d;
             color: white;
         }
@@ -87,6 +88,93 @@
         .listing-highlight {
             font-size: 12px;
             color: #495057;
+            font-weight: 600;
+        }
+
+        .listing-open-detail {
+            cursor: pointer;
+        }
+
+        .listing-view-details {
+            color: #0066cc;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .duration-badge {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .availability-badge {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .cta-soft-disabled {
+            opacity: 0.85;
+        }
+
+        .item-detail-drawer {
+            position: fixed;
+            right: -420px;
+            top: 0;
+            width: 400px;
+            max-width: 100%;
+            height: 100vh;
+            background-color: #fff;
+            box-shadow: -2px 0 8px rgba(0,0,0,0.15);
+            transition: right 0.3s;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item-detail-drawer.open {
+            right: 0;
+        }
+
+        .item-detail-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .item-detail-gallery {
+            height: 220px;
+            background-color: #e9ecef;
+            background-size: cover;
+            background-position: center;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .item-detail-gallery-slide {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .item-detail-gallery-slide.active {
+            opacity: 1;
+        }
+
+        .item-detail-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .item-detail-description {
+            font-size: 14px;
+            color: #495057;
+            white-space: pre-wrap;
+            margin-bottom: 16px;
         }
 
         .listing-image-gallery {
@@ -754,6 +842,24 @@
                         </select>
                     </div>
                     @endif
+                    @foreach($filterOptions['facets'] ?? [] as $facetKey => $facetChoices)
+                        @if(!empty($facetChoices))
+                            @php
+                                $facetLabel = collect($presentation['item_fields'] ?? [])->firstWhere('key', $facetKey)['label']
+                                    ?? ucfirst(str_replace('_', ' ', (string) $facetKey));
+                                $selectedFacet = $filters['facets'][$facetKey] ?? ($filters[$facetKey] ?? '');
+                            @endphp
+                            <div class="form-group col-md-2 col-6">
+                                <label for="filter-{{ $facetKey }}" class="sr-only">{{ $facetLabel }}</label>
+                                <select id="filter-{{ $facetKey }}" name="{{ $facetKey }}" class="custom-select">
+                                    <option value="">All {{ strtolower($facetLabel) }}</option>
+                                    @foreach($facetChoices as $facetChoice)
+                                        <option value="{{ $facetChoice }}" @selected((string) $selectedFacet === (string) $facetChoice)>{{ $facetChoice }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endif
+                    @endforeach
                     @if(($presentation['supports_geo_map'] ?? false) && in_array('geo', $presentation['filter_facets'] ?? [], true))
                     <div class="form-group col-md-3 col-12">
                         <div class="d-flex flex-wrap align-items-center" style="gap: 8px;">
@@ -835,9 +941,9 @@
             <div class="row">
                 @foreach($items as $item)
                     @if($presentation['supports_cart'] ?? true)
-                        @include('public.catalog.partials.product-card', ['item' => $item])
+                        @include('public.catalog.partials.product-card', ['item' => $item, 'currencySymbol' => $currencySymbol])
                     @else
-                        @include('public.catalog.partials.listing-card', ['item' => $item, 'presentation' => $presentation])
+                        @include('public.catalog.partials.listing-card', ['item' => $item, 'presentation' => $presentation, 'currencySymbol' => $currencySymbol])
                     @endif
                 @endforeach
             </div>
@@ -1035,6 +1141,20 @@
     </div>
 
     <div class="overlay" id="bookingOverlay" onclick="closeBookingPanel()"></div>
+
+    <div class="item-detail-drawer" id="itemDetailDrawer" aria-hidden="true">
+        <div class="cart-header">
+            <i class="fas fa-info-circle mr-2"></i>Details
+            <button type="button" onclick="closeItemDetailDrawer()" style="position: absolute; right: 15px; top: 15px; background: none; border: none; font-size: 20px; cursor: pointer;" aria-label="Close details">×</button>
+        </div>
+        <div class="item-detail-body" id="itemDetailBody"></div>
+        <div class="cart-footer">
+            <button type="button" class="checkout-btn" id="itemDetailCta" style="background-color: #25D366; width: 100%;">
+                <i class="fab fa-whatsapp mr-2"></i>{{ $presentation['cta_label'] ?? 'Inquire on WhatsApp' }}
+            </button>
+        </div>
+    </div>
+    <div class="overlay" id="itemDetailOverlay" onclick="closeItemDetailDrawer()"></div>
     @endif
 
     @if(($presentation['supports_geo_map'] ?? false) && count($mapMarkers ?? []) > 0)
@@ -1082,6 +1202,117 @@
         let cart = JSON.parse(localStorage.getItem('catalog_{{ $catalog->id }}_cart')) || [];
         let selectedVariants = {};
         const deliveryStorageKey = 'catalog_{{ $catalog->id }}_delivery';
+        const visitorStorageKey = 'catalog_visitor_{{ $catalog->id }}';
+        let cartSyncTimer = null;
+        let cartAbandonTimer = null;
+
+        function getVisitorKey() {
+            let key = localStorage.getItem(visitorStorageKey);
+            if (!key) {
+                key = (window.crypto && typeof window.crypto.randomUUID === 'function')
+                    ? window.crypto.randomUUID()
+                    : ('v_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10));
+                localStorage.setItem(visitorStorageKey, key);
+            }
+            return key;
+        }
+
+        function cartSyncPayload() {
+            const payload = {
+                visitor_key: getVisitorKey(),
+                items: cart.map((item) => ({
+                    id: item.id,
+                    quantity: item.quantity,
+                })),
+                flow_token: flowToken,
+            };
+            const phone = document.getElementById('customerPhone')?.value.trim();
+            const name = document.getElementById('customerName')?.value.trim();
+            if (phone) {
+                payload.customerPhone = phone;
+            }
+            if (name) {
+                payload.customerName = name;
+            }
+            return payload;
+        }
+
+        function syncCartToServer() {
+            if (!catalogId) {
+                return;
+            }
+            fetch(`/catalog/${catalogId}/cart/sync`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify(cartSyncPayload()),
+                keepalive: true,
+            }).catch(() => {});
+        }
+
+        function debounceCartSync() {
+            clearTimeout(cartSyncTimer);
+            cartSyncTimer = setTimeout(syncCartToServer, 400);
+        }
+
+        function postCartAbandon() {
+            const phone = document.getElementById('customerPhone')?.value.trim();
+            if (!phone || cart.length === 0) {
+                return;
+            }
+
+            const payload = {
+                visitor_key: getVisitorKey(),
+                items: cart.map((item) => ({
+                    id: item.id,
+                    quantity: item.quantity,
+                })),
+                customerPhone: phone,
+            };
+            const name = document.getElementById('customerName')?.value.trim();
+            if (name) {
+                payload.customerName = name;
+            }
+
+            const body = JSON.stringify(payload);
+            const url = `/catalog/${catalogId}/cart/abandon`;
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                },
+                body,
+                keepalive: true,
+            }).catch(() => {});
+        }
+
+        function scheduleCartAbandon() {
+            clearTimeout(cartAbandonTimer);
+            const phone = document.getElementById('customerPhone')?.value.trim();
+            if (!phone || cart.length === 0) {
+                return;
+            }
+            cartAbandonTimer = setTimeout(postCartAbandon, 30000);
+        }
+
+        function maybeAbandonOnLeave() {
+            const phone = document.getElementById('customerPhone')?.value.trim();
+            if (phone && cart.length > 0) {
+                postCartAbandon();
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                maybeAbandonOnLeave();
+            }
+        });
+        window.addEventListener('pagehide', maybeAbandonOnLeave);
 
         function loadDeliveryDetails() {
             try {
@@ -1194,6 +1425,10 @@
                 if (field) {
                     field.classList.remove('has-error');
                 }
+                if (id === 'customerPhone' || id === 'customerName') {
+                    debounceCartSync();
+                    scheduleCartAbandon();
+                }
             });
         });
 
@@ -1286,6 +1521,8 @@
         // Save cart to localStorage
         function saveCart() {
             localStorage.setItem('catalog_{{ $catalog->id }}_cart', JSON.stringify(cart));
+            debounceCartSync();
+            scheduleCartAbandon();
         }
 
         // Update cart display
@@ -1362,6 +1599,7 @@
             const payload = {
                 items: cart.map(item => ({ id: item.id, quantity: item.quantity })),
                 flow_token: flowToken,
+                visitor_key: getVisitorKey(),
             };
 
             if (details.customerName) {
@@ -1428,6 +1666,7 @@
                 deliveryAddress: details.deliveryAddress,
                 amount: total.toFixed(2),
                 flow_token: flowToken,
+                visitor_key: getVisitorKey(),
             };
 
             if (details.customerName) {
@@ -2143,6 +2382,104 @@
         });
 
         loadBookingDetails();
+
+        let itemDetailDrawerItem = null;
+        let itemDetailGalleryIndex = 0;
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function openItemDetailDrawer(item) {
+            itemDetailDrawerItem = item || null;
+            itemDetailGalleryIndex = 0;
+            const body = document.getElementById('itemDetailBody');
+            const cta = document.getElementById('itemDetailCta');
+            if (!body || !item) {
+                return;
+            }
+
+            const images = Array.isArray(item.images) ? item.images.filter(Boolean) : [];
+            let galleryHtml = '<div class="item-detail-gallery d-flex align-items-center justify-content-center text-muted"><i class="fas fa-image fa-2x"></i></div>';
+            if (images.length === 1) {
+                galleryHtml = `<div class="item-detail-gallery" style="background-image: url('${escapeHtml(images[0])}');"></div>`;
+            } else if (images.length > 1) {
+                galleryHtml = `
+                    <div class="item-detail-gallery" id="itemDetailGallery">
+                        ${images.map((url, index) => `<div class="item-detail-gallery-slide${index === 0 ? ' active' : ''}" style="background-image: url('${escapeHtml(url)}');"></div>`).join('')}
+                        <button type="button" class="gallery-nav gallery-prev" aria-label="Previous image" onclick="itemDetailGalleryPrev()"><i class="fas fa-chevron-left"></i></button>
+                        <button type="button" class="gallery-nav gallery-next" aria-label="Next image" onclick="itemDetailGalleryNext()"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                `;
+            }
+
+            const highlights = Array.isArray(item.highlights) ? item.highlights : [];
+            const highlightsHtml = highlights.length
+                ? `<div class="product-tags mb-3">${highlights.map((value) => `<span class="tag-badge">${escapeHtml(value)}</span>`).join('')}</div>`
+                : '';
+
+            const priceHtml = item.price && Number(item.price) > 0
+                ? `<div class="product-price mb-3">${escapeHtml(formatPrice(item.price))}</div>`
+                : '';
+
+            const statusClass = String(item.status || '').toLowerCase().replace(/\s+/g, '');
+
+            body.innerHTML = `
+                ${galleryHtml}
+                ${item.category ? `<div class="product-category">${escapeHtml(item.category)}</div>` : ''}
+                <div class="item-detail-title">${escapeHtml(item.title || 'Listing')}</div>
+                ${item.status ? `<div class="mb-2"><span class="stock-badge stock-${escapeHtml(statusClass)}" style="position: static;">${escapeHtml(item.status)}</span></div>` : ''}
+                ${priceHtml}
+                ${highlightsHtml}
+                <div class="item-detail-description">${escapeHtml(item.description || 'No description provided.')}</div>
+            `;
+
+            if (cta) {
+                cta.disabled = !!item.ctaDisabled;
+                cta.innerHTML = item.ctaDisabled
+                    ? `<i class="fas fa-ban mr-2"></i>${escapeHtml(item.ctaLabel || item.status || 'Unavailable')}`
+                    : `<i class="fab fa-whatsapp mr-2"></i>${escapeHtml(item.ctaLabel || @json($presentation['cta_label'] ?? 'Inquire on WhatsApp'))}`;
+                cta.onclick = () => {
+                    if (item.ctaDisabled) {
+                        return;
+                    }
+                    closeItemDetailDrawer();
+                    openBookingPanel(item.id, item.title || 'Listing', cta);
+                };
+            }
+
+            document.getElementById('itemDetailDrawer').classList.add('open');
+            document.getElementById('itemDetailOverlay').classList.add('visible');
+            document.getElementById('itemDetailDrawer').setAttribute('aria-hidden', 'false');
+        }
+
+        function closeItemDetailDrawer() {
+            document.getElementById('itemDetailDrawer')?.classList.remove('open');
+            document.getElementById('itemDetailOverlay')?.classList.remove('visible');
+            document.getElementById('itemDetailDrawer')?.setAttribute('aria-hidden', 'true');
+        }
+
+        function itemDetailGalleryGo(index) {
+            const slides = document.querySelectorAll('#itemDetailGallery .item-detail-gallery-slide');
+            if (!slides.length) {
+                return;
+            }
+            itemDetailGalleryIndex = (index + slides.length) % slides.length;
+            slides.forEach((slide, i) => slide.classList.toggle('active', i === itemDetailGalleryIndex));
+        }
+
+        function itemDetailGalleryPrev() {
+            itemDetailGalleryGo(itemDetailGalleryIndex - 1);
+        }
+
+        function itemDetailGalleryNext() {
+            itemDetailGalleryGo(itemDetailGalleryIndex + 1);
+        }
 
         function listingGalleryGo(cardId, index) {
             const card = document.getElementById(cardId);

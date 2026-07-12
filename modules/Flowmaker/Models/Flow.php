@@ -18,6 +18,7 @@ use Modules\Flowmaker\Models\Nodes\BookingEventRegister;
 use Modules\Flowmaker\Models\Nodes\BookingEventsList;
 use Modules\Flowmaker\Models\Nodes\Branch;
 use Modules\Flowmaker\Models\Nodes\Buttons;
+use Modules\Flowmaker\Models\Nodes\CatalogSearch;
 use Modules\Flowmaker\Models\Nodes\CheckPricing;
 use Modules\Flowmaker\Models\Nodes\Counter;
 use Modules\Flowmaker\Models\Nodes\Edge;
@@ -33,6 +34,7 @@ use Modules\Flowmaker\Models\Nodes\Media;
 use Modules\Flowmaker\Models\Nodes\Message;
 use Modules\Flowmaker\Models\Nodes\MpesaStkPush;
 use Modules\Flowmaker\Models\Nodes\Node;
+use Modules\Flowmaker\Models\Nodes\RequestPayment;
 use Modules\Flowmaker\Models\Nodes\SendBookingLink;
 use Modules\Flowmaker\Models\Nodes\SetVariable;
 use Modules\Flowmaker\Models\Nodes\Template;
@@ -88,7 +90,11 @@ class Flow extends Model
             $extra = is_object($data) ? ($data->extra ?? '') : ($data['extra'] ?? '');
             $skipKeywordRestart = $pendingService->isOrderConfirmationMessage($contact, $this->id, $message)
                 || $pendingService->hasPending($contact, $this->id)
-                || ($extra !== '' && str_starts_with((string) $extra, 'catalog_'));
+                || ($extra !== '' && (
+                    str_starts_with((string) $extra, 'catalog_')
+                    || str_starts_with((string) $extra, 'listing_')
+                    || str_starts_with((string) $extra, 'listing:')
+                ));
 
             if (! $skipKeywordRestart && $this->messageMatchesKeywordTrigger($flowData->nodes, $message)) {
                 $contact->clearContactState($this->id, 'current_node');
@@ -238,6 +244,10 @@ class Flow extends Model
                 $theNewNode = new AssignJourneyStage($nodeArray, []);
             } elseif ($nodeArray['type'] === 'mpesa_stk_push') {
                 $theNewNode = new MpesaStkPush($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'request_payment') {
+                $theNewNode = new RequestPayment($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'catalog_search') {
+                $theNewNode = new CatalogSearch($nodeArray, []);
             } elseif ($nodeArray['type'] === 'whatsapp_catalog') {
                 $theNewNode = new WhatsAppCatalog($nodeArray, []);
             } elseif ($nodeArray['type'] === 'listing_inquiry') {
@@ -377,6 +387,12 @@ class Flow extends Model
     public function resumeFromMpesaCallback(Contact $contact)
     {
         $this->resumeWaitingNode($contact, null);
+    }
+
+    public function resumeFromPaymentCallback(Contact $contact, string $status = 'success'): void
+    {
+        $contact->setContactState($this->id, 'payment_result_status', $status);
+        $this->resumeWaitingNode($contact, 'payment_'.$status);
     }
 
     public function resumeBookingPaymentSuccess(Contact $contact, string $nodeId, int $reservationId): void

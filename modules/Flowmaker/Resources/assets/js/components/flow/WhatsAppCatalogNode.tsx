@@ -21,6 +21,7 @@ interface NodeSettings {
   header?: string;
   displayMode?: 'link' | 'interactive_list';
   checkoutVariablePrefix?: string;
+  autoResumeFlow?: boolean;
 }
 
 interface Catalog {
@@ -28,6 +29,7 @@ interface Catalog {
   name: string;
   item_count: number;
   version: number;
+  catalog_mode?: string;
 }
 
 const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
@@ -42,6 +44,7 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
   const [checkoutVariablePrefix, setCheckoutVariablePrefix] = useState<string>(
     data.settings?.checkoutVariablePrefix || 'catalog_order'
   );
+  const [autoResumeFlow, setAutoResumeFlow] = useState<boolean>(!!data.settings?.autoResumeFlow);
 
   useEffect(() => {
     const loadCatalogs = async () => {
@@ -50,7 +53,9 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
         const result = await response.json();
         
         if (result.success && Array.isArray(result.catalogs)) {
-          setCatalogs(result.catalogs);
+          setCatalogs(
+            result.catalogs.filter((catalog: Catalog) => catalog.catalog_mode === 'commerce')
+          );
         }
       } catch (error) {
         console.error('Error loading catalogs:', error);
@@ -66,8 +71,9 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
       data.settings.header = header;
       data.settings.displayMode = displayMode;
       data.settings.checkoutVariablePrefix = checkoutVariablePrefix;
+      data.settings.autoResumeFlow = autoResumeFlow;
     }
-  }, [selectedTemplateId, header, displayMode, checkoutVariablePrefix, data]);
+  }, [selectedTemplateId, header, displayMode, checkoutVariablePrefix, autoResumeFlow, data]);
 
   const handleCatalogSelect = (value: string) => {
     setSelectedTemplateId(value);
@@ -122,7 +128,7 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
           <div className="p-4">
             <div className="space-y-4">
               <p className="text-xs text-gray-500 leading-relaxed">
-                Sends a branded shop link (or in-chat product list for ≤10 items). When opened from a flow, checkout resumes automation.
+                Sends a branded shop link (or in-chat product list for ≤10 items). After web checkout, the flow can resume automatically or wait for the customer to send the order message.
               </p>
 
               <div className="space-y-2">
@@ -189,7 +195,7 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
                     className="w-full px-2 py-1 text-xs border rounded font-mono"
                   />
                   <p className="text-[10px] text-gray-500 leading-relaxed">
-                    After WhatsApp checkout (when the user sends the order message), use these in downstream nodes:{' '}
+                    After checkout resumes (auto-resume or when the customer sends the order message), use these in downstream nodes:{' '}
                     {checkoutVariables.map((name, index) => (
                       <span key={name}>
                         {index > 0 ? ', ' : ''}
@@ -199,6 +205,23 @@ const WhatsAppCatalogNode = ({ data, id }: WhatsAppCatalogNodeProps) => {
                     .
                   </p>
                 </div>
+              )}
+
+              {selectedCatalog && (
+                <label className="flex items-start gap-2 text-xs text-gray-700">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={autoResumeFlow}
+                    onChange={(e) => setAutoResumeFlow(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-medium">Auto-resume flow after web checkout</span>
+                    <span className="block text-[10px] text-gray-500 mt-0.5 leading-relaxed">
+                      When enabled, the customer does not need to manually send the order message — the flow continues after checkout on the web.
+                    </span>
+                  </span>
+                </label>
               )}
 
               {selectedCatalog && (

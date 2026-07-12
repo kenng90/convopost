@@ -141,6 +141,7 @@ export const BookingsSection = ({ searchQuery }: BookingsSectionProps) => {
             catalogId: '',
             header: 'Browse our listings',
             footer: 'Tap the link to view listings and book on WhatsApp.',
+            displayMode: 'link',
             completionType: 'booking',
             bookingVariablePrefix: 'listing_booking',
             requirePreferredDateTime: false,
