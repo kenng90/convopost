@@ -153,6 +153,40 @@
 
     {{-- Analytics Tab --}}
     @if ($selectedFlow && $activeTab === 'analytics')
+        @if (! empty($conversionSummary))
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body d-flex flex-wrap align-items-center" style="gap: 1.5rem;">
+                            <div>
+                                <div class="text-muted small">Sent</div>
+                                <div class="h4 mb-0">{{ $conversionSummary['totals']['sent'] ?? 0 }}</div>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Completed</div>
+                                <div class="h4 mb-0">{{ $conversionSummary['totals']['completed'] ?? 0 }}</div>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Abandoned</div>
+                                <div class="h4 mb-0">{{ $conversionSummary['totals']['abandoned'] ?? 0 }}</div>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Paid / Booked</div>
+                                <div class="h4 mb-0">{{ $conversionSummary['totals']['converted'] ?? 0 }}</div>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Completion %</div>
+                                <div class="h4 mb-0">{{ $conversionSummary['completion_rate'] ?? '—' }}{{ isset($conversionSummary['completion_rate']) ? '%' : '' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Conversion %</div>
+                                <div class="h4 mb-0">{{ $conversionSummary['conversion_rate'] ?? '—' }}{{ isset($conversionSummary['conversion_rate']) ? '%' : '' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
         <div class="row">
             <div class="col-md-6 mb-4">
                 <div class="card border-0 shadow-sm h-100">

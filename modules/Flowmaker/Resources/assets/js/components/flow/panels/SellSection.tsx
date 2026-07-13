@@ -1,4 +1,4 @@
-import { Database, Search, CreditCard, PackageCheck } from 'lucide-react';
+import { Database, Search, CreditCard, PackageCheck, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowActions } from '@/hooks/useFlowActions';
 import { NodeData } from '@/types/flow';
@@ -12,6 +12,7 @@ declare global {
     data?: {
       planPlugins?: {
         whatsappcatalog?: boolean;
+        whatsappflows?: boolean;
       };
     };
   }
@@ -21,6 +22,7 @@ export const SellSection = ({ searchQuery }: SellSectionProps) => {
   const actions = useFlowActions();
   const planPlugins = window.data?.planPlugins ?? {};
   const catalogEnabled = Boolean(planPlugins.whatsappcatalog);
+  const formsEnabled = Boolean(planPlugins.whatsappflows);
 
   const options = [
     {
@@ -30,6 +32,7 @@ export const SellSection = ({ searchQuery }: SellSectionProps) => {
       bgColor: 'bg-purple-100',
       textColor: 'text-purple-600',
       requiresCatalog: true,
+      requiresForms: false,
       onClick: () => {
         const data: NodeData = {
           label: 'Send Catalog',
@@ -52,6 +55,7 @@ export const SellSection = ({ searchQuery }: SellSectionProps) => {
       bgColor: 'bg-violet-100',
       textColor: 'text-violet-600',
       requiresCatalog: true,
+      requiresForms: false,
       onClick: () => actions.createNodeCatalogSearch({ x: 250, y: 100 }),
     },
     {
@@ -61,6 +65,7 @@ export const SellSection = ({ searchQuery }: SellSectionProps) => {
       bgColor: 'bg-emerald-100',
       textColor: 'text-emerald-600',
       requiresCatalog: true,
+      requiresForms: false,
       onClick: () => {
         const data: NodeData = {
           label: 'Send Listings',
@@ -81,12 +86,36 @@ export const SellSection = ({ searchQuery }: SellSectionProps) => {
       },
     },
     {
+      type: 'whatsapp_flow',
+      icon: ClipboardList,
+      label: 'Collect with WhatsApp Form',
+      bgColor: 'bg-sky-100',
+      textColor: 'text-sky-700',
+      requiresCatalog: false,
+      requiresForms: true,
+      onClick: () => {
+        const data: NodeData = {
+          label: 'Collect with WhatsApp Form',
+          type: 'whatsapp_flow',
+          settings: {
+            whatsappFlowId: undefined,
+            header: 'Complete the form',
+            footer: 'Your responses help us serve you better',
+            fieldMappings: [],
+            onComplete: { groupId: 'none', journeyId: 'none', stageId: 'none' },
+          },
+        };
+        return actions.createNodeBase('whatsapp_flow', { x: 250, y: 100 }, data);
+      },
+    },
+    {
       type: 'request_payment',
       icon: CreditCard,
       label: 'Collect payment',
       bgColor: 'bg-blue-100',
       textColor: 'text-blue-700',
       requiresCatalog: false,
+      requiresForms: false,
       onClick: () => actions.createNodeRequestPayment({ x: 250, y: 100 }),
     },
     {
@@ -96,13 +125,17 @@ export const SellSection = ({ searchQuery }: SellSectionProps) => {
       bgColor: 'bg-amber-100',
       textColor: 'text-amber-700',
       requiresCatalog: false,
+      requiresForms: false,
       onClick: () => actions.createNodeOrderStatus({ x: 250, y: 100 }),
     },
   ];
 
-  const filtered = options.filter((option) =>
-    option.label.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filtered = options.filter((option) => {
+    if (option.requiresForms && !formsEnabled) {
+      return false;
+    }
+    return option.label.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   if (filtered.length === 0) {
     return null;
@@ -112,7 +145,12 @@ export const SellSection = ({ searchQuery }: SellSectionProps) => {
     <div className="grid gap-2">
       {!catalogEnabled && (
         <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-2">
-          Catalog nodes need the WhatsApp Catalog plugin on your plan. Collect payment still works.
+          Catalog nodes need the WhatsApp Catalog plugin on your plan. Forms and payment still work when enabled.
+        </div>
+      )}
+      {formsEnabled && (
+        <div className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-md p-2">
+          WhatsApp Forms must be Live on WhatsApp before they can be sent from automation.
         </div>
       )}
       {filtered.map((option, index) => {

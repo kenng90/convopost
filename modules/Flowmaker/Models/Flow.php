@@ -534,7 +534,8 @@ class Flow extends Model
     }
 
     /**
-     * Resume automation from the else handle when a WhatsApp Form was abandoned.
+     * Resume automation from the onAbandoned handle when a WhatsApp Form was abandoned.
+     * Falls back to else for legacy graphs.
      */
     public function resumeFromFormAbandonment(Contact $contact, string $whatsappFlowNodeId): bool
     {
@@ -544,7 +545,8 @@ class Flow extends Model
                 return false;
             }
 
-            $elseTargetId = null;
+            $targetId = null;
+            $fallbackElse = null;
             foreach ($flowData->edges as $edge) {
                 $edgeArray = is_array($edge) ? $edge : (array) $edge;
                 $source = $edgeArray['source'] ?? null;
@@ -553,13 +555,17 @@ class Flow extends Model
                 }
 
                 $handle = (string) ($edgeArray['sourceHandle'] ?? '');
-                if ($handle === 'else' || str_contains($handle, 'else')) {
-                    $elseTargetId = $edgeArray['target'] ?? null;
+                if ($handle === 'onAbandoned' || str_contains($handle, 'onAbandoned')) {
+                    $targetId = $edgeArray['target'] ?? null;
                     break;
+                }
+                if (($handle === 'else' || str_contains($handle, 'else')) && ! $fallbackElse) {
+                    $fallbackElse = $edgeArray['target'] ?? null;
                 }
             }
 
-            if (! $elseTargetId) {
+            $targetId = $targetId ?: $fallbackElse;
+            if (! $targetId) {
                 return false;
             }
 
@@ -567,11 +573,11 @@ class Flow extends Model
             $contact->primeFlowStateCache($this->id);
 
             $nodes = $this->getWiredNodes($flowData->nodes, $flowData->edges);
-            if (! isset($nodes[$elseTargetId])) {
+            if (! isset($nodes[$targetId])) {
                 return false;
             }
 
-            $nodes[$elseTargetId]->isStartNode = true;
+            $nodes[$targetId]->isStartNode = true;
 
             $mockData = new \stdClass();
             $mockData->contact_id = $contact->id;
@@ -579,7 +585,7 @@ class Flow extends Model
             $mockData->value = '';
             $mockData->extra = json_encode(['abandoned' => true]);
 
-            $nodes[$elseTargetId]->process('', $mockData);
+            $nodes[$targetId]->process('', $mockData);
 
             return true;
         } catch (\Exception $e) {

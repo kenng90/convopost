@@ -35,9 +35,9 @@ interface ActionPanelProps {
 const MODE_VISIBLE: Record<BuilderOutcomeMode, string[]> = {
   all: ['Events', 'Message', 'Sell', 'Book', 'Logic', 'Team', 'AI', 'Data', 'Connect'],
   sell: ['Events', 'Message', 'Sell', 'Logic', 'Team', 'Connect'],
-  book: ['Events', 'Message', 'Book', 'Logic', 'Team', 'Connect'],
+  book: ['Events', 'Message', 'Sell', 'Book', 'Logic', 'Team', 'Connect'],
   support: ['Events', 'Message', 'Logic', 'Team', 'AI', 'Data', 'Connect'],
-  lead: ['Events', 'Message', 'Logic', 'Team', 'AI', 'Connect'],
+  lead: ['Events', 'Message', 'Sell', 'Logic', 'Team', 'AI', 'Connect'],
 };
 
 const ActionPanel = ({

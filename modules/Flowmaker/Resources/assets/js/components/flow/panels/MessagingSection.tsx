@@ -1,4 +1,4 @@
-import { MessageCircle, Image, FileText, MessageSquare, FileVideo, File, List, Database } from 'lucide-react';
+import { MessageCircle, Image, FileText, MessageSquare, FileVideo, File, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowActions } from '@/hooks/useFlowActions';
 import { NodeData } from '@/types/flow';
@@ -140,26 +140,6 @@ const messagingActions = [
       return actions.createNodeBase('list_message', position, data);
     },
   },
-  {
-    type: 'whatsapp_flow',
-    icon: Database,
-    label: 'Send WhatsApp Form',
-    bgColor: 'bg-blue-100',
-    textColor: 'text-blue-600',
-    onClick: (actions: ReturnType<typeof useFlowActions>) => {
-      const position = { x: 250, y: 100 };
-      const data: NodeData = {
-        label: 'Send WhatsApp Form',
-        type: 'whatsapp_flow',
-        settings: {
-          whatsappFlowId: undefined,
-          header: 'Complete the form',
-          footer: 'Your responses help us serve you better',
-        },
-      };
-      return actions.createNodeBase('whatsapp_flow', position, data);
-    },
-  },
 ];
 
 declare global {
@@ -176,14 +156,9 @@ declare global {
 export const MessagingSection = ({ searchQuery }: MessagingSectionProps) => {
   const actions = useFlowActions();
 
-  const planPlugins = window.data?.planPlugins ?? {};
-
-  const filteredActions = messagingActions.filter((action) => {
-    if (action.type === 'whatsapp_flow' && !planPlugins.whatsappflows) {
-      return false;
-    }
-    return action.label.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const filteredActions = messagingActions.filter((action) =>
+    action.label.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (filteredActions.length === 0) return null;
 

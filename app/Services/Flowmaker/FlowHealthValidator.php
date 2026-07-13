@@ -208,12 +208,20 @@ class FlowHealthValidator
                     } else {
                         $errors[] = "WhatsApp Form node [{$id}] has no form selected.";
                     }
+                } elseif (
+                    ! $pendingFormBundle
+                    && empty($options['template_mode'])
+                    && ! $this->whatsappFormIsLive($whatsappFlowId)
+                ) {
+                    $errors[] = "WhatsApp Form node [{$id}] must use a form that is Live on WhatsApp (published to Meta).";
                 }
                 if (! $this->handleConnected($edges, $id, 'onFlowCompleted')) {
                     $warnings[] = "WhatsApp Form node [{$id}] should wire the Completed output.";
                 }
-                if (! $this->handleConnected($edges, $id, 'else')) {
-                    $warnings[] = "WhatsApp Form node [{$id}] should wire the Abandoned/No match output for follow-ups.";
+                $hasElse = $this->handleConnected($edges, $id, 'else');
+                $hasAbandoned = $this->handleConnected($edges, $id, 'onAbandoned');
+                if (! $hasElse && ! $hasAbandoned) {
+                    $warnings[] = "WhatsApp Form node [{$id}] should wire Abandoned and/or No match outputs for follow-ups.";
                 }
             }
 
@@ -337,5 +345,12 @@ class FlowHealthValidator
                 && ($edge['sourceHandle'] ?? '') === $handle
                 && ! empty($edge['target']);
         });
+    }
+
+    private function whatsappFormIsLive(int|string $whatsappFlowId): bool
+    {
+        $form = \App\Models\WhatsappFlow::query()->find($whatsappFlowId);
+
+        return $form && filled($form->meta_flow_id);
     }
 }

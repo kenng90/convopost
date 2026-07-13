@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\WhatsappFlow;
+use App\Services\Flowmaker\WhatsappFormAutomationFactory;
 use App\Services\WhatsappFlowSendService;
 use App\Services\WhatsappFlowSubmissionService;
 use App\Services\WhatsappFormTemplateService;
@@ -611,6 +612,38 @@ class FlowsController extends Controller
     }
 
     /**
+     * Meta Live readiness checklist for a form.
+     */
+    public function readiness(int $id): \Illuminate\Http\JsonResponse
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $companyId = $this->activeCompanyId();
+        $flow = WhatsappFlow::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+        $summary = app(\App\Services\WhatsappFlowReadinessService::class)->forForm($flow);
+
+        return response()->json(array_merge(['success' => true], $summary));
+    }
+
+    /**
+     * Form → conversion analytics for a WhatsApp Form.
+     */
+    public function conversion(int $id): \Illuminate\Http\JsonResponse
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $companyId = $this->activeCompanyId();
+        $flow = WhatsappFlow::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+        $summary = app(\App\Services\Flowmaker\FormConversionAnalyticsService::class)->summaryForForm($flow->id);
+
+        return response()->json(array_merge(['success' => true], $summary));
+    }
+
+    /**
      * Send a test form to a phone number.
      */
     public function testSend(int $id, Request $request): \Illuminate\Http\JsonResponse
@@ -681,13 +714,34 @@ class FlowsController extends Controller
     }
 
     /**
-     * Deep-link helper: use form in Flowmaker automation builder.
+     * Deep-link helper: create a Flowmaker automation from this Live form.
      */
-    public function useInAutomation(int $id): \Illuminate\Http\RedirectResponse
+    public function useInAutomation(Request $request, int $id): \Illuminate\Http\RedirectResponse
     {
         $companyId = $this->activeCompanyId();
-        WhatsappFlow::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+        $form = WhatsappFlow::where('id', $id)->where('company_id', $companyId)->firstOrFail();
 
-        return redirect()->route('flows.index', ['prefillWhatsappFormId' => $id]);
+        if (empty($form->meta_flow_id)) {
+            return redirect()
+                ->route('whatsapp-flows.edit', $form->id)
+                ->with('error', __('Publish this form to WhatsApp (Go Live) before using it in automation.'));
+        }
+
+        $recipe = strtolower((string) $request->query('recipe', 'lead'));
+        if (! in_array($recipe, WhatsappFormAutomationFactory::RECIPES, true)) {
+            $recipe = 'lead';
+        }
+
+        try {
+            $flow = app(WhatsappFormAutomationFactory::class)->createFromForm($form, $recipe, (int) $companyId);
+        } catch (\InvalidArgumentException $e) {
+            return redirect()
+                ->route('whatsapp-flows.edit', $form->id)
+                ->with('error', $e->getMessage());
+        }
+
+        return redirect()
+            ->route('flowmaker.edit', $flow)
+            ->with('success', __('Automation draft created. Review nodes, bind team/payment settings, then publish.'));
     }
 }

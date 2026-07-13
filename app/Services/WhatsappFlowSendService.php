@@ -126,6 +126,16 @@ class WhatsappFlowSendService
                 'fb_message_id' => $fbMessageId,
             ]);
 
+            if ($automationFlowId) {
+                \App\Services\Flowmaker\FlowRunLogger::log(
+                    (int) $automationFlowId,
+                    (int) $contact->id,
+                    'whatsapp_form_sent',
+                    $flowNodeId,
+                    (string) $whatsappFlow->id
+                );
+            }
+
             return [
                 'success' => true,
                 'message' => 'Form sent successfully.',

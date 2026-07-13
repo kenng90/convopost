@@ -81,12 +81,15 @@ class Main extends Controller
         }
 
         $company = auth()->user()->currentCompany();
+        $customFields = \Modules\Contacts\Models\Field::where('company_id', $flow->company_id)
+            ->get(['id', 'name']);
 
         return response()->json([
             'templates' => $templates,
             'agents' => $agents,
             'groups' => $groups,
             'journeys' => $journeys,
+            'customFields' => $customFields,
             'planPlugins' => [
                 'whatsappflows' => $company ? $company->hasPlanPlugin('whatsappflows') : false,
                 'whatsappcatalog' => $company ? $company->hasPlanPlugin('whatsappcatalog') : false,

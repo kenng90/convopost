@@ -232,6 +232,8 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject', 'org.route']
         Route::get('/api/whatsapp-flows/templates', [FlowsController::class, 'listTemplates'])->name('whatsapp-flows.templates');
         Route::post('/api/whatsapp-flows/from-bundle/{key}', [FlowsController::class, 'createFromBundle'])->name('whatsapp-flows.from-bundle');
         Route::get('/api/whatsapp-flows/{id}/fields', [FlowsController::class, 'getFields'])->name('whatsapp-flows.fields');
+        Route::get('/api/whatsapp-flows/{id}/readiness', [FlowsController::class, 'readiness'])->name('whatsapp-flows.readiness');
+        Route::get('/api/whatsapp-flows/{id}/conversion', [FlowsController::class, 'conversion'])->name('whatsapp-flows.conversion');
         Route::post('/api/whatsapp-flows/{id}/test-send', [FlowsController::class, 'testSend'])->name('whatsapp-flows.test-send');
 
         Route::prefix('api/flow-builder')->name('flow-builder.')->group(function () {

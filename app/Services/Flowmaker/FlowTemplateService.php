@@ -3,6 +3,7 @@
 namespace App\Services\Flowmaker;
 
 use App\Services\WhatsappFormTemplateService;
+use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Flow;
 
 class FlowTemplateService
@@ -32,6 +33,25 @@ class FlowTemplateService
      */
     public function install(string $key, ?string $customName = null, array $bindings = []): ?Flow
     {
+        if (str_starts_with($key, 'whatsapp_form_')) {
+            $recipe = substr($key, strlen('whatsapp_form_'));
+            $formId = $bindings['whatsapp_flow_id'] ?? $bindings['form_id'] ?? null;
+            if (! $formId) {
+                return null;
+            }
+
+            $form = \App\Models\WhatsappFlow::query()->find($formId);
+            if (! $form) {
+                return null;
+            }
+
+            return app(WhatsappFormAutomationFactory::class)->createFromForm(
+                $form,
+                $recipe,
+                (int) ($form->company_id)
+            );
+        }
+
         $template = $this->get($key);
         if (! $template) {
             return null;
@@ -45,6 +65,27 @@ class FlowTemplateService
                 $template['form_bundle'],
                 (int) $companyId
             );
+
+            $company = \App\Models\Company::find($companyId);
+            if ($company && app(\App\Services\WhatsappFlowReadinessService::class)->companyCanAutoPublish($company)) {
+                try {
+                    $publish = app(\App\Services\WhatsappMetaFlowService::class)->publishFlow($whatsappForm);
+                    if (! ($publish['success'] ?? false)) {
+                        Log::warning('WhatsApp form auto-publish failed on template install', [
+                            'form_id' => $whatsappForm->id,
+                            'message' => $publish['message'] ?? null,
+                        ]);
+                    } else {
+                        $whatsappForm->refresh();
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('WhatsApp form auto-publish exception on template install', [
+                        'form_id' => $whatsappForm->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             $flowData = $this->linkBundledWhatsappForms($flowData, $whatsappForm->id);
         }
 

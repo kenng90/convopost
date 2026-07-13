@@ -36,6 +36,21 @@ class WhatsappFlowSubmissionService
 
         if ($contact && $automationFlowId) {
             $this->syncResponseToContactState($contact, $automationFlowId, $cleanData, $whatsappFlow);
+            \App\Services\Flowmaker\FlowRunLogger::log(
+                (int) $automationFlowId,
+                (int) $contact->id,
+                'whatsapp_form_completed',
+                $flowResponse->flow_node_id ? (string) $flowResponse->flow_node_id : null,
+                (string) $flowResponse->whatsapp_flow_id
+            );
+        } elseif ($flowResponse->flow_id) {
+            \App\Services\Flowmaker\FlowRunLogger::log(
+                (int) $flowResponse->flow_id,
+                $flowResponse->contact_id ? (int) $flowResponse->contact_id : null,
+                'whatsapp_form_completed',
+                $flowResponse->flow_node_id ? (string) $flowResponse->flow_node_id : null,
+                (string) $flowResponse->whatsapp_flow_id
+            );
         }
 
         if ($whatsappFlow && $whatsappFlow->webhook_enabled && ! empty($whatsappFlow->webhook_url) && ! $flowResponse->webhook_dispatched_at) {
