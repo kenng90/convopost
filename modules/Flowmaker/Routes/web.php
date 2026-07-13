@@ -36,6 +36,7 @@ Route::group([
         Route::get('api/flowmaker/booking-services', 'Main@bookingServices')->name('flowmaker.booking.services');
         Route::get('api/flowmaker/booking-events', 'Main@bookingEvents')->name('flowmaker.booking.events');
         Route::get('api/flowmaker/booking-analytics/{flow}', 'Main@bookingAnalytics')->name('flowmaker.booking.analytics');
+        Route::get('api/flowmaker/commerce-analytics/{flow}', 'Main@commerceAnalytics')->name('flowmaker.commerce.analytics');
         Route::get('flowmaker/script', 'Main@script')->name('flowmaker.script');
         Route::get('flowmaker/css', 'Main@css')->name('flowmaker.css');
         Route::post('flowmaker/update/{flow}', 'Main@updateFlow')
@@ -50,9 +51,13 @@ Route::group([
         Route::post('flowmaker/simulate/{flow}', 'Main@simulateFlow')
             ->name('flowmaker.simulate')
             ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        Route::post('flowmaker/settings/{flow}', 'Main@updateSettings')
+            ->name('flowmaker.settings')
+            ->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
         Route::get('flowmaker/logs/{flow}', 'Main@flowRunLogs')
             ->name('flowmaker.logs');
         Route::get('flows/templates', 'FlowTemplatesController@index')->name('flow-templates.index');
+        Route::get('flows/templates/{key}/setup', 'FlowTemplatesController@setup')->name('flow-templates.setup');
         Route::post('flows/templates/{key}/install', 'FlowTemplatesController@install')->name('flow-templates.install');
         Route::post('flows/templates/ai/generate', 'FlowTemplatesController@generate')
             ->middleware('plan.capability:ai_flow_assistant')

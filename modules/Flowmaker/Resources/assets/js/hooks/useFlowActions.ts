@@ -76,6 +76,7 @@ export const useFlowActions = () => {
             type === 'booking_event_register' ? 'booking_event_register' :
             type === 'send_booking_link' ? 'send_booking_link' :
             type === 'manage_booking' ? 'manage_booking' :
+            type === 'order_status' ? 'order_status' :
             type === 'branch' ? 'branch' : 'action',
       position: newPosition,
       data: data || {
@@ -107,6 +108,7 @@ export const useFlowActions = () => {
                type === 'booking_event_register' ? 'Register for event' :
                type === 'send_booking_link' ? 'Send booking link' :
                type === 'manage_booking' ? 'Manage booking' :
+               type === 'order_status' ? 'Update order status' :
                type.charAt(0).toUpperCase() + type.slice(1),
         type,
         settings: type === 'branch' 
@@ -183,7 +185,7 @@ export const useFlowActions = () => {
           ? {
               catalogId: '',
               header: 'Browse our products',
-              displayMode: 'link',
+              displayMode: 'interactive_list',
               checkoutVariablePrefix: 'catalog_order',
               autoResumeFlow: true,
             }
@@ -192,12 +194,19 @@ export const useFlowActions = () => {
               catalogId: '',
               header: 'Browse our listings',
               footer: 'Tap the link to view listings and book on WhatsApp.',
-              displayMode: 'link',
+              displayMode: 'interactive_list',
               completionType: 'booking',
               bookingVariablePrefix: 'listing_booking',
               requirePreferredDateTime: false,
               bookingBackend: 'whatsapp_only',
-              autoResumeFlow: false,
+              autoResumeFlow: true,
+            }
+          : type === 'order_status'
+          ? {
+              status: 'confirmed',
+              message: 'Your order status is now: {{order_status}}. Reference: {{order_reference}}',
+              journeyId: 'none',
+              stageId: 'none',
             }
           : type === 'send_booking_link'
           ? {
@@ -382,7 +391,7 @@ export const useFlowActions = () => {
 
   const createNodeRequestPayment = useCallback((position: { x: number; y: number }) => {
     return createNodeBase('request_payment', position, {
-      label: 'Request Payment',
+      label: 'Collect Payment',
       type: 'request_payment',
       settings: {
         payment: {
@@ -392,6 +401,19 @@ export const useFlowActions = () => {
           description: 'Order payment',
           responseVar: 'payment_result',
         },
+      },
+    });
+  }, [createNodeBase]);
+
+  const createNodeOrderStatus = useCallback((position: { x: number; y: number }) => {
+    return createNodeBase('order_status', position, {
+      label: 'Update order status',
+      type: 'order_status',
+      settings: {
+        status: 'confirmed',
+        message: 'Your order status is now: {{order_status}}. Reference: {{order_reference}}',
+        journeyId: 'none',
+        stageId: 'none',
       },
     });
   }, [createNodeBase]);
@@ -488,6 +510,7 @@ export const useFlowActions = () => {
     createNodeAssignJourneyStage,
     createNodeMpesaStkPush,
     createNodeRequestPayment,
+    createNodeOrderStatus,
     createNodeCatalogSearch,
     deleteNode,
     updateNode

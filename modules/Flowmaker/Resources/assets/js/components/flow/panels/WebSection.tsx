@@ -1,67 +1,25 @@
-import { Button } from "@/components/ui/button";
-import { useFlowActions } from "@/hooks/useFlowActions";
-import { Webhook, Globe, Users, UserPlus, Smartphone, Route, CreditCard } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { useFlowActions } from '@/hooks/useFlowActions';
+import { Globe } from 'lucide-react';
 
 interface WebSectionProps {
   searchQuery: string;
 }
 
 export const WebSection = ({ searchQuery }: WebSectionProps) => {
-  const { createNodeWebhook, createNodeHTTP, createNodeAssignAgent, createNodeAssignGroup, createNodeAssignJourneyStage, createNodeMpesaStkPush, createNodeRequestPayment } = useFlowActions();
+  const { createNodeHTTP } = useFlowActions();
 
   const webOptions = [
-    /*{
-      icon: Webhook,
-      label: "Webhook",
-      bgColor: "bg-purple-100",
-      textColor: "text-purple-600",
-      onClick: () => createNodeWebhook({ x: 0, y: 0 }),
-    },*/
     {
       icon: Globe,
-      label: "HTTP Request--",
-      bgColor: "bg-sky-100",
-      textColor: "text-sky-600",
+      label: 'HTTP Request',
+      bgColor: 'bg-sky-100',
+      textColor: 'text-sky-600',
       onClick: () => createNodeHTTP({ x: 0, y: 0 }),
-    },
-    {
-      icon: Smartphone,
-      label: "MPesa STK Push",
-      bgColor: "bg-green-100",
-      textColor: "text-green-700",
-      onClick: () => createNodeMpesaStkPush({ x: 0, y: 0 }),
-    },
-    {
-      icon: CreditCard,
-      label: "Request Payment",
-      bgColor: "bg-blue-100",
-      textColor: "text-blue-700",
-      onClick: () => createNodeRequestPayment({ x: 0, y: 0 }),
-    },
-    {
-      icon: UserPlus,
-      label: "Assign to Agent",
-      bgColor: "bg-blue-100",
-      textColor: "text-blue-600",
-      onClick: () => createNodeAssignAgent({ x: 0, y: 0 }),
-    },
-    {
-      icon: Users,
-      label: "Assign to Group",
-      bgColor: "bg-green-100",
-      textColor: "text-green-600",
-      onClick: () => createNodeAssignGroup({ x: 0, y: 0 }),
-    },
-    {
-      icon: Route,
-      label: "Move to Journey Stage",
-      bgColor: "bg-purple-100",
-      textColor: "text-purple-700",
-      onClick: () => createNodeAssignJourneyStage({ x: 0, y: 0 }),
     },
   ];
 
-  const filteredOptions = webOptions.filter(option =>
+  const filteredOptions = webOptions.filter((option) =>
     option.label.toLowerCase().includes(searchQuery.toLowerCase())
   );
 

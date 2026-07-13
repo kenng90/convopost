@@ -14,13 +14,14 @@ $flowTemplates = [
         'description' => 'Full appointment intake: service menu, date/time, guest name, team routing, and optional couples deposit.',
         'category' => 'services',
         'video_url' => null,
-        'setup_hint' => 'Before Publish: set Bookings group & journey stage, M-Pesa deposit on couples package, and Reminders bookable service on Book Appointment node. Save draft → Publish when IDs are set.',
+        'setup_hint' => 'Before Publish: set Bookings group & journey stage, deposit amount / payment provider on couples package, and Reminders bookable service on Book Appointment node. Save draft → Publish when IDs are set.',
         'post_install_checklist' => [
             'Bookings group & journey stage IDs',
-            'M-Pesa deposit amount (couples package)',
+            'Deposit amount & payment provider (couples package)',
             'Reminders service linked on Book Appointment',
             'Publish flow',
         ],
+        'exclusive_on_match' => true,
         'flow_data' => [
             'nodes' => [
                 [
@@ -84,22 +85,24 @@ $flowTemplates = [
                         'label' => 'Deposit notice',
                         'type' => 'message',
                         'settings' => [
-                            'message' => "Our Couples Spa Package requires a 50% deposit to hold your slot.\n\nWe will send an M-Pesa prompt now. After payment, share your preferred date and time.",
+                            'message' => "Our Couples Spa Package requires a 50% deposit to hold your slot.\n\nWe will send a payment prompt now. After payment, share your preferred date and time.",
                         ],
                     ],
                 ],
                 [
-                    'id' => 'mpesa_stk_push-1',
-                    'type' => 'mpesa_stk_push',
+                    'id' => 'request_payment-1',
+                    'type' => 'request_payment',
                     'position' => ['x' => 1520, 'y' => 520],
                     'data' => [
                         'label' => 'Couples deposit',
-                        'type' => 'mpesa_stk_push',
+                        'type' => 'request_payment',
                         'settings' => [
-                            'mpesa' => [
+                            'payment' => [
                                 'amount' => '5000',
                                 'accountReference' => 'SPA-DEPOSIT',
-                                'transactionDesc' => 'Spa deposit',
+                                'description' => 'Spa deposit',
+                                'provider' => 'auto',
+                                'email' => '',
                                 'responseVar' => 'spa_deposit_result',
                             ],
                         ],
@@ -113,7 +116,7 @@ $flowTemplates = [
                         'label' => 'Payment failed',
                         'type' => 'message',
                         'settings' => [
-                            'message' => "We couldn't complete the M-Pesa request. Reply *book* to try again or type *agent* for assistance.",
+                            'message' => "We couldn't complete the payment request. Reply *book* to try again or type *agent* for assistance.",
                         ],
                     ],
                 ],
@@ -214,10 +217,10 @@ $flowTemplates = [
                 ['id' => 'e-list-manicure', 'source' => 'list_message-1', 'target' => 'book_appointment-1', 'sourceHandle' => 'section1-row3'],
                 ['id' => 'e-list-couples', 'source' => 'list_message-1', 'target' => 'message-2', 'sourceHandle' => 'section1-row4'],
                 ['id' => 'e-deposit-counter', 'source' => 'message-2', 'target' => 'counter-1'],
-                ['id' => 'e-counter-true-mpesa', 'source' => 'counter-1', 'target' => 'mpesa_stk_push-1', 'sourceHandle' => 'true'],
+                ['id' => 'e-counter-true-pay', 'source' => 'counter-1', 'target' => 'request_payment-1', 'sourceHandle' => 'true'],
                 ['id' => 'e-counter-false-end', 'source' => 'counter-1', 'target' => 'end-1', 'sourceHandle' => 'false'],
-                ['id' => 'e-mpesa-success', 'source' => 'mpesa_stk_push-1', 'target' => 'book_appointment-1', 'sourceHandle' => 'mpesa-success'],
-                ['id' => 'e-mpesa-failed', 'source' => 'mpesa_stk_push-1', 'target' => 'message-3', 'sourceHandle' => 'mpesa-failed'],
+                ['id' => 'e-pay-success', 'source' => 'request_payment-1', 'target' => 'book_appointment-1', 'sourceHandle' => 'success'],
+                ['id' => 'e-pay-failed', 'source' => 'request_payment-1', 'target' => 'message-3', 'sourceHandle' => 'failed'],
                 ['id' => 'e-fail-end', 'source' => 'message-3', 'target' => 'end-1'],
                 ['id' => 'e-book-confirm', 'source' => 'book_appointment-1', 'target' => 'message-4'],
                 ['id' => 'e-confirm-group', 'source' => 'message-4', 'target' => 'assign_group-1'],
@@ -230,11 +233,13 @@ $flowTemplates = [
 
     'whatsapp_shop_checkout' => [
         'name' => 'WhatsApp Shop — Catalog & Pay',
-        'description' => 'Browse catalog, checkout with M-Pesa, route to fulfillment, or escalate to sales / AI FAQ.',
+        'description' => 'Browse catalog, checkout with payment, confirm order status, route to fulfillment, or escalate to sales / AI FAQ.',
         'category' => 'commerce',
         'video_url' => null,
-        'setup_hint' => 'Set catalog ID, M-Pesa, Fulfillment group & journey stage. Auto-resume after web checkout is on by default. Delivery address/notes are for agent follow-up until checkout supports them. Save draft → Publish.',
-        'post_install_checklist' => ['Catalog ID', 'M-Pesa credentials', 'Fulfillment group', 'OpenRouter key for FAQ', 'Publish'],
+        'setup_hint' => 'Run the shop setup wizard to bind your catalog, payment provider, and fulfillment team. Save draft → Publish.',
+        'post_install_checklist' => ['Catalog', 'Payment provider', 'Fulfillment group', 'OpenRouter key for FAQ', 'Publish'],
+        'requires_setup_wizard' => true,
+        'exclusive_on_match' => true,
         'flow_data' => FaqConversationLoop::mergeInto([
             'nodes' => [
                 [
@@ -273,7 +278,7 @@ $flowTemplates = [
                         'settings' => [
                             'catalogId' => '1',
                             'header' => 'Browse our products',
-                            'displayMode' => 'link',
+                            'displayMode' => 'interactive_list',
                             'autoResumeFlow' => true,
                         ],
                     ],
@@ -330,31 +335,47 @@ $flowTemplates = [
                         'label' => 'Order summary',
                         'type' => 'message',
                         'settings' => [
-                            'message' => "Order summary 📦\n\nDelivery: {{delivery_address}}\nNotes: {{order_notes}}\n\nWe will send an M-Pesa payment request for the total.",
+                            'message' => "Order summary 📦\n\nDelivery: {{delivery_address}}\nNotes: {{order_notes}}\n\nWe will send a payment request for the total.",
                         ],
                     ],
                 ],
                 [
-                    'id' => 'mpesa_stk_push-1',
-                    'type' => 'mpesa_stk_push',
+                    'id' => 'request_payment-1',
+                    'type' => 'request_payment',
                     'position' => ['x' => 2660, 'y' => 80],
                     'data' => [
                         'label' => 'Collect payment',
-                        'type' => 'mpesa_stk_push',
+                        'type' => 'request_payment',
                         'settings' => [
-                            'mpesa' => [
+                            'payment' => [
                                 'amount' => '{{catalog_order_total_amount}}',
+                                'provider' => 'auto',
                                 'accountReference' => 'SHOP-ORDER',
-                                'transactionDesc' => 'Shop order',
+                                'description' => 'Shop order',
                                 'responseVar' => 'shop_payment_result',
                             ],
                         ],
                     ],
                 ],
                 [
+                    'id' => 'order_status-1',
+                    'type' => 'order_status',
+                    'position' => ['x' => 3040, 'y' => 80],
+                    'data' => [
+                        'label' => 'Confirm order',
+                        'type' => 'order_status',
+                        'settings' => [
+                            'status' => 'confirmed',
+                            'message' => 'Payment received! ✅ Your order is now *{{order_status}}*. Reference: {{order_reference}}',
+                            'journeyId' => 'none',
+                            'stageId' => 'none',
+                        ],
+                    ],
+                ],
+                [
                     'id' => 'assign_journey_stage-1',
                     'type' => 'assign_journey_stage',
-                    'position' => ['x' => 3040, 'y' => 80],
+                    'position' => ['x' => 3420, 'y' => 80],
                     'data' => [
                         'label' => 'Mark Paid',
                         'type' => 'assign_journey_stage',
@@ -367,7 +388,7 @@ $flowTemplates = [
                 [
                     'id' => 'assign_group-1',
                     'type' => 'assign_group',
-                    'position' => ['x' => 3420, 'y' => 80],
+                    'position' => ['x' => 3800, 'y' => 80],
                     'data' => [
                         'label' => 'Fulfillment team',
                         'type' => 'assign_group',
@@ -380,12 +401,12 @@ $flowTemplates = [
                 [
                     'id' => 'message-3',
                     'type' => 'message',
-                    'position' => ['x' => 3800, 'y' => 80],
+                    'position' => ['x' => 4180, 'y' => 80],
                     'data' => [
                         'label' => 'Payment thanks',
                         'type' => 'message',
                         'settings' => [
-                            'message' => 'Payment received! ✅ Our fulfillment team will confirm dispatch shortly.',
+                            'message' => 'Our fulfillment team will confirm dispatch shortly. Reply *shop* anytime to order again.',
                         ],
                     ],
                 ],
@@ -468,9 +489,10 @@ $flowTemplates = [
                 ['id' => 'e-menu-sales', 'source' => 'quick_replies-1', 'target' => 'assign_agent-1', 'sourceHandle' => 'button-3'],
                 ['id' => 'e-addr-notes', 'source' => 'question-1', 'target' => 'question-2'],
                 ['id' => 'e-notes-summary', 'source' => 'question-2', 'target' => 'message-2'],
-                ['id' => 'e-summary-mpesa', 'source' => 'message-2', 'target' => 'mpesa_stk_push-1'],
-                ['id' => 'e-mpesa-success', 'source' => 'mpesa_stk_push-1', 'target' => 'assign_journey_stage-1', 'sourceHandle' => 'mpesa-success'],
-                ['id' => 'e-mpesa-failed', 'source' => 'mpesa_stk_push-1', 'target' => 'message-4', 'sourceHandle' => 'mpesa-failed'],
+                ['id' => 'e-summary-pay', 'source' => 'message-2', 'target' => 'request_payment-1'],
+                ['id' => 'e-pay-success', 'source' => 'request_payment-1', 'target' => 'order_status-1', 'sourceHandle' => 'success'],
+                ['id' => 'e-order-journey', 'source' => 'order_status-1', 'target' => 'assign_journey_stage-1'],
+                ['id' => 'e-pay-failed', 'source' => 'request_payment-1', 'target' => 'message-4', 'sourceHandle' => 'failed'],
                 ['id' => 'e-paid-group', 'source' => 'assign_journey_stage-1', 'target' => 'assign_group-1'],
                 ['id' => 'e-group-thanks', 'source' => 'assign_group-1', 'target' => 'message-3'],
                 ['id' => 'e-thanks-end', 'source' => 'message-3', 'target' => 'end-1'],

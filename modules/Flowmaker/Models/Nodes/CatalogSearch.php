@@ -5,6 +5,7 @@ namespace Modules\Flowmaker\Models\Nodes;
 use App\Models\ListCatalog;
 use App\Services\Catalog\CatalogItemRepository;
 use App\Services\Catalog\CatalogUrlService;
+use App\Services\Flowmaker\FlowRunLogger;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
@@ -75,6 +76,7 @@ class CatalogSearch extends Node
 
         $contact->setContactState($this->flow_id, 'current_node', $this->id);
         $contact->sendMessage($prompt, false, false, 'TEXT');
+        FlowRunLogger::log((int) $this->flow_id, (int) $contact->id, 'catalog_search_started', (string) $this->id);
 
         return ['success' => true, 'waiting' => true];
     }
@@ -115,6 +117,7 @@ class CatalogSearch extends Node
         if ($matches === []) {
             $contact->clearContactState($this->flow_id, 'current_node');
             $contact->sendMessage(__('No products matched ":query". Try another keyword.', ['query' => $query]), false, false, 'TEXT');
+            FlowRunLogger::log((int) $this->flow_id, (int) $contact->id, 'catalog_search_no_match', (string) $this->id, $query);
             $noMatch = $this->getNextNodeId('onNoMatch') ?: $this->getNextNodeId('else');
             if ($noMatch) {
                 $noMatch->process($message, $data);
@@ -126,6 +129,7 @@ class CatalogSearch extends Node
         if (count($matches) === 1) {
             $contact->clearContactState($this->flow_id, 'current_node');
             $contact->setContactState($this->flow_id, 'selected_product', json_encode($matches[0]));
+            FlowRunLogger::log((int) $this->flow_id, (int) $contact->id, 'catalog_search_matched', (string) $this->id, $query);
             $next = $this->getNextNodeId('onMatch') ?: $this->getNextNodeId('onProductSelected');
             if ($next) {
                 $next->process($message, $data);

@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Save, ArrowLeft, Upload, Play } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useCallback, useMemo, useState } from 'react';
-import ActionPanel from './ActionPanel';
+import ActionPanel, { BuilderOutcomeMode } from './ActionPanel';
 import { nodeTypes } from '@/config/nodeTypes';
 import DataSidebar from './DataSidebar';
 
@@ -88,6 +88,9 @@ const FlowCanvas = ({ flowId = '1' }: FlowCanvasProps) => {
   const [healthMessages, setHealthMessages] = useState<string[]>([]);
   const [simulateMessage, setSimulateMessage] = useState('');
   const [simulateResult, setSimulateResult] = useState<string | null>(null);
+  const [outcomeMode, setOutcomeMode] = useState<BuilderOutcomeMode>('all');
+  const [viewMode, setViewMode] = useState<'canvas' | 'funnel'>('canvas');
+  const [simulateScenario, setSimulateScenario] = useState('keyword');
   const installChecklist: string[] = window.data?.post_install_checklist || [];
   const { toast } = useToast();
 
@@ -236,7 +239,7 @@ const FlowCanvas = ({ flowId = '1' }: FlowCanvasProps) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: simulateMessage }),
+        body: JSON.stringify({ message: simulateMessage, scenario: simulateScenario }),
       });
 
       const result = await response.json();
@@ -245,8 +248,13 @@ const FlowCanvas = ({ flowId = '1' }: FlowCanvasProps) => {
       }
 
       const matched = result.simulation?.matched_keywords?.join(', ') || 'none';
+      const path = (result.simulation?.path || [])
+        .map((step: { label?: string; type?: string }) => step.label || step.type)
+        .join(' → ');
       setSimulateResult(
-        `Matched keywords: ${matched}. Would start: ${result.simulation?.would_start ? 'yes' : 'no'}`,
+        `Scenario: ${simulateScenario}. Matched: ${matched}. Would start: ${
+          result.simulation?.would_start ? 'yes' : 'no'
+        }. Path: ${path || 'n/a'}`,
       );
     } catch (error) {
       toast({
@@ -257,6 +265,51 @@ const FlowCanvas = ({ flowId = '1' }: FlowCanvasProps) => {
     }
   };
 
+  const saveFlowSettings = async (updates: {
+    priority?: number;
+    exclusive_on_match?: boolean;
+    is_active?: boolean;
+  }) => {
+    try {
+      await fetch(`/flowmaker/settings/${window.data.flow.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (window.data?.flow) {
+        Object.assign(window.data.flow, updates);
+      }
+    } catch (error) {
+      toast({
+        title: 'Settings update failed',
+        description: 'Could not save flow settings.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const funnelColumns = useMemo(() => {
+    const categories: Record<string, string[]> = {
+      Start: ['keyword_trigger', 'incomingMessage', 'incoming_message', 'template'],
+      Talk: ['message', 'image', 'pdf', 'video', 'quick_replies', 'list_message', 'question', 'whatsapp_flow'],
+      Sell: ['whatsapp_catalog', 'catalog_search', 'listing_inquiry', 'request_payment', 'mpesa_stk_push', 'order_status'],
+      Book: [
+        'book_appointment',
+        'booking_events_list',
+        'booking_event_register',
+        'send_booking_link',
+        'manage_booking',
+      ],
+      Team: ['assign_agent', 'assign_group', 'assign_journey_stage'],
+      Logic: ['branch', 'counter', 'check_pricing', 'datastore', 'http', 'openai'],
+      End: ['end'],
+    };
+    return Object.entries(categories).map(([name, types]) => ({
+      name,
+      nodes: nodes.filter((n) => types.includes(n.type || '')),
+    }));
+  }, [nodes]);
+
   const healthSummary = useMemo(() => healthMessages.slice(0, 5), [healthMessages]);
 
   const handlePopoverIndexChange = () => {};
@@ -264,6 +317,10 @@ const FlowCanvas = ({ flowId = '1' }: FlowCanvasProps) => {
   const handleBackClick = () => {
     window.location.href = '/flows';
   };
+
+  const flowPriority = Number(window.data?.flow?.priority ?? 0);
+  const flowExclusive = Boolean(window.data?.flow?.exclusive_on_match);
+  const flowActive = window.data?.flow?.is_active !== false;
 
   return (
     <div className="flex h-screen bg-[#F1F0FB] relative">
@@ -274,6 +331,8 @@ const FlowCanvas = ({ flowId = '1' }: FlowCanvasProps) => {
               onImportClick={() => {}}
               onPopoverIndexChange={handlePopoverIndexChange}
               onOpenDataSidebar={handleOpenDataSidebar}
+              outcomeMode={outcomeMode}
+              onOutcomeModeChange={setOutcomeMode}
             />
           </div>
         </div>
@@ -302,8 +361,34 @@ const FlowCanvas = ({ flowId = '1' }: FlowCanvasProps) => {
           )}
         </div>
 
-        <div className="absolute top-4 left-24 z-10 w-80 bg-white rounded-lg shadow p-3 space-y-2">
+        <div className="absolute top-4 left-24 z-10 w-96 bg-white rounded-lg shadow p-3 space-y-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={`text-xs px-2 py-1 rounded ${viewMode === 'canvas' ? 'bg-gray-900 text-white' : 'bg-gray-100'}`}
+              onClick={() => setViewMode('canvas')}
+            >
+              Canvas
+            </button>
+            <button
+              type="button"
+              className={`text-xs px-2 py-1 rounded ${viewMode === 'funnel' ? 'bg-gray-900 text-white' : 'bg-gray-100'}`}
+              onClick={() => setViewMode('funnel')}
+            >
+              Funnel
+            </button>
+          </div>
           <div className="text-sm font-medium">Test message</div>
+          <select
+            className="w-full border rounded-md h-8 px-2 text-xs"
+            value={simulateScenario}
+            onChange={(e) => setSimulateScenario(e.target.value)}
+          >
+            <option value="keyword">Keyword start</option>
+            <option value="catalog_select">Catalog select</option>
+            <option value="payment_success">Payment success</option>
+            <option value="payment_failed">Payment failed</option>
+          </select>
           <div className="flex gap-2">
             <Input
               value={simulateMessage}
@@ -313,6 +398,32 @@ const FlowCanvas = ({ flowId = '1' }: FlowCanvasProps) => {
             <Button size="icon" variant="outline" onClick={handleSimulate}>
               <Play className="h-4 w-4" />
             </Button>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <label className="space-y-1">
+              <span>Priority</span>
+              <Input
+                type="number"
+                defaultValue={flowPriority}
+                onBlur={(e) => saveFlowSettings({ priority: Number(e.target.value || 0) })}
+              />
+            </label>
+            <label className="flex items-center gap-1 pt-5">
+              <input
+                type="checkbox"
+                defaultChecked={flowExclusive}
+                onChange={(e) => saveFlowSettings({ exclusive_on_match: e.target.checked })}
+              />
+              Exclusive
+            </label>
+            <label className="flex items-center gap-1 pt-5">
+              <input
+                type="checkbox"
+                defaultChecked={flowActive}
+                onChange={(e) => saveFlowSettings({ is_active: e.target.checked })}
+              />
+              Active
+            </label>
           </div>
           {installChecklist.length > 0 && (
             <div className="text-xs bg-blue-50 text-blue-900 px-2 py-2 rounded space-y-1 max-h-28 overflow-y-auto">
@@ -332,21 +443,43 @@ const FlowCanvas = ({ flowId = '1' }: FlowCanvasProps) => {
           )}
         </div>
 
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          isValidConnection={isValidConnection}
-          nodeTypes={nodeTypes}
-          defaultEdgeOptions={defaultEdgeOptions}
-          minZoom={0.1}
-          maxZoom={4}
-          fitView
-        >
-          <Background />
-        </ReactFlow>
+        {viewMode === 'funnel' ? (
+          <div className="absolute inset-0 pt-28 px-24 pb-8 overflow-auto">
+            <div className="flex gap-3 min-w-max">
+              {funnelColumns.map((column) => (
+                <div key={column.name} className="w-56 bg-white/90 rounded-lg border p-3">
+                  <div className="text-xs font-semibold mb-2">{column.name}</div>
+                  <div className="space-y-2">
+                    {column.nodes.length === 0 && (
+                      <div className="text-[11px] text-gray-400">No nodes</div>
+                    )}
+                    {column.nodes.map((node) => (
+                      <div key={node.id} className="text-xs bg-gray-50 border rounded px-2 py-1">
+                        {(node.data as any)?.label || node.type}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            isValidConnection={isValidConnection}
+            nodeTypes={nodeTypes}
+            defaultEdgeOptions={defaultEdgeOptions}
+            minZoom={0.1}
+            maxZoom={4}
+            fitView
+          >
+            <Background />
+          </ReactFlow>
+        )}
 
         <DataSidebar open={dataDrawerOpen} onOpenChange={setDataDrawerOpen} />
       </div>

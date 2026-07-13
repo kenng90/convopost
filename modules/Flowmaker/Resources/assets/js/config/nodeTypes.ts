@@ -35,6 +35,7 @@ import BookingEventsListNode from '@/components/flow/BookingEventsListNode';
 import BookingEventRegisterNode from '@/components/flow/BookingEventRegisterNode';
 import SendBookingLinkNode from '@/components/flow/SendBookingLinkNode';
 import ManageBookingNode from '@/components/flow/ManageBookingNode';
+import OrderStatusNode from '@/components/flow/OrderStatusNode';
 
 export const nodeTypes = {
   trigger: TriggerNode,
@@ -74,4 +75,5 @@ export const nodeTypes = {
   booking_event_register: BookingEventRegisterNode,
   send_booking_link: SendBookingLinkNode,
   manage_booking: ManageBookingNode,
+  order_status: OrderStatusNode,
 };

@@ -3,6 +3,7 @@
 namespace Modules\Flowmaker\Models\Nodes;
 
 use App\Models\Company;
+use App\Services\Flowmaker\FlowRunLogger;
 use App\Services\Payments\PaymentGatewayManager;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
@@ -20,6 +21,14 @@ class RequestPayment extends Node
 
         $status = $contact->getContactStateValue($this->flow_id, 'payment_result_status');
         $contact->clearContactState($this->flow_id, 'current_node');
+
+        FlowRunLogger::log(
+            (int) $this->flow_id,
+            (int) $contact->id,
+            $status === 'success' ? 'payment_succeeded' : 'payment_failed',
+            (string) $this->id,
+            (string) $status
+        );
 
         $nextNode = ($status === 'success')
             ? $this->getNextNodeId('success')
@@ -114,6 +123,7 @@ class RequestPayment extends Node
                 'message' => $result['message'] ?? null,
             ]);
             $contact->setContactState($this->flow_id, 'payment_result_status', 'failed');
+            FlowRunLogger::log((int) $this->flow_id, (int) $contact->id, 'payment_failed', (string) $this->id, 'initiate_failed');
             $failed = $this->getNextNodeId('failed');
             if ($failed) {
                 $failed->process($message, $data);
@@ -151,6 +161,20 @@ class RequestPayment extends Node
             );
         }
 
+        FlowRunLogger::log((int) $this->flow_id, (int) $contact->id, 'payment_initiated', (string) $this->id, $gateway->key());
+
         return ['success' => true, 'waiting' => true];
+    }
+
+    protected function getNextNodeId($handleId = null)
+    {
+        foreach ($this->outgoingEdges as $edge) {
+            $sourceHandle = (string) $edge->getSourceHandle();
+            if ($handleId === null || $handleId === '' || $sourceHandle === (string) $handleId || str_contains($sourceHandle, (string) $handleId)) {
+                return $edge->getTarget();
+            }
+        }
+
+        return null;
     }
 }

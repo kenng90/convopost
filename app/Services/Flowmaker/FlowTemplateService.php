@@ -20,7 +20,17 @@ class FlowTemplateService
         return $this->all()[$key] ?? null;
     }
 
-    public function install(string $key, ?string $customName = null): ?Flow
+    /**
+     * @param  array{
+     *     catalog_id?: int|string|null,
+     *     payment_provider?: string|null,
+     *     group_id?: int|string|null,
+     *     journey_id?: int|string|null,
+     *     stage_id?: int|string|null,
+     *     keywords?: array<int, string>|null
+     * }  $bindings
+     */
+    public function install(string $key, ?string $customName = null, array $bindings = []): ?Flow
     {
         $template = $this->get($key);
         if (! $template) {
@@ -38,9 +48,14 @@ class FlowTemplateService
             $flowData = $this->linkBundledWhatsappForms($flowData, $whatsappForm->id);
         }
 
+        $flowData = $this->applyBindings($flowData, $bindings);
+
         $flow = Flow::create([
             'name' => $customName ?: $template['name'],
             'company_id' => $companyId,
+            'priority' => 10,
+            'exclusive_on_match' => $this->shouldInstallExclusive($template),
+            'is_active' => true,
         ]);
 
         $encoded = json_encode($flowData);
@@ -59,6 +74,21 @@ class FlowTemplateService
     }
 
     /**
+     * Keyword-owned verticals should not collide with parallel flows on the same trigger words.
+     *
+     * @param  array<string, mixed>  $template
+     */
+    private function shouldInstallExclusive(array $template): bool
+    {
+        if (array_key_exists('exclusive_on_match', $template)) {
+            return (bool) $template['exclusive_on_match'];
+        }
+
+        return ($template['category'] ?? '') === 'commerce'
+            || ! empty($template['requires_setup_wizard']);
+    }
+
+    /**
      * @return array<string, array<int, array<string, mixed>>>
      */
     public function groupedByCategory(): array
@@ -70,6 +100,118 @@ class FlowTemplateService
         }
 
         return $grouped;
+    }
+
+    /**
+     * @param  array<string, mixed>  $flowData
+     * @param  array<string, mixed>  $bindings
+     * @return array<string, mixed>
+     */
+    public function applyBindings(array $flowData, array $bindings): array
+    {
+        $nodes = $flowData['nodes'] ?? [];
+        $edges = $flowData['edges'] ?? [];
+        $catalogId = $bindings['catalog_id'] ?? null;
+        $provider = $bindings['payment_provider'] ?? null;
+        $groupId = $bindings['group_id'] ?? null;
+        $journeyId = $bindings['journey_id'] ?? null;
+        $stageId = $bindings['stage_id'] ?? null;
+        $keywords = $bindings['keywords'] ?? null;
+        $paymentIdMap = [];
+
+        foreach ($nodes as $index => $node) {
+            $type = $node['type'] ?? '';
+            $settings = $node['data']['settings'] ?? [];
+
+            if (in_array($type, ['whatsapp_catalog', 'catalog_search', 'listing_inquiry'], true) && $catalogId) {
+                $settings['catalogId'] = (string) $catalogId;
+            }
+
+            if ($type === 'request_payment' && $provider) {
+                $payment = $settings['payment'] ?? [];
+                $payment['provider'] = $provider;
+                $settings['payment'] = $payment;
+            }
+
+            // Legacy template safety: map old M-Pesa node settings onto request_payment shape if still present.
+            if ($type === 'mpesa_stk_push') {
+                $oldId = (string) ($node['id'] ?? 'mpesa_stk_push-1');
+                $newId = str_replace('mpesa_stk_push', 'request_payment', $oldId);
+                $mpesa = $settings['mpesa'] ?? $settings;
+                $paymentIdMap[$oldId] = $newId;
+                $nodes[$index]['id'] = $newId;
+                $nodes[$index]['type'] = 'request_payment';
+                $nodes[$index]['data']['type'] = 'request_payment';
+                $nodes[$index]['data']['label'] = $node['data']['label'] ?? 'Request payment';
+                $settings = [
+                    'payment' => [
+                        'amount' => (string) ($mpesa['amount'] ?? '0'),
+                        'accountReference' => (string) ($mpesa['accountReference'] ?? 'ORDER'),
+                        'description' => (string) ($mpesa['transactionDesc'] ?? $mpesa['description'] ?? 'Payment'),
+                        'provider' => $provider ?: 'auto',
+                        'email' => (string) ($mpesa['email'] ?? ''),
+                        'responseVar' => (string) ($mpesa['responseVar'] ?? 'payment_result'),
+                    ],
+                ];
+                $type = 'request_payment';
+            }
+
+            if ($type === 'assign_group' && $groupId) {
+                $settings['groupId'] = (string) $groupId;
+            }
+
+            if ($type === 'assign_journey_stage') {
+                if ($journeyId) {
+                    $settings['journeyId'] = (string) $journeyId;
+                }
+                if ($stageId) {
+                    $settings['stageId'] = (string) $stageId;
+                }
+            }
+
+            if ($type === 'keyword_trigger' && is_array($keywords) && $keywords !== []) {
+                $keywordRows = [];
+                foreach (array_values($keywords) as $i => $value) {
+                    if (trim((string) $value) === '') {
+                        continue;
+                    }
+                    $keywordRows[] = [
+                        'id' => 'kw'.($i + 1),
+                        'value' => trim((string) $value),
+                        'matchType' => 'contains',
+                    ];
+                }
+                if ($keywordRows !== []) {
+                    $nodes[$index]['data']['keywords'] = $keywordRows;
+                }
+            }
+
+            if ($settings !== ($node['data']['settings'] ?? [])) {
+                $nodes[$index]['data']['settings'] = $settings;
+            }
+        }
+
+        if ($paymentIdMap !== []) {
+            foreach ($edges as $edgeIndex => $edge) {
+                if (isset($paymentIdMap[$edge['source'] ?? ''])) {
+                    $edges[$edgeIndex]['source'] = $paymentIdMap[$edge['source']];
+                }
+                if (isset($paymentIdMap[$edge['target'] ?? ''])) {
+                    $edges[$edgeIndex]['target'] = $paymentIdMap[$edge['target']];
+                }
+                $handle = (string) ($edge['sourceHandle'] ?? '');
+                if ($handle === 'mpesa-success') {
+                    $edges[$edgeIndex]['sourceHandle'] = 'success';
+                } elseif ($handle === 'mpesa-failed') {
+                    $edges[$edgeIndex]['sourceHandle'] = 'failed';
+                }
+            }
+        }
+
+        $flowData['nodes'] = $nodes;
+        $flowData['edges'] = $edges;
+
+        return $flowData;
     }
 
     /**

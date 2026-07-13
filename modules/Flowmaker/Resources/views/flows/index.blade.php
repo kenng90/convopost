@@ -1,43 +1,45 @@
 @extends('general.index', $setup)
 @section('thead')
     <th>{{ __('Name') }}</th>
+    <th>{{ __('Priority') }}</th>
+    <th>{{ __('Status') }}</th>
     <th>{{ __('crud.actions') }}</th>
 @endsection
 @section('tbody')
     @foreach ($setup['items'] as $item)
         <tr>
-            <td>{{ $item->name }}</td>
-           
-           
-            
             <td>
-                <!-- FLOW MAKER -->
+                {{ $item->name }}
+                @if(!empty($item->exclusive_on_match))
+                    <span class="badge badge-info">{{ __('Exclusive') }}</span>
+                @endif
+            </td>
+            <td>{{ $item->priority ?? 0 }}</td>
+            <td>
+                @if(($item->is_active ?? true))
+                    <span class="badge badge-success">{{ __('Active') }}</span>
+                @else
+                    <span class="badge badge-secondary">{{ __('Paused') }}</span>
+                @endif
+            </td>
+            <td>
                 <a href="{{ route('flowmaker.edit',['flow'=>$item->id]) }}" class="btn btn-success btn-sm">
                     <i class="ni ni-ruler-pencil"></i> {{ __('Flow maker')}}
                 </a>
-
-                <!-- EDIT -->
                 <a href="{{ route('flows.edit',['flow'=>$item->id]) }}" class="btn btn-primary btn-sm">
                     <i class="ni ni-ruler-pencil"></i>
                 </a>
-
-                <!-- EXPORT -->
                 <a href="{{ url('/flows/' . $item->id . '/export') }}" class="btn btn-info btn-sm" title="Export Flow Data">
                     <i class="ni ni-archive-2"></i>
                 </a>
-
-                <!-- IMPORT -->
                 <a href="{{ url('/flows/' . $item->id . '/import') }}" class="btn btn-warning btn-sm" title="Import Flow Data">
                     <i class="ni ni-cloud-upload-96"></i>
                 </a>
-
-                <!-- DELETE -->
                 <a href="{{ route('flows.delete',['flow'=>$item->id]) }}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this flow?')">
                     <i class="ni ni ni-fat-remove"></i>
                 </a>
             </td>
-          
-        </tr> 
+        </tr>
     @endforeach
 @endsection
 @section('customfooter')
@@ -133,17 +135,177 @@
                             @endforeach
                         </ul>
                     @endif
-                    <a href="{{ route('flows.create-from-template', $key) }}" class="btn btn-sm btn-outline-primary mt-2">
-                        {{ __('Use template') }}
-                    </a>
+                    @if(!empty($template['requires_setup_wizard']))
+                        <button type="button" class="btn btn-sm btn-primary mt-2 js-shop-wizard" data-template-key="{{ $key }}">
+                            {{ __('Set up shop flow') }}
+                        </button>
+                    @else
+                        <a href="{{ route('flows.create-from-template', $key) }}" class="btn btn-sm btn-outline-primary mt-2">
+                            {{ __('Use template') }}
+                        </a>
+                    @endif
                 </div>
             </div>
         </div>
     @endforeach
 </div>
+
+<div class="modal fade" id="shopWizardModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ __('Set up WhatsApp shop') }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted" id="shop-wizard-hint"></p>
+                <div class="form-group">
+                    <label>{{ __('Catalog') }}</label>
+                    <select id="shop-catalog" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label>{{ __('Payment provider') }}</label>
+                    <select id="shop-provider" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label>{{ __('Fulfillment group') }}</label>
+                    <select id="shop-group" class="form-control"><option value="">{{ __('Optional') }}</option></select>
+                </div>
+                <div class="form-group">
+                    <label>{{ __('Journey') }}</label>
+                    <select id="shop-journey" class="form-control"><option value="">{{ __('Optional') }}</option></select>
+                </div>
+                <div class="form-group">
+                    <label>{{ __('Stage') }}</label>
+                    <select id="shop-stage" class="form-control"><option value="">{{ __('Optional') }}</option></select>
+                </div>
+                <div class="form-group">
+                    <label>{{ __('Keywords (comma separated)') }}</label>
+                    <input type="text" id="shop-keywords" class="form-control" value="shop, buy" />
+                </div>
+                <p class="small text-danger" id="shop-wizard-error" style="display:none;"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Cancel') }}</button>
+                <button type="button" class="btn btn-primary" id="shop-wizard-install">{{ __('Install & open editor') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('js')
+<script>
+(function () {
+    let currentTemplateKey = null;
+    let journeyData = [];
+
+    document.querySelectorAll('.js-shop-wizard').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            currentTemplateKey = btn.getAttribute('data-template-key');
+            document.getElementById('shop-wizard-error').style.display = 'none';
+            fetch('/flows/templates/' + currentTemplateKey + '/setup', { headers: { 'Accept': 'application/json' } })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) {
+                        alert(data.message || 'Setup failed');
+                        return;
+                    }
+                    document.getElementById('shop-wizard-hint').textContent = data.template.setup_hint || '';
+                    const catalogSelect = document.getElementById('shop-catalog');
+                    catalogSelect.innerHTML = '';
+                    (data.catalogs || []).forEach(function (c) {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.name + (c.catalog_mode ? ' (' + c.catalog_mode + ')' : '');
+                        catalogSelect.appendChild(opt);
+                    });
+                    const providerSelect = document.getElementById('shop-provider');
+                    providerSelect.innerHTML = '';
+                    (data.payment_providers || []).forEach(function (p) {
+                        const opt = document.createElement('option');
+                        opt.value = p.value;
+                        opt.textContent = p.label;
+                        providerSelect.appendChild(opt);
+                    });
+                    const groupSelect = document.getElementById('shop-group');
+                    groupSelect.innerHTML = '<option value="">Optional</option>';
+                    (data.groups || []).forEach(function (g) {
+                        const opt = document.createElement('option');
+                        opt.value = g.id;
+                        opt.textContent = g.name;
+                        groupSelect.appendChild(opt);
+                    });
+                    journeyData = data.journeys || [];
+                    const journeySelect = document.getElementById('shop-journey');
+                    journeySelect.innerHTML = '<option value="">Optional</option>';
+                    journeyData.forEach(function (j) {
+                        const opt = document.createElement('option');
+                        opt.value = j.id;
+                        opt.textContent = j.name;
+                        journeySelect.appendChild(opt);
+                    });
+                    document.getElementById('shop-stage').innerHTML = '<option value="">Optional</option>';
+                    $('#shopWizardModal').modal('show');
+                });
+        });
+    });
+
+    document.getElementById('shop-journey')?.addEventListener('change', function () {
+        const stageSelect = document.getElementById('shop-stage');
+        stageSelect.innerHTML = '<option value="">Optional</option>';
+        const journey = journeyData.find(function (j) { return String(j.id) === String(this.value); }.bind(this));
+        (journey?.stages || []).forEach(function (s) {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.name;
+            stageSelect.appendChild(opt);
+        });
+    });
+
+    document.getElementById('shop-wizard-install')?.addEventListener('click', function () {
+        const err = document.getElementById('shop-wizard-error');
+        err.style.display = 'none';
+        const catalogId = document.getElementById('shop-catalog').value;
+        if (!catalogId) {
+            err.textContent = 'Please select a catalog.';
+            err.style.display = 'block';
+            return;
+        }
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+            || document.querySelector('[name=_token]')?.value;
+        fetch('/flows/templates/' + currentTemplateKey + '/install', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': token || '',
+            },
+            body: JSON.stringify({
+                catalog_id: catalogId,
+                payment_provider: document.getElementById('shop-provider').value,
+                group_id: document.getElementById('shop-group').value || null,
+                journey_id: document.getElementById('shop-journey').value || null,
+                stage_id: document.getElementById('shop-stage').value || null,
+                keywords: document.getElementById('shop-keywords').value,
+            }),
+        })
+        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (result) {
+            if (result.ok && result.data.success) {
+                window.location.href = result.data.edit_url;
+            } else {
+                err.textContent = result.data.message || 'Install failed';
+                err.style.display = 'block';
+            }
+        })
+        .catch(function () {
+            err.textContent = 'Install failed';
+            err.style.display = 'block';
+        });
+    });
+})();
+</script>
 @if(!empty($hasAiFlowAssistant))
 <script>
 document.getElementById('ai-flow-form')?.addEventListener('submit', function (e) {

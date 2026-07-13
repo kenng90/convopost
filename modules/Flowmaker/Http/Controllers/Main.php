@@ -5,7 +5,9 @@ namespace Modules\Flowmaker\Http\Controllers;
 use App\Models\Company;
 use App\Services\Flowmaker\BookingFlowAnalyticsService;
 use App\Services\Flowmaker\BookingFlowHealthService;
+use App\Services\Flowmaker\CommerceFlowAnalyticsService;
 use App\Services\Flowmaker\FlowHealthValidator;
+use App\Services\Flowmaker\FlowSimulateService;
 use App\Services\Flowmaker\FlowTemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -48,9 +50,13 @@ class Main extends Controller
         $checklist = $template['post_install_checklist'] ?? [];
 
         $data = [
-            'flow' => $flow->only(['id', 'name', 'flow_data', 'draft_flow_data', 'has_unpublished_changes', 'company_id', 'updated_at', 'source_template']),
+            'flow' => $flow->only([
+                'id', 'name', 'flow_data', 'draft_flow_data', 'has_unpublished_changes',
+                'company_id', 'updated_at', 'source_template', 'priority', 'exclusive_on_match', 'is_active',
+            ]),
             'variables' => $variables,
             'post_install_checklist' => $checklist,
+            'requires_setup_wizard' => (bool) ($template['requires_setup_wizard'] ?? false),
         ];
 
         return view('flowmaker::index')->with('data', json_encode($data));
@@ -235,6 +241,16 @@ class Main extends Controller
         ]);
     }
 
+    public function commerceAnalytics(Flow $flow)
+    {
+        $days = (int) request('days', 30);
+
+        return response()->json([
+            'success' => true,
+            'analytics' => app(CommerceFlowAnalyticsService::class)->summaryForFlow($flow->id, max(1, min($days, 90))),
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      * @return array{valid: bool, errors: array<int, string>, warnings: array<int, string>}
@@ -256,38 +272,16 @@ class Main extends Controller
     public function simulateFlow(Request $request, Flow $flow)
     {
         $message = (string) $request->input('message', '');
+        $scenario = (string) $request->input('scenario', 'keyword');
         $editorData = $flow->draft_flow_data ?: $flow->flow_data;
         $payload = json_decode($editorData ?? '{}', true) ?? [];
         $health = (new FlowHealthValidator)->validate($payload);
 
-        $matchedKeywords = [];
-        foreach ($payload['nodes'] ?? [] as $node) {
-            if (($node['type'] ?? '') !== 'keyword_trigger') {
-                continue;
-            }
-
-            foreach ($node['data']['keywords'] ?? $node['data']['settings']['keywords'] ?? [] as $keyword) {
-                $value = strtolower((string) ($keyword['value'] ?? ''));
-                $matchType = $keyword['matchType'] ?? 'contains';
-                $haystack = strtolower($message);
-
-                $matches = $matchType === 'exact'
-                    ? $haystack === $value
-                    : str_contains($haystack, $value);
-
-                if ($matches && $value !== '') {
-                    $matchedKeywords[] = $keyword['value'];
-                }
-            }
-        }
+        $simulation = app(FlowSimulateService::class)->simulate($payload, $message, $scenario);
 
         return response()->json([
             'health' => $health,
-            'simulation' => [
-                'message' => $message,
-                'matched_keywords' => array_values(array_unique($matchedKeywords)),
-                'would_start' => ! empty($matchedKeywords) || collect($payload['nodes'] ?? [])->contains(fn ($n) => in_array($n['type'] ?? '', ['incomingMessage', 'incoming_message'], true)),
-            ],
+            'simulation' => $simulation,
         ]);
     }
 
@@ -300,6 +294,31 @@ class Main extends Controller
             ->get(['id', 'contact_id', 'node_id', 'event', 'detail', 'created_at']);
 
         return response()->json(['logs' => $logs]);
+    }
+
+    public function updateSettings(Request $request, Flow $flow)
+    {
+        $validated = $request->validate([
+            'priority' => 'nullable|integer|min:0|max:1000',
+            'exclusive_on_match' => 'nullable|boolean',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        if (array_key_exists('priority', $validated)) {
+            $flow->priority = (int) $validated['priority'];
+        }
+        if (array_key_exists('exclusive_on_match', $validated)) {
+            $flow->exclusive_on_match = (bool) $validated['exclusive_on_match'];
+        }
+        if (array_key_exists('is_active', $validated)) {
+            $flow->is_active = (bool) $validated['is_active'];
+        }
+        $flow->save();
+
+        return response()->json([
+            'success' => true,
+            'flow' => $flow->only(['id', 'priority', 'exclusive_on_match', 'is_active']),
+        ]);
     }
 
     /**

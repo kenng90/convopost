@@ -31,7 +31,7 @@ class FlowTemplatesHealthTest extends TestCase
             $flowData = config("flow-templates.{$key}.flow_data");
             $this->assertNotEmpty($flowData, "Missing template: {$key}");
 
-            $options = [];
+            $options = ['template_mode' => true];
             if (! empty(config("flow-templates.{$key}.form_bundle"))) {
                 $options['pending_form_bundle'] = true;
             }

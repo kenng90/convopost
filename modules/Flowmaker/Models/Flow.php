@@ -34,6 +34,7 @@ use Modules\Flowmaker\Models\Nodes\Media;
 use Modules\Flowmaker\Models\Nodes\Message;
 use Modules\Flowmaker\Models\Nodes\MpesaStkPush;
 use Modules\Flowmaker\Models\Nodes\Node;
+use Modules\Flowmaker\Models\Nodes\OrderStatus;
 use Modules\Flowmaker\Models\Nodes\RequestPayment;
 use Modules\Flowmaker\Models\Nodes\SendBookingLink;
 use Modules\Flowmaker\Models\Nodes\SetVariable;
@@ -49,6 +50,13 @@ class Flow extends Model
     protected $table = 'flows';
 
     public $guarded = [];
+
+    protected $casts = [
+        'exclusive_on_match' => 'boolean',
+        'is_active' => 'boolean',
+        'has_unpublished_changes' => 'boolean',
+        'priority' => 'integer',
+    ];
 
     // Define any custom methods or scopes here
     protected static function booted()
@@ -264,6 +272,8 @@ class Flow extends Model
                 $theNewNode = new SendBookingLink($nodeArray, []);
             } elseif ($nodeArray['type'] === 'manage_booking') {
                 $theNewNode = new ManageBooking($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'order_status') {
+                $theNewNode = new OrderStatus($nodeArray, []);
             } elseif ($nodeArray['type'] === 'counter') {
                 $theNewNode = new Counter($nodeArray, []);
             } elseif ($nodeArray['type'] === 'check_pricing') {
@@ -352,6 +362,25 @@ class Flow extends Model
      * Used to decide whether to reset the saved contact state or resume from it.
      */
     private function messageMatchesKeywordTrigger(array $nodes, string $message): bool
+    {
+        return self::nodesMatchKeywordMessage($nodes, $message);
+    }
+
+    /**
+     * Public helper for dispatch selection (exclusive keyword match).
+     */
+    public function matchesKeywordMessage(string $message): bool
+    {
+        $flowData = json_decode($this->flow_data ?: '{}');
+        $nodes = is_object($flowData) && isset($flowData->nodes) ? (array) $flowData->nodes : [];
+
+        return self::nodesMatchKeywordMessage($nodes, $message);
+    }
+
+    /**
+     * @param  array<int, mixed>  $nodes
+     */
+    public static function nodesMatchKeywordMessage(array $nodes, string $message): bool
     {
         foreach ($nodes as $node) {
             $nodeArray = (array) $node;

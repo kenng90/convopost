@@ -10,9 +10,12 @@ class FlowHealthValidator
         'keyword_trigger', 'incomingMessage', 'incoming_message', 'message', 'image', 'pdf', 'video',
         'template', 'quick_replies', 'list_message', 'branch', 'openai', 'question', 'http',
         'whatsapp_catalog', 'listing_inquiry', 'catalog_search', 'whatsapp_flow', 'counter', 'check_pricing',
-        'assign_agent', 'assign_group', 'assign_journey_stage', 'mpesa_stk_push', 'request_payment', 'set_variable',
-        'book_appointment', 'booking_events_list', 'booking_event_register', 'send_booking_link', 'manage_booking', 'opening_hours', 'webhook', 'wait',
+        'assign_agent', 'assign_group', 'assign_journey_stage', 'mpesa_stk_push', 'request_payment', 'order_status',
+        'datastore', 'set_variable',
+        'book_appointment', 'booking_events_list', 'booking_event_register', 'send_booking_link', 'manage_booking',
     ];
+
+    private const NON_EXECUTABLE_UI_TYPES = ['opening_hours', 'webhook', 'wait', 'trigger', 'action', 'media'];
 
     /**
      * @param  array<string, mixed>  $flowData
@@ -93,22 +96,62 @@ class FlowHealthValidator
                 }
             }
 
+            if (in_array($type, self::NON_EXECUTABLE_UI_TYPES, true)) {
+                $warnings[] = "Node [{$id}] ({$type}) is not executable and will be skipped at runtime. Remove it or replace with a supported node.";
+            }
+
             if ($type === 'whatsapp_catalog') {
                 $catalogId = $node['data']['settings']['catalogId'] ?? '';
                 if ($catalogId === '' || $catalogId === '1') {
-                    $warnings[] = "Catalog node [{$id}] needs a real catalog ID before publish.";
+                    $message = "Catalog node [{$id}] needs a real catalog selected before publish.";
+                    if (! empty($options['template_mode'])) {
+                        $warnings[] = $message;
+                    } else {
+                        $errors[] = $message;
+                    }
+                }
+            }
+
+            if ($type === 'catalog_search') {
+                $catalogId = $node['data']['settings']['catalogId'] ?? '';
+                if ($catalogId === '' || $catalogId === '1') {
+                    $message = "Catalog search node [{$id}] needs a real catalog selected before publish.";
+                    if (! empty($options['template_mode'])) {
+                        $warnings[] = $message;
+                    } else {
+                        $errors[] = $message;
+                    }
                 }
             }
 
             if ($type === 'listing_inquiry') {
                 $catalogId = $node['data']['settings']['catalogId'] ?? '';
                 if ($catalogId === '' || $catalogId === '1') {
-                    $warnings[] = "Listing inquiry node [{$id}] needs a listing-mode catalog ID before publish.";
+                    $message = "Listing inquiry node [{$id}] needs a listing-mode catalog selected before publish.";
+                    if (! empty($options['template_mode'])) {
+                        $warnings[] = $message;
+                    } else {
+                        $errors[] = $message;
+                    }
                 }
 
                 $bookingBackend = (string) ($node['data']['settings']['bookingBackend'] ?? 'whatsapp_only');
                 if ($bookingBackend === 'reminders') {
                     $warnings[] = "Listing inquiry node [{$id}] uses Reminders backend — link each listing item to a bookable service in Catalog settings.";
+                }
+            }
+
+            if ($type === 'request_payment') {
+                $amount = (string) ($node['data']['settings']['payment']['amount'] ?? '');
+                if (trim($amount) === '') {
+                    $errors[] = "Collect payment node [{$id}] needs an amount (or {{catalog_order_total_amount}}).";
+                }
+            }
+
+            if ($type === 'order_status') {
+                $status = (string) ($node['data']['settings']['status'] ?? '');
+                if ($status === '') {
+                    $warnings[] = "Order status node [{$id}] should set a status value.";
                 }
             }
 

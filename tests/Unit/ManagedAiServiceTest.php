@@ -183,13 +183,13 @@ class ManagedAiServiceTest extends TestCase
 
 class AiFlowAssistantRuleBasedTest extends TestCase
 {
-    public function test_rule_based_fallback_still_builds_mpesa_flow(): void
+    public function test_rule_based_fallback_still_builds_payment_flow(): void
     {
         $draft = app(AiFlowAssistantService::class)->generateRuleBased('When customer says pay, collect M-Pesa payment');
 
         $this->assertNotEmpty($draft['nodes']);
         $this->assertTrue(
-            collect($draft['nodes'])->contains(fn (array $node) => $node['type'] === 'mpesa_stk_push')
+            collect($draft['nodes'])->contains(fn (array $node) => $node['type'] === 'request_payment')
         );
     }
 }
