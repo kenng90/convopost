@@ -1,4 +1,4 @@
-import { Building2, CalendarCheck, CalendarDays, Link2, Settings2, Ticket, Users } from 'lucide-react';
+import { CalendarCheck, CalendarDays, Link2, Settings2, Ticket, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowActions } from '@/hooks/useFlowActions';
 import { NodeData } from '@/types/flow';
@@ -126,30 +126,6 @@ export const BookingsSection = ({ searchQuery }: BookingsSectionProps) => {
       textColor: 'text-orange-700',
       requiresReminders: true,
       onClick: () => actions.createNodeBase('manage_booking', { x: 250, y: 100 }),
-    },
-    {
-      icon: Building2,
-      label: 'Send listings link',
-      bgColor: 'bg-emerald-100',
-      textColor: 'text-emerald-700',
-      requiresCatalog: true,
-      onClick: () => {
-        const data: NodeData = {
-          label: 'Send Listings Link',
-          type: 'listing_inquiry',
-          settings: {
-            catalogId: '',
-            header: 'Browse our listings',
-            footer: 'Tap the link to view listings and book on WhatsApp.',
-            completionType: 'booking',
-            bookingVariablePrefix: 'listing_booking',
-            requirePreferredDateTime: false,
-            bookingBackend: 'whatsapp_only',
-            autoResumeFlow: false,
-          },
-        };
-        return actions.createNodeBase('listing_inquiry', { x: 250, y: 100 }, data);
-      },
     },
   ];
 

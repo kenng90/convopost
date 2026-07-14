@@ -58,7 +58,13 @@ class CatalogItemFilterService
         $tags = [];
         $statuses = [];
         $locations = [];
+        $facetOptions = [];
         $statusField = $presentation['status_field'] ?? 'stockStatus';
+        $facetKeys = $this->filterableFacetKeys($presentation);
+
+        foreach ($facetKeys as $facetKey) {
+            $facetOptions[$facetKey] = [];
+        }
 
         foreach ($items as $item) {
             $category = trim((string) ($item['category'] ?? ''));
@@ -82,6 +88,13 @@ class CatalogItemFilterService
             if ($location !== '') {
                 $locations[$location] = $location;
             }
+
+            foreach ($facetKeys as $facetKey) {
+                $value = trim((string) $this->itemFieldValue($item, $facetKey));
+                if ($value !== '') {
+                    $facetOptions[$facetKey][$value] = $value;
+                }
+            }
         }
 
         $categoryList = array_values($categories);
@@ -93,11 +106,19 @@ class CatalogItemFilterService
         sort($statusList, SORT_NATURAL | SORT_FLAG_CASE);
         sort($locationList, SORT_NATURAL | SORT_FLAG_CASE);
 
+        $facets = [];
+        foreach ($facetOptions as $key => $values) {
+            $list = array_values($values);
+            sort($list, SORT_NATURAL | SORT_FLAG_CASE);
+            $facets[$key] = $list;
+        }
+
         return [
             'categories' => $categoryList,
             'tags' => $tagList,
             'statuses' => $statusList,
             'locations' => $locationList,
+            'facets' => $facets,
         ];
     }
 
@@ -111,7 +132,9 @@ class CatalogItemFilterService
     {
         $statusField = $presentation['status_field'] ?? 'stockStatus';
 
-        return array_values(array_filter($items, function (array $item) use ($filters, $statusField) {
+        $facetFilters = is_array($filters['facets'] ?? null) ? $filters['facets'] : [];
+
+        return array_values(array_filter($items, function (array $item) use ($filters, $statusField, $facetFilters) {
             if ($filters['q'] !== '') {
                 $needle = mb_strtolower($filters['q']);
                 $title = mb_strtolower((string) ($item['title'] ?? ''));
@@ -159,6 +182,26 @@ class CatalogItemFilterService
                 );
 
                 if (! in_array(mb_strtolower($filters['tag']), $itemTags, true)) {
+                    return false;
+                }
+            }
+
+            foreach ($facetFilters as $facetKey => $facetValue) {
+                $facetValue = trim((string) $facetValue);
+                if ($facetValue === '') {
+                    continue;
+                }
+
+                $itemValue = (string) $this->itemFieldValue($item, (string) $facetKey);
+                if (is_numeric($facetValue) && is_numeric($itemValue)) {
+                    if ((float) $itemValue < (float) $facetValue) {
+                        return false;
+                    }
+
+                    continue;
+                }
+
+                if (strcasecmp($itemValue, $facetValue) !== 0) {
                     return false;
                 }
             }
@@ -266,6 +309,12 @@ class CatalogItemFilterService
 
         $statusOptions = $presentation['status_options'] ?? [];
 
+        $facetFilters = [];
+        foreach ($this->filterableFacetKeys($presentation) as $facetKey) {
+            $raw = $filters[$facetKey] ?? ($filters['facets'][$facetKey] ?? '');
+            $facetFilters[$facetKey] = trim((string) $raw);
+        }
+
         return [
             'q' => trim((string) ($filters['q'] ?? '')),
             'category' => trim((string) ($filters['category'] ?? '')),
@@ -273,6 +322,7 @@ class CatalogItemFilterService
             'status' => trim((string) ($filters['status'] ?? '')),
             'location' => trim((string) ($filters['location'] ?? '')),
             'tag' => trim((string) ($filters['tag'] ?? '')),
+            'facets' => $facetFilters,
             'min_price' => $minPrice,
             'max_price' => $maxPrice,
             'near_lat' => isset($filters['near_lat']) && $filters['near_lat'] !== '' && $filters['near_lat'] !== null
@@ -294,6 +344,42 @@ class CatalogItemFilterService
     }
 
     /**
+     * @param  array<string, mixed>|null  $presentation
+     * @return list<string>
+     */
+    public function filterableFacetKeys(?array $presentation): array
+    {
+        $keys = [];
+        $reserved = ['category', 'tag', 'stock', 'status', 'price', 'location', 'geo'];
+
+        foreach ($presentation['item_fields'] ?? [] as $field) {
+            if (empty($field['filterable']) || empty($field['key'])) {
+                continue;
+            }
+
+            $key = (string) $field['key'];
+            if (in_array($key, $reserved, true) || in_array($key, ['latitude', 'longitude', 'booking_source_name'], true)) {
+                continue;
+            }
+
+            $keys[] = $key;
+        }
+
+        foreach ($presentation['filter_facets'] ?? [] as $facet) {
+            $facet = (string) $facet;
+            if (in_array($facet, $reserved, true) || in_array($facet, ['latitude', 'longitude', 'booking_source_name'], true)) {
+                continue;
+            }
+
+            if (! in_array($facet, $keys, true) && $facet !== '') {
+                $keys[] = $facet;
+            }
+        }
+
+        return array_values(array_unique($keys));
+    }
+
+    /**
      * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
@@ -304,6 +390,12 @@ class CatalogItemFilterService
         foreach (['q', 'category', 'stock', 'status', 'location', 'tag', 'sort', 'per_page'] as $key) {
             if ($filters[$key] !== '' && $filters[$key] !== null && $filters[$key] !== 'default') {
                 $params[$key] = $filters[$key];
+            }
+        }
+
+        foreach ($filters['facets'] ?? [] as $facetKey => $facetValue) {
+            if ($facetValue !== '' && $facetValue !== null) {
+                $params[$facetKey] = $facetValue;
             }
         }
 

@@ -439,6 +439,8 @@ return [
                             'catalogId' => '',
                             'header' => 'Available rentals',
                             'footer' => 'Book a viewing on WhatsApp.',
+                            'displayMode' => 'interactive_list',
+                            'autoResumeFlow' => true,
                             'completionType' => 'booking',
                             'bookingVariablePrefix' => 'listing_booking',
                             'requirePreferredDateTime' => true,
@@ -581,12 +583,13 @@ return [
 
     'microfinance_banking_bot' => [
         'name' => 'Microfinance Banking Bot',
-        'description' => 'Balance checks, loan applications, repayments via M-Pesa, and AI-formatted loan status updates.',
+        'description' => 'Balance checks, loan applications, repayments via payment request, and AI-formatted loan status updates.',
         'category' => 'banking',
         'form_bundle' => 'microfinance_loan_application',
         'video_url' => null,
-        'setup_hint' => 'Configure banking API, M-Pesa, loan template, Repayments group. LLM auto-sends loan status (no duplicate message). Save draft → Publish.',
-        'post_install_checklist' => ['Banking API URLs', 'M-Pesa credentials', 'Repayments group', 'Publish'],
+        'setup_hint' => 'Configure banking API, payment gateway, loan template, Repayments group. LLM auto-sends loan status (no duplicate message). Save draft → Publish.',
+        'post_install_checklist' => ['Banking API URLs', 'Payment gateway credentials', 'Repayments group', 'Publish'],
+        'exclusive_on_match' => true,
         'flow_data' => [
             'nodes' => [
                 [
@@ -796,17 +799,19 @@ return [
                     ],
                 ],
                 [
-                    'id' => 'mpesa_stk_push-1',
-                    'type' => 'mpesa_stk_push',
+                    'id' => 'request_payment-1',
+                    'type' => 'request_payment',
                     'position' => ['x' => 1900, 'y' => 520],
                     'data' => [
                         'label' => 'Collect repayment',
-                        'type' => 'mpesa_stk_push',
+                        'type' => 'request_payment',
                         'settings' => [
-                            'mpesa' => [
+                            'payment' => [
                                 'amount' => '{{repayment_amount}}',
                                 'accountReference' => 'LOAN-REPAY',
-                                'transactionDesc' => 'Loan repayment',
+                                'description' => 'Loan repayment',
+                                'provider' => 'auto',
+                                'email' => '',
                                 'responseVar' => 'repayment_result',
                             ],
                         ],
@@ -957,9 +962,9 @@ return [
                 ['id' => 'e-template-end', 'source' => 'template-1', 'target' => 'end-1'],
                 ['id' => 'e-q-store', 'source' => 'question-1', 'target' => 'datastore-1'],
                 ['id' => 'e-store-verify', 'source' => 'datastore-1', 'target' => 'http-2'],
-                ['id' => 'e-verify-mpesa', 'source' => 'http-2', 'target' => 'mpesa_stk_push-1'],
-                ['id' => 'e-mpesa-success', 'source' => 'mpesa_stk_push-1', 'target' => 'message-2', 'sourceHandle' => 'mpesa-success'],
-                ['id' => 'e-mpesa-failed-end', 'source' => 'mpesa_stk_push-1', 'target' => 'end-1', 'sourceHandle' => 'mpesa-failed'],
+                ['id' => 'e-verify-pay', 'source' => 'http-2', 'target' => 'request_payment-1'],
+                ['id' => 'e-pay-success', 'source' => 'request_payment-1', 'target' => 'message-2', 'sourceHandle' => 'success'],
+                ['id' => 'e-pay-failed-end', 'source' => 'request_payment-1', 'target' => 'end-1', 'sourceHandle' => 'failed'],
                 ['id' => 'e-receipt-group', 'source' => 'message-2', 'target' => 'assign_group-1'],
                 ['id' => 'e-group-journey', 'source' => 'assign_group-1', 'target' => 'assign_journey_stage-1'],
                 ['id' => 'e-journey-end', 'source' => 'assign_journey_stage-1', 'target' => 'end-1'],
@@ -978,8 +983,9 @@ return [
         'category' => 'hospitality',
         'form_bundle' => 'hospitality_booking',
         'video_url' => null,
-        'setup_hint' => 'Link booking WhatsApp Flows, listing catalog, M-Pesa deposits, VIP group. FAQ paths use multi-turn AI loops. Save draft → Publish.',
-        'post_install_checklist' => ['Suite WhatsApp Flow ID', 'Safari listing catalog ID', 'M-Pesa deposit settings', 'VIP Guests group', 'Publish'],
+        'setup_hint' => 'Link booking WhatsApp Flows, listing catalog, payment deposits, VIP group. FAQ paths use multi-turn AI loops. Save draft → Publish.',
+        'post_install_checklist' => ['Suite WhatsApp Flow ID', 'Safari listing catalog ID', 'Payment deposit settings', 'VIP Guests group', 'Publish'],
+        'exclusive_on_match' => true,
         'flow_data' => FaqConversationLoop::mergeInto(
             FaqConversationLoop::mergeInto([
                 'nodes' => [
@@ -1134,17 +1140,19 @@ return [
                         ],
                     ],
                     [
-                        'id' => 'mpesa_stk_push-1',
-                        'type' => 'mpesa_stk_push',
+                        'id' => 'request_payment-1',
+                        'type' => 'request_payment',
                         'position' => ['x' => 2280, 'y' => 280],
                         'data' => [
                             'label' => '30% deposit',
-                            'type' => 'mpesa_stk_push',
+                            'type' => 'request_payment',
                             'settings' => [
-                                'mpesa' => [
+                                'payment' => [
                                     'amount' => '{{deposit_amount}}',
                                     'accountReference' => 'HOTEL-DEPOSIT',
-                                    'transactionDesc' => 'Booking deposit (30%)',
+                                    'description' => 'Booking deposit (30%)',
+                                    'provider' => 'auto',
+                                    'email' => '',
                                     'responseVar' => 'deposit_result',
                                 ],
                             ],
@@ -1230,6 +1238,8 @@ return [
                                 'catalogId' => '',
                                 'header' => 'Safari packages',
                                 'footer' => 'Book a safari on WhatsApp.',
+                                'displayMode' => 'interactive_list',
+                                'autoResumeFlow' => true,
                                 'completionType' => 'booking',
                                 'bookingVariablePrefix' => 'safari_booking',
                                 'requirePreferredDateTime' => true,
@@ -1266,9 +1276,9 @@ return [
                     ['id' => 'e-pdf-template', 'source' => 'pdf-1', 'target' => 'template-1'],
                     ['id' => 'e-q-store', 'source' => 'question-1', 'target' => 'datastore-1'],
                     ['id' => 'e-store-http', 'source' => 'datastore-1', 'target' => 'http-1'],
-                    ['id' => 'e-http-mpesa', 'source' => 'http-1', 'target' => 'mpesa_stk_push-1'],
-                    ['id' => 'e-mpesa-success', 'source' => 'mpesa_stk_push-1', 'target' => 'assign_group-1', 'sourceHandle' => 'mpesa-success'],
-                    ['id' => 'e-mpesa-failed-end', 'source' => 'mpesa_stk_push-1', 'target' => 'end-1', 'sourceHandle' => 'mpesa-failed'],
+                    ['id' => 'e-http-pay', 'source' => 'http-1', 'target' => 'request_payment-1'],
+                    ['id' => 'e-pay-success', 'source' => 'request_payment-1', 'target' => 'assign_group-1', 'sourceHandle' => 'success'],
+                    ['id' => 'e-pay-failed-end', 'source' => 'request_payment-1', 'target' => 'end-1', 'sourceHandle' => 'failed'],
                     ['id' => 'e-group-journey', 'source' => 'assign_group-1', 'target' => 'assign_journey_stage-1'],
                     ['id' => 'e-journey-template', 'source' => 'assign_journey_stage-1', 'target' => 'template-1'],
                     ['id' => 'e-template-end', 'source' => 'template-1', 'target' => 'end-1'],

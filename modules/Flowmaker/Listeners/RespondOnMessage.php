@@ -3,8 +3,10 @@
 namespace Modules\Flowmaker\Listeners;
 
 use App\Models\Company;
+use App\Services\Flowmaker\FlowDispatchService;
 use Illuminate\Support\Collection;
 use Modules\Flowmaker\Jobs\ProcessFlowMessage;
+use Modules\Flowmaker\Models\Contact;
 use Modules\Flowmaker\Models\Flow;
 
 class RespondOnMessage
@@ -20,12 +22,21 @@ class RespondOnMessage
 
                 $flows = Flow::query()
                     ->where('company_id', $company_id)
+                    ->where('is_active', true)
                     ->whereNotNull('flow_data')
                     ->where('flow_data', '!=', '')
                     ->where('flow_data', '!=', '{}')
-                    ->get(['id', 'name', 'company_id']);
+                    ->get();
 
-                $flowsForChat = $this->filterFlowsForChat($company, $flows);
+                $flowmakerContact = Contact::find($contact->id) ?: $contact;
+                $messageBody = (string) ($message->value ?? $message->body ?? '');
+
+                $flowsForChat = app(FlowDispatchService::class)->selectFlowsForMessage(
+                    $company,
+                    $flows,
+                    $flowmakerContact,
+                    $messageBody
+                );
 
                 foreach ($flowsForChat as $flow) {
                     ProcessFlowMessage::dispatch($flow->id, $message->id)->onQueue('flows');
@@ -35,28 +46,9 @@ class RespondOnMessage
         }
     }
 
-    /**
-     * Chat runs all company flows except the one assigned to AI voice (knowledge-only there).
-     * If that voice flow is the only flow, it is still used for chat so the bot does not go silent.
-     *
-     * @param  \Illuminate\Database\Eloquent\Collection<int, Flow>|Collection<int, Flow>  $flows
-     * @return Collection<int, Flow>
-     */
     public function filterFlowsForChat(Company $company, $flows): Collection
     {
-        $voiceFlowId = (int) $company->getConfig('whatsapp_ai_flow_id', 0);
-        if ($voiceFlowId <= 0) {
-            return $flows instanceof Collection ? $flows : collect($flows);
-        }
-
-        $collection = $flows instanceof Collection ? $flows : collect($flows);
-        $withoutVoice = $collection->reject(fn (Flow $flow) => (int) $flow->id === $voiceFlowId)->values();
-
-        if ($withoutVoice->isEmpty()) {
-            return $collection->values();
-        }
-
-        return $withoutVoice;
+        return app(FlowDispatchService::class)->filterFlowsForChat($company, $flows);
     }
 
     public function subscribe($events)

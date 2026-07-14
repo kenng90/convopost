@@ -11,9 +11,11 @@ use App\Models\Company;
 use App\Models\ListCatalog;
 use App\Services\Catalog\ApiCatalogImportService;
 use App\Services\Catalog\CatalogAnalyticsService;
+use App\Services\Catalog\CatalogAvailabilitySyncService;
 use App\Services\Catalog\CatalogCategoryNormalizer;
 use App\Services\Catalog\CatalogExperimentService;
 use App\Services\Catalog\CatalogFlowUsageService;
+use App\Services\Catalog\CatalogGoLiveService;
 use App\Services\Catalog\CatalogItemPayloadService;
 use App\Services\Catalog\CatalogItemRepository;
 use App\Services\Catalog\CatalogMode;
@@ -53,6 +55,8 @@ class ListCatalogController extends Controller
         protected CatalogWhatsAppOrderService $catalogWhatsAppOrderService,
         protected CatalogTemplateRegistry $catalogTemplateRegistry,
         protected CatalogItemPayloadService $catalogItemPayloadService,
+        protected CatalogGoLiveService $catalogGoLiveService,
+        protected CatalogAvailabilitySyncService $catalogAvailabilitySyncService,
     ) {
     }
 
@@ -1301,6 +1305,80 @@ class ListCatalogController extends Controller
             'message' => 'Store catalog synced.',
             'catalog' => $this->formatCatalogSummary($catalog->fresh()),
             'stats' => $result['stats'] ?? [],
+        ]);
+    }
+
+    public function goLiveStatus(Request $request)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $company = $this->getCompany() ?? abort(403);
+        $catalog = null;
+
+        if ($request->filled('catalog_id')) {
+            $catalog = ListCatalog::where('id', $request->integer('catalog_id'))
+                ->where('company_id', $company->id)
+                ->whereNull('parent_id')
+                ->firstOrFail();
+        }
+
+        $summary = $this->catalogGoLiveService->summary($company, $catalog);
+        $summary['steps'] = array_map(function (array $step) {
+            if (! empty($step['action_url'])) {
+                return $step;
+            }
+
+            $routeName = $step['action_route'] ?? null;
+            if (! $routeName) {
+                return $step;
+            }
+
+            try {
+                $step['action_url'] = route($routeName, $step['action_params'] ?? []);
+            } catch (\Throwable) {
+                $step['action_url'] = null;
+            }
+
+            return $step;
+        }, $summary['steps']);
+
+        return response()->json([
+            'success' => true,
+            ...$summary,
+        ]);
+    }
+
+    public function syncAvailability(Request $request, $id)
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $companyId = $this->activeCompanyId();
+        $catalog = ListCatalog::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+
+        if (! in_array($catalog->resolvedCatalogMode(), [CatalogMode::SERVICE, CatalogMode::LISTING], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Availability sync is only available for service and listing catalogs.',
+            ], 400);
+        }
+
+        try {
+            $updated = $this->catalogAvailabilitySyncService->syncCatalog($catalog);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $updated > 0
+                ? "Updated availability for {$updated} item(s)."
+                : 'Availability is already up to date.',
+            'updated' => $updated,
+            'catalog' => $this->formatCatalogSummary($catalog->fresh()),
         ]);
     }
 

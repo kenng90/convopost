@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\PublicCatalogBookItemRequest;
 use App\Http\Requests\PublicCatalogBrowseRequest;
 use App\Models\CatalogCollection;
+use App\Models\CatalogOrder;
 use App\Models\Company;
 use App\Models\ListCatalog;
 use App\Services\Catalog\CatalogAnalyticsService;
 use App\Services\Catalog\CatalogBookingPendingService;
+use App\Services\Catalog\CatalogCartSessionService;
 use App\Services\Catalog\CatalogCheckoutPendingService;
 use App\Services\Catalog\CatalogCurrencyService;
 use App\Services\Catalog\CatalogExperimentService;
@@ -20,6 +22,7 @@ use App\Services\Catalog\CatalogListingBookingReservationService;
 use App\Services\Catalog\CatalogListingBookingService;
 use App\Services\Catalog\CatalogListingInquiryService;
 use App\Services\Catalog\CatalogListingSlotBookingService;
+use App\Services\Catalog\CatalogOrderService;
 use App\Services\Catalog\CatalogUrlService;
 use App\Services\Catalog\CatalogWhatsAppOrderService;
 use App\Services\CatalogItemFilterService;
@@ -51,6 +54,8 @@ class PublicCatalogController extends Controller
         protected CatalogListingBookingReservationService $catalogListingBookingReservationService,
         protected CatalogListingSlotBookingService $catalogListingSlotBookingService,
         protected BookingPaymentService $bookingPaymentService,
+        protected CatalogOrderService $catalogOrderService,
+        protected CatalogCartSessionService $catalogCartSessionService,
     ) {
     }
 
@@ -194,6 +199,8 @@ class PublicCatalogController extends Controller
                 'customerPhone' => 'nullable|string',
                 'notes' => 'nullable|string',
                 'flow_token' => 'nullable|string',
+                'visitor_key' => 'nullable|string|max:64',
+                'deliveryAddress' => 'nullable|string|max:1000',
             ]);
 
             $currency = $this->catalogCurrencyService->codeForCompany($catalog->company);
@@ -238,11 +245,26 @@ class PublicCatalogController extends Controller
                     $orderMessage .= "\n📝 *Notes:* ".$validated['notes']."\n";
                 }
 
+                $order = $this->catalogOrderService->createFromCheckout(
+                    $catalog,
+                    $validated['items'],
+                    $catalog->items ?? [],
+                    CatalogOrder::CHANNEL_WHATSAPP,
+                    [
+                        'customer_name' => $validated['customerName'] ?? null,
+                        'customer_phone' => $validated['customerPhone'] ?? null,
+                        'delivery_address' => $validated['deliveryAddress'] ?? null,
+                        'notes' => $validated['notes'] ?? null,
+                        'flow_token' => $validated['flow_token'] ?? null,
+                        'order_message' => $orderMessage,
+                    ]
+                );
+
                 $this->catalogAnalyticsService->record(
                     $catalog->company_id,
                     $catalog->id,
                     'checkout_whatsapp',
-                    ['item_count' => count($validated['items']), 'total' => $totalPrice]
+                    ['item_count' => count($validated['items']), 'total' => $totalPrice, 'order_id' => $order->id]
                 );
 
                 $this->catalogCheckoutPendingService->storePendingFromFlowToken(
@@ -252,12 +274,23 @@ class PublicCatalogController extends Controller
                     $orderMessage
                 );
 
+                if (! empty($validated['visitor_key'])) {
+                    $this->catalogCartSessionService->markConverted($catalog, (string) $validated['visitor_key']);
+                }
+
                 $this->commitCheckoutReservations($reservations);
 
                 return response()->json([
                     'success' => true,
                     'message' => $orderMessage,
                     'orderData' => $validated,
+                    'order' => [
+                        'id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'public_uuid' => $order->public_uuid,
+                        'status' => $order->status,
+                        'total_amount' => $order->total_amount,
+                    ],
                     'currency' => $currency,
                 ]);
             } catch (\Throwable $e) {
@@ -490,6 +523,7 @@ class PublicCatalogController extends Controller
                 'amount' => 'required|numeric|min:1',
                 'notes' => 'nullable|string',
                 'flow_token' => 'nullable|string',
+                'visitor_key' => 'nullable|string|max:64',
             ]);
 
             $invoiceItems = [];
@@ -554,6 +588,39 @@ class PublicCatalogController extends Controller
 
                 $this->commitCheckoutReservations($reservations);
 
+                $orderMessage = '📦 *New Order from Catalog: '.$catalog->name."*\n\n"
+                    ."📋 *Items:*\n"
+                    .collect($invoiceItems)->map(fn ($item) => "• {$item['title']} (x{$item['quantity']})")
+                        ->implode("\n")
+                    ."\n\n💰 *Total:* ".$this->catalogCurrencyService->formatAmount($catalog->company, $totalAmount);
+
+                $order = $this->catalogOrderService->createFromCheckout(
+                    $catalog,
+                    $validated['items'],
+                    $catalog->items ?? [],
+                    CatalogOrder::CHANNEL_INVOICE,
+                    [
+                        'customer_name' => $validated['customerName'] ?? null,
+                        'customer_phone' => $validated['customerPhone'] ?? null,
+                        'delivery_address' => $validated['deliveryAddress'] ?? null,
+                        'notes' => $validated['notes'] ?? null,
+                        'flow_token' => $validated['flow_token'] ?? null,
+                        'order_message' => $orderMessage,
+                    ],
+                    $invoice
+                );
+
+                $this->catalogCheckoutPendingService->storePendingFromFlowToken(
+                    $validated['flow_token'] ?? null,
+                    $catalog->id,
+                    $validated['items'],
+                    $orderMessage
+                );
+
+                if (! empty($validated['visitor_key'])) {
+                    $this->catalogCartSessionService->markConverted($catalog, (string) $validated['visitor_key']);
+                }
+
                 $whatsAppService = new InvoiceWhatsAppService($catalog->company);
                 $whatsAppSent = $whatsAppService->sendInvoice($invoice);
 
@@ -568,7 +635,12 @@ class PublicCatalogController extends Controller
                     $catalog->company_id,
                     $catalog->id,
                     'checkout_invoice',
-                    ['item_count' => count($validated['items']), 'total' => $totalAmount, 'invoice_id' => $invoice->id]
+                    [
+                        'item_count' => count($validated['items']),
+                        'total' => $totalAmount,
+                        'invoice_id' => $invoice->id,
+                        'order_id' => $order->id,
+                    ]
                 );
 
                 return response()->json([
@@ -581,6 +653,12 @@ class PublicCatalogController extends Controller
                         'customer_phone' => $invoice->customer_phone,
                         'status' => $invoice->status,
                         'whatsapp_sent' => $whatsAppSent,
+                    ],
+                    'order' => [
+                        'id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'public_uuid' => $order->public_uuid,
+                        'status' => $order->status,
                     ],
                 ]);
             } catch (\Throwable $e) {
@@ -601,6 +679,88 @@ class PublicCatalogController extends Controller
                 'message' => 'Error creating invoice: '.$e->getMessage(),
             ], 400);
         }
+    }
+
+    public function syncCart(Request $request, $catalogId)
+    {
+        $catalog = ListCatalog::withoutGlobalScopes()->find($catalogId);
+
+        if (! $catalog) {
+            return response()->json(['success' => false, 'message' => 'Catalog not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'visitor_key' => 'required|string|max:64',
+            'items' => 'nullable|array',
+            'items.*.id' => 'required_with:items|string',
+            'items.*.quantity' => 'required_with:items|integer|min:1',
+            'customerPhone' => 'nullable|string|max:40',
+            'customerName' => 'nullable|string|max:255',
+            'flow_token' => 'nullable|string',
+        ]);
+
+        $contactId = null;
+        if (! empty($validated['flow_token'])) {
+            $context = $this->catalogFlowCallbackService->decodeToken($validated['flow_token']);
+            $contactId = $context['contact_id'] ?? null;
+        }
+
+        $session = $this->catalogCartSessionService->sync(
+            $catalog,
+            $validated['visitor_key'],
+            $validated['items'] ?? [],
+            $validated['customerPhone'] ?? null,
+            $validated['customerName'] ?? null,
+            $contactId
+        );
+
+        return response()->json([
+            'success' => true,
+            'session' => [
+                'id' => $session->id,
+                'item_count' => $session->itemCount(),
+                'last_activity_at' => optional($session->last_activity_at)?->toIso8601String(),
+            ],
+        ]);
+    }
+
+    public function abandonCart(Request $request, $catalogId)
+    {
+        $catalog = ListCatalog::withoutGlobalScopes()->find($catalogId);
+
+        if (! $catalog) {
+            return response()->json(['success' => false, 'message' => 'Catalog not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'visitor_key' => 'required|string|max:64',
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|string',
+            'items.*.quantity' => 'required|integer|min:1',
+            'customerPhone' => 'required|string|max:40',
+            'customerName' => 'nullable|string|max:255',
+        ]);
+
+        $session = $this->catalogCartSessionService->markAbandoned(
+            $catalog,
+            $validated['visitor_key'],
+            $validated['items'],
+            $validated['customerPhone'],
+            $validated['customerName'] ?? null
+        );
+
+        $this->catalogAnalyticsService->record(
+            $catalog->company_id,
+            $catalog->id,
+            'cart_abandoned',
+            ['item_count' => count($validated['items'])]
+        );
+
+        return response()->json([
+            'success' => true,
+            'abandoned' => (bool) $session,
+            'session_id' => $session?->id,
+        ]);
     }
 
     /**

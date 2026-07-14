@@ -196,6 +196,9 @@ class WhatsappFlowResponses extends Component
         $avgCompletionSeconds = $service->averageCompletionSeconds($analyticsResponses);
         $avgCompletionLabel = $service->formatDuration($avgCompletionSeconds);
         $exportUrl = $this->getExportUrl();
+        $conversionSummary = $selectedFlow
+            ? app(\App\Services\Flowmaker\FormConversionAnalyticsService::class)->summaryForForm((int) $selectedFlow->id)
+            : null;
 
         return view('livewire.whatsapp-flow-responses', compact(
             'flows',
@@ -211,7 +214,8 @@ class WhatsappFlowResponses extends Component
             'funnelAnalytics',
             'avgCompletionLabel',
             'exportUrl',
-            'genericRows'
+            'genericRows',
+            'conversionSummary'
         ));
     }
 

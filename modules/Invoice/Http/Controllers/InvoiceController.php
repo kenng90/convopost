@@ -116,17 +116,18 @@ class InvoiceController extends Controller
     }
 
     /**
-     * Initiate M-Pesa payment for invoice
+     * Initiate payment for invoice (M-Pesa STK or Paystack)
      */
     public function initiatePayment(Request $request, Invoice $invoice)
     {
         try {
             $validated = $request->validate([
                 'amount' => 'nullable|numeric|min:1',
-                'customer_phone' => 'required|string|max:20', // Customer must provide phone for verification
+                'customer_phone' => 'required|string|max:20',
+                'payment_method' => 'nullable|string|in:mpesa,paystack,auto',
+                'customer_email' => 'nullable|email|max:255',
             ]);
 
-            // Authorization check: Verify customer phone matches invoice
             if ($validated['customer_phone'] !== $invoice->customer_phone) {
                 Log::warning('Unauthorized payment attempt - phone mismatch', [
                     'invoice_id' => $invoice->id,
@@ -156,72 +157,59 @@ class InvoiceController extends Controller
                 ], 400);
             }
 
-            // Initialize M-Pesa service
-            $mpesaService = new MpesaService($invoice->company);
+            $manager = app(\App\Services\Payments\PaymentGatewayManager::class);
+            $method = $validated['payment_method'] ?? 'auto';
+            $gateway = $method === 'auto'
+                ? $manager->preferredForCompany($invoice->company)
+                : $manager->get($method);
 
-            if (! $mpesaService->isConfigured()) {
-                $errors = $mpesaService->getConfigErrors();
-                Log::error('M-Pesa not configured for invoice payment', [
-                    'invoice_id' => $invoice->id,
-                    'errors' => $errors,
-                ]);
-
+            if (! $gateway || ! $gateway->isConfigured($invoice->company)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'M-Pesa is not configured. Please contact support.',
-                    'errors' => $errors,
+                    'message' => 'No payment method is configured for this business.',
+                    'gateways' => $manager->availableForCompany($invoice->company),
                 ], 400);
             }
 
-            // Create payment record
-            $payment = InvoicePayment::create([
-                'invoice_id' => $invoice->id,
-                'payment_method' => 'mpesa',
+            $result = $gateway->initiate($invoice->company, $invoice, [
                 'amount' => $amount,
-                'status' => 'pending',
+                'phone' => $invoice->customer_phone,
+                'email' => $validated['customer_email'] ?? $invoice->customer_email,
+                'account_reference' => 'INV-'.mb_substr((string) $invoice->invoice_number, 0, 8),
+                'description' => 'Invoice '.$invoice->invoice_number,
+                'callback_url' => $gateway->key() === 'paystack'
+                    ? url('/api/invoice/paystack/callback')
+                    : config('app.url').'/api/invoice/payment/callback',
             ]);
 
-            // Initiate STK Push
-            $result = $mpesaService->initiateStk(
-                phone: $invoice->customer_phone,
-                amount: $amount,
-                accountReference: "INV-{$invoice->invoice_number}",
-                transactionDesc: "Invoice {$invoice->invoice_number}",
-                callbackUrl: config('app.url').'/api/invoice/payment/callback'
-            );
-
-            if (! $result['success']) {
-                $payment->markAsFailed($result['error']);
-                Log::error('Failed to initiate M-Pesa STK Push', [
-                    'invoice_id' => $invoice->id,
-                    'payment_id' => $payment->id,
-                    'error' => $result['error'],
-                ]);
-
+            if (! ($result['success'] ?? false)) {
                 return response()->json([
                     'success' => false,
-                    'message' => $result['error'],
+                    'message' => $result['message'] ?? 'Unable to start payment',
                 ], 400);
             }
 
-            // Update payment with M-Pesa request IDs
-            $payment->update([
-                'mpesa_checkout_request_id' => $result['checkout_request_id'],
-                'mpesa_merchant_request_id' => $result['merchant_request_id'],
-                'initiated_at' => now(),
-            ]);
+            /** @var \Modules\Invoice\Models\InvoicePayment $payment */
+            $payment = $result['payment'];
 
-            Log::info('M-Pesa STK Push initiated for invoice', [
+            Log::info('Invoice payment initiated', [
                 'invoice_id' => $invoice->id,
                 'payment_id' => $payment->id,
-                'checkout_request_id' => $result['checkout_request_id'],
+                'method' => $gateway->key(),
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Payment initiated. Please enter your M-Pesa PIN.',
+                'message' => $gateway->key() === 'paystack'
+                    ? 'Continue to Paystack checkout.'
+                    : 'Payment initiated. Please enter your M-Pesa PIN.',
                 'payment_id' => $payment->id,
-                'checkout_request_id' => $result['checkout_request_id'],
+                'payment_method' => $gateway->key(),
+                'authorization_url' => $result['authorization_url'] ?? null,
+                'reference' => $result['reference'] ?? null,
+                'public_key' => $result['public_key'] ?? null,
+                'checkout_request_id' => $payment->mpesa_checkout_request_id,
+                'gateways' => $manager->availableForCompany($invoice->company),
             ]);
         } catch (\Exception $e) {
             Log::error('Exception during payment initiation', [

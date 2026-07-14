@@ -18,6 +18,7 @@ use Modules\Flowmaker\Models\Nodes\BookingEventRegister;
 use Modules\Flowmaker\Models\Nodes\BookingEventsList;
 use Modules\Flowmaker\Models\Nodes\Branch;
 use Modules\Flowmaker\Models\Nodes\Buttons;
+use Modules\Flowmaker\Models\Nodes\CatalogSearch;
 use Modules\Flowmaker\Models\Nodes\CheckPricing;
 use Modules\Flowmaker\Models\Nodes\Counter;
 use Modules\Flowmaker\Models\Nodes\Edge;
@@ -33,6 +34,8 @@ use Modules\Flowmaker\Models\Nodes\Media;
 use Modules\Flowmaker\Models\Nodes\Message;
 use Modules\Flowmaker\Models\Nodes\MpesaStkPush;
 use Modules\Flowmaker\Models\Nodes\Node;
+use Modules\Flowmaker\Models\Nodes\OrderStatus;
+use Modules\Flowmaker\Models\Nodes\RequestPayment;
 use Modules\Flowmaker\Models\Nodes\SendBookingLink;
 use Modules\Flowmaker\Models\Nodes\SetVariable;
 use Modules\Flowmaker\Models\Nodes\Template;
@@ -47,6 +50,13 @@ class Flow extends Model
     protected $table = 'flows';
 
     public $guarded = [];
+
+    protected $casts = [
+        'exclusive_on_match' => 'boolean',
+        'is_active' => 'boolean',
+        'has_unpublished_changes' => 'boolean',
+        'priority' => 'integer',
+    ];
 
     // Define any custom methods or scopes here
     protected static function booted()
@@ -88,7 +98,11 @@ class Flow extends Model
             $extra = is_object($data) ? ($data->extra ?? '') : ($data['extra'] ?? '');
             $skipKeywordRestart = $pendingService->isOrderConfirmationMessage($contact, $this->id, $message)
                 || $pendingService->hasPending($contact, $this->id)
-                || ($extra !== '' && str_starts_with((string) $extra, 'catalog_'));
+                || ($extra !== '' && (
+                    str_starts_with((string) $extra, 'catalog_')
+                    || str_starts_with((string) $extra, 'listing_')
+                    || str_starts_with((string) $extra, 'listing:')
+                ));
 
             if (! $skipKeywordRestart && $this->messageMatchesKeywordTrigger($flowData->nodes, $message)) {
                 $contact->clearContactState($this->id, 'current_node');
@@ -238,6 +252,10 @@ class Flow extends Model
                 $theNewNode = new AssignJourneyStage($nodeArray, []);
             } elseif ($nodeArray['type'] === 'mpesa_stk_push') {
                 $theNewNode = new MpesaStkPush($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'request_payment') {
+                $theNewNode = new RequestPayment($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'catalog_search') {
+                $theNewNode = new CatalogSearch($nodeArray, []);
             } elseif ($nodeArray['type'] === 'whatsapp_catalog') {
                 $theNewNode = new WhatsAppCatalog($nodeArray, []);
             } elseif ($nodeArray['type'] === 'listing_inquiry') {
@@ -254,6 +272,8 @@ class Flow extends Model
                 $theNewNode = new SendBookingLink($nodeArray, []);
             } elseif ($nodeArray['type'] === 'manage_booking') {
                 $theNewNode = new ManageBooking($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'order_status') {
+                $theNewNode = new OrderStatus($nodeArray, []);
             } elseif ($nodeArray['type'] === 'counter') {
                 $theNewNode = new Counter($nodeArray, []);
             } elseif ($nodeArray['type'] === 'check_pricing') {
@@ -343,6 +363,25 @@ class Flow extends Model
      */
     private function messageMatchesKeywordTrigger(array $nodes, string $message): bool
     {
+        return self::nodesMatchKeywordMessage($nodes, $message);
+    }
+
+    /**
+     * Public helper for dispatch selection (exclusive keyword match).
+     */
+    public function matchesKeywordMessage(string $message): bool
+    {
+        $flowData = json_decode($this->flow_data ?: '{}');
+        $nodes = is_object($flowData) && isset($flowData->nodes) ? (array) $flowData->nodes : [];
+
+        return self::nodesMatchKeywordMessage($nodes, $message);
+    }
+
+    /**
+     * @param  array<int, mixed>  $nodes
+     */
+    public static function nodesMatchKeywordMessage(array $nodes, string $message): bool
+    {
         foreach ($nodes as $node) {
             $nodeArray = (array) $node;
             if (($nodeArray['type'] ?? '') !== 'keyword_trigger') {
@@ -377,6 +416,12 @@ class Flow extends Model
     public function resumeFromMpesaCallback(Contact $contact)
     {
         $this->resumeWaitingNode($contact, null);
+    }
+
+    public function resumeFromPaymentCallback(Contact $contact, string $status = 'success'): void
+    {
+        $contact->setContactState($this->id, 'payment_result_status', $status);
+        $this->resumeWaitingNode($contact, 'payment_'.$status);
     }
 
     public function resumeBookingPaymentSuccess(Contact $contact, string $nodeId, int $reservationId): void
@@ -489,7 +534,8 @@ class Flow extends Model
     }
 
     /**
-     * Resume automation from the else handle when a WhatsApp Form was abandoned.
+     * Resume automation from the onAbandoned handle when a WhatsApp Form was abandoned.
+     * Falls back to else for legacy graphs.
      */
     public function resumeFromFormAbandonment(Contact $contact, string $whatsappFlowNodeId): bool
     {
@@ -499,7 +545,8 @@ class Flow extends Model
                 return false;
             }
 
-            $elseTargetId = null;
+            $targetId = null;
+            $fallbackElse = null;
             foreach ($flowData->edges as $edge) {
                 $edgeArray = is_array($edge) ? $edge : (array) $edge;
                 $source = $edgeArray['source'] ?? null;
@@ -508,13 +555,17 @@ class Flow extends Model
                 }
 
                 $handle = (string) ($edgeArray['sourceHandle'] ?? '');
-                if ($handle === 'else' || str_contains($handle, 'else')) {
-                    $elseTargetId = $edgeArray['target'] ?? null;
+                if ($handle === 'onAbandoned' || str_contains($handle, 'onAbandoned')) {
+                    $targetId = $edgeArray['target'] ?? null;
                     break;
+                }
+                if (($handle === 'else' || str_contains($handle, 'else')) && ! $fallbackElse) {
+                    $fallbackElse = $edgeArray['target'] ?? null;
                 }
             }
 
-            if (! $elseTargetId) {
+            $targetId = $targetId ?: $fallbackElse;
+            if (! $targetId) {
                 return false;
             }
 
@@ -522,11 +573,11 @@ class Flow extends Model
             $contact->primeFlowStateCache($this->id);
 
             $nodes = $this->getWiredNodes($flowData->nodes, $flowData->edges);
-            if (! isset($nodes[$elseTargetId])) {
+            if (! isset($nodes[$targetId])) {
                 return false;
             }
 
-            $nodes[$elseTargetId]->isStartNode = true;
+            $nodes[$targetId]->isStartNode = true;
 
             $mockData = new \stdClass();
             $mockData->contact_id = $contact->id;
@@ -534,7 +585,7 @@ class Flow extends Model
             $mockData->value = '';
             $mockData->extra = json_encode(['abandoned' => true]);
 
-            $nodes[$elseTargetId]->process('', $mockData);
+            $nodes[$targetId]->process('', $mockData);
 
             return true;
         } catch (\Exception $e) {

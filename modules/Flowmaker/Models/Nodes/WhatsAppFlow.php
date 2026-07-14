@@ -260,6 +260,9 @@ class WhatsAppFlow extends Node
             $submissionService->syncResponseToContactState($contact, $this->flow_id, $flowResponse->responses ?? [], $whatsappFlow);
         }
 
+        $this->applyCrmMappings($contact, $responseData, $settings);
+        $this->applyOnCompleteActions($contact, $settings);
+
         // Clear the waiting state
         $contact->clearContactState($this->flow_id, 'current_node');
 
@@ -395,10 +398,31 @@ class WhatsAppFlow extends Node
      * {
      *   fieldName: "contact_preference",
      *   operator: "==",
-     *   value: "yes"
+     *   value: "yes",
+     *   allOf?: [{ fieldName, operator, value }, ...]
      * }
      */
     protected function evaluateCondition(array $condition, array $responseData): bool
+    {
+        $allOf = $condition['allOf'] ?? null;
+        if (is_array($allOf) && $allOf !== []) {
+            foreach ($allOf as $clause) {
+                if (! is_array($clause) || ! $this->evaluateSingleCondition($clause, $responseData)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        return $this->evaluateSingleCondition($condition, $responseData);
+    }
+
+    /**
+     * @param  array<string, mixed>  $condition
+     * @param  array<string, mixed>  $responseData
+     */
+    protected function evaluateSingleCondition(array $condition, array $responseData): bool
     {
         $fieldName = $condition['fieldName'] ?? '';
         $operator = $condition['operator'] ?? '==';
@@ -412,7 +436,6 @@ class WhatsAppFlow extends Node
 
         $actualValue = $responseData[$fieldName] ?? '';
 
-        // Convert array to string if needed
         if (is_array($actualValue)) {
             $actualValue = implode(',', $actualValue);
         }
@@ -427,7 +450,6 @@ class WhatsAppFlow extends Node
             'actualValue' => $actualValue,
         ]);
 
-        // Evaluate based on operator
         switch ($operator) {
             case '==':
                 return strtolower($actualValue) === strtolower($expectedValue);
@@ -437,10 +459,123 @@ class WhatsAppFlow extends Node
                 return stripos($actualValue, $expectedValue) !== false;
             case 'starts':
                 return strpos(strtolower($actualValue), strtolower($expectedValue)) === 0;
+            case 'gt':
+            case 'lt':
+            case 'gte':
+            case 'lte':
+                if (! is_numeric($actualValue) || ! is_numeric($expectedValue)) {
+                    return false;
+                }
+                $left = (float) $actualValue;
+                $right = (float) $expectedValue;
+
+                return match ($operator) {
+                    'gt' => $left > $right,
+                    'lt' => $left < $right,
+                    'gte' => $left >= $right,
+                    'lte' => $left <= $right,
+                };
+            case 'in':
+                $haystack = array_map(
+                    fn ($item) => strtolower(trim((string) $item)),
+                    preg_split('/\s*,\s*/', $expectedValue) ?: []
+                );
+
+                return in_array(strtolower($actualValue), $haystack, true);
             default:
                 Log::warning('WhatsApp Flow: unknown operator', ['operator' => $operator]);
 
                 return false;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $responseData
+     * @param  array<string, mixed>  $settings
+     */
+    protected function applyCrmMappings($contact, array $responseData, array $settings): void
+    {
+        $mappings = $settings['fieldMappings'] ?? [];
+        if (! is_array($mappings) || $mappings === []) {
+            return;
+        }
+
+        foreach ($mappings as $mapping) {
+            $formFieldKey = $mapping['formFieldKey'] ?? null;
+            $contactFieldId = $mapping['contactFieldId'] ?? null;
+            if (! $formFieldKey || ! $contactFieldId || $contactFieldId === 'none') {
+                continue;
+            }
+
+            if (! array_key_exists($formFieldKey, $responseData)) {
+                continue;
+            }
+
+            $field = \Modules\Contacts\Models\Field::query()
+                ->where('id', $contactFieldId)
+                ->where('company_id', $contact->company_id)
+                ->first();
+
+            if (! $field) {
+                continue;
+            }
+
+            $value = $responseData[$formFieldKey];
+            if (is_array($value)) {
+                $value = json_encode($value);
+            }
+
+            $existing = $contact->fields()->where('custom_contacts_fields.id', $field->id)->exists();
+            if ($existing) {
+                $contact->fields()->updateExistingPivot($field->id, ['value' => (string) $value]);
+            } else {
+                $contact->fields()->attach($field->id, ['value' => (string) $value]);
+            }
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    protected function applyOnCompleteActions($contact, array $settings): void
+    {
+        $onComplete = $settings['onComplete'] ?? [];
+        if (! is_array($onComplete)) {
+            return;
+        }
+
+        $groupId = $onComplete['groupId'] ?? null;
+        if (! empty($groupId) && $groupId !== 'none') {
+            $group = \Modules\Contacts\Models\Group::query()
+                ->where('id', $groupId)
+                ->where('company_id', $contact->company_id)
+                ->first();
+
+            if ($group && ! $contact->groups()->where('group_id', $groupId)->exists()) {
+                $contact->groups()->attach($groupId);
+                if (class_exists(\Modules\Journies\Support\GroupRuleBridge::class)) {
+                    \Modules\Journies\Support\GroupRuleBridge::contactAddedToGroups($contact, [$groupId]);
+                }
+            }
+        }
+
+        $stageId = $onComplete['stageId'] ?? null;
+        if (! empty($stageId) && $stageId !== 'none' && class_exists(\Modules\Journies\Models\JourneyStage::class)) {
+            $stage = \Modules\Journies\Models\JourneyStage::query()
+                ->where('id', $stageId)
+                ->whereHas('journey', fn ($query) => $query->where('company_id', $contact->company_id))
+                ->first();
+
+            if ($stage) {
+                app(\Modules\Journies\Services\JourneyContactService::class)->moveContactToStage(
+                    $contact,
+                    $stage,
+                    'flow',
+                    null,
+                    true,
+                    false,
+                );
+            }
         }
     }
 

@@ -129,11 +129,11 @@ class PlatformFeaturesTest extends TestCase
 
     public function test_ai_flow_assistant_generates_valid_graph(): void
     {
-        $draft = app(AiFlowAssistantService::class)->generate('When customer says pay, collect M-Pesa payment');
+        $draft = app(AiFlowAssistantService::class)->generateRuleBased('When customer says pay, collect M-Pesa payment');
 
         $this->assertNotEmpty($draft['nodes']);
         $this->assertNotEmpty($draft['edges']);
-        $this->assertTrue(collect($draft['nodes'])->contains(fn ($n) => $n['type'] === 'mpesa_stk_push'));
+        $this->assertTrue(collect($draft['nodes'])->contains(fn ($n) => $n['type'] === 'request_payment'));
     }
 
     public function test_public_invoice_page_renders(): void

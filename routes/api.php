@@ -44,6 +44,13 @@ Route::prefix('invoice')->group(function () {
         ->withoutMiddleware(['api'])
         ->name('invoice.payment.callback');
 
+    Route::get('/paystack/callback', [\Modules\Flowmaker\Http\Controllers\PaystackController::class, 'callback'])
+        ->name('invoice.paystack.callback');
+
+    Route::post('/paystack/webhook', [\Modules\Flowmaker\Http\Controllers\PaystackController::class, 'webhook'])
+        ->withoutMiddleware(['api'])
+        ->name('invoice.paystack.webhook');
+
     // Public payment routes (with rate limiting)
     Route::middleware('throttle:10,1')->group(function () {
         // Public payment initiation (uses UUID for route binding)

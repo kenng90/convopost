@@ -35,6 +35,16 @@ class WhatsappFlowAbandonmentService
                     $flowResponse->markAbandoned('Timed out after '.$this->timeoutHours.' hours without completion');
                     $marked++;
 
+                    if ($flowResponse->flow_id) {
+                        \App\Services\Flowmaker\FlowRunLogger::log(
+                            (int) $flowResponse->flow_id,
+                            $flowResponse->contact_id ? (int) $flowResponse->contact_id : null,
+                            'whatsapp_form_abandoned',
+                            $flowResponse->flow_node_id ? (string) $flowResponse->flow_node_id : null,
+                            (string) $flowResponse->whatsapp_flow_id
+                        );
+                    }
+
                     if ($this->tryResumeAbandonedAutomation($flowResponse)) {
                         $resumed++;
                     }

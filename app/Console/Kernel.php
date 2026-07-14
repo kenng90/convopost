@@ -13,6 +13,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('catalog:sync-stores')->hourly();
+        $schedule->command('catalog:sync-availability')->hourly();
         $schedule->command('whatsapp-flows:mark-abandoned')->hourly();
         $schedule->command('campaigns:dispatch-scheduled')->everyMinute();
         $schedule->command('campaigns:check-completion')->everyFiveMinutes();

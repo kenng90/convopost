@@ -416,13 +416,22 @@
                 </div>
 
                 <div id="paymentContent">
-                    <div class="payment-info">
+                    <div class="payment-info mb-3">
                         <i class="fas fa-info-circle"></i>
-                        <span>You will receive a popup to enter your M-Pesa PIN. The charge will be <strong>KES {{ number_format($invoice['remaining'], 2) }}</strong></span>
+                        <span>Pay <strong>{{ $invoice['currency'] ?? 'KES' }} {{ number_format($invoice['remaining'], 2) }}</strong> using your preferred method.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="paymentMethod">Payment method</label>
+                        <select id="paymentMethod" class="form-control">
+                            <option value="auto">Auto (recommended)</option>
+                            <option value="paystack">Card / Mobile Money (Paystack)</option>
+                            <option value="mpesa">M-Pesa STK Push</option>
+                        </select>
                     </div>
 
                     <button class="pay-button" id="payButton" onclick="initiatePayment()">
-                        <i class="fab fa-m"></i> Pay with M-Pesa
+                        <i class="fas fa-lock"></i> Pay now
                     </button>
                 </div>
 
@@ -467,7 +476,8 @@
                 },
                 body: JSON.stringify({
                     amount: remainingAmount,
-                    customer_phone: '{{ $invoice["customer_phone"] }}', // Required for authorization
+                    customer_phone: '{{ $invoice["customer_phone"] }}',
+                    payment_method: document.getElementById('paymentMethod')?.value || 'auto',
                 })
             })
             .then(response => {
@@ -478,24 +488,28 @@
             })
             .then(data => {
                 loading.style.display = 'none';
-
+                if (data.success && data.authorization_url) {
+                    window.location.href = data.authorization_url;
+                    return;
+                }
                 if (data.success) {
                     successMessage.style.display = 'block';
-
-                    // Poll for payment status
-                    pollPaymentStatus(data.payment_id);
-                } else {
-                    alert('Error: ' + (data.message || 'Failed to initiate payment'));
-                    paymentContent.style.display = 'block';
-                    button.disabled = false;
+                    successMessage.querySelector('p').textContent = data.message || 'Please complete payment on your phone.';
+                    if (data.payment_id && data.payment_method === 'mpesa') {
+                        pollPaymentStatus(data.payment_id);
+                    }
+                    return;
                 }
+                paymentContent.style.display = 'block';
+                button.disabled = false;
+                alert(data.message || 'Payment failed to start');
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert('Error initiating payment: ' + error.message);
                 loading.style.display = 'none';
                 paymentContent.style.display = 'block';
                 button.disabled = false;
+                console.error(error);
+                alert('Unable to start payment. Please try again.');
             });
         }
 

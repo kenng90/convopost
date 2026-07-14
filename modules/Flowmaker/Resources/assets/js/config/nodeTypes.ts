@@ -28,11 +28,14 @@ import AssignJourneyStageNode from '@/components/flow/AssignJourneyStageNode';
 import CounterNode from '@/components/flow/CounterNode';
 import CheckPricingNode from '@/components/flow/CheckPricingNode';
 import MpesaStkPushNode from '@/components/flow/MpesaStkPushNode';
+import RequestPaymentNode from '@/components/flow/RequestPaymentNode';
+import CatalogSearchNode from '@/components/flow/CatalogSearchNode';
 import BookAppointmentNode from '@/components/flow/BookAppointmentNode';
 import BookingEventsListNode from '@/components/flow/BookingEventsListNode';
 import BookingEventRegisterNode from '@/components/flow/BookingEventRegisterNode';
 import SendBookingLinkNode from '@/components/flow/SendBookingLinkNode';
 import ManageBookingNode from '@/components/flow/ManageBookingNode';
+import OrderStatusNode from '@/components/flow/OrderStatusNode';
 
 export const nodeTypes = {
   trigger: TriggerNode,
@@ -55,6 +58,7 @@ export const nodeTypes = {
   quick_replies: QuickRepliesNode,
   list_message: ListMessageNode,
   whatsapp_catalog: WhatsAppCatalogNode,
+  catalog_search: CatalogSearchNode,
   listing_inquiry: ListingInquiryNode,
   whatsapp_flow: WhatsAppFlowNode,
   openai: OpenAINode,
@@ -65,9 +69,11 @@ export const nodeTypes = {
   counter: CounterNode,
   check_pricing: CheckPricingNode,
   mpesa_stk_push: MpesaStkPushNode,
+  request_payment: RequestPaymentNode,
   book_appointment: BookAppointmentNode,
   booking_events_list: BookingEventsListNode,
   booking_event_register: BookingEventRegisterNode,
   send_booking_link: SendBookingLinkNode,
   manage_booking: ManageBookingNode,
+  order_status: OrderStatusNode,
 };

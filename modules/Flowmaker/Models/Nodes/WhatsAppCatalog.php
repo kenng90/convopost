@@ -7,6 +7,7 @@ use App\Models\ListCatalog;
 use App\Services\Catalog\CatalogCheckoutPendingService;
 use App\Services\Catalog\CatalogFlowCallbackService;
 use App\Services\Catalog\CatalogUrlService;
+use App\Services\Flowmaker\FlowRunLogger;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
@@ -86,6 +87,7 @@ class WhatsAppCatalog extends Node
                 'productTitle' => $selectedProduct['title'],
                 'nodeId' => $this->id,
             ]);
+            FlowRunLogger::log((int) $this->flow_id, (int) $contact->id, 'catalog_product_selected', (string) $this->id, (string) ($selectedProduct['id'] ?? ''));
 
             $contact->setContactState($this->flow_id, 'selected_product', json_encode($selectedProduct));
 
@@ -143,6 +145,7 @@ class WhatsAppCatalog extends Node
         app(CatalogCheckoutPendingService::class)->clearPending($contact, $this->flow_id);
         $contact->setContactState($this->flow_id, self::CHECKOUT_RESUMED_STATE, '1');
         $contact->clearContactState($this->flow_id, 'current_node');
+        FlowRunLogger::log((int) $this->flow_id, (int) $contact->id, 'catalog_checkout_completed', (string) $this->id);
 
         $nextNode = $this->resolveCheckoutNextNode();
         if ($nextNode) {
@@ -216,7 +219,7 @@ class WhatsAppCatalog extends Node
         $contact->setContactState($this->flow_id, 'catalog_id', $catalogId);
         $contact->setContactState($this->flow_id, 'catalog_items', json_encode($catalog->items ?? []));
 
-        $displayMode = $settings['displayMode'] ?? 'link';
+        $displayMode = $settings['displayMode'] ?? 'interactive_list';
         $items = $catalog->items ?? [];
 
         if ($displayMode === 'interactive_list' && count($items) > 0 && count($items) <= 10) {
@@ -251,6 +254,8 @@ class WhatsAppCatalog extends Node
             $contact->sendMessageToWhatsApp($messageToBeSend, $contact);
 
             $contact->setContactState($this->flow_id, 'current_node', $this->id);
+
+            FlowRunLogger::log((int) $this->flow_id, (int) $contact->id, 'catalog_link_sent', (string) $this->id, (string) $catalogId);
 
             Log::info('WhatsApp Catalog: link message sent', [
                 'catalogId' => $catalogId,
@@ -311,6 +316,7 @@ class WhatsAppCatalog extends Node
         ];
 
         $contact->setContactState($this->flow_id, 'current_node', $this->id);
+        FlowRunLogger::log((int) $this->flow_id, (int) $contact->id, 'catalog_link_sent', (string) $this->id, (string) $catalog->id);
 
         try {
             $response = Http::post(config('app.url').'/api/wpbox/sendlistmessage', $payload);

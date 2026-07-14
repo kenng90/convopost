@@ -28,15 +28,24 @@ interface Catalog {
 
 type CompletionType = 'booking' | 'inquiry';
 type BookingBackend = 'whatsapp_only' | 'reminders';
+type DisplayMode = 'link' | 'interactive_list';
+
+const DEFAULT_LISTING_HEADER = 'Browse our listings';
+const DEFAULT_SERVICE_HEADER = 'Book our services';
+const DEFAULT_LISTING_FOOTER = 'Tap the link to view listings and book on WhatsApp.';
+const DEFAULT_SERVICE_FOOTER = 'Tap the link to view services and book on WhatsApp.';
 
 const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
   const { deleteNode } = useFlowActions();
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(data.settings?.catalogId || "");
   const [catalogs, setCatalogs] = useState<Catalog[]>([]);
-  const [header, setHeader] = useState<string>(data.settings?.header || 'Browse our listings');
+  const [header, setHeader] = useState<string>(data.settings?.header || DEFAULT_LISTING_HEADER);
   const [footer, setFooter] = useState<string>(
-    data.settings?.footer || 'Tap the link to view listings and book on WhatsApp.'
+    data.settings?.footer || DEFAULT_LISTING_FOOTER
+  );
+  const [displayMode, setDisplayMode] = useState<DisplayMode>(
+    (data.settings?.displayMode as DisplayMode) || 'link'
   );
   const [completionType, setCompletionType] = useState<CompletionType>(
     (data.settings?.completionType as CompletionType) || 'booking'
@@ -76,6 +85,7 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
       data.settings.catalogId = selectedTemplateId;
       data.settings.header = header;
       data.settings.footer = footer;
+      data.settings.displayMode = displayMode;
       data.settings.completionType = completionType;
       data.settings.bookingVariablePrefix = bookingVariablePrefix;
       data.settings.requirePreferredDateTime = requirePreferredDateTime;
@@ -86,6 +96,7 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
     selectedTemplateId,
     header,
     footer,
+    displayMode,
     completionType,
     bookingVariablePrefix,
     requirePreferredDateTime,
@@ -100,6 +111,26 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
   };
 
   const selectedCatalog = catalogs.find(c => c.id.toString() === selectedTemplateId);
+  const isServiceCatalog = selectedCatalog?.catalog_mode === 'service';
+  const headerPlaceholder = isServiceCatalog ? DEFAULT_SERVICE_HEADER : DEFAULT_LISTING_HEADER;
+  const footerPlaceholder = isServiceCatalog ? DEFAULT_SERVICE_FOOTER : DEFAULT_LISTING_FOOTER;
+  const canUseInteractiveList = selectedCatalog
+    ? selectedCatalog.item_count > 0 && selectedCatalog.item_count <= 10
+    : false;
+
+  const handleCatalogSelect = (value: string) => {
+    setSelectedTemplateId(value);
+    const catalog = catalogs.find(c => c.id.toString() === value);
+    if (catalog?.catalog_mode === 'service') {
+      if (header === DEFAULT_LISTING_HEADER) {
+        setHeader(DEFAULT_SERVICE_HEADER);
+      }
+      if (footer === DEFAULT_LISTING_FOOTER) {
+        setFooter(DEFAULT_SERVICE_FOOTER);
+      }
+    }
+  };
+
   const variablePrefix = (bookingVariablePrefix || 'listing_booking').replace(/[^a-zA-Z0-9_]/g, '') || 'listing_booking';
   const bookingVariables = [
     `${variablePrefix}_item_title`,
@@ -129,13 +160,14 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
           <div className="p-4">
             <div className="space-y-4">
               <p className="text-xs text-gray-500 leading-relaxed">
-                Sends a branded listings page. Customers complete booking details on the web, then send the WhatsApp message to continue the flow.
+                Sends a branded listings page (or in-chat list for ≤10 items). Customers complete booking details on the web, then continue in WhatsApp.
               </p>
 
               <div className="space-y-2">
                 <Label htmlFor="listing-header">Message header</Label>
                 <textarea
                   id="listing-header"
+                  placeholder={headerPlaceholder}
                   value={header}
                   onChange={(e) => setHeader(e.target.value)}
                   rows={2}
@@ -147,6 +179,7 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
                 <Label htmlFor="listing-footer">Message footer</Label>
                 <textarea
                   id="listing-footer"
+                  placeholder={footerPlaceholder}
                   value={footer}
                   onChange={(e) => setFooter(e.target.value)}
                   rows={2}
@@ -164,7 +197,7 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
                   <select
                     id="listing-catalog-select"
                     value={selectedTemplateId}
-                    onChange={(e) => setSelectedTemplateId(e.target.value)}
+                    onChange={(e) => handleCatalogSelect(e.target.value)}
                     className="w-full px-2 py-2 text-xs border rounded bg-white"
                   >
                     <option value="">-- Choose a listing catalog --</option>
@@ -176,6 +209,23 @@ const ListingInquiryNode = ({ data, id }: ListingInquiryNodeProps) => {
                   </select>
                 )}
               </div>
+
+              {selectedCatalog && (
+                <div className="space-y-2">
+                  <Label htmlFor="listing-display-mode">Display mode</Label>
+                  <select
+                    id="listing-display-mode"
+                    value={displayMode}
+                    onChange={(e) => setDisplayMode(e.target.value as DisplayMode)}
+                    className="w-full px-2 py-2 text-xs border rounded bg-white"
+                  >
+                    <option value="link">Listings link (web page)</option>
+                    <option value="interactive_list" disabled={!canUseInteractiveList}>
+                      In-chat list (≤10 items){!canUseInteractiveList ? ' — unavailable' : ''}
+                    </option>
+                  </select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="completion-type">Completion type</Label>

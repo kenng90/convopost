@@ -30,6 +30,13 @@ class FlowTemplatesConfigTest extends TestCase
         'datastore',
         'http',
         'mpesa_stk_push',
+        'request_payment',
+        'order_status',
+        'catalog_search',
+        'booking_events_list',
+        'booking_event_register',
+        'send_booking_link',
+        'manage_booking',
         'assign_agent',
         'assign_group',
         'assign_journey_stage',
@@ -117,5 +124,64 @@ class FlowTemplatesConfigTest extends TestCase
                 }
             }
         }
+    }
+
+    public function test_payment_templates_use_request_payment_not_mpesa_stk_push(): void
+    {
+        foreach ([
+            'spa_wellness_booking',
+            'whatsapp_shop_checkout',
+            'microfinance_banking_bot',
+            'hotel_tour_concierge_bot',
+        ] as $key) {
+            $nodes = collect(config("flow-templates.{$key}.flow_data.nodes"));
+            $this->assertTrue(
+                $nodes->contains(fn (array $node) => ($node['type'] ?? '') === 'request_payment'),
+                "Template {$key} should include request_payment"
+            );
+            $this->assertFalse(
+                $nodes->contains(fn (array $node) => ($node['type'] ?? '') === 'mpesa_stk_push'),
+                "Template {$key} should not use mpesa_stk_push"
+            );
+
+            foreach (config("flow-templates.{$key}.flow_data.edges") as $edge) {
+                $handle = (string) ($edge['sourceHandle'] ?? '');
+                $this->assertNotContains($handle, ['mpesa-success', 'mpesa-failed'], "Template {$key} still uses legacy M-Pesa handles");
+            }
+        }
+    }
+
+    public function test_shop_checkout_includes_order_status_after_payment(): void
+    {
+        $flowData = config('flow-templates.whatsapp_shop_checkout.flow_data');
+        $this->assertTrue(
+            collect($flowData['nodes'])->contains(fn (array $node) => ($node['type'] ?? '') === 'order_status')
+        );
+
+        $paySuccess = collect($flowData['edges'])->first(
+            fn (array $edge) => ($edge['source'] ?? '') === 'request_payment-1' && ($edge['sourceHandle'] ?? '') === 'success'
+        );
+        $this->assertNotNull($paySuccess);
+        $this->assertSame('order_status-1', $paySuccess['target']);
+    }
+
+    public function test_listing_templates_default_to_interactive_list(): void
+    {
+        foreach ([
+            'services_listing_booking' => 'listing_inquiry-1',
+            'catalog_listings_showcase' => 'listing_inquiry-1',
+            'real_estate_agency_bot' => 'listing_inquiry-1',
+            'hotel_tour_concierge_bot' => 'listing_inquiry-2',
+        ] as $key => $nodeId) {
+            $node = collect(config("flow-templates.{$key}.flow_data.nodes"))->firstWhere('id', $nodeId);
+            $this->assertNotNull($node, "Missing {$nodeId} in {$key}");
+            $this->assertSame('interactive_list', $node['data']['settings']['displayMode'] ?? null, $key);
+            $this->assertTrue((bool) ($node['data']['settings']['autoResumeFlow'] ?? false), $key);
+        }
+    }
+
+    public function test_catalog_listings_showcase_requires_setup_wizard(): void
+    {
+        $this->assertTrue((bool) config('flow-templates.catalog_listings_showcase.requires_setup_wizard'));
     }
 }

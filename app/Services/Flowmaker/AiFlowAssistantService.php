@@ -15,13 +15,19 @@ class AiFlowAssistantService
         'keyword_trigger',
         'message',
         'end',
-        'mpesa_stk_push',
+        'request_payment',
+        'whatsapp_catalog',
+        'catalog_search',
+        'listing_inquiry',
         'question',
         'datastore',
         'assign_agent',
         'assign_group',
+        'assign_journey_stage',
         'branch',
         'quick_replies',
+        'whatsapp_flow',
+        'order_status',
     ];
 
     public function __construct(
@@ -97,10 +103,11 @@ Rules:
 - Start with a keyword_trigger node with 1-3 keywords relevant to the use case.
 - End paths with an "end" node.
 - Use "message" nodes for automated replies; settings.message holds the text.
-- For payments/M-Pesa, include mpesa_stk_push after a message.
-- For lead capture, use question nodes where appropriate.
-- Edges need id, source, target, and sourceHandle when leaving keyword_trigger.
-- Keep flows simple (3-8 nodes). Use realistic placeholder copy.
+- For shops/catalogs, use whatsapp_catalog (displayMode interactive_list) then request_payment (provider auto, amount {{catalog_order_total_amount}}), then optional order_status.
+- For simple payments, use request_payment (not mpesa_stk_push).
+- For lead capture, use question nodes and assign_agent / assign_group / assign_journey_stage.
+- Edges need id, source, target, and sourceHandle when leaving keyword_trigger or multi-outcome nodes (success/failed, onCheckoutComplete).
+- Keep flows simple (3-10 nodes). Use realistic placeholder copy.
 - Return ONLY valid JSON, no markdown fences.
 PROMPT;
 
@@ -296,28 +303,91 @@ PROMPT;
             ],
         ];
 
-        if ($this->needsPayment($lower)) {
-            $mpesaId = 'mpesa_stk_push-'.uniqid();
+        if ($this->needsShop($lower)) {
+            $catalogId = 'whatsapp_catalog-'.uniqid();
+            $payId = 'request_payment-'.uniqid();
+            $statusId = 'order_status-'.uniqid();
             $nodes[] = [
-                'id' => $mpesaId,
-                'type' => 'mpesa_stk_push',
+                'id' => $catalogId,
+                'type' => 'whatsapp_catalog',
+                'position' => ['x' => 630, 'y' => 40],
+                'data' => [
+                    'label' => 'Send Catalog',
+                    'type' => 'whatsapp_catalog',
+                    'settings' => [
+                        'catalogId' => '',
+                        'header' => 'Browse our products',
+                        'displayMode' => 'interactive_list',
+                        'autoResumeFlow' => true,
+                    ],
+                ],
+            ];
+            $nodes[] = [
+                'id' => $payId,
+                'type' => 'request_payment',
+                'position' => ['x' => 630, 'y' => 200],
+                'data' => [
+                    'label' => 'Collect Payment',
+                    'type' => 'request_payment',
+                    'settings' => [
+                        'payment' => [
+                            'amount' => '{{catalog_order_total_amount}}',
+                            'provider' => 'auto',
+                            'accountReference' => 'ORDER',
+                            'description' => 'Order payment',
+                            'responseVar' => 'payment_result',
+                        ],
+                    ],
+                ],
+            ];
+            $nodes[] = [
+                'id' => $statusId,
+                'type' => 'order_status',
+                'position' => ['x' => 840, 'y' => 200],
+                'data' => [
+                    'label' => 'Order confirmed',
+                    'type' => 'order_status',
+                    'settings' => [
+                        'status' => 'confirmed',
+                        'message' => 'Thanks! Your order is confirmed. Reference: {{order_reference}}',
+                    ],
+                ],
+            ];
+            $edges = array_filter($edges, fn ($e) => $e['target'] !== $endId);
+            $edges[] = ['id' => 'e-catalog', 'source' => $messageId, 'target' => $catalogId];
+            $edges[] = ['id' => 'e-pay', 'source' => $catalogId, 'target' => $payId, 'sourceHandle' => 'onCheckoutComplete'];
+            $edges[] = ['id' => 'e-status', 'source' => $payId, 'target' => $statusId, 'sourceHandle' => 'success'];
+            $edges[] = ['id' => 'e-end', 'source' => $statusId, 'target' => $endId];
+            $nodes = array_map(function ($node) use ($endId) {
+                if ($node['id'] === $endId) {
+                    $node['position'] = ['x' => 1100, 'y' => 200];
+                }
+
+                return $node;
+            }, $nodes);
+        } elseif ($this->needsPayment($lower)) {
+            $payId = 'request_payment-'.uniqid();
+            $nodes[] = [
+                'id' => $payId,
+                'type' => 'request_payment',
                 'position' => ['x' => 630, 'y' => 120],
                 'data' => [
-                    'label' => 'MPesa STK Push',
-                    'type' => 'mpesa_stk_push',
+                    'label' => 'Collect Payment',
+                    'type' => 'request_payment',
                     'settings' => [
-                        'mpesa' => [
+                        'payment' => [
                             'amount' => '100',
+                            'provider' => 'auto',
                             'accountReference' => 'PAYMENT',
-                            'transactionDesc' => 'Payment',
-                            'responseVar' => 'mpesa_result',
+                            'description' => 'Payment',
+                            'responseVar' => 'payment_result',
                         ],
                     ],
                 ],
             ];
             $edges = array_filter($edges, fn ($e) => $e['target'] !== $endId);
-            $edges[] = ['id' => 'e-mpesa', 'source' => $messageId, 'target' => $mpesaId];
-            $edges[] = ['id' => 'e-end', 'source' => $mpesaId, 'target' => $endId];
+            $edges[] = ['id' => 'e-pay', 'source' => $messageId, 'target' => $payId];
+            $edges[] = ['id' => 'e-end', 'source' => $payId, 'target' => $endId, 'sourceHandle' => 'success'];
             $nodes = array_map(function ($node) use ($endId) {
                 if ($node['id'] === $endId) {
                     $node['position'] = ['x' => 1050, 'y' => 120];
@@ -366,5 +436,14 @@ PROMPT;
     private function needsPayment(string $lower): bool
     {
         return str_contains($lower, 'mpesa') || str_contains($lower, 'payment') || str_contains($lower, 'pay');
+    }
+
+    private function needsShop(string $lower): bool
+    {
+        return str_contains($lower, 'shop')
+            || str_contains($lower, 'catalog')
+            || str_contains($lower, 'store')
+            || (str_contains($lower, 'sell') && str_contains($lower, 'product'))
+            || (str_contains($lower, 'buy') && str_contains($lower, 'product'));
     }
 }

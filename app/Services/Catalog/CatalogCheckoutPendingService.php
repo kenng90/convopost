@@ -4,6 +4,7 @@ namespace App\Services\Catalog;
 
 use App\Models\ListCatalog;
 use App\Scopes\CompanyScope;
+use Modules\Flowmaker\Jobs\ResumeFlowFromCatalogCheckout;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Flowmaker\Models\Flow;
 
@@ -58,6 +59,49 @@ class CatalogCheckoutPendingService
         $contact->setContactState($flowId, self::PENDING_CART, json_encode($cartItems, JSON_THROW_ON_ERROR));
         $contact->setContactState($flowId, self::PENDING_CATALOG_ID, (string) $catalog->id);
         $contact->setContactState($flowId, self::PENDING_NODE_ID, $nodeId);
+
+        $this->maybeAutoResumeFlow($contact, $flowId, $nodeId, $catalog->id, $cartItems, $orderMessage);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $cartItems
+     */
+    private function maybeAutoResumeFlow(
+        Contact $contact,
+        int $flowId,
+        string $nodeId,
+        int $catalogId,
+        array $cartItems,
+        ?string $orderMessage
+    ): void {
+        $flow = Flow::withoutGlobalScopes()->find($flowId);
+        if (! $flow) {
+            return;
+        }
+
+        $flowData = json_decode($flow->flow_data ?: $flow->draft_flow_data ?: '{}', true);
+        $nodes = $flowData['nodes'] ?? [];
+
+        foreach ($nodes as $node) {
+            if (($node['id'] ?? '') !== $nodeId) {
+                continue;
+            }
+
+            if (! empty($node['data']['settings']['autoResumeFlow'])) {
+                $productId = (string) ($cartItems[0]['id'] ?? '');
+                ResumeFlowFromCatalogCheckout::dispatch(
+                    $flowId,
+                    $contact->id,
+                    $productId,
+                    $cartItems,
+                    $nodeId,
+                    $orderMessage,
+                    $catalogId
+                )->onQueue('flows');
+            }
+
+            return;
+        }
     }
 
     public function storePendingFromFlowToken(

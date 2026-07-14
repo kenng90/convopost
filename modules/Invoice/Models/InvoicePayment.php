@@ -12,9 +12,13 @@ class InvoicePayment extends Model
     protected $fillable = [
         'invoice_id',
         'payment_method',
+        'paid_via',
         'mpesa_checkout_request_id',
         'mpesa_merchant_request_id',
         'mpesa_receipt_number',
+        'gateway_reference',
+        'gateway_access_code',
+        'authorization_url',
         'amount',
         'status',
         'result_description',
@@ -70,11 +74,21 @@ class InvoicePayment extends Model
      */
     public function markAsSuccess($receiptNumber = null): void
     {
-        $this->update([
+        $payload = [
             'status' => 'success',
-            'mpesa_receipt_number' => $receiptNumber,
             'completed_at' => now(),
-        ]);
+        ];
+
+        if ($receiptNumber) {
+            if ($this->payment_method === 'paystack' || $this->paid_via === 'paystack') {
+                $payload['gateway_reference'] = $this->gateway_reference ?: $receiptNumber;
+                $payload['mpesa_receipt_number'] = $receiptNumber;
+            } else {
+                $payload['mpesa_receipt_number'] = $receiptNumber;
+            }
+        }
+
+        $this->update($payload);
 
         // Update invoice status to paid if payment amount covers invoice amount
         if ($this->amount >= $this->invoice->amount) {

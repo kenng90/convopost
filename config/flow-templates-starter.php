@@ -110,6 +110,7 @@ return [
             'Booking team group ID configured',
             'Flow published',
         ],
+        'exclusive_on_match' => true,
         'flow_data' => [
             'nodes' => [
                 [
@@ -148,6 +149,8 @@ return [
                             'catalogId' => '',
                             'header' => 'Our services',
                             'footer' => 'Tap a listing to book on WhatsApp.',
+                            'displayMode' => 'interactive_list',
+                            'autoResumeFlow' => true,
                             'completionType' => 'booking',
                             'bookingVariablePrefix' => 'listing_booking',
                             'requirePreferredDateTime' => true,
@@ -200,13 +203,15 @@ return [
         'description' => 'Non-commerce catalog in listing mode: properties, classes, or packages with inquiry capture and AI FAQ loop.',
         'category' => 'commerce',
         'video_url' => null,
-        'setup_hint' => 'Use a listing-mode catalog (not product checkout). Set catalog ID, train AI optional FAQ path, Publish when ready.',
+        'setup_hint' => 'Run setup (or Edit) to bind a listing-mode catalog and sales group. Train optional AI FAQ, then Publish.',
         'post_install_checklist' => [
-            'Catalog mode set to Listing',
-            'Catalog ID on Listing Inquiry node',
+            'Listing-mode catalog ID',
             'Sales group configured',
-            'Published live',
+            'OpenRouter key for FAQ (optional)',
+            'Publish when ready',
         ],
+        'requires_setup_wizard' => true,
+        'exclusive_on_match' => true,
         'flow_data' => FaqConversationLoop::mergeInto([
             'nodes' => [
                 [
@@ -233,6 +238,8 @@ return [
                             'catalogId' => '',
                             'header' => 'Available listings',
                             'footer' => 'Reply with questions after viewing.',
+                            'displayMode' => 'interactive_list',
+                            'autoResumeFlow' => true,
                             'completionType' => 'inquiry',
                             'bookingVariablePrefix' => 'listing_inquiry',
                             'requirePreferredDateTime' => false,
@@ -383,6 +390,39 @@ return [
             'humanTarget' => 'assign_agent-1',
             'limitTarget' => 'message-2',
         ]),
+    ],
+
+    'whatsapp_form_lead' => [
+        'name' => 'WhatsApp Form — Lead recipe',
+        'description' => 'Install from a Live WhatsApp Form: form → team → thanks. Use Automate on the form list, or pass whatsapp_flow_id.',
+        'category' => 'services',
+        'requires_setup_wizard' => true,
+        'exclusive_on_match' => true,
+        'setup_hint' => 'Prefer Automate on the WhatsApp Forms list. Requires a Live form ID.',
+        'post_install_checklist' => ['Live WhatsApp Form', 'Leads group', 'Publish automation'],
+        'flow_data' => ['nodes' => [], 'edges' => []],
+    ],
+
+    'whatsapp_form_book' => [
+        'name' => 'WhatsApp Form — Book recipe',
+        'description' => 'Install from a Live WhatsApp Form: form → book appointment → team.',
+        'category' => 'services',
+        'requires_setup_wizard' => true,
+        'exclusive_on_match' => true,
+        'setup_hint' => 'Prefer Automate on the WhatsApp Forms list. Requires a Live form ID.',
+        'post_install_checklist' => ['Live WhatsApp Form', 'Bookable service', 'Bookings group', 'Publish'],
+        'flow_data' => ['nodes' => [], 'edges' => []],
+    ],
+
+    'whatsapp_form_checkout' => [
+        'name' => 'WhatsApp Form — Checkout recipe',
+        'description' => 'Install from a Live WhatsApp Form: form → payment → order status → fulfillment.',
+        'category' => 'commerce',
+        'requires_setup_wizard' => true,
+        'exclusive_on_match' => true,
+        'setup_hint' => 'Prefer Automate on the WhatsApp Forms list. Requires a Live form ID.',
+        'post_install_checklist' => ['Live WhatsApp Form', 'Payment provider', 'Fulfillment group', 'Publish'],
+        'flow_data' => ['nodes' => [], 'edges' => []],
     ],
 
 ];

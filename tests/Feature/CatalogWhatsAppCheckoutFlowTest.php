@@ -51,6 +51,11 @@ class CatalogWhatsAppCheckoutFlowTest extends TestCase
 
         Queue::assertNotPushed(ResumeFlowFromCatalogCheckout::class);
 
+        $this->assertDatabaseHas('catalog_orders', [
+            'catalog_id' => $catalog->id,
+            'checkout_channel' => 'whatsapp',
+        ]);
+
         $contact->refresh();
 
         $this->assertSame('1', $contact->getContactStateValue($flow->id, CatalogCheckoutPendingService::PENDING_FLAG));
@@ -123,6 +128,8 @@ class CatalogWhatsAppCheckoutFlowTest extends TestCase
         $this->assertDatabaseHas('invoices', ['catalog_id' => $catalog->id]);
 
         Queue::assertNotPushed(ResumeFlowFromCatalogCheckout::class);
+        // Invoice checkout now stores pending + can auto-resume when node setting is on.
+        // This flow context leaves autoResumeFlow unset/false.
     }
 
     public function test_inbound_order_message_advances_catalog_node_once(): void

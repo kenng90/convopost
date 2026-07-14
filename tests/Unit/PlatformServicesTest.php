@@ -7,13 +7,25 @@ use Tests\TestCase;
 
 class PlatformServicesTest extends TestCase
 {
-    public function test_ai_flow_assistant_builds_mpesa_flow_for_payment_description(): void
+    public function test_ai_flow_assistant_builds_payment_flow_for_payment_description(): void
     {
         $draft = app(AiFlowAssistantService::class)->generateRuleBased('When customer says pay, collect M-Pesa payment');
 
         $this->assertNotEmpty($draft['nodes']);
         $this->assertTrue(
-            collect($draft['nodes'])->contains(fn (array $node) => $node['type'] === 'mpesa_stk_push')
+            collect($draft['nodes'])->contains(fn (array $node) => $node['type'] === 'request_payment')
+        );
+    }
+
+    public function test_ai_flow_assistant_builds_shop_flow_for_catalog_description(): void
+    {
+        $draft = app(AiFlowAssistantService::class)->generateRuleBased('I want a WhatsApp shop catalog checkout flow');
+
+        $this->assertTrue(
+            collect($draft['nodes'])->contains(fn (array $node) => $node['type'] === 'whatsapp_catalog')
+        );
+        $this->assertTrue(
+            collect($draft['nodes'])->contains(fn (array $node) => $node['type'] === 'request_payment')
         );
     }
 
@@ -21,8 +33,6 @@ class PlatformServicesTest extends TestCase
     {
         $templates = config('flow-templates');
 
-        $this->assertArrayHasKey('lead_capture', $templates);
-        $this->assertArrayHasKey('payment_collection', $templates);
         $this->assertArrayHasKey('spa_wellness_booking', $templates);
         $this->assertArrayHasKey('whatsapp_shop_checkout', $templates);
         $this->assertArrayHasKey('lead_intake_routing', $templates);

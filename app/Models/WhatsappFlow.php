@@ -138,11 +138,15 @@ class WhatsappFlow extends MyModel
      */
     public function getStatusLabel(): string
     {
+        if ($this->meta_flow_id) {
+            return 'Live on WhatsApp';
+        }
+
         return match ($this->status) {
             'draft' => 'Draft',
-            'published' => 'Published Locally',
+            'published' => 'Saved',
             'archived' => 'Archived',
-            default => 'Unknown',
+            default => 'Draft',
         };
     }
 
@@ -152,9 +156,29 @@ class WhatsappFlow extends MyModel
     public function getMetaStatusLabel(): string
     {
         if (! $this->meta_flow_id) {
-            return 'Not Published';
+            return 'Not live';
         }
 
-        return 'Published to Meta';
+        return 'Live on WhatsApp';
+    }
+
+    /**
+     * Merchant-facing lifecycle badge (Draft | Saved | Live on WhatsApp).
+     */
+    public function getLifecycleLabel(): string
+    {
+        if ($this->isPublishedToMeta()) {
+            return 'Live on WhatsApp';
+        }
+
+        if ($this->status === 'archived') {
+            return 'Archived';
+        }
+
+        if ($this->status === 'published') {
+            return 'Saved';
+        }
+
+        return 'Draft';
     }
 }

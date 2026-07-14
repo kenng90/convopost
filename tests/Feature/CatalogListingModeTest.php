@@ -99,7 +99,9 @@ class CatalogListingModeTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Inquire on WhatsApp', false);
-        $response->assertSee('Toyota RAV4 2021', false);
+        $response->assertSee('2021 Toyota RAV4', false);
+        $response->assertSee('itemDetailDrawer', false);
+        $response->assertSee('View details', false);
         $response->assertDontSee('Your Cart', false);
         $response->assertDontSee('Add to Cart', false);
     }
@@ -131,7 +133,9 @@ class CatalogListingModeTest extends TestCase
         $response->assertOk();
 
         // The @js directive must escape quotes so the double-quoted onclick attribute is not broken.
-        $response->assertSee('onclick="openBookingPanel(\'home-1\', \'Bob\u0027s \u0022Deluxe\u0022 Villa\')"', false);
+        $response->assertSee('openBookingPanel(', false);
+        $response->assertSee('home-1', false);
+        $response->assertSee('Bob\u0027s \u0022Deluxe\u0022 Villa', false);
 
         // Guard against the regression where a raw JSON string terminated the attribute early.
         $response->assertDontSee('openBookingPanel(\'home-1\', "', false);

@@ -4,6 +4,9 @@
     window.addEventListener('load', function () {
         chatList.addProperty('catalogSidebarCatalogs', []);
         chatList.addProperty('catalogSidebarProducts', []);
+        chatList.addProperty('catalogSidebarRecentOrders', []);
+        chatList.addProperty('catalogSidebarStoreProducts', []);
+        chatList.addProperty('catalogSidebarStoreSource', null);
         chatList.addProperty('catalogSidebarSearch', '');
         chatList.addProperty('catalogSidebarLoading', false);
         chatList.addProperty('catalog_sidebar_error', '');
@@ -14,6 +17,9 @@
                 .then(function (response) {
                     if (response.data && response.data.success) {
                         chatList.updateProperty('catalogSidebarCatalogs', response.data.catalogs || []);
+                        chatList.updateProperty('catalogSidebarRecentOrders', response.data.recent_orders || []);
+                        chatList.updateProperty('catalogSidebarStoreProducts', response.data.store_products || []);
+                        chatList.updateProperty('catalogSidebarStoreSource', response.data.store_source || null);
                         chatList.updateProperty('catalog_sidebar_error', '');
                     }
                 })
@@ -41,6 +47,19 @@
             }
         };
 
+        chatList.sendStoreProductLink = function (product) {
+            var message = '🛍️ *' + (product.title || 'Product') + '*';
+            if (product.description) {
+                message += '\n' + product.description;
+            }
+            if (product.link) {
+                message += '\n' + product.link;
+            }
+            if (typeof chatList.setMessage === 'function') {
+                chatList.setMessage(message);
+            }
+        };
+
         chatList.sendCatalogProduct = function (row) {
             var item = row.item || {};
             var message = '🛍️ *' + (item.title || 'Product') + '*';
@@ -53,6 +72,16 @@
             if (row.shop_url) {
                 message += '\n' + row.shop_url;
             }
+            if (typeof chatList.setMessage === 'function') {
+                chatList.setMessage(message);
+            }
+        };
+
+        chatList.sendOrderSummary = function (order) {
+            var message = '🧾 *Order ' + (order.order_number || '') + '*\n'
+                + 'Status: ' + (order.status || '') + '\n'
+                + 'Total: ' + (order.currency || '') + ' ' + (order.total_amount || '') + '\n'
+                + 'Items: ' + (order.item_count || 0);
             if (typeof chatList.setMessage === 'function') {
                 chatList.setMessage(message);
             }

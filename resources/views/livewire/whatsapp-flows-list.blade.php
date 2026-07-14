@@ -111,17 +111,15 @@
                                         </td>
                                         <td>
                                             @php
-                                                $statusBadge = match($flow->status) {
-                                                    'published' => 'badge-success',
-                                                    'draft'     => 'badge-warning',
-                                                    'archived'  => 'badge-secondary',
-                                                    default     => 'badge-secondary',
+                                                $lifecycle = $flow->getLifecycleLabel();
+                                                $statusBadge = match ($lifecycle) {
+                                                    'Live on WhatsApp' => 'badge-success',
+                                                    'Saved' => 'badge-info',
+                                                    'Archived' => 'badge-secondary',
+                                                    default => 'badge-warning',
                                                 };
                                             @endphp
-                                            <span class="badge {{ $statusBadge }}">{{ ucfirst($flow->status) }}</span>
-                                            @if ($flow->meta_flow_id)
-                                                <span class="badge badge-info ml-1">Meta ✓</span>
-                                            @endif
+                                            <span class="badge {{ $statusBadge }}">{{ $lifecycle }}</span>
                                         </td>
                                         <td>
                                             {{ (int) $flow->screens_count }}
@@ -154,16 +152,27 @@
                                                 >
                                                     <i class="ni ni-send"></i> Test
                                                 </button>
-                                            @endif
 
-                                            <a
-                                                href="{{ route('whatsapp-flows.use-in-automation', $flow->id) }}"
-                                                title="Use in automation"
-                                                class="btn btn-warning btn-sm"
-                                                style="margin-right: 3px;"
-                                            >
-                                                <i class="ni ni-settings"></i> Automate
-                                            </a>
+                                                <div class="btn-group" style="margin-right: 3px;">
+                                                    <button type="button" class="btn btn-warning btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                        <i class="ni ni-settings"></i> Automate
+                                                    </button>
+                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                        <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'lead']) }}">Lead capture</a>
+                                                        <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'book']) }}">Book appointment</a>
+                                                        <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'checkout']) }}">Checkout &amp; pay</a>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <a
+                                                    href="{{ route('whatsapp-flows.edit', $flow->id) }}"
+                                                    title="Publish to WhatsApp first"
+                                                    class="btn btn-outline-secondary btn-sm"
+                                                    style="margin-right: 3px;"
+                                                >
+                                                    <i class="ni ni-send"></i> Go Live first
+                                                </a>
+                                            @endif
 
                                             {{-- Preview --}}
                                             <button

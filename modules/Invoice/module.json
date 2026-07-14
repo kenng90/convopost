@@ -1,9 +1,9 @@
 {
     "alias": "invoice",
-    "version": "1.0",
+    "version": "1.1",
     "nameSpace": "Modules\\Invoice",
-    "description": "Invoice and payment management module integrated with M-Pesa",
-    "keywords": ["invoice", "payment", "mpesa"],
+    "description": "Invoice and multi-rail payment management (M-Pesa + Paystack)",
+    "keywords": ["invoice", "payment", "mpesa", "paystack"],
     "active": 1,
     "order": 0,
     "providers": [
@@ -11,5 +11,33 @@
     ],
     "aliases": {},
     "files": [],
-    "requires": []
+    "requires": [],
+    "vendor_fields": [
+        {
+            "separator": "Commerce payments",
+            "title": "Preferred payment gateway",
+            "key": "preferred_payment_gateway",
+            "ftype": "select",
+            "value": "paystack",
+            "data": {
+                "paystack": "Paystack (card / mobile money)",
+                "mpesa": "M-Pesa STK Push"
+            },
+            "help": "Used by catalog checkout and the Request Payment flow node when provider is Auto."
+        },
+        {
+            "title": "Paystack public key (commerce)",
+            "key": "paystack_commerce_public_key",
+            "ftype": "input",
+            "value": "",
+            "help": "Company Paystack public key for customer checkout (not SaaS subscribe keys)."
+        },
+        {
+            "title": "Paystack secret key (commerce)",
+            "key": "paystack_commerce_secret_key",
+            "ftype": "input",
+            "value": "",
+            "help": "Company Paystack secret key for initialize/verify."
+        }
+    ]
 }

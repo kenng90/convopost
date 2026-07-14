@@ -9,7 +9,7 @@ return [
     |
     | commerce → cart, checkout, inventory
     | listing  → inquiry-led showcase (property, vehicles, etc.)
-    | service  → packages / appointments (future)
+    | service  → bookable packages / appointments
     |
     */
     'modes' => [
@@ -78,7 +78,7 @@ return [
         'general_listing' => [
             'mode' => 'listing',
             'label' => 'General listings',
-            'description' => 'Flexible listings with location, status, and custom details.',
+            'description' => 'Use when real estate, automotive, or services don\'t fit. Flexible listings with location, status, and custom details.',
             'supports_geo_map' => true,
             'status_field' => 'listing_status',
             'status_options' => ['Available', 'Under Offer', 'Sold', 'Leased'],
@@ -117,6 +117,7 @@ return [
             'mode' => 'listing',
             'label' => 'Automotive',
             'description' => 'Cars, trucks, motorcycles, and other vehicles.',
+            'supports_geo_map' => true,
             'status_field' => 'listing_status',
             'status_options' => ['Available', 'Reserved', 'Sold'],
             'card_highlights' => ['make', 'model', 'year', 'mileage', 'listing_status'],
@@ -129,7 +130,7 @@ return [
                 ['key' => 'listing_status', 'label' => 'Status', 'type' => 'select', 'options' => ['Available', 'Reserved', 'Sold'], 'filterable' => true],
                 ['key' => 'booking_source_name', 'label' => 'Bookable service', 'type' => 'text', 'filterable' => false],
             ],
-            'filter_facets' => ['category', 'tag', 'status', 'price', 'make'],
+            'filter_facets' => ['category', 'tag', 'status', 'price', 'make', 'geo'],
         ],
         'general_service' => [
             'mode' => 'service',
