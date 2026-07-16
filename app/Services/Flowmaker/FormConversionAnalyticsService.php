@@ -67,6 +67,13 @@ class FormConversionAnalyticsService
             'completion_rate' => $sent > 0 ? round(($completed / $sent) * 100, 1) : null,
             'conversion_rate' => $completed > 0 ? round(($converted / $completed) * 100, 1) : null,
             'events' => $eventCounts,
+            'funnel' => [
+                ['stage' => 'Sent', 'count' => $sent],
+                ['stage' => 'Completed', 'count' => $completed],
+                ['stage' => 'Abandoned', 'count' => $abandoned],
+                ['stage' => 'Converted (paid/booked)', 'count' => $converted],
+            ],
+            'automation_flow_ids' => $automationFlowIds,
         ];
     }
 }

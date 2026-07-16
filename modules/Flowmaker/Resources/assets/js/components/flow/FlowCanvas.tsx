@@ -62,6 +62,10 @@ function normalizeFlowNodes(nodes: Node[]): Node[] {
       return { ...node, type: 'manage_booking' };
     }
 
+    if (node.type === 'action' && dataType === 'manage_event_registration') {
+      return { ...node, type: 'manage_event_registration' };
+    }
+
     return node;
   });
 }
@@ -299,6 +303,7 @@ const FlowCanvas = ({ flowId = '1' }: FlowCanvasProps) => {
         'booking_event_register',
         'send_booking_link',
         'manage_booking',
+        'manage_event_registration',
       ],
       Team: ['assign_agent', 'assign_group', 'assign_journey_stage'],
       Logic: ['branch', 'counter', 'check_pricing', 'datastore', 'http', 'openai'],
@@ -388,6 +393,12 @@ const FlowCanvas = ({ flowId = '1' }: FlowCanvasProps) => {
             <option value="catalog_select">Catalog select</option>
             <option value="payment_success">Payment success</option>
             <option value="payment_failed">Payment failed</option>
+            <option value="form_completed">Form completed</option>
+            <option value="form_abandoned">Form abandoned</option>
+            <option value="form_no_match">Form no match</option>
+            <option value="form_condition_0">Form condition 1</option>
+            <option value="form_score_pass">Form score pass</option>
+            <option value="form_score_fail">Form score fail</option>
           </select>
           <div className="flex gap-2">
             <Input

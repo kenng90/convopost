@@ -58,7 +58,7 @@ class FlowBuilderController extends Controller
                 'id' => $flow->id,
                 'name' => $flow->name,
                 'description' => $flow->description ?? '',
-                'category' => $flow->category ?? 'OTHER',
+                'category' => \App\Support\WhatsappFlowCategory::normalize($flow->category),
                 'status' => $flow->status,
                 'meta_flow_id' => $flow->meta_flow_id,
                 'meta_error' => $flow->meta_error,
@@ -107,7 +107,7 @@ class FlowBuilderController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category' => 'nullable|string',
+            'category' => ['nullable', 'string', \Illuminate\Validation\Rule::in(\App\Support\WhatsappFlowCategory::ALLOWED)],
             'screens' => 'required|array',
             'webhook_url' => 'nullable|url|max:2048',
             'webhook_enabled' => 'nullable|boolean',
@@ -124,7 +124,7 @@ class FlowBuilderController extends Controller
             'company_id' => $company->id,
             'name' => $data['name'],
             'description' => $data['description'] ?? '',
-            'category' => $data['category'] ?? 'OTHER',
+            'category' => \App\Support\WhatsappFlowCategory::normalize($data['category'] ?? 'OTHER'),
             'flow_json' => ['screens' => $data['screens']],
             'status' => 'draft',
         ]);
@@ -143,7 +143,7 @@ class FlowBuilderController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category' => 'nullable|string',
+            'category' => ['nullable', 'string', \Illuminate\Validation\Rule::in(\App\Support\WhatsappFlowCategory::ALLOWED)],
             'screens' => 'required|array',
             'webhook_url' => 'nullable|url|max:2048',
             'webhook_enabled' => 'nullable|boolean',
@@ -152,7 +152,7 @@ class FlowBuilderController extends Controller
         $flow->update([
             'name' => $data['name'],
             'description' => $data['description'] ?? $flow->description,
-            'category' => $data['category'] ?? $flow->category,
+            'category' => \App\Support\WhatsappFlowCategory::normalize($data['category'] ?? $flow->category),
             'flow_json' => ['screens' => $data['screens']],
             'webhook_url' => $data['webhook_url'] ?? $flow->webhook_url,
             'webhook_enabled' => $data['webhook_enabled'] ?? $flow->webhook_enabled,

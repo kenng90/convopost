@@ -986,7 +986,43 @@ class APIController extends Controller
         return response()->json([
             'groups' => $groups,
             'customFields' => $customFields,
+            'latestFormSubmission' => $this->latestFormSubmissionForContact($contact),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function latestFormSubmissionForContact(Contact $contact): ?array
+    {
+        $response = \App\Models\WhatsappFlowResponse::query()
+            ->with('whatsappFlow:id,name,meta_flow_id')
+            ->where('contact_id', $contact->id)
+            ->where('company_id', $contact->company_id)
+            ->latest('completed_at')
+            ->latest('id')
+            ->first();
+
+        if (! $response) {
+            return null;
+        }
+
+        $service = app(\App\Services\WhatsappFlowResponseService::class);
+        $answers = $service->enrichResponsesFlat($response->responses ?? [], $response->whatsappFlow);
+
+        return [
+            'id' => $response->id,
+            'status' => $response->status,
+            'form_name' => $response->whatsappFlow?->name,
+            'form_id' => $response->whatsapp_flow_id,
+            'flow_id' => $response->flow_id,
+            'completed_at' => optional($response->completed_at)?->toIso8601String(),
+            'answers' => array_slice($answers, 0, 12),
+            'responses_url' => route('whatsapp-flows.responses', ['flow' => $response->whatsapp_flow_id]),
+            'automation_url' => $response->flow_id
+                ? route('flowmaker.edit', $response->flow_id)
+                : null,
+        ];
     }
 
     public function getNotes(Contact $contact)

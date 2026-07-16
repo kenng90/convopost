@@ -88,6 +88,27 @@
         </div>
     </div>
 
+    <!-- Latest WhatsApp Form submission -->
+    <div v-if="latestFormSubmission" class="mt-4">
+        <h5 class="text-muted">{{ __('Latest form submission')}}</h5>
+        <div class="contacInfo border-radius-lg border p-4">
+            <div class="d-flex justify-content-between mb-2">
+                <div class="contactInfoLabel font-weight-bold">@{{ latestFormSubmission.form_name || 'WhatsApp Form' }}</div>
+                <div class="badge" :class="latestFormSubmission.status === 'completed' ? 'badge-success' : 'badge-warning'">
+                    @{{ latestFormSubmission.status }}
+                </div>
+            </div>
+            <div v-for="(answer, idx) in latestFormSubmission.answers" :key="idx" class="d-flex justify-content-between mb-1">
+                <div class="contactInfoLabel text-muted">@{{ answer.label || answer.key }}</div>
+                <div class="contactInfoInput text-right" style="max-width: 55%; word-break: break-word;">@{{ answer.display_value || answer.value }}</div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <a v-if="latestFormSubmission.responses_url" :href="latestFormSubmission.responses_url" class="btn btn-sm btn-outline-primary">{{ __('View submissions') }}</a>
+                <a v-if="latestFormSubmission.automation_url" :href="latestFormSubmission.automation_url" class="btn btn-sm btn-outline-secondary">{{ __('Open automation') }}</a>
+            </div>
+        </div>
+    </div>
+
     <!-- Show the Custom fields -->
     <h5 class="text-muted mt-4">{{ __('Custom Fields')}}</h5>
     <div class="contacInfo border-radius-lg border p-4">

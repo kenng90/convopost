@@ -34,6 +34,7 @@ class BookingsNavigationSectionsTest extends TestCase
         $this->assertStringContainsString('navbar-bookingsMenu-settings', $html);
         $this->assertStringContainsString('navbar-bookingsMenu-events', $html);
         $this->assertStringContainsString(__('Overview'), $html);
+        $this->assertStringContainsString(__('Calendar'), $html);
         $this->assertStringContainsString(__('Appointments'), $html);
     }
 
@@ -54,8 +55,8 @@ class BookingsNavigationSectionsTest extends TestCase
         $bookingsMenu = collect($owner->collectOwnerModuleMenus())->firstWhere('id', 'bookingsMenu');
         $html = view('admin.navbars.menus._nav-menu-item', ['menu' => $bookingsMenu])->render();
 
-        $this->assertStringContainsString(
-            'id="navbar-bookingsMenu-appointments" class="collapse show"',
+        $this->assertMatchesRegularExpression(
+            '/class="collapse show\s*" id="navbar-bookingsMenu-appointments"/',
             preg_replace('/\s+/', ' ', $html)
         );
     }

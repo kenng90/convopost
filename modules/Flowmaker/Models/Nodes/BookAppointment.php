@@ -14,6 +14,7 @@ use Modules\Reminders\Models\Reservation;
 use Modules\Reminders\Models\Source;
 use Modules\Reminders\Services\AvailabilityService;
 use Modules\Reminders\Services\BookingCatalogService;
+use Modules\Reminders\Services\BookingFormBridgeService;
 use Modules\Reminders\Services\BookingPaymentService;
 use Modules\Reminders\Services\ReservationBookingService;
 use Modules\Reminders\Support\BookingPaymentConfig;
@@ -114,12 +115,98 @@ class BookAppointment extends Node
             return ['success' => false];
         }
 
+        $settings = $this->getDataAsArray()['settings'] ?? [];
+        $intakeMode = (string) ($settings['intake_mode'] ?? 'lists');
+
         $this->clearWizardState($contact);
         $this->seedFixedSettings($contact, $company);
         $contact->setContactState($this->flow_id, 'current_node', $this->id);
+
+        $useForm = $intakeMode === 'form'
+            || ($intakeMode === 'auto' && app(BookingFormBridgeService::class)->hasFormIntakeSignals($contact, $this->flow_id, $settings));
+
+        if ($useForm) {
+            FlowRunLogger::log($this->flow_id, $contact->id, 'booking_form_intake_started', $this->id);
+
+            return $this->tryFormIntake($contact, $company, $message, $data, $settings);
+        }
+
         FlowRunLogger::log($this->flow_id, $contact->id, 'booking_wizard_started', $this->id);
 
         return $this->advanceWizard($contact, $message, $data);
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    private function tryFormIntake(Contact $contact, Company $company, $message, $data, array $settings): array
+    {
+        $result = app(BookingFormBridgeService::class)->resolve($contact, $company, $this->flow_id, $settings);
+
+        if ($result['status'] === 'error') {
+            $contact->sendMessage($result['message'] ?? __('Could not complete booking from the form.'), false, false, 'TEXT');
+            FlowRunLogger::log($this->flow_id, $contact->id, 'booking_error', $this->id, $result['message'] ?? 'form_bridge_error');
+            $this->routeToHandle($contact, 'error', $message, $data);
+
+            return ['success' => false];
+        }
+
+        if ($result['status'] === 'unavailable') {
+            $contact->sendMessage($result['message'] ?? __('No available appointment slots.'), false, false, 'TEXT');
+            FlowRunLogger::log($this->flow_id, $contact->id, 'booking_unavailable', $this->id);
+            $this->routeToHandle($contact, 'unavailable', $message, $data);
+
+            return ['success' => false];
+        }
+
+        /** @var Source $source */
+        $source = $result['source'];
+        $this->setState($contact, 'source_name', $source->name);
+        $this->setState($contact, 'duration_minutes', (string) ($result['duration_minutes'] ?? $source->default_duration_minutes ?: 30));
+        $this->setState($contact, 'booking_source', 'whatsapp_form');
+
+        if ($result['status'] === 'ready') {
+            $this->setState($contact, 'slot_id', (string) $result['slot_id']);
+            if (! empty($result['date'])) {
+                $this->setState($contact, 'selected_date', (string) $result['date']);
+            }
+
+            return $this->finalizeBooking($contact, $company, $source, $message, $data);
+        }
+
+        // needs_slot_pick — one interactive list for the resolved day
+        if (! empty($result['date'])) {
+            $this->setState($contact, 'selected_date', (string) $result['date']);
+        }
+
+        $slots = $result['slots'] ?? [];
+        if ($slots === []) {
+            $contact->sendMessage(__('No available appointment slots.'), false, false, 'TEXT');
+            $this->routeToHandle($contact, 'unavailable', $message, $data);
+
+            return ['success' => false];
+        }
+
+        $body = $result['message']
+            ?? ($settings['slot_body'] ?? __('Choose an available time slot.'));
+
+        return $this->sendList(
+            $contact,
+            $settings['slot_header'] ?? __('Select time'),
+            $body,
+            '',
+            $settings['buttonText'] ?? __('Choose time'),
+            __('Times'),
+            $this->paginatedRows(
+                collect($slots)->map(fn (array $slot) => [
+                    'id' => $this->listItemId('slot', $slot['id']),
+                    'title' => $slot['title'],
+                    'description' => '',
+                ])->all(),
+                0,
+                'slot'
+            )
+        );
     }
 
     public static function notifyPaymentOutcome(int $flowId, int $contactId, string $nodeId, string $outcome): void
@@ -172,6 +259,8 @@ class BookAppointment extends Node
 
     private function finalizeBooking(Contact $contact, Company $company, Source $source, $message, $data): array
     {
+        $bookingSource = $this->getState($contact, 'booking_source');
+
         $payload = [
             'phone' => $contact->phone,
             'name' => $contact->name ?: $contact->phone,
@@ -180,6 +269,7 @@ class BookAppointment extends Node
             'duration_minutes' => (int) $this->getState($contact, 'duration_minutes'),
             'flow_id' => $this->flow_id,
             'flow_node_id' => $this->id,
+            'booking_source' => $bookingSource !== '' ? $bookingSource : 'whatsapp_list',
         ];
 
         $settings = $this->getDataAsArray()['settings'] ?? [];
@@ -265,9 +355,56 @@ class BookAppointment extends Node
             app(BookingWebhookService::class)->dispatchAppointmentConfirmed($company, $reservation, $this->flow_id, $this->id, $settings);
         }
 
+        $this->applyOnCompleteActions($contact, $settings);
+
         $this->clearWizardState($contact);
         $contact->clearContactState($this->flow_id, 'current_node');
         $this->routeToHandle($contact, 'success', $message, $data);
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    private function applyOnCompleteActions(Contact $contact, array $settings): void
+    {
+        $onComplete = $settings['onComplete'] ?? [];
+        if (! is_array($onComplete)) {
+            return;
+        }
+
+        $groupId = $onComplete['groupId'] ?? null;
+        if (! empty($groupId) && $groupId !== 'none') {
+            $group = \Modules\Contacts\Models\Group::query()
+                ->where('id', $groupId)
+                ->where('company_id', $contact->company_id)
+                ->first();
+
+            if ($group && ! $contact->groups()->where('group_id', $groupId)->exists()) {
+                $contact->groups()->attach($groupId);
+                if (class_exists(\Modules\Journies\Support\GroupRuleBridge::class)) {
+                    \Modules\Journies\Support\GroupRuleBridge::contactAddedToGroups($contact, [$groupId]);
+                }
+            }
+        }
+
+        $stageId = $onComplete['stageId'] ?? null;
+        if (! empty($stageId) && $stageId !== 'none' && class_exists(\Modules\Journies\Models\JourneyStage::class)) {
+            $stage = \Modules\Journies\Models\JourneyStage::query()
+                ->where('id', $stageId)
+                ->whereHas('journey', fn ($query) => $query->where('company_id', $contact->company_id))
+                ->first();
+
+            if ($stage) {
+                app(\Modules\Journies\Services\JourneyContactService::class)->moveContactToStage(
+                    $contact,
+                    $stage,
+                    'flow',
+                    null,
+                    true,
+                    false,
+                );
+            }
+        }
     }
 
     private function promptServiceSelection(Contact $contact, Company $company): array
@@ -552,7 +689,7 @@ class BookAppointment extends Node
 
     private function clearWizardState(Contact $contact): void
     {
-        foreach (['source_name', 'duration_minutes', 'selected_date', 'slot_id', 'payment_outcome', 'service_offset', 'date_offset', 'slot_offset', 'payment_retries'] as $suffix) {
+        foreach (['source_name', 'duration_minutes', 'selected_date', 'slot_id', 'payment_outcome', 'service_offset', 'date_offset', 'slot_offset', 'payment_retries', 'booking_source'] as $suffix) {
             $contact->clearContactState($this->flow_id, $this->stateKey($suffix));
         }
     }

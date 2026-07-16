@@ -7,18 +7,25 @@ use App\Models\Company;
 use App\Models\User;
 use App\Models\WhatsappFlow;
 use App\Models\WhatsappFlowResponse;
+use App\Services\WhatsappFlows\WhatsappFlowDataExchangeResolver;
+use App\Services\WhatsappFlows\WhatsappFlowScreenInitService;
 use App\Traits\EnsuresOpenSsl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\PersonalAccessToken;
-use Modules\Wpbox\Models\Contact;
 use Modules\Wpbox\Traits\Contacts;
 
 class FlowsWebhookController extends Controller
 {
     use Contacts;
     use EnsuresOpenSsl;
+
+    public function __construct(
+        private readonly WhatsappFlowDataExchangeResolver $dataExchangeResolver,
+        private readonly WhatsappFlowScreenInitService $screenInitService,
+    ) {
+    }
 
     /**
      * Handle GET — Meta webhook verification (hub challenge).
@@ -142,10 +149,9 @@ class FlowsWebhookController extends Controller
                 'has_error' => isset($payload['data']['error']),
             ]);
 
-            // Trigger Flowmaker integration if this is a data_exchange response (form submission)
-            $this->triggerFlowmakerIntegration($payload, $company);
-
+            // Trigger Flowmaker integration only after we know the exchange completes the form.
             $screenResponse = $this->getNextScreen($payload);
+            $screenResponse = $this->finalizeDataExchangeResponse($payload, $screenResponse, $company);
 
             Log::info('WhatsApp Flow response', ['response' => $screenResponse]);
 
@@ -153,7 +159,8 @@ class FlowsWebhookController extends Controller
             // This matches Meta's official sample: res.send(encryptResponse(...))
             $encrypted = $this->encryptResponse($screenResponse, $aesKey, $iv);
 
-            return response($encrypted, 200)->header('Content-Type', 'text/plain');
+            return response($encrypted, 200)
+                ->header('Content-Type', 'text/plain');
 
         } catch (\Throwable $e) {
             Log::error('WhatsApp Flow decryption/encryption error', [
@@ -164,7 +171,9 @@ class FlowsWebhookController extends Controller
                 'company_id' => $company->id,
             ]);
 
-            return response('Processing failed', 500);
+            // HTTP 421 tells Meta to refresh the business public key and retry.
+            // See: https://developers.facebook.com/docs/whatsapp/flows/guides/implementingyourflowendpoint
+            return response('Decryption failed', 421);
         }
     }
 
@@ -180,11 +189,15 @@ class FlowsWebhookController extends Controller
         $version = $decryptedBody['version'] ?? '3.0';
         $flowToken = $decryptedBody['flow_token'] ?? null;
 
-        // Health check ping — must respond with active status
+        // Health check ping — must respond with active status.
+        // Include version: Meta's publishing checks expect it (community + sample endpoints).
         if ($action === 'ping') {
             Log::info('WhatsApp Flow health check ping — responding active');
 
-            return ['data' => ['status' => 'active']];
+            return [
+                'version' => $version ?: '3.0',
+                'data' => ['status' => 'active'],
+            ];
         }
 
         // Client-side error notification
@@ -207,7 +220,7 @@ class FlowsWebhookController extends Controller
 
             return [
                 'screen' => $firstScreenId,
-                'data' => (object) $this->initDataForScreen($whatsappFlow, $firstScreenId),
+                'data' => (object) $this->screenInitService->initDataForScreen($whatsappFlow, $firstScreenId, $flowToken),
             ];
         }
 
@@ -233,31 +246,10 @@ class FlowsWebhookController extends Controller
                 Log::info('EmbeddedLink tapped', ['url' => $data['url']]);
             }
 
-            $templateResponse = $this->resolveTemplateDataExchange($whatsappFlow, $screen, $data);
-            if ($templateResponse !== null) {
-                Log::info('WhatsApp Flow template data_exchange response', ['template' => $templateResponse]);
+            $templateResponse = $this->dataExchangeResolver->resolve($whatsappFlow, $screen, $data, $flowToken);
+            Log::info('WhatsApp Flow data_exchange response', ['response' => $templateResponse]);
 
-                return $templateResponse;
-            }
-
-            // Pass all form field values through extension_message_response.params.
-            // Meta sends these params back verbatim as the nfm_reply response_json,
-            // so this ensures the nfm_reply handler on the standard webhook receives
-            // the real form data (not just flow_token).
-            $responseParams = array_merge(
-                ['flow_token' => $flowToken ?? 'unused'],
-                // Exclude internal/meta fields, keep only user-submitted field data
-                array_filter($data, fn ($k) => ! in_array($k, ['url', 'error'], true), ARRAY_FILTER_USE_KEY)
-            );
-
-            return [
-                'screen' => 'SUCCESS',
-                'data' => [
-                    'extension_message_response' => [
-                        'params' => $responseParams,
-                    ],
-                ],
-            ];
+            return $templateResponse;
         }
 
         throw new \Exception('Unhandled action: '.$action);
@@ -316,70 +308,78 @@ class FlowsWebhookController extends Controller
     }
 
     /**
+     * Persist partial answers and complete automations only when Meta receives SUCCESS.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $screenResponse
      * @return array<string, mixed>
      */
-    protected function initDataForScreen(?WhatsappFlow $flow, string $screenId): array
+    protected function finalizeDataExchangeResponse(array $payload, array $screenResponse, Company $company): array
     {
-        if (! $flow) {
-            return [];
+        if (($payload['action'] ?? null) !== 'data_exchange') {
+            return $screenResponse;
         }
 
-        $screens = $flow->flow_json['screens'] ?? [];
-        $screen = collect($screens)->firstWhere('id', $screenId) ?? ($screens[0] ?? null);
+        $flowToken = $payload['flow_token'] ?? null;
+        $formData = $this->extractSubmittedFormData($payload['data'] ?? []);
 
-        if (! is_array($screen)) {
-            return [];
+        $flowResponse = $this->resolveFlowResponseFromToken($flowToken);
+        if (! $flowResponse) {
+            return $screenResponse;
         }
 
-        $dynamicEntries = $screen['dynamic_data'] ?? [];
-        if ($dynamicEntries === []) {
-            return [];
+        $flowResponse->mergeResponses($formData);
+
+        if (($screenResponse['screen'] ?? null) !== 'SUCCESS') {
+            return $screenResponse;
         }
 
-        $builder = app(\App\Services\WhatsappFlowDynamicDataBuilder::class);
-        $schema = $builder->entriesToMetaSchema($dynamicEntries);
-        $initData = [];
+        $flowResponse->refresh();
+        $mergedResponses = is_array($flowResponse->responses) ? $flowResponse->responses : $formData;
 
-        foreach ($schema as $key => $definition) {
-            $initData[$key] = $definition['__example__'] ?? '';
-        }
+        $responseParams = array_merge(
+            ['flow_token' => $flowToken ?? 'unused'],
+            $mergedResponses,
+        );
 
-        return $initData;
+        $screenResponse['data'] = [
+            'extension_message_response' => [
+                'params' => $responseParams,
+            ],
+        ];
+
+        $this->triggerFlowmakerIntegration($flowResponse, $company, $mergedResponses);
+
+        return $screenResponse;
     }
 
     /**
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>|null
+     * @param  array<string, mixed>  $rawData
+     * @return array<string, mixed>
      */
-    protected function resolveTemplateDataExchange(?WhatsappFlow $flow, ?string $screen, array $data): ?array
+    protected function extractSubmittedFormData(array $rawData): array
     {
-        if (! $flow || ! $screen) {
+        return array_filter(
+            $rawData,
+            fn ($key) => ! in_array($key, ['url', 'error'], true),
+            ARRAY_FILTER_USE_KEY
+        );
+    }
+
+    protected function resolveFlowResponseFromToken(?string $flowToken): ?WhatsappFlowResponse
+    {
+        if (empty($flowToken) || ! str_starts_with($flowToken, 'flow_')) {
             return null;
         }
 
-        $screens = $flow->flow_json['screens'] ?? [];
-        $screenData = collect($screens)->firstWhere('id', $screen);
+        $parts = explode('_', $flowToken);
+        $responseId = $parts[1] ?? null;
 
-        if (! is_array($screenData)) {
+        if (! $responseId) {
             return null;
         }
 
-        $endpointTemplate = $screenData['endpoint_template'] ?? null;
-        if (empty($endpointTemplate)) {
-            return null;
-        }
-
-        // Built-in template: pass dynamic option lists from screen schema examples
-        if ($endpointTemplate === 'dynamic_options') {
-            $initData = $this->initDataForScreen($flow, $screen);
-
-            return [
-                'screen' => $screen,
-                'data' => (object) $initData,
-            ];
-        }
-
-        return null;
+        return WhatsappFlowResponse::find($responseId);
     }
 
     /**
@@ -394,8 +394,10 @@ class FlowsWebhookController extends Controller
         Log::info('WhatsApp Flow plain request', ['action' => $action]);
 
         if ($action === 'ping') {
-            return response(json_encode(['data' => ['status' => 'active']]), 200)
-                ->header('Content-Type', 'application/json');
+            return response(json_encode([
+                'version' => $version ?: '3.0',
+                'data' => ['status' => 'active'],
+            ]), 200)->header('Content-Type', 'application/json');
         }
 
         return response(json_encode([
@@ -496,22 +498,17 @@ class FlowsWebhookController extends Controller
      */
     protected function encryptResponse(array $response, string $aesKey, string $iv): string
     {
-        // Flip each IV byte — matches JS: flipped_iv.push(~pair[1])
-        $flippedIv = '';
-        for ($i = 0; $i < strlen($iv); $i++) {
-            $flippedIv .= chr(ord($iv[$i]) ^ 0xFF);
-        }
+        // Flip IV bits — PHP ~$string and Meta's sample (~$initialVectorBuffer) are equivalent.
+        $flippedIv = ~$iv;
 
         $tag = '';
         $encrypted = openssl_encrypt(
-            json_encode($response),
+            json_encode($response, JSON_UNESCAPED_SLASHES),
             'aes-128-gcm',
             $aesKey,
             OPENSSL_RAW_DATA,
             $flippedIv,
-            $tag,
-            '',
-            16
+            $tag
         );
 
         if ($encrypted === false) {
@@ -523,85 +520,36 @@ class FlowsWebhookController extends Controller
     }
 
     /**
-     * When a WhatsApp Flow is submitted, trigger the Flowmaker flow engine to resume
-     * at the waiting WhatsApp Flow node. This integrates form responses into the automation.
-     *
-     * The flow_token should contain encoded contact/flow info. For now, we look up
-     * contacts by scanning for the current_node == WhatsApp Flow node in Flowmaker.
+     * When a WhatsApp Flow completes (SUCCESS), resume the Flowmaker automation.
      */
-    protected function triggerFlowmakerIntegration(array $payload, Company $company): void
-    {
-        $action = $payload['action'] ?? null;
-        $flowToken = $payload['flow_token'] ?? null;
-
-        // Only process form submissions, not health checks or init
-        if ($action !== 'data_exchange') {
-            return;
-        }
-
-        // $payload['data'] contains the form field values Meta sent to the endpoint.
-        // Strip internal keys so we store only user-submitted data.
-        $rawData = $payload['data'] ?? [];
-        $formData = array_filter(
-            $rawData,
-            fn ($k) => ! in_array($k, ['url', 'error'], true),
-            ARRAY_FILTER_USE_KEY
-        );
-
-        Log::info('WhatsApp Flow: processing form submission', [
-            'flow_token' => $flowToken,
+    protected function triggerFlowmakerIntegration(
+        WhatsappFlowResponse $flowResponse,
+        Company $company,
+        array $formData,
+    ): void {
+        Log::info('WhatsApp Flow: processing completed form submission', [
+            'response_id' => $flowResponse->id,
             'company_id' => $company->id,
             'form_data' => $formData,
-            'data_keys' => array_keys($rawData),
         ]);
 
         try {
-            // The flow_token was stored as "flow_{responseId}_{timestamp}" in sendFlow()
-            if (empty($flowToken) || ! str_starts_with($flowToken, 'flow_')) {
-                Log::warning('WhatsApp Flow: unrecognised flow_token format', ['flow_token' => $flowToken]);
-
-                return;
-            }
-
-            // Parse: flow_{responseId}_{timestamp}
-            $parts = explode('_', $flowToken);
-            $responseId = $parts[1] ?? null;
-
-            if (! $responseId) {
-                Log::warning('WhatsApp Flow: could not extract response ID from flow_token', ['flow_token' => $flowToken]);
-
-                return;
-            }
-
-            $flowResponse = \App\Models\WhatsappFlowResponse::find($responseId);
-            if (! $flowResponse) {
-                Log::warning('WhatsApp Flow: flow response record not found', ['responseId' => $responseId]);
-
-                return;
-            }
-
             $contactId = $flowResponse->contact_id;
-
-            // Look up the contact through Wpbox (has the WhatsApp trait / sendMessageToWhatsApp)
             $contact = \Modules\Wpbox\Models\Contact::find($contactId);
+
             if (! $contact) {
                 Log::warning('WhatsApp Flow: contact not found', ['contactId' => $contactId]);
 
                 return;
             }
 
-            // Mark the response as completed immediately so the dashboard updates
             $flowResponse->markCompleted($formData);
 
             Log::info('WhatsApp Flow: response marked completed', [
-                'responseId' => $responseId,
+                'responseId' => $flowResponse->id,
                 'formData' => $formData,
             ]);
 
-            // Create a synthetic incoming message carrying the form data in `extra`.
-            // This will be picked up by the RespondOnMessage listener which will
-            // resume the Flowmaker flow at the saved current_node (the WhatsApp Flow node),
-            // call listenForReply(), route to the next node, and clear the saved state.
             $message = \Modules\Wpbox\Models\Message::create([
                 'contact_id' => $contactId,
                 'company_id' => $company->id,
@@ -619,10 +567,9 @@ class FlowsWebhookController extends Controller
 
             Log::info('WhatsApp Flow: ContactReplies event dispatched', [
                 'contactId' => $contactId,
-                'responseId' => $responseId,
+                'responseId' => $flowResponse->id,
                 'messageId' => $message->id,
             ]);
-
         } catch (\Throwable $e) {
             Log::error('WhatsApp Flow: Flowmaker integration error', [
                 'error' => $e->getMessage(),

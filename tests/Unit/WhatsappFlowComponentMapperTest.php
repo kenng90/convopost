@@ -35,6 +35,71 @@ class WhatsappFlowComponentMapperTest extends TestCase
         $this->assertSame('cover', $component['name']);
     }
 
+    public function test_explicit_name_wins_over_data_source_key_for_booking_fields(): void
+    {
+        $component = $this->mapper->convertFieldToComponent(
+            [
+                'id' => 10,
+                'type' => 'select',
+                'label' => 'Service',
+                'dynamic_data_source' => true,
+                'data_source_key' => 'service_options',
+                'name' => 'service',
+                'meta_name' => 'service',
+                'options' => [],
+            ],
+            'PICK_SLOT',
+            false,
+            fn () => ''
+        );
+
+        $this->assertSame('service', $component['name']);
+        $this->assertSame('${data.service_options}', $component['data-source']);
+    }
+
+    public function test_heading_uses_text_when_label_missing(): void
+    {
+        $component = $this->mapper->convertFieldToComponent(
+            [
+                'id' => 20,
+                'type' => 'heading',
+                'text' => 'Available times',
+            ],
+            'PICK_SLOT',
+            false,
+            fn () => ''
+        );
+
+        $this->assertSame('TextHeading', $component['type']);
+        $this->assertSame('Available times', $component['text']);
+    }
+
+    public function test_appointment_slot_screen_heading_is_not_blank(): void
+    {
+        $screens = config('whatsapp-form-templates.appointment_booking.screens');
+        $this->assertIsArray($screens);
+
+        $children = $this->mapper->convertFieldsToComponents(
+            $screens[1]['fields'],
+            null,
+            true,
+            [],
+            fn () => '',
+            [],
+            array_column($screens[1]['dynamic_data'] ?? [], 'key'),
+            [],
+            [],
+            true
+        );
+
+        $heading = $children[0] ?? null;
+        $this->assertIsArray($heading);
+        $this->assertSame('TextHeading', $heading['type'] ?? null);
+        $this->assertNotSame('', trim((string) ($heading['text'] ?? '')));
+        $this->assertIsString($heading['text']);
+        $this->assertSame('Available times', $heading['text']);
+    }
+
     public function test_on_select_payload_is_preserved_without_auto_injected_component_key(): void
     {
         $component = $this->mapper->convertFieldToComponent(

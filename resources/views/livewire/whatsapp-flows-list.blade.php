@@ -159,7 +159,12 @@
                                                     </button>
                                                     <div class="dropdown-menu dropdown-menu-right">
                                                         <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'lead']) }}">Lead capture</a>
-                                                        <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'book']) }}">Book appointment</a>
+                                                        <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'book_live']) }}">
+                                                            <strong>Live slot booking</strong>
+                                                            <div class="small text-muted">Form picks service + time → Reminders appointment</div>
+                                                        </a>
+                                                        <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'book']) }}">Book from form answers</a>
+                                                        <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'event']) }}">Event registration</a>
                                                         <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'checkout']) }}">Checkout &amp; pay</a>
                                                     </div>
                                                 </div>

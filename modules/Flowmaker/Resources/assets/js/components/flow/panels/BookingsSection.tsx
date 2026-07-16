@@ -1,4 +1,4 @@
-import { CalendarCheck, CalendarDays, Link2, Settings2, Ticket, Users } from 'lucide-react';
+import { CalendarCheck, CalendarDays, Link2, Settings2, Ticket, TicketX, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFlowActions } from '@/hooks/useFlowActions';
 import { NodeData } from '@/types/flow';
@@ -34,6 +34,7 @@ export const BookingsSection = ({ searchQuery }: BookingsSectionProps) => {
           label: 'Book appointment',
           type: 'book_appointment',
           settings: {
+            intake_mode: 'lists',
             source_name: '',
             duration_minutes: '',
             header: 'Book appointment',
@@ -47,6 +48,12 @@ export const BookingsSection = ({ searchQuery }: BookingsSectionProps) => {
             slot_header: 'Select time',
             slot_body: 'Choose an available time slot.',
             success_message: 'Your appointment for {{booking_service}} on {{booking_date}} at {{booking_time}} is confirmed.',
+            formFieldMap: {
+              serviceField: 'select_3',
+              dateField: 'date_4',
+              slotField: 'slot',
+            },
+            serviceOptionMap: {},
             allow_payment_retry: true,
             allow_pay_at_venue: false,
             booking_webhook_url: '',
@@ -97,7 +104,12 @@ export const BookingsSection = ({ searchQuery }: BookingsSectionProps) => {
           settings: {
             occurrence_id: '',
             party_size: '1',
+            intake_mode: 'lists',
             success_message: 'You are registered for {{booking_event_title}} on {{booking_event_date}} at {{booking_event_time}}.',
+            formFieldMap: {
+              occurrenceField: 'occurrence_id',
+              partySizeField: 'party_size',
+            },
             booking_webhook_url: '',
           },
         };
@@ -126,6 +138,22 @@ export const BookingsSection = ({ searchQuery }: BookingsSectionProps) => {
       textColor: 'text-orange-700',
       requiresReminders: true,
       onClick: () => actions.createNodeBase('manage_booking', { x: 250, y: 100 }),
+    },
+    {
+      icon: TicketX,
+      label: 'Manage event registration',
+      bgColor: 'bg-rose-100',
+      textColor: 'text-rose-700',
+      requiresReminders: true,
+      onClick: () => actions.createNodeBase('manage_event_registration', { x: 250, y: 100 }, {
+        label: 'Manage event registration',
+        type: 'manage_event_registration',
+        settings: {
+          reference_variable: 'booking_event_reference',
+          default_action: 'cancel',
+          success_message: 'Your event registration has been cancelled.',
+        },
+      }),
     },
   ];
 

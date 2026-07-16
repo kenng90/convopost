@@ -32,7 +32,7 @@ class WhatsappFormTemplateService
                 'key' => $key,
                 'name' => $template['name'] ?? $key,
                 'description' => $template['description'] ?? '',
-                'category' => $template['category'] ?? 'OTHER',
+                'category' => \App\Support\WhatsappFlowCategory::normalize($template['category'] ?? 'OTHER'),
                 'industry' => $template['industry'] ?? null,
                 'screen_count' => count($template['screens'] ?? []),
             ];
@@ -53,7 +53,7 @@ class WhatsappFormTemplateService
             'company_id' => $companyId,
             'name' => $customName ?? ($template['name'] ?? 'New Form'),
             'description' => $template['description'] ?? '',
-            'category' => $template['category'] ?? 'OTHER',
+            'category' => \App\Support\WhatsappFlowCategory::normalize($template['category'] ?? 'OTHER'),
             'flow_json' => ['screens' => $template['screens'] ?? []],
             'status' => 'draft',
             'form_bundle_key' => $key,

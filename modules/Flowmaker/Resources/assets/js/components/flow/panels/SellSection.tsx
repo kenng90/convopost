@@ -2,6 +2,7 @@ import { Database, Search, CreditCard, PackageCheck, ClipboardList } from 'lucid
 import { Button } from '@/components/ui/button';
 import { useFlowActions } from '@/hooks/useFlowActions';
 import { NodeData } from '@/types/flow';
+import { useEffect, useState } from 'react';
 
 interface SellSectionProps {
   searchQuery: string;
@@ -18,11 +19,50 @@ declare global {
   }
 }
 
+interface FormsHealth {
+  ready?: boolean;
+  totals?: {
+    forms?: number;
+    live?: number;
+    completed_30d?: number;
+    abandoned_30d?: number;
+  };
+  links?: {
+    forms?: string;
+    responses?: string;
+    keys?: string;
+  };
+}
+
 export const SellSection = ({ searchQuery }: SellSectionProps) => {
   const actions = useFlowActions();
   const planPlugins = window.data?.planPlugins ?? {};
   const catalogEnabled = Boolean(planPlugins.whatsappcatalog);
   const formsEnabled = Boolean(planPlugins.whatsappflows);
+  const [formsHealth, setFormsHealth] = useState<FormsHealth | null>(null);
+
+  useEffect(() => {
+    if (!formsEnabled) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch('/api/whatsapp-flows/health', {
+          headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'include',
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!cancelled && data.success) {
+          setFormsHealth(data);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [formsEnabled]);
 
   const options = [
     {
@@ -149,8 +189,29 @@ export const SellSection = ({ searchQuery }: SellSectionProps) => {
         </div>
       )}
       {formsEnabled && (
-        <div className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-md p-2">
-          WhatsApp Forms must be Live on WhatsApp before they can be sent from automation.
+        <div className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded-md p-2 space-y-1">
+          <div className="font-medium">WhatsApp Forms health</div>
+          <div>
+            Live forms: {formsHealth?.totals?.live ?? '—'} / {formsHealth?.totals?.forms ?? '—'}
+            {' · '}
+            Completed (30d): {formsHealth?.totals?.completed_30d ?? '—'}
+            {' · '}
+            Abandoned: {formsHealth?.totals?.abandoned_30d ?? '—'}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {formsHealth?.links?.forms && (
+              <a href={formsHealth.links.forms} className="text-sky-700 underline">All forms</a>
+            )}
+            {formsHealth?.links?.responses && (
+              <a href={formsHealth.links.responses} className="text-sky-700 underline">Submissions</a>
+            )}
+            {formsHealth?.links?.keys && (
+              <a href={formsHealth.links.keys} className="text-sky-700 underline">Setup keys</a>
+            )}
+          </div>
+          <div className="text-slate-600">
+            Forms must be Live on WhatsApp before they can be sent from automation.
+          </div>
         </div>
       )}
       {filtered.map((option, index) => {

@@ -4,7 +4,7 @@
 <div class="card shadow-sm border-0">
     <div class="card-body">
         <h3 class="mb-3">{{ __('Google Calendar') }}</h3>
-        <p class="text-muted">{{ __('Connect your personal Google Calendar so availability reflects your busy times and new appointments appear on your calendar. This applies to one-to-one appointments only — events use fixed session dates and do not sync to Google Calendar.') }}</p>
+        <p class="text-muted">{{ __('Connect your personal Google Calendar so availability reflects your busy times and new appointments appear on your calendar. Bookings → Calendar embeds these Google calendars in an iframe — calendars must be public (or shareable) for the embed to display.') }}</p>
 
         <div class="alert alert-secondary small mb-4">
             <strong>{{ __('Google redirect URI') }}:</strong>
@@ -43,6 +43,7 @@
             </form>
 
             <a href="{{ route('reminders.google.disconnect') }}" class="btn btn-outline-danger">{{ __('Disconnect Google Calendar') }}</a>
+            <a href="{{ $calendarUrl ?? route('reminders.calendar.index') }}" class="btn btn-outline-primary ml-2">{{ __('Open calendar view') }}</a>
         @else
             <a href="{{ route('reminders.google.connect') }}" class="btn btn-primary">{{ __('Connect Google Calendar') }}</a>
         @endif

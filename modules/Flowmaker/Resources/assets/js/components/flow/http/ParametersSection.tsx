@@ -22,16 +22,23 @@ const ParametersSection = ({ params, onAddParam, onUpdateParam, onRemoveParam }:
         </Button>
       </div>
       <div className="space-y-2">
+        {params.length === 0 ? (
+          <p className="text-xs text-muted-foreground border border-dashed rounded-md p-3">
+            Add parameters to send with the request. After a WhatsApp Form node, use{' '}
+            <code className="text-xs bg-muted px-1 rounded">{'{{whatsapp_flow_responses}}'}</code>{' '}
+            for all answers (JSON), or <code className="text-xs bg-muted px-1 rounded">{'{{form_<field>}}'}</code> per field.
+          </p>
+        ) : null}
         {params.map((param) => (
           <div key={param.id} className="flex gap-2">
             <Input
-              placeholder="Key"
+              placeholder="Key (e.g. responses)"
               value={param.key}
               onChange={(e) => onUpdateParam(param.id, e.target.value, param.value)}
               className="flex-1"
             />
             <VariableInput
-              placeholder="Value"
+              placeholder="{{whatsapp_flow_responses}}"
               value={param.value}
               onChange={(value) => onUpdateParam(param.id, param.key, value)}
               className="flex-1"

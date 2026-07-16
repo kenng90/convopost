@@ -63,7 +63,8 @@ class FlowsController extends Controller
             $companyId = $this->activeCompanyId();
 
             $flows = WhatsappFlow::where('company_id', $companyId)
-                ->publishedToMeta()
+                ->when(! request()->boolean('include_drafts'), fn ($q) => $q->publishedToMeta())
+                ->when(request()->boolean('include_drafts'), fn ($q) => $q->where('status', '!=', 'archived'))
                 ->orderByDesc('updated_at')
                 ->get()
                 ->map(function ($flow) {
@@ -74,6 +75,8 @@ class FlowsController extends Controller
                         'name' => $flow->name,
                         'status' => $flow->status,
                         'meta_flow_id' => $flow->meta_flow_id,
+                        'live' => filled($flow->meta_flow_id),
+                        'lifecycle' => $flow->getLifecycleLabel(),
                         'screen_count' => count($flow->flow_json['screens'] ?? []),
                         'fields' => $submissionService->getFieldOptionsForForm($flow),
                     ];
@@ -625,6 +628,50 @@ class FlowsController extends Controller
         $summary = app(\App\Services\WhatsappFlowReadinessService::class)->forForm($flow);
 
         return response()->json(array_merge(['success' => true], $summary));
+    }
+
+    /**
+     * Company-level WhatsApp Forms health for Flowmaker Sell panel.
+     */
+    public function formsHealth(): \Illuminate\Http\JsonResponse
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $companyId = $this->activeCompanyId();
+        $company = \App\Models\Company::find($companyId);
+        $readiness = app(\App\Services\WhatsappFlowReadinessService::class)->forCompany($company);
+
+        $total = WhatsappFlow::where('company_id', $companyId)->where('status', '!=', 'archived')->count();
+        $live = WhatsappFlow::where('company_id', $companyId)->publishedToMeta()->count();
+        $abandoned = \App\Models\WhatsappFlowResponse::query()
+            ->where('company_id', $companyId)
+            ->where('status', 'abandoned')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->count();
+        $completed = \App\Models\WhatsappFlowResponse::query()
+            ->where('company_id', $companyId)
+            ->where('status', 'completed')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'ready' => $readiness['ready'] ?? false,
+            'steps' => $readiness['steps'] ?? [],
+            'totals' => [
+                'forms' => $total,
+                'live' => $live,
+                'completed_30d' => $completed,
+                'abandoned_30d' => $abandoned,
+            ],
+            'links' => [
+                'forms' => route('whatsapp-flows.index'),
+                'responses' => route('whatsapp-flows.responses'),
+                'keys' => route('admin.apps.company').'#facebook_developer',
+            ],
+        ]);
     }
 
     /**

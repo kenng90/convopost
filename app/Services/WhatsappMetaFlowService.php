@@ -98,12 +98,15 @@ class WhatsappMetaFlowService
 
             // ── Step 2: health-check for data_exchange flows ──────────────────
             if ($hasDataExchange) {
-                $healthResult = $this->checkFlowEndpointHealth($metaFlowId, $accessToken);
+                // Meta verifies the endpoint asynchronously after endpoint_uri is set.
+                // Wait/poll until the FLOW publishing check clears before calling /publish.
+                $healthResult = $this->waitForFlowEndpointHealth($metaFlowId, $accessToken);
                 if (! $healthResult['success']) {
                     return [
                         'success' => false,
                         'message' => 'Endpoint health check failed: '.$healthResult['message']
-                            .' — make sure your webhook is publicly reachable and returns {"data":{"status":"active"}} for a ping action.',
+                            .' Tip: keep your ngrok/public URL online, confirm Setup Keys matches the phone number,'
+                            .' then in Meta Flow Builder → Endpoint → Run Check, and retry Go Live.',
                     ];
                 }
 
@@ -165,11 +168,12 @@ class WhatsappMetaFlowService
 
             // Health-check for endpoint-powered flows
             if ($hasDataExchange) {
-                $healthResult = $this->checkFlowEndpointHealth($metaFlowId, $accessToken);
+                $healthResult = $this->waitForFlowEndpointHealth($metaFlowId, $accessToken);
                 if (! $healthResult['success']) {
                     return [
                         'success' => false,
-                        'message' => 'Endpoint health check failed: '.$healthResult['message'],
+                        'message' => 'Endpoint health check failed: '.$healthResult['message']
+                            .' Tip: keep your public URL online, confirm Setup Keys is uploaded, run Meta Endpoint Health Check, then retry.',
                     ];
                 }
             }
@@ -202,10 +206,15 @@ class WhatsappMetaFlowService
         $url = "{$this->getApiBaseUrl()}/{$businessAccountId}/flows";
         $body = [
             'name' => $flow->name,
-            'categories' => [$flow->category ?? 'OTHER'],
+            'categories' => \App\Support\WhatsappFlowCategory::forMetaApi($flow->category),
             'flow_json' => $flowJsonString,
             // DO NOT pass publish:true — create in draft, publish separately
         ];
+
+        $normalizedCategory = \App\Support\WhatsappFlowCategory::normalize($flow->category);
+        if ($flow->category !== $normalizedCategory) {
+            $flow->forceFill(['category' => $normalizedCategory])->save();
+        }
 
         if ($hasDataExchange) {
             $endpointUri = $this->resolveEndpointUri($flow, $credentials);
@@ -337,16 +346,55 @@ class WhatsappMetaFlowService
     }
 
     /**
+     * Poll Meta's health_status until the FLOW entity is publishable, or give up.
+     *
+     * Meta runs endpoint verification asynchronously after endpoint_uri is set.
+     * health_status is an object (not the legacy HEALTHY|BLOCKED string).
+     */
+    private function waitForFlowEndpointHealth(string $metaFlowId, string $accessToken, int $maxAttempts = 6, int $delaySeconds = 5): array
+    {
+        $lastResult = ['success' => false, 'message' => 'Endpoint health could not be verified.'];
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $lastResult = $this->checkFlowEndpointHealth($metaFlowId, $accessToken);
+
+            if ($lastResult['success']) {
+                return $lastResult;
+            }
+
+            // Don't burn retries on non-endpoint JSON/validation blockers
+            if (($lastResult['retryable'] ?? true) === false) {
+                return $lastResult;
+            }
+
+            if ($attempt < $maxAttempts) {
+                Log::info('Waiting for Meta endpoint health check to clear', [
+                    'meta_flow_id' => $metaFlowId,
+                    'attempt' => $attempt,
+                    'next_delay_seconds' => $delaySeconds,
+                    'message' => $lastResult['message'] ?? null,
+                ]);
+                sleep($delaySeconds);
+            }
+        }
+
+        return $lastResult;
+    }
+
+    /**
      * Query Meta's health_status field and decide if it is safe to publish.
      *
-     * Possible values: HEALTHY | WARNING | BLOCKED | null (no endpoint set)
+     * Modern shape:
+     * {
+     *   "can_send_message": "BLOCKED|AVAILABLE|LIMITED",
+     *   "entities": [{ "entity_type": "FLOW", "can_send_message": "...", "errors": [...] }]
+     * }
      *
-     * We proceed on HEALTHY and WARNING.  BLOCKED means the endpoint failed
-     * Meta's health check and publishing would fail.
+     * Legacy (rarely returned): string HEALTHY | WARNING | BLOCKED
      */
     private function checkFlowEndpointHealth(string $metaFlowId, string $accessToken): array
     {
-        $url = "{$this->getApiBaseUrl()}/{$metaFlowId}?fields=health_status";
+        $url = "{$this->getApiBaseUrl()}/{$metaFlowId}?fields=health_status,validation_errors,endpoint_uri,status";
         $response = Http::withToken($accessToken)->timeout(30)->get($url);
 
         if (! $response->successful()) {
@@ -359,25 +407,81 @@ class WhatsappMetaFlowService
             return ['success' => true, 'health_status' => 'unknown'];
         }
 
-        $healthStatus = $response->json()['health_status'] ?? null;
+        $payload = $response->json() ?? [];
+        $healthStatus = $payload['health_status'] ?? null;
+        $validationErrors = $payload['validation_errors'] ?? [];
 
         Log::info('Flow health_status from Meta', [
             'meta_flow_id' => $metaFlowId,
             'health_status' => $healthStatus,
+            'endpoint_uri' => $payload['endpoint_uri'] ?? null,
+            'validation_errors' => $validationErrors,
         ]);
 
-        if ($healthStatus === 'BLOCKED') {
+        if (! empty($validationErrors) && is_array($validationErrors)) {
+            $validationMsg = collect($validationErrors)
+                ->map(fn ($e) => ($e['error_type'] ?? 'error').': '.($e['message'] ?? json_encode($e)))
+                ->join(' | ');
+
             return [
                 'success' => false,
-                'health_status' => 'BLOCKED',
-                'message' => 'Meta reports your webhook endpoint is BLOCKED. '
-                    .'Ensure it is publicly reachable, returns HTTP 200, '
-                    .'and responds with {"data":{"status":"active"}} for a ping action.',
+                'retryable' => false,
+                'health_status' => $healthStatus,
+                'message' => 'Flow JSON validation errors: '.$validationMsg,
             ];
         }
 
-        // HEALTHY, WARNING, null (no endpoint set), or any other value → allow publish
-        return ['success' => true, 'health_status' => $healthStatus];
+        // Legacy string status
+        if (is_string($healthStatus)) {
+            if ($healthStatus === 'BLOCKED') {
+                return [
+                    'success' => false,
+                    'retryable' => true,
+                    'health_status' => 'BLOCKED',
+                    'message' => 'Meta reports your webhook endpoint is BLOCKED. '
+                        .'Ensure it is publicly reachable and returns an encrypted ping response '
+                        .'with {"version":"3.0","data":{"status":"active"}}.',
+                ];
+            }
+
+            return ['success' => true, 'health_status' => $healthStatus];
+        }
+
+        if (! is_array($healthStatus)) {
+            return ['success' => true, 'health_status' => $healthStatus];
+        }
+
+        $flowEntity = collect($healthStatus['entities'] ?? [])
+            ->first(fn ($entity) => ($entity['entity_type'] ?? null) === 'FLOW');
+
+        $flowStatus = $flowEntity['can_send_message']
+            ?? $healthStatus['can_send_message']
+            ?? null;
+
+        if ($flowStatus !== 'BLOCKED') {
+            return ['success' => true, 'health_status' => $healthStatus];
+        }
+
+        $errors = collect($flowEntity['errors'] ?? []);
+        $descriptions = $errors
+            ->map(fn ($e) => $e['error_description'] ?? ($e['error_user_msg'] ?? null))
+            ->filter()
+            ->values();
+
+        $hasEndpointIssue = $errors->contains(
+            fn ($e) => str_contains(strtolower((string) ($e['error_description'] ?? '')), 'endpoint')
+        );
+
+        $message = $descriptions->isNotEmpty()
+            ? $descriptions->join(' ')
+            : 'Meta reports this Flow as BLOCKED (publishing checks failing).';
+
+        return [
+            'success' => false,
+            'retryable' => $hasEndpointIssue || $descriptions->isEmpty(),
+            'health_status' => $healthStatus,
+            'message' => $message,
+        ];
     }
 
     /**

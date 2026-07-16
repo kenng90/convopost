@@ -30,6 +30,7 @@ use Modules\Flowmaker\Models\Nodes\ListingInquiry;
 use Modules\Flowmaker\Models\Nodes\ListMessage;
 use Modules\Flowmaker\Models\Nodes\LLM;
 use Modules\Flowmaker\Models\Nodes\ManageBooking;
+use Modules\Flowmaker\Models\Nodes\ManageEventRegistration;
 use Modules\Flowmaker\Models\Nodes\Media;
 use Modules\Flowmaker\Models\Nodes\Message;
 use Modules\Flowmaker\Models\Nodes\MpesaStkPush;
@@ -272,6 +273,8 @@ class Flow extends Model
                 $theNewNode = new SendBookingLink($nodeArray, []);
             } elseif ($nodeArray['type'] === 'manage_booking') {
                 $theNewNode = new ManageBooking($nodeArray, []);
+            } elseif ($nodeArray['type'] === 'manage_event_registration') {
+                $theNewNode = new ManageEventRegistration($nodeArray, []);
             } elseif ($nodeArray['type'] === 'order_status') {
                 $theNewNode = new OrderStatus($nodeArray, []);
             } elseif ($nodeArray['type'] === 'counter') {

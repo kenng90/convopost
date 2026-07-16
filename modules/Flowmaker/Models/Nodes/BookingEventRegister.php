@@ -5,6 +5,7 @@ namespace Modules\Flowmaker\Models\Nodes;
 use App\Models\Company;
 use App\Services\Flowmaker\BookingWebhookService;
 use App\Services\Flowmaker\FlowRunLogger;
+use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Jobs\ResumeFlowFromMpesa;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Reminders\Models\EventRegistration;
@@ -69,7 +70,8 @@ class BookingEventRegister extends Node
             return ['success' => false];
         }
 
-        $occurrenceId = $this->resolveOccurrenceId($contact);
+        $settings = $this->getDataAsArray()['settings'] ?? [];
+        $occurrenceId = $this->resolveOccurrenceId($contact, $settings);
 
         if (! $occurrenceId) {
             $contact->sendMessage(__('Please select an event first.'), false, false, 'TEXT');
@@ -78,8 +80,7 @@ class BookingEventRegister extends Node
             return ['success' => false];
         }
 
-        $settings = $this->getDataAsArray()['settings'] ?? [];
-        $partySize = max(1, (int) ($settings['party_size'] ?? 1));
+        $partySize = $this->resolvePartySize($contact, $settings);
 
         $payload = [
             'occurrence_id' => $occurrenceId,
@@ -88,6 +89,7 @@ class BookingEventRegister extends Node
             'party_size' => $partySize,
             'flow_id' => $this->flow_id,
             'flow_node_id' => $this->id,
+            'booking_source' => ($settings['intake_mode'] ?? '') === 'form' ? 'whatsapp_form' : 'whatsapp_list',
         ];
 
         $occurrence = app(EventCatalogService::class)->findRegisterableOccurrence($company, $occurrenceId);
@@ -163,6 +165,8 @@ class BookingEventRegister extends Node
             app(BookingWebhookService::class)->dispatchEventRegistrationConfirmed($company, $registration, $this->flow_id, $this->id, $settings);
         }
 
+        $this->applyOnCompleteActions($contact, $settings);
+
         $contact->clearContactState($this->flow_id, 'selected_occurrence_id');
         $contact->clearContactState($this->flow_id, 'current_node');
         $this->routeToHandle($contact, 'success', $message, $data);
@@ -181,7 +185,10 @@ class BookingEventRegister extends Node
         ResumeFlowFromMpesa::dispatch($flowId, $contactId)->onQueue('flows');
     }
 
-    private function resolveOccurrenceId(Contact $contact): int
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    private function resolveOccurrenceId(Contact $contact, array $settings): int
     {
         $fromState = (int) $contact->getContactStateValue($this->flow_id, 'selected_occurrence_id');
 
@@ -189,9 +196,106 @@ class BookingEventRegister extends Node
             return $fromState;
         }
 
-        $settings = $this->getDataAsArray()['settings'] ?? [];
+        $intakeMode = (string) ($settings['intake_mode'] ?? 'lists');
+        if ($intakeMode === 'form' || $intakeMode === 'auto') {
+            $fromForm = $this->readFormValue($contact, $settings['formFieldMap']['occurrenceField'] ?? [
+                'occurrence_id', 'form_occurrence_id', 'form_session', 'session', 'select_3', 'form_select_3',
+            ]);
+            if (is_numeric($fromForm) && (int) $fromForm > 0) {
+                return (int) $fromForm;
+            }
+        }
 
         return (int) ($settings['occurrence_id'] ?? 0);
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    private function resolvePartySize(Contact $contact, array $settings): int
+    {
+        $fromForm = $this->readFormValue($contact, $settings['formFieldMap']['partySizeField'] ?? [
+            'party_size', 'form_party_size', 'form_select_4', 'select_4',
+        ]);
+
+        if (is_numeric($fromForm) && (int) $fromForm > 0) {
+            return max(1, (int) $fromForm);
+        }
+
+        return max(1, (int) ($settings['party_size'] ?? 1));
+    }
+
+    /**
+     * @param  string|list<string>  $keys
+     */
+    private function readFormValue(Contact $contact, string|array $keys): ?string
+    {
+        $keys = is_array($keys) ? $keys : [$keys];
+
+        foreach ($keys as $key) {
+            if (! is_string($key) || $key === '') {
+                continue;
+            }
+
+            $candidates = [$key];
+            if (! str_starts_with($key, 'form_')) {
+                $candidates[] = 'form_'.$key;
+            }
+
+            foreach ($candidates as $candidate) {
+                $value = $contact->getContactStateValue($this->flow_id, $candidate);
+                if ($value !== null && $value !== '') {
+                    return is_array($value) ? json_encode($value) : (string) $value;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    private function applyOnCompleteActions(Contact $contact, array $settings): void
+    {
+        $onComplete = $settings['onComplete'] ?? [];
+        if (! is_array($onComplete)) {
+            return;
+        }
+
+        $groupId = $onComplete['groupId'] ?? null;
+        if (! empty($groupId) && $groupId !== 'none') {
+            $group = \Modules\Contacts\Models\Group::query()
+                ->where('id', $groupId)
+                ->where('company_id', $contact->company_id)
+                ->first();
+
+            if ($group && ! $contact->groups()->where('group_id', $groupId)->exists()) {
+                $contact->groups()->attach($groupId);
+                if (class_exists(\Modules\Journies\Support\GroupRuleBridge::class)) {
+                    \Modules\Journies\Support\GroupRuleBridge::contactAddedToGroups($contact, [$groupId]);
+                }
+            }
+        }
+
+        $stageId = $onComplete['stageId'] ?? null;
+        if (! empty($stageId) && $stageId !== 'none' && class_exists(\Modules\Journies\Models\JourneyStage::class)) {
+            $stage = \Modules\Journies\Models\JourneyStage::query()
+                ->where('id', $stageId)
+                ->whereHas('journey', fn ($query) => $query->where('company_id', $contact->company_id))
+                ->first();
+
+            if ($stage) {
+                app(\Modules\Journies\Services\JourneyContactService::class)->moveContactToStage(
+                    $contact,
+                    $stage,
+                    'flow',
+                    null,
+                    true,
+                    false,
+                );
+            }
+        }
     }
 
     private function storeRegistrationVariables(Contact $contact, EventRegistration $registration): void

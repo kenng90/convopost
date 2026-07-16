@@ -76,6 +76,7 @@ export const useFlowActions = () => {
             type === 'booking_event_register' ? 'booking_event_register' :
             type === 'send_booking_link' ? 'send_booking_link' :
             type === 'manage_booking' ? 'manage_booking' :
+            type === 'manage_event_registration' ? 'manage_event_registration' :
             type === 'order_status' ? 'order_status' :
             type === 'branch' ? 'branch' : 'action',
       position: newPosition,
@@ -108,6 +109,7 @@ export const useFlowActions = () => {
                type === 'booking_event_register' ? 'Register for event' :
                type === 'send_booking_link' ? 'Send booking link' :
                type === 'manage_booking' ? 'Manage booking' :
+               type === 'manage_event_registration' ? 'Manage event registration' :
                type === 'order_status' ? 'Update order status' :
                type.charAt(0).toUpperCase() + type.slice(1),
         type,
@@ -223,6 +225,12 @@ export const useFlowActions = () => {
               reference_variable: 'booking_reference',
               allow_reschedule: true,
               default_action: 'menu',
+            }
+          : type === 'manage_event_registration'
+          ? {
+              reference_variable: 'booking_event_reference',
+              default_action: 'cancel',
+              success_message: 'Your event registration has been cancelled.',
             }
           : {},
       },

@@ -392,6 +392,7 @@
             activeChat:{},
             activeChatGroups:{},
             activeChatCustomFields:{},
+            latestFormSubmission: null,
             messages:[],
             activeMessage:"",
             copilotSuggestions:[],
@@ -642,11 +643,13 @@
                         .then(response => {
                             this.activeChatGroups = response.data.groups;
                             this.activeChatCustomFields = response.data.customFields;
+                            this.latestFormSubmission = response.data.latestFormSubmission || null;
                         })
                         .catch(error => {
                             console.error('Error fetching contact groups:', error);
                             this.activeChatGroups = {};
                             this.activeChatCustomFields = {};
+                            this.latestFormSubmission = null;
                         });
                 }
 

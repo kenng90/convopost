@@ -52,7 +52,7 @@ class GoogleCalendarService
     /**
      * @return array<int, array{id: string, summary: string, label: string, primary: bool}>
      */
-    public function listCalendars(User $user): array
+    public function listCalendars(User $user, string $minAccessRole = 'writer'): array
     {
         if (! $this->isConnected($user)) {
             return [];
@@ -64,7 +64,7 @@ class GoogleCalendarService
         }
 
         $response = Http::withToken($accessToken)->get(self::CALENDAR_BASE.'/users/me/calendarList', [
-            'minAccessRole' => 'writer',
+            'minAccessRole' => $minAccessRole,
         ]);
 
         if (! $response->successful()) {
@@ -102,6 +102,14 @@ class GoogleCalendarService
         return collect($this->listCalendars($user))
             ->mapWithKeys(fn (array $calendar) => [$calendar['id'] => $calendar['label']])
             ->all();
+    }
+
+    public function embedUrl(string $calendarId, string $timezone = 'UTC'): string
+    {
+        return 'https://calendar.google.com/calendar/embed?'.http_build_query([
+            'src' => $calendarId,
+            'ctz' => $timezone,
+        ]);
     }
 
     /**

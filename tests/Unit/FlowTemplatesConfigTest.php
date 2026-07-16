@@ -37,6 +37,7 @@ class FlowTemplatesConfigTest extends TestCase
         'booking_event_register',
         'send_booking_link',
         'manage_booking',
+        'manage_event_registration',
         'assign_agent',
         'assign_group',
         'assign_journey_stage',

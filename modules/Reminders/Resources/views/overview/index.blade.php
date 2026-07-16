@@ -51,6 +51,7 @@
                     <li>{{ __('Optionally assign team members and sync to Google Calendar') }}</li>
                 </ul>
                 <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ route('reminders.calendar.index') }}" class="btn btn-sm btn-primary">{{ __('Calendar') }}</a>
                     <a href="{{ route('reminders.reservations.index') }}" class="btn btn-sm btn-primary">{{ __('Appointments') }}</a>
                     <a href="{{ route('reminders.sources.index') }}" class="btn btn-sm btn-outline-primary">{{ __('Services') }}</a>
                 </div>

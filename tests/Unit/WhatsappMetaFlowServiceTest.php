@@ -335,6 +335,32 @@ class WhatsappMetaFlowServiceTest extends TestCase
         $this->assertArrayNotHasKey('next', $footer['on-click-action']);
     }
 
+    public function test_live_booking_first_screen_data_model_excludes_next_slot_options(): void
+    {
+        $flow = $this->makeFlow(config('whatsapp-form-templates.appointment_booking.screens'));
+
+        $meta = $this->service->convertToMetaFormat($flow);
+        $pickService = $meta['screens'][0];
+        $footer = collect($pickService['layout']['children'] ?? [])
+            ->flatMap(function (array $component) {
+                if (($component['type'] ?? '') === 'Form') {
+                    return $component['children'] ?? [];
+                }
+
+                return [$component];
+            })
+            ->firstWhere('type', 'Footer');
+
+        $this->assertArrayHasKey('service_options', (array) $pickService['data']);
+        $this->assertArrayNotHasKey('slot_options', (array) $pickService['data']);
+        $this->assertNotNull($footer);
+        $this->assertSame('data_exchange', $footer['on-click-action']['name']);
+        $payload = (array) ($footer['on-click-action']['payload'] ?? []);
+        $this->assertArrayHasKey('service', $payload);
+        $this->assertArrayHasKey('preferred_date', $payload);
+        $this->assertArrayNotHasKey('slot_options', $payload);
+    }
+
     public function test_textarea_default_max_length_is_six_hundred(): void
     {
         $mapper = new WhatsappFlowComponentMapper;

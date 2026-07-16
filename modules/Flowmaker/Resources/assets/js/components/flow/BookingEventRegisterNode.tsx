@@ -28,13 +28,23 @@ interface OccurrenceOption {
 interface NodeSettings {
   occurrence_id?: string;
   party_size?: string;
+  intake_mode?: 'lists' | 'form' | 'auto';
   success_message?: string;
+  formFieldMap?: {
+    occurrenceField?: string;
+    partySizeField?: string;
+  };
 }
 
 const defaultSettings: NodeSettings = {
   occurrence_id: '',
   party_size: '1',
+  intake_mode: 'lists',
   success_message: 'You are registered for {{booking_event_title}} on {{booking_event_date}} at {{booking_event_time}}.',
+  formFieldMap: {
+    occurrenceField: 'occurrence_id',
+    partySizeField: 'party_size',
+  },
 };
 
 const BookingEventRegisterNode = ({ id, data }: BookingEventRegisterNodeProps) => {
@@ -112,6 +122,44 @@ const BookingEventRegisterNode = ({ id, data }: BookingEventRegisterNodeProps) =
           </div>
 
           <div className="p-4 space-y-3 max-h-[420px] overflow-y-auto">
+            <div>
+              <Label className="text-xs">Intake mode</Label>
+              <select
+                className="w-full mt-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                value={settings.intake_mode || 'lists'}
+                onChange={e => update({ intake_mode: e.target.value as NodeSettings['intake_mode'] })}
+              >
+                <option value="lists">From list / fixed session</option>
+                <option value="form">From WhatsApp Form answers</option>
+                <option value="auto">Auto — form when answers present</option>
+              </select>
+            </div>
+
+            {(settings.intake_mode === 'form' || settings.intake_mode === 'auto') && (
+              <div className="space-y-2 border border-emerald-100 rounded-md p-2 bg-emerald-50/50">
+                <div>
+                  <Label className="text-xs">Occurrence field key</Label>
+                  <Input
+                    className="font-mono text-sm"
+                    value={settings.formFieldMap?.occurrenceField || ''}
+                    onChange={e => update({
+                      formFieldMap: { ...(settings.formFieldMap || {}), occurrenceField: e.target.value },
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Party size field key</Label>
+                  <Input
+                    className="font-mono text-sm"
+                    value={settings.formFieldMap?.partySizeField || ''}
+                    onChange={e => update({
+                      formFieldMap: { ...(settings.formFieldMap || {}), partySizeField: e.target.value },
+                    })}
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <Label className="text-xs">Fixed session (optional)</Label>
               <select

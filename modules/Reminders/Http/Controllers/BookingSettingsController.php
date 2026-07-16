@@ -22,7 +22,7 @@ class BookingSettingsController extends Controller
         private readonly BookingCatalogService $catalogService,
         private readonly BookingPublicKeyService $bookingPublicKeyService,
         private readonly EventCatalogService $eventCatalogService,
-        private readonly BookingPaymentService $bookingPaymentService
+        private readonly BookingPaymentService $bookingPaymentService,
     ) {
     }
 
@@ -53,6 +53,7 @@ class BookingSettingsController extends Controller
             'bookingPublicKey' => $company ? $this->bookingPublicKeyService->ensureKey($company) : null,
             'eventsEnabled' => $company ? $this->eventCatalogService->eventsEnabled($company) : false,
             'bookingContactsInInbox' => filter_var($company?->getConfig('BOOKING_CONTACTS_IN_INBOX', 'false'), FILTER_VALIDATE_BOOLEAN),
+            'calendarUrl' => route('reminders.calendar.index'),
         ]);
     }
 
