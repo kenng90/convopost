@@ -35,7 +35,8 @@ class WhatsappFlowResponseService
                 }
 
                 $definitions[] = [
-                    'key' => $this->buildFieldKey($type, $field['id']),
+                    'key' => app(WhatsappFlowComponentMapper::class)->getComponentName($field)
+                        ?? $this->buildFieldKey($type, $field['id'] ?? null),
                     'label' => $field['label'] ?? ucfirst(str_replace('_', ' ', $type)),
                     'type' => $type,
                     'screen_title' => $screen['title'] ?? 'Screen '.($screenIndex + 1),
@@ -146,19 +147,51 @@ class WhatsappFlowResponseService
 
         if (is_array($value)) {
             $labels = array_map(
-                fn ($item) => $this->resolveOptionLabel((string) $item, $field),
+                fn ($item) => $this->resolveOptionLabel($this->scalarToString($item), $field),
                 $value
             );
 
-            return implode(', ', $labels) ?: '—';
+            return implode(', ', array_filter($labels, fn ($label) => $label !== '')) ?: '—';
         }
 
         if (in_array($type, ['radio', 'select', 'chips', 'dropdown'], true)) {
-            return $this->resolveOptionLabel((string) $value, $field);
+            return $this->resolveOptionLabel($this->scalarToString($value), $field);
         }
 
         if ($type === 'date') {
-            return $this->formatDateValue((string) $value);
+            return $this->formatDateValue($this->scalarToString($value));
+        }
+
+        return $this->scalarToString($value);
+    }
+
+    /**
+     * Coerce a response fragment to a string without array-to-string notices.
+     */
+    private function scalarToString(mixed $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        if (is_array($value)) {
+            foreach (['id', 'value', 'title', 'label', 'name'] as $key) {
+                if (array_key_exists($key, $value) && is_scalar($value[$key])) {
+                    return (string) $value[$key];
+                }
+            }
+
+            $encoded = json_encode($value, JSON_UNESCAPED_UNICODE);
+
+            return is_string($encoded) ? $encoded : '';
         }
 
         return (string) $value;
@@ -247,7 +280,7 @@ class WhatsappFlowResponseService
                 $values = is_array($value) ? $value : [$value];
 
                 foreach ($values as $singleValue) {
-                    $resolved = $this->resolveOptionLabel((string) $singleValue, $definition);
+                    $resolved = $this->resolveOptionLabel($this->scalarToString($singleValue), $definition);
                     $counts[$resolved] = ($counts[$resolved] ?? 0) + 1;
                 }
             }
@@ -387,7 +420,7 @@ class WhatsappFlowResponseService
             $file = fopen('php://output', 'w');
 
             $headerRow = array_merge(
-                ['Contact Name', 'Phone', 'Status', 'Sent At', 'Completed At', 'Duration'],
+                ['Contact Name', 'Phone', 'Status', 'Sent At', 'Completed At', 'Duration', 'Form ID', 'Automation Flow ID', 'Node ID'],
                 array_map(fn ($definition) => $definition['label'], $definitions)
             );
             fputcsv($file, $headerRow);
@@ -402,6 +435,9 @@ class WhatsappFlowResponseService
                         $response->sent_at?->format('Y-m-d H:i:s') ?? '',
                         $response->completed_at?->format('Y-m-d H:i:s') ?? '',
                         $this->formatDuration($this->durationSeconds($response)),
+                        $response->whatsapp_flow_id,
+                        $response->flow_id,
+                        $response->flow_node_id,
                     ];
 
                     foreach ($definitions as $definition) {

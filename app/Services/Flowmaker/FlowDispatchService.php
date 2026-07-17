@@ -28,6 +28,25 @@ class FlowDispatchService
 
         $candidateIds = $candidates->pluck('id')->map(fn ($id) => (int) $id)->all();
 
+        $sorted = $candidates->sortBy([
+            ['priority', 'desc'],
+            ['id', 'asc'],
+        ])->values();
+
+        // Exclusive keywords (e.g. "book") must be allowed to interrupt a stuck
+        // session on another flow — otherwise a waiting quick-replies/menu node
+        // permanently traps the contact and booking forms never send.
+        $exclusiveMatch = $sorted->first(function (Flow $flow) use ($messageBody) {
+            return (bool) ($flow->exclusive_on_match ?? false)
+                && $flow->matchesKeywordMessage($messageBody);
+        });
+
+        if ($exclusiveMatch) {
+            $this->clearOtherFlowSessions($contact, (int) $exclusiveMatch->id, $candidateIds);
+
+            return collect([$exclusiveMatch]);
+        }
+
         $sessionFlowIds = ContactState::query()
             ->where('contact_id', $contact->id)
             ->where('state', 'current_node')
@@ -44,21 +63,30 @@ class FlowDispatchService
             return $candidates->filter(fn (Flow $flow) => (int) $flow->id === $sessionId)->values();
         }
 
-        $sorted = $candidates->sortBy([
-            ['priority', 'desc'],
-            ['id', 'asc'],
-        ])->values();
+        return $sorted;
+    }
 
-        $exclusiveMatch = $sorted->first(function (Flow $flow) use ($messageBody) {
-            return (bool) ($flow->exclusive_on_match ?? false)
-                && $flow->matchesKeywordMessage($messageBody);
-        });
+    /**
+     * Drop waiting-state locks on other flows when an exclusive keyword takes over.
+     *
+     * @param  list<int>  $candidateIds
+     */
+    private function clearOtherFlowSessions(Contact $contact, int $winningFlowId, array $candidateIds): void
+    {
+        $otherIds = array_values(array_filter(
+            $candidateIds,
+            fn (int $id) => $id !== $winningFlowId
+        ));
 
-        if ($exclusiveMatch) {
-            return collect([$exclusiveMatch]);
+        if ($otherIds === []) {
+            return;
         }
 
-        return $sorted;
+        ContactState::query()
+            ->where('contact_id', $contact->id)
+            ->where('state', 'current_node')
+            ->whereIn('flow_id', $otherIds)
+            ->delete();
     }
 
     /**

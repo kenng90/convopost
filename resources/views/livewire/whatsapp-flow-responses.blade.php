@@ -186,6 +186,35 @@
                     </div>
                 </div>
             </div>
+            @if (! empty($conversionSummary['funnel']))
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-transparent">
+                                <h6 class="mb-0">{{ __('Form → outcome funnel (30 days)') }}</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex flex-wrap" style="gap: 1rem;">
+                                    @foreach ($conversionSummary['funnel'] as $stage)
+                                        <div class="border rounded px-3 py-2" style="min-width: 140px;">
+                                            <div class="text-muted small">{{ $stage['stage'] ?? '' }}</div>
+                                            <div class="h5 mb-0">{{ $stage['count'] ?? 0 }}</div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                @if (! empty($conversionSummary['automation_flow_ids']))
+                                    <div class="text-muted small mt-2">
+                                        {{ __('Linked automations') }}:
+                                        @foreach ($conversionSummary['automation_flow_ids'] as $autoId)
+                                            <a href="{{ route('flowmaker.edit', $autoId) }}">#{{ $autoId }}</a>@if (! $loop->last), @endif
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
         @endif
         <div class="row">
             <div class="col-md-6 mb-4">

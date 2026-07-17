@@ -120,6 +120,76 @@ class FlowmakerRecommendationsTest extends TestCase
         $this->assertSame(10, $selected->first()->id);
     }
 
+    public function test_exclusive_keyword_interrupts_stuck_session_on_another_flow(): void
+    {
+        $company = Company::factory()->create();
+        $companyMock = Mockery::mock(Company::class);
+        $companyMock->shouldReceive('getConfig')->with('whatsapp_ai_flow_id', 0)->andReturn(0);
+
+        $loanMenu = new Flow([
+            'id' => 32,
+            'name' => 'Loan menu',
+            'priority' => 1,
+            'is_active' => true,
+            'exclusive_on_match' => false,
+            'company_id' => $company->id,
+            'flow_data' => json_encode([
+                'nodes' => [[
+                    'id' => 'kw',
+                    'type' => 'keyword_trigger',
+                    'data' => ['keywords' => [['id' => 'kw1', 'value' => 'loan', 'matchType' => 'contains']]],
+                ]],
+                'edges' => [],
+            ]),
+        ]);
+        $bookFlow = new Flow([
+            'id' => 33,
+            'name' => 'Book',
+            'priority' => 10,
+            'is_active' => true,
+            'exclusive_on_match' => true,
+            'company_id' => $company->id,
+            'flow_data' => json_encode([
+                'nodes' => [[
+                    'id' => 'kw',
+                    'type' => 'keyword_trigger',
+                    'data' => ['keywords' => [['id' => 'kw1', 'value' => 'book', 'matchType' => 'contains']]],
+                ]],
+                'edges' => [],
+            ]),
+        ]);
+
+        $contact = Contact::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'name' => 'Kenneth',
+            'phone' => '+254700000099',
+        ]);
+
+        ContactState::create([
+            'contact_id' => $contact->id,
+            'flow_id' => 32,
+            'state' => 'current_node',
+            'value' => 'quick_replies-1',
+        ]);
+
+        $selected = app(FlowDispatchService::class)->selectFlowsForMessage(
+            $companyMock,
+            collect([$loanMenu, $bookFlow]),
+            $contact,
+            'book'
+        );
+
+        $this->assertCount(1, $selected);
+        $this->assertSame(33, $selected->first()->id);
+        $this->assertFalse(
+            ContactState::query()
+                ->where('contact_id', $contact->id)
+                ->where('flow_id', 32)
+                ->where('state', 'current_node')
+                ->exists()
+        );
+    }
+
     public function test_dispatch_skips_inactive_flows(): void
     {
         $companyMock = Mockery::mock(Company::class);

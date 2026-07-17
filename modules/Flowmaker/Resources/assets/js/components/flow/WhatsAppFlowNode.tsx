@@ -21,6 +21,15 @@ interface Condition {
   fieldName: string;
   operator: string;
   value: string;
+  allOf?: Array<{ fieldName: string; operator: string; value: string }>;
+}
+
+interface ScoreRule {
+  id: string;
+  fieldName: string;
+  operator: string;
+  value: string;
+  points: string;
 }
 
 interface FieldMapping {
@@ -47,6 +56,8 @@ interface WhatsAppFlowOption {
   name: string;
   status: string;
   meta_flow_id?: string;
+  live?: boolean;
+  lifecycle?: string;
   screen_count?: number;
   fields?: FormFieldOption[];
 }
@@ -74,6 +85,18 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
   const [header, setHeader] = useState<string>(data.settings?.header || 'Complete the form');
   const [footer, setFooter] = useState<string>(data.settings?.footer || 'Your responses help us serve you better');
   const [conditions, setConditions] = useState<Condition[]>(data.settings?.conditions || []);
+  const [scoreRules, setScoreRules] = useState<ScoreRule[]>(
+    (data.settings?.scoreRules || []).map((r: any) => ({
+      id: r.id || Math.random().toString(36).slice(2, 9),
+      fieldName: String(r.fieldName || ''),
+      operator: String(r.operator || '=='),
+      value: String(r.value || ''),
+      points: String(r.points ?? '10'),
+    }))
+  );
+  const [scoreThreshold, setScoreThreshold] = useState<string>(
+    data.settings?.scoreThreshold != null ? String(data.settings.scoreThreshold) : ''
+  );
   const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>(
     (data.settings?.fieldMappings || []).map((m: any) => ({
       id: m.id || Math.random().toString(36).slice(2, 9),
@@ -90,7 +113,7 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
   useEffect(() => {
     const loadFlows = async () => {
       try {
-        const response = await fetch('/api/whatsapp-flows', {
+        const response = await fetch('/api/whatsapp-flows?include_drafts=1', {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
@@ -119,20 +142,33 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
 
   useEffect(() => {
     if (data && data.settings) {
+      const flow = flows.find((f) => f.id.toString() === selectedFlowId);
       data.settings.whatsappFlowId = selectedFlowId;
       data.settings.header = header;
       data.settings.footer = footer;
       data.settings.conditions = conditions;
+      data.settings.scoreRules = scoreRules.map(({ fieldName, operator, value, points }) => ({
+        fieldName,
+        operator,
+        value,
+        points: Number(points) || 0,
+      }));
+      data.settings.scoreThreshold = scoreThreshold === '' ? null : Number(scoreThreshold);
       data.settings.fieldMappings = fieldMappings.map(({ formFieldKey, contactFieldId }) => ({
         formFieldKey,
         contactFieldId: contactFieldId === '' ? 'none' : contactFieldId,
       }));
       data.settings.onComplete = onComplete;
+      data.settings.formFields = flow?.fields || data.settings.formFields || [];
     }
-  }, [selectedFlowId, header, footer, conditions, fieldMappings, onComplete, data]);
+  }, [selectedFlowId, header, footer, conditions, scoreRules, scoreThreshold, fieldMappings, onComplete, data, flows]);
 
   const handleFlowSelect = (value: string) => {
     setSelectedFlowId(value);
+    const flow = flows.find((f) => f.id.toString() === value);
+    if (data?.settings) {
+      data.settings.formFields = flow?.fields || [];
+    }
   };
 
   const addCondition = () => {
@@ -143,6 +179,54 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
         fieldName: '',
         operator: '==',
         value: '',
+        allOf: [],
+      },
+    ]);
+  };
+
+  const addAndClause = (conditionId: string) => {
+    setConditions(conditions.map((c) => {
+      if (c.id !== conditionId) return c;
+      return {
+        ...c,
+        allOf: [
+          ...(c.allOf || []),
+          { fieldName: '', operator: '==', value: '' },
+        ],
+      };
+    }));
+  };
+
+  const updateAndClause = (
+    conditionId: string,
+    clauseIndex: number,
+    key: 'fieldName' | 'operator' | 'value',
+    value: string
+  ) => {
+    setConditions(conditions.map((c) => {
+      if (c.id !== conditionId) return c;
+      const allOf = [...(c.allOf || [])];
+      allOf[clauseIndex] = { ...allOf[clauseIndex], [key]: value };
+      return { ...c, allOf };
+    }));
+  };
+
+  const removeAndClause = (conditionId: string, clauseIndex: number) => {
+    setConditions(conditions.map((c) => {
+      if (c.id !== conditionId) return c;
+      return { ...c, allOf: (c.allOf || []).filter((_, i) => i !== clauseIndex) };
+    }));
+  };
+
+  const addScoreRule = () => {
+    setScoreRules([
+      ...scoreRules,
+      {
+        id: Math.random().toString(36).slice(2, 9),
+        fieldName: '',
+        operator: '==',
+        value: '',
+        points: '10',
       },
     ]);
   };
@@ -207,10 +291,10 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="flow-select">Select Live form</Label>
+                <Label htmlFor="flow-select">Select form</Label>
                 {flows.length === 0 ? (
                   <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded border border-gray-200">
-                    No Live forms found. Publish a form to WhatsApp first.
+                    No forms found. Create a WhatsApp Form first. Draft forms can be wired for simulation; Live is required to send.
                   </div>
                 ) : (
                   <select
@@ -222,7 +306,7 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
                     <option value="">-- Choose a form --</option>
                     {flows.map((flow) => (
                       <option key={flow.id} value={flow.id}>
-                        {flow.name}
+                        {flow.name}{flow.live || flow.meta_flow_id ? ' (Live)' : ' (Draft — simulate only)'}
                       </option>
                     ))}
                   </select>
@@ -230,9 +314,34 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
               </div>
 
               {selectedFlow && (
-                <div className="bg-sky-50 border border-sky-200 p-2 rounded text-xs">
+                <div className={`border p-2 rounded text-xs space-y-2 ${(selectedFlow.live || selectedFlow.meta_flow_id) ? 'bg-sky-50 border-sky-200' : 'bg-amber-50 border-amber-200'}`}>
                   <div className="font-medium text-sky-900">{selectedFlow.name}</div>
-                  <div className="text-green-700">Live on WhatsApp</div>
+                  <div className={(selectedFlow.live || selectedFlow.meta_flow_id) ? 'text-green-700' : 'text-amber-700'}>
+                    {selectedFlow.lifecycle || ((selectedFlow.live || selectedFlow.meta_flow_id) ? 'Live on WhatsApp' : 'Draft — publish to send')}
+                  </div>
+                  <div className="border-t border-sky-200/80 pt-2 space-y-1">
+                    <div className="font-medium text-sky-900">Variables after submit</div>
+                    <p className="text-gray-600">
+                      Use in HTTP, Message, or Payment nodes connected to <strong>On completion</strong>:
+                    </p>
+                    <code className="block bg-white/80 border border-sky-200 rounded px-2 py-1 text-[11px] text-sky-900">
+                      {'{{whatsapp_flow_responses}}'}
+                    </code>
+                    <p className="text-gray-500">All answers as JSON. Or per field:</p>
+                    {fieldOptions.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {fieldOptions.map((f) => (
+                          <code key={f.key} className="bg-white/80 border border-sky-100 rounded px-1.5 py-0.5 text-[10px] text-sky-800">
+                            {`{{form_${f.key}}}`}
+                          </code>
+                        ))}
+                      </div>
+                    ) : (
+                      <code className="block bg-white/80 border border-sky-100 rounded px-2 py-1 text-[10px] text-sky-800">
+                        {'{{form_<field_key>}}'}
+                      </code>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -342,7 +451,7 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
                 ) : (
                   <div className="space-y-2">
                     {conditions.map((condition, idx) => (
-                      <div key={condition.id} className="bg-gray-50 p-2 rounded border border-gray-200 text-xs">
+                      <div key={condition.id} className="bg-gray-50 p-2 rounded border border-gray-200 text-xs space-y-2">
                         <div className="flex items-start gap-2 flex-wrap">
                           {fieldOptions.length > 0 ? (
                             <select
@@ -392,11 +501,130 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
                             <X className="h-3 w-3" />
                           </button>
                         </div>
-                        <p className="text-gray-500 mt-1">Match {idx + 1}</p>
+                        {(condition.allOf || []).map((clause, clauseIdx) => (
+                          <div key={clauseIdx} className="flex items-center gap-1 pl-2 border-l-2 border-sky-300">
+                            <span className="text-[10px] text-sky-700 font-medium">AND</span>
+                            <select
+                              value={clause.fieldName}
+                              onChange={(e) => updateAndClause(condition.id, clauseIdx, 'fieldName', e.target.value)}
+                              className="flex-1 px-1 py-1 border rounded text-xs"
+                            >
+                              <option value="">Field</option>
+                              {fieldOptions.map((field) => (
+                                <option key={field.key} value={field.key}>{field.label}</option>
+                              ))}
+                            </select>
+                            <select
+                              value={clause.operator}
+                              onChange={(e) => updateAndClause(condition.id, clauseIdx, 'operator', e.target.value)}
+                              className="px-1 py-1 border rounded text-xs"
+                            >
+                              <option value="==">=</option>
+                              <option value="!=">≠</option>
+                              <option value="contains">contains</option>
+                              <option value="gt">&gt;</option>
+                              <option value="gte">≥</option>
+                              <option value="in">in</option>
+                            </select>
+                            <input
+                              type="text"
+                              value={clause.value}
+                              onChange={(e) => updateAndClause(condition.id, clauseIdx, 'value', e.target.value)}
+                              className="flex-1 px-1 py-1 border rounded text-xs"
+                              placeholder="Value"
+                            />
+                            <button onClick={() => removeAndClause(condition.id, clauseIdx)} className="text-red-500">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between">
+                          <p className="text-gray-500">Match {idx + 1}</p>
+                          <button onClick={() => addAndClause(condition.id)} className="text-[10px] text-sky-700 font-medium">
+                            + AND clause
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
+              </div>
+
+              <div className="border-t pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="font-bold text-xs">Lead score (optional)</Label>
+                  <button onClick={addScoreRule} className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                    <Plus className="h-3 w-3" /> Rule
+                  </button>
+                </div>
+                <input
+                  type="number"
+                  placeholder="Pass threshold (e.g. 20)"
+                  value={scoreThreshold}
+                  onChange={(e) => setScoreThreshold(e.target.value)}
+                  className="w-full px-2 py-1 border rounded text-xs"
+                />
+                {scoreRules.map((rule) => (
+                  <div key={rule.id} className="flex gap-1 items-center flex-wrap">
+                    <select
+                      value={rule.fieldName}
+                      onChange={(e) =>
+                        setScoreRules(scoreRules.map((r) =>
+                          r.id === rule.id ? { ...r, fieldName: e.target.value } : r
+                        ))
+                      }
+                      className="flex-1 min-w-[6rem] px-1 py-1 border rounded text-xs"
+                    >
+                      <option value="">Field</option>
+                      {fieldOptions.map((f) => (
+                        <option key={f.key} value={f.key}>{f.label}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={rule.operator}
+                      onChange={(e) =>
+                        setScoreRules(scoreRules.map((r) =>
+                          r.id === rule.id ? { ...r, operator: e.target.value } : r
+                        ))
+                      }
+                      className="px-1 py-1 border rounded text-xs"
+                    >
+                      <option value="==">=</option>
+                      <option value="gte">≥</option>
+                      <option value="gt">&gt;</option>
+                      <option value="contains">contains</option>
+                      <option value="in">in</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={rule.value}
+                      onChange={(e) =>
+                        setScoreRules(scoreRules.map((r) =>
+                          r.id === rule.id ? { ...r, value: e.target.value } : r
+                        ))
+                      }
+                      className="w-16 px-1 py-1 border rounded text-xs"
+                      placeholder="Value"
+                    />
+                    <input
+                      type="number"
+                      value={rule.points}
+                      onChange={(e) =>
+                        setScoreRules(scoreRules.map((r) =>
+                          r.id === rule.id ? { ...r, points: e.target.value } : r
+                        ))
+                      }
+                      className="w-14 px-1 py-1 border rounded text-xs"
+                      placeholder="Pts"
+                    />
+                    <button
+                      onClick={() => setScoreRules(scoreRules.filter((r) => r.id !== rule.id))}
+                      className="text-red-500"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -410,6 +638,19 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
               className="!bg-green-500 !w-3 !h-3 !border-2 !border-white"
             />
           </div>
+
+          {scoreThreshold !== '' && (
+            <>
+              <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-white text-xs">
+                <span className="text-emerald-700">Score pass</span>
+                <Handle type="source" position={Position.Right} id="score_pass" className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-white" />
+              </div>
+              <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-white text-xs">
+                <span className="text-amber-700">Score fail</span>
+                <Handle type="source" position={Position.Right} id="score_fail" className="!bg-amber-500 !w-3 !h-3 !border-2 !border-white" />
+              </div>
+            </>
+          )}
 
           {conditions.map((condition, idx) => (
             <div key={condition.id} className="flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-white text-xs">

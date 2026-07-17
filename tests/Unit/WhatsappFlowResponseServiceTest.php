@@ -121,6 +121,36 @@ class WhatsappFlowResponseServiceTest extends TestCase
         $this->assertSame('Yes', $this->service->formatDisplayValue(true, $flow->flow_json['screens'][0]['fields'][1]));
     }
 
+    public function test_it_formats_array_items_that_are_objects_from_meta(): void
+    {
+        $flow = $this->makeFlow([
+            'screens' => [
+                [
+                    'id' => 'SCREEN_A',
+                    'title' => 'Preferences',
+                    'fields' => [
+                        [
+                            'id' => 4,
+                            'type' => 'chips',
+                            'label' => 'Interests',
+                            'options' => [
+                                ['id' => 'sms', 'label' => 'SMS Updates', 'value' => 'sms'],
+                                ['id' => 'email', 'label' => 'Email Updates', 'value' => 'email'],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $display = $this->service->formatDisplayValue([
+            ['id' => 'sms', 'title' => 'SMS Updates'],
+            ['id' => 'email', 'title' => 'Email Updates'],
+        ], $flow->flow_json['screens'][0]['fields'][0]);
+
+        $this->assertSame('SMS Updates, Email Updates', $display);
+    }
+
     private function makeFlow(?array $flowJson = null): WhatsappFlow
     {
         $flow = new WhatsappFlow([

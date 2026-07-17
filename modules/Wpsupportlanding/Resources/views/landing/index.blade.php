@@ -1,10 +1,25 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ConvoConnect — Social Commerce Platform for WhatsApp</title>
-<meta name="description" content="Sell from chat, run journey pipelines, take bookings, and get paid on WhatsApp. ConvoConnect is the social commerce platform with catalogs, kanban CRM, team inbox, and M-Pesa payments." />
+@php
+  $siteName = config('settings.site_name', config('app.name'));
+  $metaTitle = $siteName.' — Social Commerce Platform for WhatsApp';
+  $metaDescription = 'Sell from chat, run journey pipelines, take bookings, and get paid on WhatsApp. '.$siteName.' is the social commerce platform with catalogs, kanban CRM, team inbox, and M-Pesa payments.';
+  $registrationEnabled = !config('settings.disable_registration_page', false);
+@endphp
+<title>{{ $metaTitle }}</title>
+<meta name="title" content="{{ $metaTitle }}">
+<meta name="description" content="{{ $metaDescription }}" />
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ url()->current() }}">
+<meta property="og:title" content="{{ $metaTitle }}">
+<meta property="og:description" content="{{ $metaDescription }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ $metaTitle }}">
+<meta name="twitter:description" content="{{ $metaDescription }}">
+<link rel="canonical" href="{{ url()->current() }}">
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet" />
@@ -232,16 +247,28 @@ tailwind.config = {
     border-color: rgba(37,211,102,0.2);
     transform: translateY(-3px);
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .float, .float2, .float3, .pulse-ring::after { animation: none !important; }
+    .card-lift, .integration-card, .flow-node { transition: none !important; }
+  }
+
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid #25D366;
+    outline-offset: 2px;
+  }
 </style>
 </head>
 
-<body class="bg-[#040f0c] text-white" x-data="{ mobileOpen: false, billing: 'monthly' }">
+<body class="bg-[#040f0c] text-white" x-data="{ mobileOpen: false, billing: 'monthly', faqOpen: null }">
+
+<a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:text-black focus:font-semibold" style="background:#25D366;">Skip to content</a>
 
 <!-- ===== NAVBAR ===== -->
 <nav class="navbar-blur fixed top-0 left-0 right-0 z-50" style="height:72px;">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-full">
     <!-- Logo -->
-    <a href="#" class="flex items-center gap-2.5 flex-shrink-0">
+    <a href="{{ route('landing') }}" class="flex items-center gap-2.5 flex-shrink-0">
       <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#25D366,#075E54);">
       <img src="{{ config('settings.logo', asset('favicon.ico')) }}" alt="{{ config('settings.site_name', config('app.name')) }}" class="w-full h-full object-contain p-1" />
       </div>
@@ -269,18 +296,20 @@ tailwind.config = {
     <!-- CTAs -->
     <div class="hidden lg:flex items-center gap-3">
       <a href="{{ route('login') }}" class="text-sm text-gray-300 hover:text-white transition-colors font-medium">Sign In</a>
+      @if($registrationEnabled)
       <a href="{{ route('register') }}" class="text-sm font-semibold px-4 py-2 rounded-lg text-black transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">Get Started Free</a>
+      @endif
     </div>
 
     <!-- Mobile toggle -->
-    <button class="lg:hidden text-gray-400 hover:text-white" @click="mobileOpen = !mobileOpen">
+    <button type="button" class="lg:hidden text-gray-400 hover:text-white" @click="mobileOpen = !mobileOpen" :aria-expanded="mobileOpen.toString()" aria-controls="mobile-menu" aria-label="Toggle navigation menu">
       <svg x-show="!mobileOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
       <svg x-show="mobileOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
   </div>
 
   <!-- Mobile Menu -->
-  <div x-show="mobileOpen" x-cloak class="lg:hidden border-t border-white/5 px-4 py-4 space-y-1" style="background:rgba(4,15,12,0.98);">
+  <div id="mobile-menu" x-show="mobileOpen" x-cloak class="lg:hidden border-t border-white/5 px-4 py-4 space-y-1" style="background:rgba(4,15,12,0.98);">
     <a href="#features" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Features</a>
     <a href="#platform" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Platform</a>
     <a href="#journeys" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Journeys</a>
@@ -297,12 +326,15 @@ tailwind.config = {
     @endif
     <div class="pt-3 flex flex-col gap-2">
       <a href="{{ route('login') }}" class="text-center py-2.5 text-sm text-gray-300 border border-white/10 rounded-lg">Sign In</a>
+      @if($registrationEnabled)
       <a href="{{ route('register') }}" class="text-center py-2.5 text-sm font-semibold text-black rounded-lg" style="background:#25D366;">Get Started Free</a>
+      @endif
     </div>
   </div>
 </nav>
 
 <!-- ===== HERO ===== -->
+<main id="main-content">
 <section class="relative min-h-screen flex items-center pt-20 overflow-hidden noise hero-glow grid-pattern">
   <!-- Background elements -->
   <div class="absolute inset-0 z-0">
@@ -325,14 +357,21 @@ tailwind.config = {
       </h1>
 
       <p class="text-lg text-gray-400 leading-relaxed mb-8 max-w-xl">
-        Sell from chat, move contacts through journey pipelines, take bookings, and get paid — product catalogs, kanban CRM, team inbox, and M-Pesa in one platform. Go from signup to your first sale in as little as 15 minutes.
+        Sell from chat, move contacts through journey pipelines, take bookings, and get paid — product catalogs, kanban CRM, team inbox, and M-Pesa in one platform. Guided activation helps most teams send their first reply in about 15 minutes.
       </p>
 
       <div class="flex flex-wrap gap-3 mb-10">
+        @if($registrationEnabled)
         <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
           Start Free Today
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
         </a>
+        @else
+        <a href="{{ route('login') }}" class="inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
+          Sign In
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+        </a>
+        @endif
         <a href="#features" class="inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold text-white rounded-xl border border-white/10 hover:border-white/20 transition-all hover:bg-white/5">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           See Features
@@ -350,7 +389,7 @@ tailwind.config = {
         </div>
         <div>
           <div class="flex text-yellow-400 text-sm mb-0.5">★★★★★</div>
-          <p class="text-xs text-gray-500"><span class="text-white font-semibold">2,400+</span> businesses on ConvoConnect</p>
+          <p class="text-xs text-gray-500"><span class="text-white font-semibold">Built for teams</span> selling and supporting on WhatsApp</p>
         </div>
       </div>
     </div>
@@ -375,8 +414,8 @@ tailwind.config = {
             <div class="w-2 h-2 rounded-full" style="background:#25D366;"></div>
             <p class="text-xs text-gray-400">Campaign sent</p>
           </div>
-          <p class="text-sm font-semibold text-white">12,400 delivered</p>
-          <p class="text-xs text-gray-500 mt-0.5">89% read rate · 3 regions</p>
+          <p class="text-sm font-semibold text-white">Campaign delivered</p>
+          <p class="text-xs text-gray-500 mt-0.5">Delivery &amp; read analytics</p>
         </div>
       </div>
 
@@ -449,20 +488,20 @@ tailwind.config = {
 <section class="border-y border-white/5 py-8" style="background:rgba(37,211,102,0.03);">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-2 lg:grid-cols-4 gap-0">
     <div class="stat-item text-center px-6 py-4">
-      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">2B+</p>
-      <p class="text-sm text-gray-500">WhatsApp users reachable</p>
+      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">Meta</p>
+      <p class="text-sm text-gray-500">Official WhatsApp Business API</p>
     </div>
     <div class="stat-item text-center px-6 py-4">
-      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">100%</p>
-      <p class="text-sm text-gray-500">Official Meta API compliant</p>
+      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">3</p>
+      <p class="text-sm text-gray-500">Campaign channels: WhatsApp, SMS, email</p>
     </div>
     <div class="stat-item text-center px-6 py-4">
-      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">15 min</p>
-      <p class="text-sm text-gray-500">Average time to first reply</p>
+      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">~15 min</p>
+      <p class="text-sm text-gray-500">Guided path to first reply</p>
     </div>
     <div class="stat-item text-center px-6 py-4">
-      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">4.9★</p>
-      <p class="text-sm text-gray-500">Average customer rating</p>
+      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">38+</p>
+      <p class="text-sm text-gray-500">Automation node types in Flowmaker</p>
     </div>
   </div>
 </section>
@@ -474,7 +513,7 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Commerce + operations</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Everything to sell and<br/>support on WhatsApp</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Catalogs and checkout for social selling, plus journey pipelines, inbox, campaigns, bookings, and payments — one platform for your entire WhatsApp business.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">Catalogs and checkout for social selling, plus journey pipelines, inbox, multichannel campaigns, bookings, WhatsApp Forms, and payments — one platform for your entire WhatsApp business.</p>
     </div>
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -482,10 +521,10 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">👥</div>
         <h3 class="font-display font-700 text-lg mb-2">Shared Team Inbox</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Multi-agent inbox with Customer 360 — journeys, bookings, orders, and conversation context in one panel. AI Copilot suggests replies from your knowledge base.</p>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Multi-agent inbox with Customer 360 — journeys, bookings, orders, and conversation context in one panel. Agent Copilot surfaces knowledge-base replies and quick replies agents can accept or edit.</p>
         <ul class="space-y-2">
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Customer 360 unified sidebar</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>AI Copilot reply suggestions</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Knowledge-based Copilot suggestions</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Chat assignment & agent handover</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Bookings, catalog & store sidebars</li>
         </ul>
@@ -494,12 +533,12 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">📢</div>
         <h3 class="font-display font-700 text-lg mb-2">Campaigns & Broadcasts</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Three broadcast modes — file upload, contact groups, or quick phone lists — with delivery analytics and timezone-aware scheduling.</p>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Multichannel campaigns across WhatsApp, SMS, and email — file upload, contact groups, or quick lists — with delivery analytics and timezone-aware scheduling.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>File, group & quick broadcasts</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Pause, resume & CSV reports</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Geographic delivery analytics</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>API-triggered campaigns</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>WhatsApp, SMS &amp; email channels</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>File, group &amp; quick audiences</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Segments, scheduling &amp; analytics</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>API-triggered campaign sends</li>
         </ul>
       </div>
       <!-- Card 3 -->
@@ -523,7 +562,7 @@ tailwind.config = {
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Flow template library (payments, booking, support)</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>AI Flow Assistant — natural language to draft</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Visual no-code flow builder</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>M-Pesa, HTTP, catalog & AI nodes</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>38+ nodes: forms, bookings, payments &amp; AI</li>
         </ul>
       </div>
       <!-- Card 5 -->
@@ -531,22 +570,22 @@ tailwind.config = {
         <div class="absolute top-3 right-3 badge text-xs">New</div>
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.15);">📋</div>
         <h3 class="font-display font-700 text-lg mb-2">WhatsApp Flows</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Native interactive forms that open inside WhatsApp. No link. No redirect. Pure WhatsApp.</p>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Native interactive forms that open inside WhatsApp — then convert submissions into Flowmaker automations with booking and commerce prefills.</p>
         <ul class="space-y-2">
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Drag-and-drop form builder</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Multi-screen, all input types</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>One-click publish to Meta</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Automation on form submission</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Convert responses into automations</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Booking &amp; commerce data exchange</li>
         </ul>
       </div>
       <!-- Card 6 -->
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">📞</div>
         <h3 class="font-display font-700 text-lg mb-2">WhatsApp Calling</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Inbound and outbound voice calls via the official WhatsApp Business API. Full call analytics included.</p>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Inbound and outbound WhatsApp voice calls with AI-assisted greetings, post-call booking handoff, and call analytics.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Inbound & outbound voice calls</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Call routing & queuing</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Inbound &amp; outbound WhatsApp calls</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>AI voice context &amp; booking handoff</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Call analytics dashboard</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Agent performance reports</li>
         </ul>
@@ -555,11 +594,11 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">💰</div>
         <h3 class="font-display font-700 text-lg mb-2">Invoices & Payments</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Share public invoice pages, collect M-Pesa or Stripe in-chat, and sync paid status back to contacts and journey stages automatically.</p>
+        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Share public invoice pages, collect M-Pesa or Paystack in-chat, and sync paid status back to contacts and journey stages automatically.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Public invoice & payment links</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Public invoice &amp; payment links</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>M-Pesa STK push integration</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Stripe card payment links</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Paystack commerce checkout</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Auto-update CRM on payment</li>
         </ul>
       </div>
@@ -572,7 +611,7 @@ tailwind.config = {
         <ul class="space-y-2">
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Multi-staff & department scheduling</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Embeddable booking widgets & events</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Google Calendar sync & REST API</li>
+          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Google Calendar sync</li>
           <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>WhatsApp reminder campaigns</li>
         </ul>
       </div>
@@ -617,12 +656,12 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">✨</div>
         <h3 class="font-display font-700 text-base mb-2">Agent Copilot</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">AI suggests on-brand replies from your knowledge base. Agents stay in control — accept, edit, or ignore every suggestion.</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Surfaces knowledge articles, quick replies, and greeting suggestions agents can accept or edit — with generative AI available in the Flow Assistant for building automations.</p>
       </div>
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">📊</div>
-        <h3 class="font-display font-700 text-base mb-2">Revenue Dashboard</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">Pipeline value, paid invoices, and journey stage metrics on your home screen — see WhatsApp revenue at a glance.</p>
+        <h3 class="font-display font-700 text-base mb-2">Revenue &amp; credits</h3>
+        <p class="text-sm text-gray-500 leading-relaxed">Pipeline value, paid invoices, messaging credits, and managed AI credit wallets on your home screen — see usage and WhatsApp revenue at a glance.</p>
       </div>
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">🔔</div>
@@ -632,7 +671,7 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">👥</div>
         <h3 class="font-display font-700 text-base mb-2">Organization Managers</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">Invite managers with scoped module access — they run inbox and campaigns without full owner permissions.</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Invite managers with scoped module access on seat-based plans — they run inbox and campaigns without full owner permissions.</p>
       </div>
     </div>
   </div>
@@ -644,7 +683,7 @@ tailwind.config = {
     <div>
       <div class="badge inline-flex mb-6">WhatsApp Native Forms</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 leading-tight mb-6">Forms that open<br/><span class="grad-text">inside WhatsApp.</span></h2>
-      <p class="text-gray-400 leading-relaxed mb-8">WhatsApp Flows are interactive, multi-screen forms built by Meta that open natively inside WhatsApp — no links, no browsers, no friction. ConvoConnect gives you a drag-and-drop builder and one-click publish.</p>
+      <p class="text-gray-400 leading-relaxed mb-8">WhatsApp Flows are interactive, multi-screen forms that open natively inside WhatsApp — no links, no browsers, no friction. ConvoConnect gives you a drag-and-drop builder, one-click Meta publish, and a bridge into Flowmaker for bookings and commerce.</p>
       <ul class="space-y-4 mb-8">
         <li class="flex items-start gap-3">
           <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style="background:rgba(37,211,102,0.15);">
@@ -669,8 +708,8 @@ tailwind.config = {
             <svg class="w-3.5 h-3.5" style="color:#25D366;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
           </div>
           <div>
-            <p class="font-semibold text-white text-sm">Trigger automation on submit</p>
-            <p class="text-sm text-gray-500">Every form submission fires a flow — send confirmations, update CRM, notify your team, or charge a payment.</p>
+            <p class="font-semibold text-white text-sm">Forms ↔ Flow Builder bridge</p>
+            <p class="text-sm text-gray-500">Convert submissions into automations with dynamic data exchange — prefill bookings, catalogs, and payment steps from form answers.</p>
           </div>
         </li>
         <li class="flex items-start gap-3">
@@ -683,7 +722,9 @@ tailwind.config = {
           </div>
         </li>
       </ul>
+      @if($registrationEnabled)
       <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-5 py-3 text-sm font-semibold text-black rounded-xl" style="background:#25D366;">Build Your First Flow →</a>
+      @endif
     </div>
 
     <!-- Form Builder Mockup -->
@@ -828,7 +869,9 @@ tailwind.config = {
             </div>
           </div>
         </div>
+        @if($registrationEnabled)
         <a href="{{ route('register') }}" class="inline-flex items-center gap-2 mt-8 px-5 py-3 text-sm font-semibold text-black rounded-xl" style="background:#25D366;">Start Your First Journey →</a>
+        @endif
       </div>
 
       <div class="relative">
@@ -940,7 +983,9 @@ tailwind.config = {
             </div>
           </div>
         </div>
+        @if($registrationEnabled)
         <a href="{{ route('register') }}" class="inline-flex items-center gap-2 mt-8 px-5 py-3 text-sm font-semibold text-black rounded-xl" style="background:#25D366;">Start Booking on WhatsApp →</a>
+        @endif
       </div>
 
       <!-- Booking widget mockup -->
@@ -1024,7 +1069,7 @@ tailwind.config = {
       <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">💳</div>
         <p class="font-display font-700 text-base mb-2">3. Invoice & Collect Payment</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Generate a PDF invoice and send a payment link in the same conversation. Accept M-Pesa STK or Stripe cards — confirmed in seconds.</p>
+        <p class="text-sm text-gray-500 leading-relaxed">Generate a PDF invoice and send a payment link in the same conversation. Accept M-Pesa STK or Paystack — confirmed in seconds.</p>
       </div>
     </div>
 
@@ -1059,7 +1104,7 @@ tailwind.config = {
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🧾</div>
             <div>
               <p class="text-sm font-semibold text-white mb-0.5">Checkout & payments</p>
-              <p class="text-sm text-gray-500">Customers checkout via WhatsApp message or auto-generated invoice. M-Pesa STK and Stripe links confirm payment and trigger next flow steps.</p>
+              <p class="text-sm text-gray-500">Customers checkout via WhatsApp message or auto-generated invoice. M-Pesa STK and Paystack confirm payment and trigger next flow steps.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
@@ -1070,7 +1115,9 @@ tailwind.config = {
             </div>
           </div>
         </div>
+        @if($registrationEnabled)
         <a href="{{ route('register') }}" class="inline-flex items-center gap-2 mt-8 px-5 py-3 text-sm font-semibold text-black rounded-xl" style="background:#25D366;">Start Selling on WhatsApp →</a>
+        @endif
       </div>
 
       <!-- Right: mockup -->
@@ -1120,7 +1167,7 @@ tailwind.config = {
               </div>
               <div class="flow-node px-3 py-3 text-center">
                 <span class="text-sm">💳</span>
-                <p class="text-xs font-semibold text-white mt-1">Stripe Link</p>
+                <p class="text-xs font-semibold text-white mt-1">Paystack</p>
                 <p class="text-xs text-gray-500">Card payment</p>
               </div>
             </div>
@@ -1154,7 +1201,7 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Workflow Automation</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Orchestrate every<br/>customer touchpoint</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Build sales, support, and onboarding flows visually — start from curated templates or describe what you need and let the AI Flow Assistant draft it for you.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">Build sales, support, and onboarding flows visually — start from curated templates, convert WhatsApp Forms into automations, or describe what you need and let the AI Flow Assistant draft it for you.</p>
     </div>
 
     <div class="grid lg:grid-cols-2 gap-12 items-center">
@@ -1202,47 +1249,47 @@ tailwind.config = {
 
       <!-- Node types -->
       <div class="space-y-3">
-        <h3 class="font-display font-700 text-xl mb-4">6 powerful node types</h3>
+        <h3 class="font-display font-700 text-xl mb-4">38+ automation nodes</h3>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
           <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">⚡</div>
           <div>
-            <p class="text-sm font-semibold text-white mb-0.5">Trigger Nodes</p>
-            <p class="text-xs text-gray-500">Keyword match, incoming message, button reply, flow submission, campaign delivery, scheduled time, or API call.</p>
+            <p class="text-sm font-semibold text-white mb-0.5">Triggers &amp; branching</p>
+            <p class="text-xs text-gray-500">Keywords, inbound messages, form submissions, waits, conditions, HTTP/webhooks, and scheduled steps.</p>
           </div>
         </div>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
           <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">💬</div>
           <div>
-            <p class="text-sm font-semibold text-white mb-0.5">Message Nodes</p>
-            <p class="text-xs text-gray-500">Send text, images, video, documents, buttons, lists, and approved Meta message templates.</p>
+            <p class="text-sm font-semibold text-white mb-0.5">Messaging &amp; WhatsApp Forms</p>
+            <p class="text-xs text-gray-500">Text, media, lists, templates, questions, and native WhatsApp Flow forms with data exchange.</p>
           </div>
         </div>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
-          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">🔀</div>
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">🛍️</div>
           <div>
-            <p class="text-sm font-semibold text-white mb-0.5">Condition Nodes</p>
-            <p class="text-xs text-gray-500">Branch based on contact fields, message content, time of day, payment status, or previous flow steps.</p>
+            <p class="text-sm font-semibold text-white mb-0.5">Commerce &amp; payments</p>
+            <p class="text-xs text-gray-500">Catalogs, order status, pricing, M-Pesa and payment requests that resume the flow on success.</p>
           </div>
         </div>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
-          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">⏱️</div>
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">📅</div>
           <div>
-            <p class="text-sm font-semibold text-white mb-0.5">Delay & Wait Nodes</p>
-            <p class="text-xs text-gray-500">Wait minutes, hours, or days. Wait for a user reply. Wait for a specific keyword or event before continuing.</p>
+            <p class="text-sm font-semibold text-white mb-0.5">Bookings &amp; events</p>
+            <p class="text-xs text-gray-500">Appointment and event nodes that collect availability, confirm slots, and sync with Google Calendar.</p>
           </div>
         </div>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
-          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">🔗</div>
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">🗂️</div>
           <div>
-            <p class="text-sm font-semibold text-white mb-0.5">Action & Webhook Nodes</p>
-            <p class="text-xs text-gray-500">Update contact fields, tag contacts, assign to agent, send webhook to your system, or trigger another flow.</p>
+            <p class="text-sm font-semibold text-white mb-0.5">CRM &amp; assignment</p>
+            <p class="text-xs text-gray-500">Update contacts, assign agents or groups, enroll journeys, and write to your flow datastore.</p>
           </div>
         </div>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
           <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">🤖</div>
           <div>
-            <p class="text-sm font-semibold text-white mb-0.5">AI Flow Nodes</p>
-            <p class="text-xs text-gray-500">Deflect tier-1 FAQs using your docs and knowledge base — then hand off to an agent in the shared inbox when needed.</p>
+            <p class="text-sm font-semibold text-white mb-0.5">AI Flow Assistant &amp; AI nodes</p>
+            <p class="text-xs text-gray-500">Draft flows in natural language with managed AI credits, then run knowledge-based AI steps with human handover.</p>
           </div>
         </div>
       </div>
@@ -1256,57 +1303,50 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Integrations</div>
       <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Connects with<br/>your stack</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">ConvoConnect plugs into your existing tools — e-commerce, payments, email, and more. The Integration Hub centralizes connector setup in one place.</p>
+      <p class="text-gray-400 max-w-xl mx-auto">Connect the tools that power selling and outreach — Meta Embedded Signup, store sync, commerce payments, SMS, email, and an embeddable WhatsApp widget.</p>
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
-        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(149,191,71,0.1);">🛍️</div>
-        <div><p class="text-sm font-semibold text-white">Shopify</p><p class="text-xs text-gray-500 mt-0.5">Products, orders & abandoned cart</p></div>
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(149,191,71,0.1);" aria-hidden="true">🛍️</div>
+        <div><p class="text-sm font-semibold text-white">Shopify</p><p class="text-xs text-gray-500 mt-0.5">Products, orders &amp; webhooks</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
-        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(150,88,183,0.1);">🛒</div>
-        <div><p class="text-sm font-semibold text-white">WooCommerce</p><p class="text-xs text-gray-500 mt-0.5">Products, orders & webhooks</p></div>
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(150,88,183,0.1);" aria-hidden="true">🛒</div>
+        <div><p class="text-sm font-semibold text-white">WooCommerce</p><p class="text-xs text-gray-500 mt-0.5">Products, orders &amp; webhooks</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
-        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(99,91,255,0.1);">💳</div>
-        <div><p class="text-sm font-semibold text-white">Stripe</p><p class="text-xs text-gray-500 mt-0.5">Card payments & subscriptions</p></div>
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(0,150,64,0.1);" aria-hidden="true">📱</div>
+        <div><p class="text-sm font-semibold text-white">M-Pesa</p><p class="text-xs text-gray-500 mt-0.5">STK push commerce payments</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
-        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(0,150,64,0.1);">📱</div>
-        <div><p class="text-sm font-semibold text-white">M-Pesa</p><p class="text-xs text-gray-500 mt-0.5">STK push & C2B payments</p></div>
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(0,174,239,0.1);" aria-hidden="true">💳</div>
+        <div><p class="text-sm font-semibold text-white">Paystack</p><p class="text-xs text-gray-500 mt-0.5">Card checkout for invoices</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
-        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(245,47,47,0.1);">📨</div>
-        <div><p class="text-sm font-semibold text-white">Twilio SMS</p><p class="text-xs text-gray-500 mt-0.5">SMS fallback & notifications</p></div>
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(99,91,255,0.1);" aria-hidden="true">💳</div>
+        <div><p class="text-sm font-semibold text-white">Stripe</p><p class="text-xs text-gray-500 mt-0.5">SaaS plan subscriptions</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
-        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(37,99,235,0.1);">📧</div>
-        <div><p class="text-sm font-semibold text-white">SMTP Email</p><p class="text-xs text-gray-500 mt-0.5">Transactional email delivery</p></div>
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(245,47,47,0.1);" aria-hidden="true">📨</div>
+        <div><p class="text-sm font-semibold text-white">Twilio SMS</p><p class="text-xs text-gray-500 mt-0.5">SMS campaigns &amp; alerts</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
-        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(24,119,242,0.1);">🔵</div>
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(37,99,235,0.1);" aria-hidden="true">📧</div>
+        <div><p class="text-sm font-semibold text-white">SMTP Email</p><p class="text-xs text-gray-500 mt-0.5">Email campaigns &amp; notices</p></div>
+      </div>
+      <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(24,119,242,0.1);" aria-hidden="true">🔵</div>
         <div><p class="text-sm font-semibold text-white">Meta Embedded</p><p class="text-xs text-gray-500 mt-0.5">One-click WhatsApp onboarding</p></div>
-      </div>
-      <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
-        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(37,211,102,0.1);">🌐</div>
-        <div><p class="text-sm font-semibold text-white">Chat Widget</p><p class="text-xs text-gray-500 mt-0.5">Embeddable WhatsApp button</p></div>
       </div>
     </div>
 
     <!-- Widget code snippet -->
     <div class="max-w-2xl mx-auto">
-      <p class="text-sm text-gray-400 mb-3 font-medium">Add WhatsApp chat to your website in 2 lines:</p>
+      <p class="text-sm text-gray-400 mb-3 font-medium">Add the WhatsApp chat widget with one script tag:</p>
       <div class="code-block p-4 overflow-x-auto">
-        <pre class="text-sm"><code><span style="color:#6a9955;">// Paste before &lt;/body&gt;</span>
-<span style="color:#569cd6;">&lt;script</span> <span style="color:#9cdcfe;">src</span><span style="color:#d4d4d4;">=</span><span style="color:#ce9178;">"https://cdn.convoconnect.io/widget.js"</span><span style="color:#569cd6;">&gt;&lt;/script&gt;</span>
-<span style="color:#569cd6;">&lt;script&gt;</span>
-  <span style="color:#dcdcaa;">ConvoWidget</span><span style="color:#d4d4d4;">.</span><span style="color:#dcdcaa;">init</span><span style="color:#d4d4d4;">({</span>
-    <span style="color:#9cdcfe;">phone</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"254700000000"</span><span style="color:#d4d4d4;">,</span>
-    <span style="color:#9cdcfe;">message</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"Hi! I'd like to know more."</span><span style="color:#d4d4d4;">,</span>
-    <span style="color:#9cdcfe;">color</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"#25D366"</span>
-  <span style="color:#d4d4d4;">});</span>
-<span style="color:#569cd6;">&lt;/script&gt;</span></code></pre>
+        <pre class="text-sm"><code><span style="color:#6a9955;">// Paste before &lt;/body&gt; — widget ID from WhatsApp Widget settings</span>
+<span style="color:#569cd6;">&lt;script</span> <span style="color:#9cdcfe;">src</span><span style="color:#d4d4d4;">=</span><span style="color:#ce9178;">"{{ url('/popup/whatsapp') }}?id=YOUR_WIDGET_ID"</span><span style="color:#569cd6;">&gt;&lt;/script&gt;</span></code></pre>
       </div>
     </div>
   </div>
@@ -1319,68 +1359,65 @@ tailwind.config = {
   <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Developer API</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Build anything<br/><span class="grad-text">with our REST API</span></h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Every feature available in the UI is also accessible via API. Send messages, manage contacts, trigger campaigns, book appointments, and collect payments programmatically.</p>
+      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Automate with<br/><span class="grad-text">developer APIs</span></h2>
+      <p class="text-gray-400 max-w-xl mx-auto">Send WhatsApp messages, manage contacts, trigger campaigns, sync catalogs, and collect invoice payments programmatically with plan-gated API access.</p>
     </div>
 
     <div class="grid lg:grid-cols-2 gap-12 items-start">
       <!-- Endpoints list -->
       <div class="space-y-2">
-        <h3 class="font-display font-700 text-lg mb-5">Core endpoints</h3>
+        <h3 class="font-display font-700 text-lg mb-5">Available endpoints</h3>
         <div class="space-y-2">
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/v1/messages/send</code>
+            <code class="text-sm text-gray-300">/api/wpbox/sendmessage</code>
             <span class="text-xs text-gray-600 ml-auto">Send message</span>
           </div>
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/v1/messages/template</code>
+            <code class="text-sm text-gray-300">/api/wpbox/sendtemplatemessage</code>
             <span class="text-xs text-gray-600 ml-auto">Send template</span>
           </div>
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(59,130,246,0.15);color:#60a5fa;">GET</span>
-            <code class="text-sm text-gray-300">/v1/contacts</code>
+            <code class="text-sm text-gray-300">/api/wpbox/getContacts</code>
             <span class="text-xs text-gray-600 ml-auto">List contacts</span>
           </div>
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/v1/contacts</code>
+            <code class="text-sm text-gray-300">/api/wpbox/makeContact</code>
             <span class="text-xs text-gray-600 ml-auto">Create contact</span>
           </div>
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/v1/campaigns/trigger</code>
+            <code class="text-sm text-gray-300">/api/wpbox/sendcampaigns</code>
             <span class="text-xs text-gray-600 ml-auto">Trigger campaign</span>
           </div>
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/v1/flows/trigger</code>
-            <span class="text-xs text-gray-600 ml-auto">Trigger automation flow</span>
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(59,130,246,0.15);color:#60a5fa;">GET</span>
+            <code class="text-sm text-gray-300">/api/v1/catalog/catalogs</code>
+            <span class="text-xs text-gray-600 ml-auto">List catalogs</span>
           </div>
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/api/bookings/appointments</code>
-            <span class="text-xs text-gray-600 ml-auto">Create booking</span>
+            <code class="text-sm text-gray-300">/api/v1/catalog/catalogs/{id}/sync</code>
+            <span class="text-xs text-gray-600 ml-auto">Sync catalog</span>
+          </div>
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
+            <code class="text-sm text-gray-300">/api/invoice/{uuid}/pay</code>
+            <span class="text-xs text-gray-600 ml-auto">Initiate payment</span>
           </div>
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(59,130,246,0.15);color:#60a5fa;">GET</span>
-            <code class="text-sm text-gray-300">/api/bookings/availability</code>
-            <span class="text-xs text-gray-600 ml-auto">Get available slots</span>
-          </div>
-          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/v1/payments/mpesa</code>
-            <span class="text-xs text-gray-600 ml-auto">Initiate M-Pesa STK</span>
-          </div>
-          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(251,146,60,0.15);color:#fb923c;">DEL</span>
-            <code class="text-sm text-gray-300">/v1/contacts/:id</code>
-            <span class="text-xs text-gray-600 ml-auto">Delete contact</span>
+            <code class="text-sm text-gray-300">/api/wpbox/me</code>
+            <span class="text-xs text-gray-600 ml-auto">API account info</span>
           </div>
         </div>
         <div class="pt-4">
+          @if($registrationEnabled)
           <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-black rounded-xl" style="background:#25D366;">Get Your API Key →</a>
+          @endif
         </div>
       </div>
 
@@ -1389,7 +1426,7 @@ tailwind.config = {
         <h3 class="font-display font-700 text-lg mb-5">Send a message in seconds</h3>
         <div class="code-block p-5 overflow-x-auto">
           <pre class="text-sm leading-relaxed"><code><span style="color:#569cd6;">const</span> <span style="color:#9cdcfe;">response</span> <span style="color:#d4d4d4;">= </span><span style="color:#569cd6;">await</span> <span style="color:#dcdcaa;">fetch</span><span style="color:#d4d4d4;">(</span>
-  <span style="color:#ce9178;">"https://api.convoconnect.io/v1/messages/send"</span><span style="color:#d4d4d4;">,</span>
+  <span style="color:#ce9178;">"{{ url('/api/wpbox/sendmessage') }}"</span><span style="color:#d4d4d4;">,</span>
   <span style="color:#d4d4d4;">{</span>
     <span style="color:#9cdcfe;">method</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"POST"</span><span style="color:#d4d4d4;">,</span>
     <span style="color:#9cdcfe;">headers</span><span style="color:#d4d4d4;">: {</span>
@@ -1397,22 +1434,18 @@ tailwind.config = {
       <span style="color:#ce9178;">"Content-Type"</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"application/json"</span>
     <span style="color:#d4d4d4;">},</span>
     <span style="color:#9cdcfe;">body</span><span style="color:#d4d4d4;">: </span><span style="color:#dcdcaa;">JSON</span><span style="color:#d4d4d4;">.</span><span style="color:#dcdcaa;">stringify</span><span style="color:#d4d4d4;">({</span>
-      <span style="color:#9cdcfe;">to</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"254700000000"</span><span style="color:#d4d4d4;">,</span>
-      <span style="color:#9cdcfe;">type</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"text"</span><span style="color:#d4d4d4;">,</span>
-      <span style="color:#9cdcfe;">text</span><span style="color:#d4d4d4;">: {</span>
-        <span style="color:#9cdcfe;">body</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"Hello from ConvoConnect! 👋"</span>
-      <span style="color:#d4d4d4;">}</span>
+      <span style="color:#9cdcfe;">phone</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"254700000000"</span><span style="color:#d4d4d4;">,</span>
+      <span style="color:#9cdcfe;">message</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"Hello from {{ $siteName }}!"</span>
     <span style="color:#d4d4d4;">})</span>
   <span style="color:#d4d4d4;">}</span>
 <span style="color:#d4d4d4;">);</span>
 
 <span style="color:#569cd6;">const</span> <span style="color:#9cdcfe;">data</span> <span style="color:#d4d4d4;">= </span><span style="color:#569cd6;">await</span> <span style="color:#9cdcfe;">response</span><span style="color:#d4d4d4;">.</span><span style="color:#dcdcaa;">json</span><span style="color:#d4d4d4;">();</span>
-<span style="color:#dcdcaa;">console</span><span style="color:#d4d4d4;">.</span><span style="color:#dcdcaa;">log</span><span style="color:#d4d4d4;">(</span><span style="color:#9cdcfe;">data</span><span style="color:#d4d4d4;">.</span><span style="color:#9cdcfe;">messageId</span><span style="color:#d4d4d4;">);</span>
-<span style="color:#6a9955;">// → "wamid.HBgN2547..."</span></code></pre>
+<span style="color:#dcdcaa;">console</span><span style="color:#d4d4d4;">.</span><span style="color:#dcdcaa;">log</span><span style="color:#d4d4d4;">(</span><span style="color:#9cdcfe;">data</span><span style="color:#d4d4d4;">);</span></code></pre>
         </div>
         <div class="mt-4 flex items-center gap-3 p-3 rounded-xl" style="background:rgba(37,211,102,0.05);border:1px solid rgba(37,211,102,0.1);">
           <div class="w-2 h-2 rounded-full flex-shrink-0" style="background:#25D366;"></div>
-          <p class="text-xs text-gray-400">Webhooks available for inbound messages, delivery receipts, flow submissions, and payment events.</p>
+          <p class="text-xs text-gray-400">Catalog, invoice, and messaging APIs are plan-gated. Webhooks support inbound WhatsApp events and payment callbacks.</p>
         </div>
       </div>
     </div>
@@ -1455,7 +1488,7 @@ tailwind.config = {
           <p class="text-xs text-gray-500 mt-2 leading-relaxed">{{ $plan->description }}</p>
           @endif
         </div>
-        @if(!config('settings.disable_registration_page', false))
+        @if($registrationEnabled)
         <a href="{{ route('register') }}" class="block w-full text-center py-2.5 rounded-xl text-sm font-semibold text-black transition-all hover:opacity-90 mb-6" style="background:#25D366;">Get Started</a>
         @endif
         @if(count($features) > 0)
@@ -1483,7 +1516,7 @@ tailwind.config = {
           <p class="text-xs text-gray-600 mt-2 leading-relaxed">{{ $plan->description }}</p>
           @endif
         </div>
-        @if(!config('settings.disable_registration_page', false))
+        @if($registrationEnabled)
         <a href="{{ route('register') }}" class="block w-full text-center py-2.5 rounded-xl border border-white/10 text-sm font-semibold text-white hover:bg-white/5 transition-all mb-6">Get Started</a>
         @endif
         @if(count($features) > 0)
@@ -1552,121 +1585,121 @@ tailwind.config = {
       <h2 class="font-display text-4xl sm:text-5xl font-800">Common questions</h2>
     </div>
 
-    <div class="space-y-2" x-data="{ open: null }">
+    <div class="space-y-2">
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 1 ? null : 1">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 1 ? null : 1" :aria-expanded="(faqOpen === 1).toString()" aria-controls="faq-panel-1" id="faq-button-1">
           <span class="text-sm font-semibold text-white">Do I need a WhatsApp Business API account to use ConvoConnect?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 1 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 1 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 1" x-cloak class="px-6 pb-4">
+        <div id="faq-panel-1" x-show="faqOpen === 1" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-1">
           <p class="text-sm text-gray-400 leading-relaxed">No — ConvoConnect is built on the official Meta WhatsApp Business Cloud API. Our Activation OS walks you through Embedded Signup, team setup, and your first flow — most businesses send their first reply within 15 minutes.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 2 ? null : 2">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 2 ? null : 2" :aria-expanded="(faqOpen === 2).toString()" aria-controls="faq-panel-2" id="faq-button-2">
           <span class="text-sm font-semibold text-white">Can I connect multiple WhatsApp numbers to one account?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 2 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 2 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 2" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Absolutely. On the Growth plan you can connect up to 3 numbers, and on Scale there's no limit. Each number has its own inbox, flows, campaigns, and contacts — but you manage everything from a single dashboard.</p>
+        <div id="faq-panel-2" x-show="faqOpen === 2" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-2">
+          <p class="text-sm text-gray-400 leading-relaxed">Yes — plan limits determine how many WhatsApp numbers you can connect. Each number has its own inbox, flows, campaigns, and contacts, and you manage everything from a single dashboard. Check the pricing section for current plan entitlements.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 3 ? null : 3">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 3 ? null : 3" :aria-expanded="(faqOpen === 3).toString()" aria-controls="faq-panel-3" id="faq-button-3">
           <span class="text-sm font-semibold text-white">What exactly are WhatsApp Flows — are they different from chatbots?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 3 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 3 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 3" x-cloak class="px-6 pb-4">
+        <div id="faq-panel-3" x-show="faqOpen === 3" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-3">
           <p class="text-sm text-gray-400 leading-relaxed">Yes — completely different. WhatsApp Flows are interactive, multi-screen forms that open inside WhatsApp itself (like an app within WhatsApp). They support text inputs, dropdowns, radio buttons, date pickers, checkboxes, and opt-ins. Our Flowmaker automations are the chatbot/workflow engine that decides when to send a message or trigger a WhatsApp Flow.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 4 ? null : 4">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 4 ? null : 4" :aria-expanded="(faqOpen === 4).toString()" aria-controls="faq-panel-4" id="faq-button-4">
           <span class="text-sm font-semibold text-white">Which integrations are currently available?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 4 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 4 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 4" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">We support Shopify, WooCommerce, Stripe, M-Pesa (STK push and C2B), Google Calendar, Twilio SMS, SMTP email, and our embeddable WhatsApp chat widget. The Integration Hub lets owners connect and manage these from one dashboard. Our REST API and webhooks also let you build custom integrations.</p>
+        <div id="faq-panel-4" x-show="faqOpen === 4" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-4">
+          <p class="text-sm text-gray-400 leading-relaxed">We support Shopify and WooCommerce catalog sync, M-Pesa and Paystack for commerce payments, Stripe for SaaS subscriptions, Google Calendar for bookings, Twilio SMS, SMTP email, Meta Embedded Signup, and our embeddable WhatsApp chat widget. Messaging and catalog APIs plus payment webhooks let you build custom integrations.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 5 ? null : 5">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 5 ? null : 5" :aria-expanded="(faqOpen === 5).toString()" aria-controls="faq-panel-5" id="faq-button-5">
           <span class="text-sm font-semibold text-white">Do you support M-Pesa payments?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 5 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 5 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 5" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Yes. We have native M-Pesa STK push integration for Kenya and East Africa. For international businesses, we integrate with Stripe for card payments and payment links that can be sent via WhatsApp. Both payment methods trigger confirmation messages and can kick off automation flows on success or failure.</p>
+        <div id="faq-panel-5" x-show="faqOpen === 5" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-5">
+          <p class="text-sm text-gray-400 leading-relaxed">Yes. Native M-Pesa STK push handles commerce payments for Kenya and East Africa, and Paystack supports card checkout on invoices. Successful payments trigger confirmation messages and can resume automation flows. Stripe is used for ConvoConnect SaaS subscriptions, not in-chat commerce checkout.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 6 ? null : 6">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 6 ? null : 6" :aria-expanded="(faqOpen === 6).toString()" aria-controls="faq-panel-6" id="faq-button-6">
           <span class="text-sm font-semibold text-white">Is there a free trial? Do I need a credit card?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 6 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 6 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 6" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Yes — create a free account and explore ConvoConnect on the Starter plan: team inbox, contacts, and flow builder. No credit card required. Upgrade anytime when you need campaigns, catalog commerce, or higher limits.</p>
+        <div id="faq-panel-6" x-show="faqOpen === 6" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-6">
+          <p class="text-sm text-gray-400 leading-relaxed">You can create an account and explore available plans in the pricing section. Features, messaging credits, managed AI credits, and seat limits depend on the plan you choose — upgrade anytime as you need campaigns, catalog commerce, or higher limits.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 7 ? null : 7">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 7 ? null : 7" :aria-expanded="(faqOpen === 7).toString()" aria-controls="faq-panel-7" id="faq-button-7">
           <span class="text-sm font-semibold text-white">How is ConvoConnect different from Meta's Business Agent?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 7 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 7 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 7" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Meta's Business Agent handles simple FAQ support. ConvoConnect is a full social commerce platform: sell from catalog sidebars and branded shops, run journey pipelines and file/group/quick campaigns, take bookings, manage a Customer 360 inbox with AI Copilot, collect M-Pesa and Stripe payments, and track revenue — with AI as one step in your flows, not a black-box replacement for your stack.</p>
+        <div id="faq-panel-7" x-show="faqOpen === 7" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-7">
+          <p class="text-sm text-gray-400 leading-relaxed">Meta's Business Agent handles simple FAQ support. ConvoConnect is a full social commerce platform: sell from catalog sidebars and branded shops, run journey pipelines and multichannel campaigns (WhatsApp, SMS, email), take bookings, manage a Customer 360 inbox with knowledge-based Copilot suggestions, collect M-Pesa and Paystack payments, and track revenue — with AI Flow Assistant and AI nodes as tools you control, not a black-box replacement for your stack.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 8 ? null : 8">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 8 ? null : 8" :aria-expanded="(faqOpen === 8).toString()" aria-controls="faq-panel-8" id="faq-button-8">
           <span class="text-sm font-semibold text-white">How does the booking system work?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 8 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 8 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 8" x-cloak class="px-6 pb-4">
+        <div id="faq-panel-8" x-show="faqOpen === 8" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-8">
           <p class="text-sm text-gray-400 leading-relaxed">Set up bookable services, departments, and staff with working hours. Share a public booking page or embed a widget on your website. Customers pick services, staff, and available time slots. Bookings sync to Google Calendar, appear in the chat sidebar, and trigger automated WhatsApp reminder campaigns. You can also run events with seat capacity and registrations.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 9 ? null : 9">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 9 ? null : 9" :aria-expanded="(faqOpen === 9).toString()" aria-controls="faq-panel-9" id="faq-button-9">
           <span class="text-sm font-semibold text-white">What campaign broadcast types are available?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 9 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 9 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 9" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Three modes: <strong class="text-gray-300">File broadcast</strong> — upload a CSV/Excel with per-row template variables mapped to contact fields. <strong class="text-gray-300">Group broadcast</strong> — send to an existing contact group or all subscribed contacts. <strong class="text-gray-300">Quick broadcast</strong> — paste a list of phone numbers for ad-hoc sends. All support scheduling, pause/resume, delivery analytics, and geographic breakdowns.</p>
+        <div id="faq-panel-9" x-show="faqOpen === 9" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-9">
+          <p class="text-sm text-gray-400 leading-relaxed">Campaigns run across WhatsApp, SMS, and email. Audience modes include <strong class="text-gray-300">file</strong> (CSV/Excel with variables), <strong class="text-gray-300">group</strong> (contact groups or subscribers), and <strong class="text-gray-300">quick</strong> (pasted phone lists). All support segments, scheduling, pause/resume, delivery analytics, and API-triggered sends.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 10 ? null : 10">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 10 ? null : 10" :aria-expanded="(faqOpen === 10).toString()" aria-controls="faq-panel-10" id="faq-button-10">
           <span class="text-sm font-semibold text-white">Can I sell products directly in WhatsApp chat?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 10 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 10 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 10" x-cloak class="px-6 pb-4">
-          <p class="text-sm text-gray-400 leading-relaxed">Yes. Build product catalogs and branded shop pages, then sell from the inbox catalog sidebar — search products and send shop links without leaving the conversation. Catalogs sync from Shopify, WooCommerce, Excel, or your own API. Customers checkout via WhatsApp or receive a public invoice page with M-Pesa/Stripe payment links that sync back to your CRM.</p>
+        <div id="faq-panel-10" x-show="faqOpen === 10" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-10">
+          <p class="text-sm text-gray-400 leading-relaxed">Yes. Build product catalogs and branded shop pages, then sell from the inbox catalog sidebar — search products and send shop links without leaving the conversation. Catalogs sync from Shopify, WooCommerce, Excel, or your own API. Customers checkout via WhatsApp or receive a public invoice page with M-Pesa or Paystack payment that syncs back to your CRM.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 11 ? null : 11">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 11 ? null : 11" :aria-expanded="(faqOpen === 11).toString()" aria-controls="faq-panel-11" id="faq-button-11">
           <span class="text-sm font-semibold text-white">What are flow templates and the AI Flow Assistant?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 11 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 11 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 11" x-cloak class="px-6 pb-4">
+        <div id="faq-panel-11" x-show="faqOpen === 11" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-11">
           <p class="text-sm text-gray-400 leading-relaxed">Flow templates are pre-built automations for common use cases — payment reminders, booking confirmations, support triage, and more. Install one in a click, then customize. The AI Flow Assistant lets you describe what you want in plain language and generates a draft flow you review and publish — no blank canvas required.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 12 ? null : 12">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 12 ? null : 12" :aria-expanded="(faqOpen === 12).toString()" aria-controls="faq-panel-12" id="faq-button-12">
           <span class="text-sm font-semibold text-white">Can I invite managers without giving them full owner access?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 12 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 12 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 12" x-cloak class="px-6 pb-4">
+        <div id="faq-panel-12" x-show="faqOpen === 12" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-12">
           <p class="text-sm text-gray-400 leading-relaxed">Yes. Organization managers get scoped access to specific modules — like inbox, campaigns, or flows — without billing or WhatsApp setup permissions. They see Customer 360, Copilot suggestions, and revenue widgets based on what you grant them. Owners keep control of activation, integrations, and account settings.</p>
         </div>
       </div>
       <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
-        <button class="w-full flex items-center justify-between px-6 py-4 text-left" @click="open = open === 13 ? null : 13">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 13 ? null : 13" :aria-expanded="(faqOpen === 13).toString()" aria-controls="faq-panel-13" id="faq-button-13">
           <span class="text-sm font-semibold text-white">What are journey pipelines?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="open === 13 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 13 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
-        <div x-show="open === 13" x-cloak class="px-6 pb-4">
+        <div id="faq-panel-13" x-show="faqOpen === 13" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-13">
           <p class="text-sm text-gray-400 leading-relaxed">Journey pipelines are kanban boards for your WhatsApp contacts. Create pipelines from templates (sales, support, e-commerce, events, and more), drag contacts between stages, and attach WhatsApp campaigns that fire when someone enters a stage. New contacts can auto-enroll, agents manage journeys from the inbox sidebar, and owners configure the app from the Journeys tab in Company Apps.</p>
         </div>
       </div>
@@ -1679,124 +1712,43 @@ tailwind.config = {
   <div class="absolute inset-0" style="background:radial-gradient(ellipse 80% 60% at 50% 50%, rgba(37,211,102,0.08) 0%, transparent 70%);"></div>
   <div class="absolute top-0 left-0 right-0 h-px" style="background:linear-gradient(90deg,transparent,rgba(37,211,102,0.3),transparent);"></div>
   <div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center">
-    <div class="badge inline-flex mb-6">No credit card required</div>
+    <div class="badge inline-flex mb-6">Guided activation</div>
     <h2 class="font-display text-5xl sm:text-6xl lg:text-7xl font-800 leading-tight mb-6" style="letter-spacing:-0.02em;">
       Start selling on<br/><span class="grad-text">WhatsApp today</span>
     </h2>
-    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Join 2,400+ brands selling on WhatsApp — journey pipelines, catalogs, campaigns, bookings, inbox, and payments in one social commerce platform.</p>
+    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Journey pipelines, catalogs, multichannel campaigns, bookings, inbox, and payments in one social commerce platform.</p>
     <div class="flex flex-wrap justify-center gap-4 mb-6">
+      @if($registrationEnabled)
       <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
         Start Free Today
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
       </a>
-      <a href="#" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-white rounded-xl border border-white/10 hover:border-white/20 transition-all hover:bg-white/5">Contact Sales</a>
+      @else
+      <a href="{{ route('login') }}" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
+        Sign In
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+      </a>
+      @endif
+      <a href="#pricing" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-white rounded-xl border border-white/10 hover:border-white/20 transition-all hover:bg-white/5">See Pricing</a>
     </div>
-    <p class="text-sm text-gray-600">No credit card required · Cancel anytime · Guided activation in ~15 minutes</p>
+    <p class="text-sm text-gray-600">Cancel anytime · Seat-based plans · Messaging &amp; managed AI credits</p>
   </div>
 </section>
-<!-- ===== BOOKING SECTION ===== -->
-<!-- ===== BOOKING SECTION ===== -->
-<!-- <section id="book" class="py-24 border-t border-white/5">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6">
-      <div class="text-center mb-12">
-        <div class="badge inline-flex mb-4">Book a Demo</div>
-        <h2 class="font-display text-4xl sm:text-5xl font-800 mb-3">Schedule a consultation</h2>
-        <p class="text-gray-400">Pick a time — we'll walk you through ConvoConnect live.</p>
-      </div>
+</main>
 
-      <div class="rounded-2xl overflow-hidden" style="border:1px solid rgba(37,211,102,0.15);">
-
-        {{-- Header --}}
-        <div class="flex items-center justify-between px-5 py-3.5" style="background:rgba(7,94,84,0.15);border-bottom:1px solid rgba(37,211,102,0.12);">
-          <div class="flex items-center gap-2.5">
-            <span class="w-2 h-2 rounded-full pulse-ring relative" style="background:#25D366;"></span>
-            <span class="text-sm font-semibold text-gray-200">ConvoConnect — Live Consultation</span>
-          </div>
-          <span class="badge">Free · 30 min</span>
-        </div>
-
-        {{-- iframe + loader --}}
-        <div class="relative" style="height:660px;">
-
-          {{-- Loader overlay --}}
-          <div id="bookingLoader" class="absolute inset-0 flex flex-col items-center justify-center gap-5 z-10" style="background:#040f0c; transition:opacity 0.5s ease;">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center" style="background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.2);">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="#25D366">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.105.547 4.085 1.505 5.805L0 24l6.388-1.493A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.815 9.815 0 01-5.003-1.368l-.359-.214-3.72.869.936-3.624-.236-.373A9.818 9.818 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/>
-              </svg>
-            </div>
-            <div class="text-center">
-              <p class="font-semibold text-white text-base mb-1">Loading your booking page</p>
-              <p class="text-sm text-gray-500">Setting up your consultation calendar</p>
-            </div>
-            <div class="w-48 rounded-full overflow-hidden" style="height:2px;background:rgba(37,211,102,0.1);">
-              <div id="loaderBar" style="height:100%;width:0%;background:linear-gradient(90deg,#25D366,#128C7E);transition:width 0.4s ease;border-radius:999px;"></div>
-            </div>
-            <div class="space-y-2.5 w-52">
-              <div id="lStep1" class="flex items-center gap-2.5" style="opacity:0;transform:translateY(4px);transition:all 0.3s ease;">
-                <div class="step-circle w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0" style="border-color:rgba(37,211,102,0.3);">
-                  <svg class="check-icon w-2.5 h-2.5" style="display:none;" fill="none" stroke="#25D366" stroke-width="2.5" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
-                </div>
-                <span class="step-text text-xs text-gray-500">Connecting to calendar</span>
-              </div>
-              <div id="lStep2" class="flex items-center gap-2.5" style="opacity:0;transform:translateY(4px);transition:all 0.3s ease;">
-                <div class="step-circle w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0" style="border-color:rgba(37,211,102,0.3);">
-                  <svg class="check-icon w-2.5 h-2.5" style="display:none;" fill="none" stroke="#25D366" stroke-width="2.5" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
-                </div>
-                <span class="step-text text-xs text-gray-500">Fetching available slots</span>
-              </div>
-              <div id="lStep3" class="flex items-center gap-2.5" style="opacity:0;transform:translateY(4px);transition:all 0.3s ease;">
-                <div class="step-circle w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0" style="border-color:rgba(37,211,102,0.3);">
-                  <svg class="check-icon w-2.5 h-2.5" style="display:none;" fill="none" stroke="#25D366" stroke-width="2.5" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
-                </div>
-                <span class="step-text text-xs text-gray-500">Ready to book</span>
-              </div>
-            </div>
-          </div>
-
-          {{-- Iframe --}}
-          <iframe
-            id="bookingIframe"
-            src="https://glady-volcanologic-resourcefully.ngrok-free.dev/book/254759608209/Consultation?token==MFlujqPkkzOFoxUrUWK7DhpaLVTNHmJZWx6UvrArea0c6b48"
-            width="100%"
-            height="100%"
-            frameborder="0"
-            title="Book a ConvoConnect consultation"
-            style="display:block;background:#040f0c;"
-          ></iframe>
-        </div>
-
-        {{-- Footer --}}
-        <div class="flex items-center justify-between px-5 py-2.5" style="background:rgba(7,94,84,0.08);border-top:1px solid rgba(37,211,102,0.08);">
-          <span class="text-xs text-gray-600">Powered by ConvoConnect</span>
-          <span class="text-xs text-gray-600">🔒 Secure &amp; encrypted</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
- -->
 <!-- ===== FOOTER ===== -->
 <footer class="border-t border-white/[0.05] py-16" style="background:#020907;">
   <div class="max-w-7xl mx-auto px-4 sm:px-6">
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
       <!-- Brand -->
       <div class="lg:col-span-2">
-        <a href="#" class="flex items-center gap-2.5 mb-4">
+        <a href="{{ route('landing') }}" class="flex items-center gap-2.5 mb-4">
           <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#25D366,#075E54);">
           <img src="{{ config('settings.logo', asset('favicon.ico')) }}" alt="{{ config('settings.site_name', config('app.name')) }}" class="w-full h-full object-contain p-1" />
           </div>
           <span class="font-display font-800 text-lg tracking-tight">{{ config('settings.site_name', config('app.name')) }}</span>
         </a>
         <p class="text-sm text-gray-500 leading-relaxed max-w-xs mb-5">The social commerce platform for WhatsApp — sell from chat, run journey pipelines, take bookings, and get paid. Built on the official Meta WhatsApp Business API.</p>
-        <div class="flex items-center gap-3">
-          <a href="#" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-          </a>
-          <a href="#" class="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-gray-500 hover:text-white hover:border-white/20 transition-all">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-          </a>
-        </div>
       </div>
       <!-- Product -->
       <div>
@@ -1816,19 +1768,20 @@ tailwind.config = {
       <div>
         <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">Company</p>
         <ul class="space-y-2.5">
-          <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">About</a></li>
-          <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Blog</a></li>
-          <li><a href="#" class="text-sm text-gray-400 hover:text-white transition-colors">Contact</a></li>
+          @if(isset($hasBlog) && $hasBlog)
+          <li><a href="/blog" class="text-sm text-gray-400 hover:text-white transition-colors">Blog</a></li>
+          @endif
           <li><a href="{{ route('policy.show') }}" class="text-sm text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
           <li><a href="{{ route('terms.show') }}" class="text-sm text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
           <li><a href="#faq" class="text-sm text-gray-400 hover:text-white transition-colors">FAQ</a></li>
+          <li><a href="#pricing" class="text-sm text-gray-400 hover:text-white transition-colors">Pricing</a></li>
         </ul>
       </div>
     </div>
 
     <!-- Bottom bar -->
     <div class="border-t border-white/[0.05] pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p class="text-xs text-gray-600">© {{ date('Y') }} ConvoConnect. All rights reserved.</p>
+      <p class="text-xs text-gray-600">© {{ date('Y') }} {{ $siteName }}. All rights reserved.</p>
       <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/[0.06]" style="background:rgba(37,211,102,0.04);">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.105.547 4.085 1.505 5.805L0 24l6.388-1.493A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.815 9.815 0 01-5.003-1.368l-.359-.214-3.72.869.936-3.624-.236-.373A9.818 9.818 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
         <p class="text-xs text-gray-500">Built on <span class="text-gray-300">Meta WhatsApp Business API</span></p>
@@ -1836,50 +1789,5 @@ tailwind.config = {
     </div>
   </div>
 </footer>
-<script src="https://glady-volcanologic-resourcefully.ngrok-free.dev/popup/whatsapp?id=0OPfclU79P"></script>
-<div id="embed-whatsapp-chat"></div>
-
-{{-- Booking loader script --}}
-<script>
-(function () {
-  const steps = [
-    { id: 'lStep1', barW: '40%', delay: 300 },
-    { id: 'lStep2', barW: '75%', delay: 900 },
-    { id: 'lStep3', barW: '95%', delay: 1600 },
-  ];
-
-  steps.forEach(({ id, barW, delay }) => {
-    setTimeout(() => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.style.opacity = '1';
-      el.style.transform = 'translateY(0)';
-      setTimeout(() => {
-        el.querySelector('.step-circle').style.background = 'rgba(37,211,102,0.15)';
-        el.querySelector('.step-circle').style.borderColor = '#25D366';
-        el.querySelector('.check-icon').style.display = 'block';
-        el.querySelector('.step-text').style.color = '#a7f3d0';
-        document.getElementById('loaderBar').style.width = barW;
-      }, 400);
-    }, delay);
-  });
-
-  const iframe = document.getElementById('bookingIframe');
-  const loader = document.getElementById('bookingLoader');
-
-  iframe.addEventListener('load', () => {
-    document.getElementById('loaderBar').style.width = '100%';
-    setTimeout(() => {
-      loader.style.opacity = '0';
-      loader.style.pointerEvents = 'none';
-    }, 600);
-  });
-
-  setTimeout(() => {
-    loader.style.opacity = '0';
-    loader.style.pointerEvents = 'none';
-  }, 8000);
-})();
-</script>
 </body>
 </html>

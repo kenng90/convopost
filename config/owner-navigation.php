@@ -79,7 +79,7 @@ return [
         'whatsappFormsMenu' => [
             'section' => 'automations',
             'id' => 'whatsappFormsMenu',
-            'name' => 'WhatsApp forms',
+            'name' => 'WhatsApp Forms',
             'icon' => 'ni ni-send text-purple',
             'route' => 'whatsapp-flows.index',
             'plugin' => 'whatsappflows',

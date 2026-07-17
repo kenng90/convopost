@@ -96,11 +96,30 @@ return [
                             'whatsappFlowId' => '',
                             'header' => 'Book Your Visit',
                             'footer' => "We'll confirm within 1 hour",
-                            'conditions' => [
-                                ['id' => 'cond-dept', 'fieldName' => 'department', 'operator' => 'equals', 'value' => 'selected'],
-                                ['id' => 'cond-date', 'fieldName' => 'appointment_date', 'operator' => 'equals', 'value' => 'chosen'],
-                                ['id' => 'cond-doctor', 'fieldName' => 'doctor', 'operator' => 'equals', 'value' => 'selected'],
-                                ['id' => 'cond-insurance', 'fieldName' => 'insurance', 'operator' => 'equals', 'value' => 'confirmed'],
+                            'conditions' => [],
+                        ],
+                    ],
+                ],
+                [
+                    'id' => 'book_appointment-1',
+                    'type' => 'book_appointment',
+                    'position' => ['x' => 1140, 'y' => 280],
+                    'data' => [
+                        'label' => 'Confirm appointment slot',
+                        'type' => 'book_appointment',
+                        'settings' => [
+                            'intake_mode' => 'form',
+                            'duration_minutes' => '30',
+                            'success_message' => 'Your appointment for {{booking_service}} on {{booking_date}} at {{booking_time}} is confirmed.',
+                            'formFieldMap' => [
+                                'serviceField' => 'select_3',
+                                'dateField' => 'date_4',
+                                'slotField' => 'slot',
+                            ],
+                            'serviceOptionMap' => [
+                                'general' => 'General Practice',
+                                'dental' => 'Dental',
+                                'lab' => 'Lab Tests',
                             ],
                         ],
                     ],
@@ -108,19 +127,31 @@ return [
                 [
                     'id' => 'message-1',
                     'type' => 'message',
-                    'position' => ['x' => 1140, 'y' => 240],
+                    'position' => ['x' => 1520, 'y' => 240],
                     'data' => [
                         'label' => 'Booking confirmation',
                         'type' => 'message',
                         'settings' => [
-                            'message' => "Your appointment is confirmed! ✅\n\nDepartment: {{department}}\nDate: {{appointment_date}}\nDoctor: {{doctor}}\n\nPlease review the pre-visit instructions attached.",
+                            'message' => "Your appointment is confirmed! ✅\n\nDepartment: {{form_department}}\nPreferred date: {{form_preferred_date}}\nService: {{booking_service}}\nWhen: {{booking_date}} at {{booking_time}}\n\nPlease review the pre-visit instructions attached.",
+                        ],
+                    ],
+                ],
+                [
+                    'id' => 'message-book-unavailable',
+                    'type' => 'message',
+                    'position' => ['x' => 1520, 'y' => 400],
+                    'data' => [
+                        'label' => 'No slots available',
+                        'type' => 'message',
+                        'settings' => [
+                            'message' => 'Sorry, we could not find an open slot for {{form_department}} near {{form_preferred_date}}. Reply *appointment* to try another day or talk to our team.',
                         ],
                     ],
                 ],
                 [
                     'id' => 'pdf-1',
                     'type' => 'pdf',
-                    'position' => ['x' => 1520, 'y' => 240],
+                    'position' => ['x' => 1900, 'y' => 240],
                     'data' => [
                         'label' => 'Pre-visit instructions',
                         'type' => 'pdf',
@@ -248,9 +279,13 @@ return [
                 ['id' => 'e-book-flow', 'source' => 'quick_replies-1', 'target' => 'whatsapp_flow-1', 'sourceHandle' => 'button-1'],
                 ['id' => 'e-talk-faq', 'source' => 'quick_replies-1', 'target' => 'triage-faq-question-initial', 'sourceHandle' => 'button-2'],
                 ['id' => 'e-results-q', 'source' => 'quick_replies-1', 'target' => 'question-1', 'sourceHandle' => 'button-3'],
-                ['id' => 'e-flow-confirm', 'source' => 'whatsapp_flow-1', 'target' => 'message-1', 'sourceHandle' => 'condition_0'],
+                ['id' => 'e-flow-book', 'source' => 'whatsapp_flow-1', 'target' => 'book_appointment-1', 'sourceHandle' => 'onFlowCompleted'],
+                ['id' => 'e-book-confirm', 'source' => 'book_appointment-1', 'target' => 'message-1', 'sourceHandle' => 'success'],
+                ['id' => 'e-book-unavailable', 'source' => 'book_appointment-1', 'target' => 'message-book-unavailable', 'sourceHandle' => 'unavailable'],
+                ['id' => 'e-book-error', 'source' => 'book_appointment-1', 'target' => 'message-book-unavailable', 'sourceHandle' => 'error'],
                 ['id' => 'e-confirm-pdf', 'source' => 'message-1', 'target' => 'pdf-1'],
                 ['id' => 'e-pdf-end', 'source' => 'pdf-1', 'target' => 'end-1'],
+                ['id' => 'e-unavailable-end', 'source' => 'message-book-unavailable', 'target' => 'end-1'],
                 ['id' => 'e-q-store', 'source' => 'question-1', 'target' => 'datastore-1'],
                 ['id' => 'e-store-http', 'source' => 'datastore-1', 'target' => 'http-1'],
                 ['id' => 'e-http-agent', 'source' => 'http-1', 'target' => 'assign_agent-1'],
@@ -984,7 +1019,14 @@ return [
         'form_bundle' => 'hospitality_booking',
         'video_url' => null,
         'setup_hint' => 'Link booking WhatsApp Flows, listing catalog, payment deposits, VIP group. FAQ paths use multi-turn AI loops. Save draft → Publish.',
-        'post_install_checklist' => ['Suite WhatsApp Flow ID', 'Safari listing catalog ID', 'Payment deposit settings', 'VIP Guests group', 'Publish'],
+        'post_install_checklist' => [
+            'Suite WhatsApp Flow ID',
+            'Safari listing catalog ID',
+            'Payment deposit settings',
+            'VIP Guests group',
+            'Forms capture inquiry — bind to PMS/HTTP or a bookable Source later',
+            'Publish',
+        ],
         'exclusive_on_match' => true,
         'flow_data' => FaqConversationLoop::mergeInto(
             FaqConversationLoop::mergeInto([
@@ -1048,12 +1090,7 @@ return [
                                 'whatsappFlowId' => '',
                                 'header' => 'Suite Reservation',
                                 'footer' => 'Complimentary airport transfer included',
-                                'conditions' => [
-                                    ['id' => 'cond-checkin', 'fieldName' => 'check_in_date', 'operator' => 'equals', 'value' => 'confirmed'],
-                                    ['id' => 'cond-checkout', 'fieldName' => 'check_out_date', 'operator' => 'equals', 'value' => 'confirmed'],
-                                    ['id' => 'cond-guests', 'fieldName' => 'guest_count', 'operator' => 'equals', 'value' => 'confirmed'],
-                                    ['id' => 'cond-requests', 'fieldName' => 'special_requests', 'operator' => 'equals', 'value' => 'submitted'],
-                                ],
+                                'conditions' => [],
                             ],
                         ],
                     ],
@@ -1188,9 +1225,11 @@ return [
                             'settings' => [
                                 'selectedTemplateId' => '',
                                 'parameters' => [
-                                    'guest_name' => '{{contact_name}}',
+                                    'guest_name' => '{{form_guest_name}}',
                                     'booking_reference' => '{{booking_result.reference}}',
-                                    'check_in_date' => '{{check_in_date}}',
+                                    'check_in_date' => '{{form_check_in_date}}',
+                                    'check_out_date' => '{{form_check_out_date}}',
+                                    'room_type' => '{{form_room_type}}',
                                 ],
                                 'fileUrl' => null,
                                 'videoUrl' => null,
@@ -1271,7 +1310,7 @@ return [
                     ['id' => 'e-tour-qr', 'source' => 'keyword_trigger-1', 'target' => 'quick_replies-1', 'sourceHandle' => 'keyword-kw2'],
                     ['id' => 'e-suite-flow', 'source' => 'list_message-1', 'target' => 'whatsapp_flow-1', 'sourceHandle' => 'section1-row3'],
                     ['id' => 'e-honeymoon-faq', 'source' => 'list_message-1', 'target' => 'honeymoon-faq-question-initial', 'sourceHandle' => 'section2-row1'],
-                    ['id' => 'e-flow-image', 'source' => 'whatsapp_flow-1', 'target' => 'image-1', 'sourceHandle' => 'condition_2'],
+                    ['id' => 'e-flow-image', 'source' => 'whatsapp_flow-1', 'target' => 'image-1', 'sourceHandle' => 'onFlowCompleted'],
                     ['id' => 'e-image-pdf', 'source' => 'image-1', 'target' => 'pdf-1'],
                     ['id' => 'e-pdf-template', 'source' => 'pdf-1', 'target' => 'template-1'],
                     ['id' => 'e-q-store', 'source' => 'question-1', 'target' => 'datastore-1'],

@@ -50,6 +50,12 @@ class WhatsappFlowComponentMapper
             return (string) $field['meta_name'];
         }
 
+        // Explicit answer key — preferred for booking Forms (service / preferred_date / slot).
+        // Do not confuse with data_source_key (options list id like service_options).
+        if (! empty($field['name']) && is_string($field['name'])) {
+            return (string) $field['name'];
+        }
+
         $type = $field['type'] ?? '';
         $fieldId = $field['id'] ?? '';
 
@@ -57,6 +63,7 @@ class WhatsappFlowComponentMapper
             return null;
         }
 
+        // Legacy dynamic fields often used data_source_key as the answer name.
         if (! empty($field['dynamic_data_source']) && ! empty($field['data_source_key'])) {
             return (string) $field['data_source_key'];
         }
@@ -168,13 +175,32 @@ class WhatsappFlowComponentMapper
                 $inputFields,
                 $currentScreenDataKeys,
                 $currentScreenDynamicKeys,
-                $usesEndpointFlow
+                $usesEndpointFlow,
+                $previousScreenFields
             ) {
                 $component = $this->convertFieldToComponent($field, $nextScreenId, $isTerminal, fn () => '');
                 $actionName = $component['on-click-action']['name'] ?? '';
                 $preservedPayload = $field['on_click_payload'] ?? null;
 
+                $resolvedActionName = $this->resolveFooterClickActionName(
+                    $field,
+                    $isTerminal,
+                    $usesEndpointFlow,
+                    $currentScreenDynamicKeys,
+                    (string) ($actionName ?: 'navigate')
+                );
+
+                // data_exchange must send current form answers to the endpoint (service/date),
+                // not next-screen option-list keys like slot_options (${data.slot_options}).
+                // Those bindings inflate this screen's data model and break INIT population.
+                $dataExchangePayload = $this->buildActionPayload(
+                    $inputFields,
+                    $previousScreenFields,
+                    $isTerminal
+                );
+
                 if (is_array($preservedPayload) && $preservedPayload !== []) {
+                    // Explicit payloads (imported / custom) keep navigate-style reconciliation.
                     $component['on-click-action']['payload'] = $this->reconcileNavigatePayload(
                         $preservedPayload,
                         $actionPayload,
@@ -182,42 +208,36 @@ class WhatsappFlowComponentMapper
                         $isTerminal
                     );
 
-                    $component['on-click-action']['name'] = $this->resolveFooterClickActionName(
-                        $field,
-                        $isTerminal,
-                        $usesEndpointFlow,
-                        $currentScreenDynamicKeys,
-                        (string) ($component['on-click-action']['name'] ?? 'navigate')
-                    );
+                    $component['on-click-action']['name'] = $resolvedActionName;
 
-                    if (! empty($field['navigate_next']) && ($component['on-click-action']['name'] ?? '') === 'navigate') {
+                    if (! empty($field['navigate_next']) && $resolvedActionName === 'navigate') {
                         $component['on-click-action']['next'] = [
                             'type' => 'screen',
                             'name' => (string) $field['navigate_next'],
                         ];
                     }
                 } else {
-                    $payloadToInject = empty($actionPayload) ? new \stdClass() : $actionPayload;
-
                     $hasMediaOnScreen = collect($inputFields)->contains(
                         fn ($f) => in_array($f['type'] ?? '', self::NAVIGATE_PAYLOAD_EXCLUDED, true)
                     );
 
                     if (! $isTerminal && $hasMediaOnScreen && $actionName === 'navigate') {
-                        $component['on-click-action']['name'] = 'data_exchange';
-                    } else {
-                        $component['on-click-action']['name'] = $this->resolveFooterClickActionName(
-                            $field,
-                            $isTerminal,
-                            $usesEndpointFlow,
-                            $currentScreenDynamicKeys,
-                            (string) ($component['on-click-action']['name'] ?? 'navigate')
-                        );
+                        $resolvedActionName = 'data_exchange';
                     }
 
-                    if ($isTerminal && $actionName === 'complete') {
+                    $component['on-click-action']['name'] = $resolvedActionName;
+
+                    // Default data_exchange payloads must send form answers (service/date),
+                    // not next-screen option-list keys like ${data.slot_options}.
+                    if ($resolvedActionName === 'data_exchange' && ! $isTerminal) {
+                        $payloadToInject = empty($dataExchangePayload) ? new \stdClass() : $dataExchangePayload;
+                    } else {
+                        $payloadToInject = empty($actionPayload) ? new \stdClass() : $actionPayload;
+                    }
+
+                    if ($isTerminal && $resolvedActionName === 'complete') {
                         $component['on-click-action']['payload'] = $payloadToInject;
-                    } elseif (! $isTerminal && in_array($component['on-click-action']['name'] ?? '', ['navigate', 'data_exchange'], true)) {
+                    } elseif (! $isTerminal && in_array($resolvedActionName, ['navigate', 'data_exchange'], true)) {
                         $component['on-click-action']['payload'] = $payloadToInject;
                     }
                 }
@@ -511,20 +531,20 @@ class WhatsappFlowComponentMapper
         return match ($type) {
             'heading' => [
                 'type' => 'TextHeading',
-                'text' => $field['label'] ?? '',
+                'text' => $this->displayText($field, 'Heading'),
             ],
             'subheading' => [
                 'type' => 'TextSubheading',
-                'text' => $field['label'] ?? '',
+                'text' => $this->displayText($field, 'Subheading'),
             ],
             'body' => array_filter([
                 'type' => 'TextBody',
-                'text' => $field['placeholder'] ?: ($field['label'] ?? ''),
+                'text' => $this->displayText($field, 'Body text'),
                 'markdown' => ($field['markdown'] ?? false) ? true : null,
             ], fn ($v) => $v !== null),
             'caption' => array_filter([
                 'type' => 'TextCaption',
-                'text' => $field['placeholder'] ?: ($field['label'] ?? ''),
+                'text' => $this->displayText($field, 'Caption'),
                 'markdown' => ($field['markdown'] ?? false) ? true : null,
             ], fn ($v) => $v !== null),
             'richtext' => [
@@ -726,8 +746,13 @@ class WhatsappFlowComponentMapper
         $errors = [];
         $type = $field['type'] ?? '';
 
-        if ($type === 'heading' && strlen($field['label'] ?? '') > 80) {
-            $errors[] = "\"{$screenTitle}\": Heading exceeds 80 characters.";
+        if (in_array($type, ['heading', 'subheading', 'body', 'caption', 'richtext'], true)) {
+            $display = $this->rawDisplayText($field);
+            if ($display === '') {
+                $errors[] = "\"{$screenTitle}\": ".ucfirst($type).' text cannot be blank.';
+            } elseif ($type === 'heading' && strlen($display) > 80) {
+                $errors[] = "\"{$screenTitle}\": Heading exceeds 80 characters.";
+            }
         }
 
         if ($type === 'embedded_link') {
@@ -842,12 +867,37 @@ class WhatsappFlowComponentMapper
 
     private function richTextValue(array $field): string|array
     {
-        $text = $field['placeholder'] ?: ($field['label'] ?? '');
+        $text = $this->displayText($field, 'Rich text');
         if ($field['richtext_as_array'] ?? false) {
-            return array_values(array_filter(preg_split('/\r\n|\r|\n/', $text) ?: []));
+            $lines = array_values(array_filter(preg_split('/\r\n|\r|\n/', $text) ?: []));
+
+            return $lines !== [] ? $lines : [$text];
         }
 
         return $text;
+    }
+
+    /**
+     * Builder templates may store copy on text, label, or placeholder.
+     * Meta rejects blank TextHeading/TextBody strings.
+     */
+    private function rawDisplayText(array $field): string
+    {
+        foreach (['text', 'label', 'placeholder'] as $key) {
+            $value = $field[$key] ?? null;
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return '';
+    }
+
+    private function displayText(array $field, string $fallback): string
+    {
+        $text = $this->rawDisplayText($field);
+
+        return $text !== '' ? $text : $fallback;
     }
 
     private function buildTextInput(array $field, int|string $fieldId): array

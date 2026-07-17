@@ -57,6 +57,12 @@ class FlowSimulateService
             'catalog_select' => 'onProductSelected',
             'payment_success' => 'success',
             'payment_failed' => 'failed',
+            'form_completed' => 'onFlowCompleted',
+            'form_abandoned' => 'onAbandoned',
+            'form_no_match' => 'else',
+            'form_condition_0' => 'condition_0',
+            'form_score_pass' => 'score_pass',
+            'form_score_fail' => 'score_fail',
             default => null,
         };
 
@@ -77,6 +83,22 @@ class FlowSimulateService
                 }
                 if (in_array($scenario, ['payment_success', 'payment_failed', 'catalog_select'], true)) {
                     $variables['catalog_order_total_amount'] = '100';
+                }
+            }
+
+            if ($type === 'whatsapp_flow') {
+                $settings = $node['data']['settings'] ?? [];
+                $variables['whatsapp_flow_id'] = $settings['whatsappFlowId'] ?? null;
+                $variables['whatsapp_flow_simulated'] = $scenario;
+
+                if (str_starts_with($scenario, 'form_') && $scenario !== 'form_abandoned') {
+                    $mockAnswers = is_array($payload['mock_form_answers'] ?? null)
+                        ? $payload['mock_form_answers']
+                        : ['sim_field' => 'yes'];
+                    foreach ($mockAnswers as $key => $value) {
+                        $variables['form_'.$key] = is_array($value) ? json_encode($value) : (string) $value;
+                    }
+                    $variables['whatsapp_flow_responses'] = $mockAnswers;
                 }
             }
 
@@ -121,6 +143,25 @@ class FlowSimulateService
             foreach ($candidates as $edge) {
                 if (($edge['sourceHandle'] ?? '') === $preferredHandle) {
                     return $edge['target'] ?? null;
+                }
+            }
+        }
+
+        if ($type === 'whatsapp_flow') {
+            $handles = match ($scenario) {
+                'form_abandoned' => ['onAbandoned'],
+                'form_no_match' => ['else', 'onFlowCompleted'],
+                'form_condition_0' => ['condition_0', 'onFlowCompleted'],
+                'form_score_pass' => ['score_pass', 'onFlowCompleted'],
+                'form_score_fail' => ['score_fail', 'else', 'onFlowCompleted'],
+                default => ['onFlowCompleted', 'condition_0'],
+            };
+
+            foreach ($handles as $handle) {
+                foreach ($candidates as $edge) {
+                    if (($edge['sourceHandle'] ?? '') === $handle) {
+                        return $edge['target'] ?? null;
+                    }
                 }
             }
         }

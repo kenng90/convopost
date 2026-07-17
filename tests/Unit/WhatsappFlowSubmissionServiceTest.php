@@ -31,7 +31,6 @@ class WhatsappFlowSubmissionServiceTest extends TestCase
 
     public function test_init_data_for_screen_returns_dynamic_examples(): void
     {
-        $controller = new \Modules\Wpbox\Http\Controllers\FlowsWebhookController();
         $flow = new WhatsappFlow([
             'flow_json' => [
                 'screens' => [[
@@ -45,9 +44,8 @@ class WhatsappFlowSubmissionServiceTest extends TestCase
             ],
         ]);
 
-        $method = new \ReflectionMethod($controller, 'initDataForScreen');
-        $method->setAccessible(true);
-        $data = $method->invoke($controller, $flow, 'SCREEN_A');
+        $data = app(\App\Services\WhatsappFlows\WhatsappFlowScreenInitService::class)
+            ->initDataForScreen($flow, 'SCREEN_A');
 
         $this->assertArrayHasKey('departments', $data);
         $this->assertIsArray($data['departments']);

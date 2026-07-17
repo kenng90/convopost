@@ -55,6 +55,28 @@ export function useFlowVariables() {
         });
       }
       
+      if (node.type === 'whatsapp_flow') {
+        const formLabel = nodeData.label || 'WhatsApp Form';
+        const fields = settings.formFields || [];
+
+        dynamicVariables.push({
+          label: `${formLabel} — all responses (JSON)`,
+          value: 'whatsapp_flow_responses',
+          category: 'WhatsApp Form',
+        });
+
+        if (Array.isArray(fields)) {
+          fields.forEach((field: { key?: string; label?: string }) => {
+            if (!field?.key) return;
+            dynamicVariables.push({
+              label: `${formLabel} — ${field.label || field.key}`,
+              value: `form_${field.key}`,
+              category: 'WhatsApp Form',
+            });
+          });
+        }
+      }
+
       if (node.type === 'datastore' && settings.variableName) {
         dynamicVariables.push({
           label: `Data Store (${nodeData.label || 'Data Store'})`,

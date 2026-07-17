@@ -77,6 +77,30 @@ class WhatsappFlowSendService
                 }
             }
 
+            $flowAction = $this->resolveFlowAction($whatsappFlow);
+            $prefill = app(\App\Services\WhatsappFlows\WhatsappFlowCommercePrefillService::class)
+                ->buildPrefillData($whatsappFlow, $contact, $automationFlowId);
+
+            if ($automationFlowId && $prefill !== []) {
+                $contact->setContactState($automationFlowId, 'whatsapp_flow_prefill', json_encode($prefill));
+            }
+
+            $parameters = [
+                'flow_message_version' => '3',
+                'flow_token' => $flowToken,
+                'flow_id' => $whatsappFlow->meta_flow_id,
+                'flow_cta' => 'Open Form',
+                'flow_action' => $flowAction,
+            ];
+
+            // navigate requires an explicit first screen; data_exchange calls INIT on the endpoint.
+            if ($flowAction === 'navigate') {
+                $parameters['flow_action_payload'] = [
+                    'screen' => $this->resolveFirstScreenId($whatsappFlow),
+                    'data' => (object) $prefill,
+                ];
+            }
+
             $payload = [
                 'messaging_product' => 'whatsapp',
                 'to' => $contact->phone,
@@ -87,16 +111,16 @@ class WhatsappFlowSendService
                     'footer' => ['text' => $footerText],
                     'action' => [
                         'name' => 'flow',
-                        'parameters' => [
-                            'flow_message_version' => '3',
-                            'flow_token' => $flowToken,
-                            'flow_id' => $whatsappFlow->meta_flow_id,
-                            'flow_cta' => 'Open Form',
-                            'flow_action' => 'navigate',
-                        ],
+                        'parameters' => $parameters,
                     ],
                 ],
             ];
+
+            Log::info('WhatsApp Form send payload', [
+                'whatsapp_flow_id' => $whatsappFlow->id,
+                'flow_action' => $flowAction,
+                'meta_flow_id' => $whatsappFlow->meta_flow_id,
+            ]);
 
             $url = 'https://graph.facebook.com/v19.0/'.$phoneId.'/messages';
             $response = Http::withHeaders([
@@ -168,5 +192,54 @@ class WhatsappFlowSendService
             'Test: '.$whatsappFlow->name,
             'This is a test send from your form builder.'
         );
+    }
+
+    /**
+     * Endpoint-powered forms (live booking catalog/slots) must open with data_exchange
+     * so Meta calls INIT and the dropdown options are populated.
+     */
+    public function resolveFlowAction(WhatsappFlow $whatsappFlow): string
+    {
+        return $this->formNeedsEndpointOnOpen($whatsappFlow) ? 'data_exchange' : 'navigate';
+    }
+
+    public function formNeedsEndpointOnOpen(WhatsappFlow $whatsappFlow): bool
+    {
+        $json = is_array($whatsappFlow->flow_json) ? $whatsappFlow->flow_json : [];
+        $firstScreen = $json['screens'][0] ?? null;
+
+        if (! is_array($firstScreen)) {
+            return (bool) ($whatsappFlow->requires_endpoint ?? false);
+        }
+
+        if (! empty($firstScreen['endpoint_template'])) {
+            return true;
+        }
+
+        if (! empty($firstScreen['dynamic_data'])) {
+            return true;
+        }
+
+        foreach ($firstScreen['fields'] ?? [] as $field) {
+            if (! is_array($field)) {
+                continue;
+            }
+
+            if (! empty($field['dynamic_data_source']) || ! empty($field['data_source_key'])) {
+                return true;
+            }
+        }
+
+        return (bool) ($whatsappFlow->requires_endpoint ?? false)
+            || filled($json['data_api_version'] ?? null);
+    }
+
+    private function resolveFirstScreenId(WhatsappFlow $whatsappFlow): string
+    {
+        $json = is_array($whatsappFlow->flow_json) ? $whatsappFlow->flow_json : [];
+        $firstScreen = $json['screens'][0] ?? null;
+        $rawId = is_array($firstScreen) ? ($firstScreen['id'] ?? '') : '';
+
+        return filled($rawId) ? (string) $rawId : 'WELCOME';
     }
 }

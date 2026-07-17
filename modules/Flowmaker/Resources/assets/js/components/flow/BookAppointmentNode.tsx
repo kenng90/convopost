@@ -26,6 +26,7 @@ interface BookingService {
 }
 
 interface NodeSettings {
+  intake_mode?: 'lists' | 'form' | 'auto';
   source_name?: string;
   duration_minutes?: string;
   header?: string;
@@ -42,9 +43,21 @@ interface NodeSettings {
   allow_payment_retry?: boolean;
   allow_pay_at_venue?: boolean;
   booking_webhook_url?: string;
+  formFieldMap?: {
+    serviceField?: string;
+    dateField?: string;
+    slotField?: string;
+  };
+  serviceOptionMapJson?: string;
+  onComplete?: {
+    groupId?: string;
+    journeyId?: string;
+    stageId?: string;
+  };
 }
 
 const defaultSettings: NodeSettings = {
+  intake_mode: 'lists',
   source_name: '',
   duration_minutes: '',
   header: 'Book appointment',
@@ -52,6 +65,12 @@ const defaultSettings: NodeSettings = {
   footer: '',
   buttonText: 'Choose option',
   success_message: 'Your appointment for {{booking_service}} on {{booking_date}} at {{booking_time}} is confirmed.',
+  formFieldMap: {
+    serviceField: 'select_3',
+    dateField: 'date_4',
+    slotField: 'slot',
+  },
+  serviceOptionMapJson: '',
 };
 
 const BookAppointmentNode = ({ id, data }: BookAppointmentNodeProps) => {
@@ -106,7 +125,21 @@ const BookAppointmentNode = ({ id, data }: BookAppointmentNodeProps) => {
   }, [settings, id, setNodes]);
 
   const update = (updates: Partial<NodeSettings>) => {
-    setSettings(prev => ({ ...prev, ...updates }));
+    setSettings(prev => {
+      const next = { ...prev, ...updates };
+      // Persist serviceOptionMap from JSON textarea into settings for the PHP bridge
+      if (typeof updates.serviceOptionMapJson === 'string') {
+        try {
+          const parsed = updates.serviceOptionMapJson.trim()
+            ? JSON.parse(updates.serviceOptionMapJson)
+            : {};
+          (next as any).serviceOptionMap = parsed;
+        } catch {
+          // keep raw JSON; bridge ignores invalid maps
+        }
+      }
+      return next;
+    });
   };
 
   return (
@@ -125,6 +158,69 @@ const BookAppointmentNode = ({ id, data }: BookAppointmentNodeProps) => {
           </div>
 
           <div className="p-4 space-y-3 max-h-[420px] overflow-y-auto">
+            <div>
+              <Label className="text-xs">Intake mode</Label>
+              <select
+                className="w-full mt-1 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                value={settings.intake_mode || 'lists'}
+                onChange={e => update({ intake_mode: e.target.value as NodeSettings['intake_mode'] })}
+              >
+                <option value="lists">WhatsApp list wizard (default)</option>
+                <option value="form">Book from WhatsApp Form answers</option>
+                <option value="auto">Auto — form when answers present, else lists</option>
+              </select>
+            </div>
+
+            {(settings.intake_mode === 'form' || settings.intake_mode === 'auto') && (
+              <div className="space-y-2 border border-violet-100 rounded-md p-2 bg-violet-50/50">
+                <p className="text-xs text-violet-800 font-medium">Form field map</p>
+                <div>
+                  <Label className="text-xs">Service field key</Label>
+                  <Input
+                    className="font-mono text-sm"
+                    placeholder="select_3"
+                    value={settings.formFieldMap?.serviceField || ''}
+                    onChange={e => update({
+                      formFieldMap: { ...(settings.formFieldMap || {}), serviceField: e.target.value },
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Date field key</Label>
+                  <Input
+                    className="font-mono text-sm"
+                    placeholder="date_4"
+                    value={settings.formFieldMap?.dateField || ''}
+                    onChange={e => update({
+                      formFieldMap: { ...(settings.formFieldMap || {}), dateField: e.target.value },
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Slot field key (live forms)</Label>
+                  <Input
+                    className="font-mono text-sm"
+                    placeholder="slot"
+                    value={settings.formFieldMap?.slotField || ''}
+                    onChange={e => update({
+                      formFieldMap: { ...(settings.formFieldMap || {}), slotField: e.target.value },
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Option → service map (JSON)</Label>
+                  <Textarea
+                    rows={2}
+                    className="font-mono text-xs"
+                    placeholder='{"general":"General Practice","dental":"Dental"}'
+                    value={settings.serviceOptionMapJson || ''}
+                    onChange={e => update({ serviceOptionMapJson: e.target.value })}
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">Maps form option ids to bookable service names.</p>
+                </div>
+              </div>
+            )}
+
             <div>
               <Label className="text-xs">Fixed service (optional)</Label>
               {services.length === 0 ? (

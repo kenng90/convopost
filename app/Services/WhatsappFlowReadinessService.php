@@ -52,7 +52,7 @@ class WhatsappFlowReadinessService
                 'title' => 'Encryption key (endpoint forms)',
                 'completed' => $encryptionOk,
                 'help' => $needsEndpoint
-                    ? 'This form appears to need data_exchange. Generate and upload the WhatsApp Flow encryption key.'
+                    ? 'Required for live booking / dynamic forms. Use Setup Keys, upload the public key to your WhatsApp phone number, keep APP_URL public (ngrok), then run Meta Flow Builder → Endpoint → Health Check before Go Live.'
                     : 'Not required for navigate-only forms.',
             ],
             [

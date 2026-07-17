@@ -82,10 +82,15 @@
                     "route": "reminders.overview.index"
                 },
                 {
+                    "name": "Calendar",
+                    "icon": "ni ni-calendar-grid-58 text-primary",
+                    "route": "reminders.calendar.index",
+                    "navSection": "Appointments"
+                },
+                {
                     "name": "Appointments",
                     "icon": "ni ni-time-alarm text-primary",
-                    "route": "reminders.reservations.index",
-                    "navSection": "Appointments"
+                    "route": "reminders.reservations.index"
                 },
                 {
                     "name": "Services",
@@ -135,6 +140,13 @@
                 }
             ]
         }
+    ],
+    "staffmenus":[
+        {
+            "name": "My calendar",
+            "icon": "ni ni-calendar-grid-58 text-primary",
+            "route": "reminders.calendar.index",
+            "priority": 5
+        }
     ]
-
 }

@@ -274,6 +274,30 @@ class WhatsAppFlow extends Node
 
         // ── Route to next node ────────────────────────────────────────────────────
         $conditions = $settings['conditions'] ?? [];
+        $scoreRules = $settings['scoreRules'] ?? [];
+        $scoreThreshold = $settings['scoreThreshold'] ?? null;
+
+        if (is_array($scoreRules) && $scoreRules !== [] && $scoreThreshold !== null && $scoreThreshold !== '') {
+            $score = $this->computeResponseScore($scoreRules, $responseData);
+            $contact->setContactState($this->flow_id, 'whatsapp_flow_score', (string) $score);
+            Log::info('WhatsApp Flow: score evaluated', ['score' => $score, 'threshold' => $scoreThreshold]);
+
+            if ($score >= (float) $scoreThreshold) {
+                $nextNode = $this->getNextNodeId('score_pass');
+                if ($nextNode) {
+                    $nextNode->process($message, $data);
+
+                    return;
+                }
+            } else {
+                $nextNode = $this->getNextNodeId('score_fail');
+                if ($nextNode) {
+                    $nextNode->process($message, $data);
+
+                    return;
+                }
+            }
+        }
 
         if (! empty($conditions)) {
             Log::info('WhatsApp Flow: evaluating conditions', ['conditionCount' => count($conditions)]);
@@ -392,6 +416,32 @@ class WhatsAppFlow extends Node
     }
 
     /**
+     * @param  list<array<string, mixed>>  $scoreRules
+     * @param  array<string, mixed>  $responseData
+     */
+    protected function computeResponseScore(array $scoreRules, array $responseData): float
+    {
+        $score = 0.0;
+
+        foreach ($scoreRules as $rule) {
+            if (! is_array($rule)) {
+                continue;
+            }
+
+            $points = (float) ($rule['points'] ?? 0);
+            if ($points == 0.0) {
+                continue;
+            }
+
+            if ($this->evaluateSingleCondition($rule, $responseData)) {
+                $score += $points;
+            }
+        }
+
+        return $score;
+    }
+
+    /**
      * Evaluate a condition against response data.
      *
      * Condition format:
@@ -406,7 +456,16 @@ class WhatsAppFlow extends Node
     {
         $allOf = $condition['allOf'] ?? null;
         if (is_array($allOf) && $allOf !== []) {
-            foreach ($allOf as $clause) {
+            $clauses = $allOf;
+            if (! empty($condition['fieldName'])) {
+                array_unshift($clauses, [
+                    'fieldName' => $condition['fieldName'],
+                    'operator' => $condition['operator'] ?? '==',
+                    'value' => $condition['value'] ?? '',
+                ]);
+            }
+
+            foreach ($clauses as $clause) {
                 if (! is_array($clause) || ! $this->evaluateSingleCondition($clause, $responseData)) {
                     return false;
                 }

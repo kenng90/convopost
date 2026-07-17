@@ -101,6 +101,24 @@ class WhatsappFlowResponse extends Model
     }
 
     /**
+     * Merge in-progress form answers without completing the response.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function mergeResponses(array $data): void
+    {
+        if ($data === []) {
+            return;
+        }
+
+        $existing = is_array($this->responses) ? $this->responses : [];
+
+        $this->update([
+            'responses' => array_merge($existing, $data),
+        ]);
+    }
+
+    /**
      * Mark response as completed with data.
      */
     public function markCompleted(array $data)

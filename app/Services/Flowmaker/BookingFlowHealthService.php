@@ -97,9 +97,50 @@ class BookingFlowHealthService
             if ($type === 'send_booking_link' && trim((string) ($settings['link_type'] ?? '')) === '') {
                 $warnings[] = "Send booking link node [{$id}]: choose a link type (appointments, events, or service).";
             }
+
+            if ($type === 'whatsapp_flow') {
+                $this->warnAppointmentFormWithoutBookNode($nodes, $edges, $id, $warnings);
+            }
         }
 
         return array_values(array_unique($warnings));
+    }
+
+    /**
+     * Warn when a Form completion routes only to a message while appointment-like booking is expected.
+     *
+     * @param  array<int, array<string, mixed>>  $nodes
+     * @param  array<int, array<string, mixed>>  $edges
+     * @param  list<string>  $warnings
+     */
+    private function warnAppointmentFormWithoutBookNode(array $nodes, array $edges, string $flowNodeId, array &$warnings): void
+    {
+        $targets = collect($edges)
+            ->filter(fn ($e) => ($e['source'] ?? '') === $flowNodeId)
+            ->pluck('target')
+            ->all();
+
+        if ($targets === []) {
+            return;
+        }
+
+        $hasBook = false;
+        $hasMessageOnly = false;
+
+        foreach ($targets as $targetId) {
+            $target = collect($nodes)->firstWhere('id', $targetId);
+            $targetType = $target['type'] ?? ($target['data']['type'] ?? null);
+            if ($targetType === 'book_appointment') {
+                $hasBook = true;
+            }
+            if ($targetType === 'message') {
+                $hasMessageOnly = true;
+            }
+        }
+
+        if ($hasMessageOnly && ! $hasBook) {
+            $warnings[] = "WhatsApp Form node [{$flowNodeId}]: completion goes to a message without Book appointment — for appointment Forms, wire onFlowCompleted to Book appointment (intake_mode=form).";
+        }
     }
 
     /**

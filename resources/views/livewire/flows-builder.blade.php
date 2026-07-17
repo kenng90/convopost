@@ -56,11 +56,27 @@
         </div>
 
         <div class="flex items-center gap-4">
+            {{-- Lifecycle badge --}}
+            <span
+                class="px-2.5 py-1 rounded-full text-xs font-medium"
+                :class="metaFlowId
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
+                    : (readiness.can_publish
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200')"
+                x-text="metaFlowId ? 'Live on WhatsApp' : (readiness.can_publish ? 'Ready to publish' : 'Draft')"
+            ></span>
+
+            <button
+                @click="showReadiness = !showReadiness; if (showReadiness) loadReadiness()"
+                class="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 text-indigo-800 dark:text-indigo-200 rounded-lg transition text-sm font-medium"
+            >Live checklist</button>
+
             {{-- Templates --}}
             <button
                 @click="openTemplatesModal()"
                 class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition text-sm"
-            >📋 Templates</button>
+            >Templates</button>
 
             {{-- Import --}}
             <button
@@ -126,6 +142,47 @@
         </div>
     </div>
 
+    {{-- ── Live readiness checklist ──────────────────────────────────────── --}}
+    <div
+        x-show="showReadiness"
+        x-cloak
+        class="bg-indigo-50 dark:bg-indigo-950/40 border-b border-indigo-200 dark:border-indigo-800 px-4 py-3"
+    >
+        <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+                <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100 mb-2">
+                    Go Live checklist
+                    <span class="font-normal text-indigo-700 dark:text-indigo-300" x-text="`(${readiness.completed || 0}/${readiness.total || 0})`"></span>
+                </div>
+                <div class="grid gap-2 md:grid-cols-2">
+                    <template x-for="step in (readiness.steps || [])" :key="step.key">
+                        <div class="flex items-start gap-2 text-xs bg-white/70 dark:bg-gray-900/40 rounded-lg p-2 border border-indigo-100 dark:border-indigo-900">
+                            <span
+                                class="mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold"
+                                :class="step.completed ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-700'"
+                                x-text="step.completed ? '✓' : '·'"
+                            ></span>
+                            <div>
+                                <div class="font-medium text-gray-900 dark:text-white" x-text="step.title"></div>
+                                <div class="text-gray-600 dark:text-gray-400" x-text="step.help"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                    <a href="{{ route('admin.apps.company') }}#facebook_developer" class="text-indigo-700 underline">Setup keys & credentials</a>
+                    <button
+                        x-show="!metaFlowId && readiness.can_publish"
+                        @click="publish()"
+                        class="px-2 py-1 bg-indigo-600 text-white rounded font-medium"
+                    >Go Live now</button>
+                    <span x-show="metaFlowId" class="text-green-700 font-medium">This form is Live — use it in Automations.</span>
+                </div>
+            </div>
+            <button @click="showReadiness = false" class="text-indigo-500 hover:text-indigo-800 text-sm">Close</button>
+        </div>
+    </div>
+
     {{-- ── Submission Webhook Bar ─────────────────────────────────────────── --}}
     <div class="bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-200 dark:border-emerald-800 px-4 py-2 flex flex-wrap items-center gap-3 text-xs">
         <span class="text-emerald-800 dark:text-emerald-200 font-medium">Submission webhook:</span>
@@ -180,8 +237,8 @@
                     <textarea x-model="flowDescription" @input="isDirty = true" rows="2"
                         class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="What is this flow for?"></textarea>
                 </div>
-                <!-- <div>
-                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Category</label>
+                <div>
+                    <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Category (required by WhatsApp)</label>
                     <select x-model="flowCategory" @change="isDirty = true"
                         class="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="OTHER">Other</option>
@@ -189,11 +246,12 @@
                         <option value="SIGN_IN">Sign In</option>
                         <option value="APPOINTMENT_BOOKING">Appointment Booking</option>
                         <option value="LEAD_GENERATION">Lead Generation</option>
+                        <option value="SHOPPING">Shopping</option>
                         <option value="CONTACT_US">Contact Us</option>
                         <option value="CUSTOMER_SUPPORT">Customer Support</option>
                         <option value="SURVEY">Survey</option>
                     </select>
-                </div> -->
+                </div>
             </div>
             {{-- Screen list header --}}
             <div class="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
@@ -1040,6 +1098,8 @@ function flowBuilder(initialFlowId) {
         flowDescription: '',
         flowCategory: 'OTHER',
         metaFlowId: null,
+        readiness: { ready: false, live: false, can_publish: false, steps: [], completed: 0, total: 0 },
+        showReadiness: false,
         webhookUrl: '',
         webhookEnabled: false,
         showTemplatesModal: false,
@@ -1163,6 +1223,10 @@ function flowBuilder(initialFlowId) {
                     this.normalizeScreensOnLoad();
                     this.hydrateImportedFieldMetadata();
                     this.endpointUrl = data.endpoint_url || '';
+                    await this.loadReadiness();
+                    if (!this.metaFlowId) {
+                        this.showReadiness = true;
+                    }
 
                     if (this.screens.length > 0) {
                         this.ensureTerminalScreen();
@@ -1190,6 +1254,23 @@ function flowBuilder(initialFlowId) {
                     this.save(true);
                 }
             }, 45000);
+        },
+
+        async loadReadiness() {
+            if (!this.flowId) return;
+            try {
+                const data = await this.api('GET', `/api/whatsapp-flows/${this.flowId}/readiness`);
+                this.readiness = {
+                    ready: !!data.ready,
+                    live: !!data.live,
+                    can_publish: !!data.can_publish,
+                    steps: data.steps || [],
+                    completed: data.completed || 0,
+                    total: data.total || 0,
+                };
+            } catch (e) {
+                console.warn('Readiness load failed', e);
+            }
         },
 
         async openTemplatesModal() {
@@ -1883,6 +1964,8 @@ function flowBuilder(initialFlowId) {
                 });
                 this.metaFlowId = r.meta_flow_id;
                 this.isDirty    = false;
+                await this.loadReadiness();
+                this.showReadiness = false;
                 this.notify('Flow published to Meta!', 'success');
             } catch(e) {
                 this.notify(e.message || 'Publish failed.', 'error');
