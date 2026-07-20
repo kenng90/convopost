@@ -182,6 +182,9 @@ class RemindersBookingTest extends TestCase
             $decoded['start']->toDateTimeString(),
             $updated->start_date->toDateTimeString()
         );
+        $this->assertSame(1, (int) $updated->reschedule_count);
+        $this->assertNotNull($updated->rescheduled_at);
+        $this->assertNotNull($updated->previous_start_date);
     }
 
     public function test_public_booking_catalog_page_loads(): void

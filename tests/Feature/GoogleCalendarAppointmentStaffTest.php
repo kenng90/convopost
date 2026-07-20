@@ -196,4 +196,167 @@ class GoogleCalendarAppointmentStaffTest extends TestCase
         $this->assertNull($reservation->google_event_id);
         $this->assertSame('Insufficient permissions', $reservation->google_calendar_sync_error);
     }
+
+    public function test_reschedule_patches_google_calendar_event(): void
+    {
+        Http::fake([
+            'https://www.googleapis.com/calendar/v3/calendars/*' => Http::response(['id' => 'google-event-123'], 200),
+        ]);
+
+        [$company, $linkedUser, $member, $source] = $this->bookableSetup();
+
+        $reservation = app(ReservationBookingService::class)->book($company, [
+            'phone' => '+254712345678',
+            'name' => 'Jane Doe',
+            'source' => 'Consultation',
+            'appointment_staff_id' => $member->id,
+            'start_date' => now('UTC')->addDay()->setTime(10, 0)->toDateTimeString(),
+            'end_date' => now('UTC')->addDay()->setTime(10, 30)->toDateTimeString(),
+            'duration_minutes' => 30,
+        ]);
+
+        $this->assertSame('google-event-123', $reservation->fresh()->google_event_id);
+
+        $newStart = now('UTC')->addDays(2)->setTime(11, 0);
+        $updated = app(ReservationBookingService::class)->reschedule($reservation, [
+            'appointment_staff_id' => $member->id,
+            'start_date' => $newStart->toDateTimeString(),
+            'end_date' => $newStart->copy()->addMinutes(30)->toDateTimeString(),
+            'duration_minutes' => 30,
+        ]);
+
+        $this->assertSame(1, (int) $updated->reschedule_count);
+        $this->assertNotNull($updated->previous_start_date);
+
+        Http::assertSent(function ($request) {
+            return $request->method() === 'PATCH'
+                && str_contains($request->url(), 'google-event-123');
+        });
+    }
+
+    public function test_cancel_deletes_google_calendar_event(): void
+    {
+        Http::fake([
+            'https://www.googleapis.com/calendar/v3/calendars/*' => function ($request) {
+                if ($request->method() === 'DELETE') {
+                    return Http::response(null, 204);
+                }
+
+                return Http::response(['id' => 'google-event-999'], 200);
+            },
+        ]);
+
+        [$company, $linkedUser, $member, $source] = $this->bookableSetup();
+
+        $reservation = app(ReservationBookingService::class)->book($company, [
+            'phone' => '+254712345678',
+            'name' => 'Jane Doe',
+            'source' => 'Consultation',
+            'appointment_staff_id' => $member->id,
+            'start_date' => now('UTC')->addDay()->setTime(10, 0)->toDateTimeString(),
+            'end_date' => now('UTC')->addDay()->setTime(10, 30)->toDateTimeString(),
+            'duration_minutes' => 30,
+        ]);
+
+        $this->assertSame('google-event-999', $reservation->fresh()->google_event_id);
+
+        app(ReservationBookingService::class)->cancel($reservation->fresh(), 'admin');
+
+        Http::assertSent(function ($request) {
+            return $request->method() === 'DELETE'
+                && str_contains($request->url(), 'google-event-999');
+        });
+
+        $reservation->refresh();
+        $this->assertSame(2, (int) $reservation->status);
+        $this->assertSame('admin', $reservation->cancellation_source);
+    }
+
+    public function test_reschedule_records_sync_error_when_patch_and_create_fail(): void
+    {
+        $calls = 0;
+        Http::fake([
+            'https://www.googleapis.com/calendar/v3/calendars/*' => function () use (&$calls) {
+                $calls++;
+
+                if ($calls === 1) {
+                    return Http::response(['id' => 'google-event-123'], 200);
+                }
+
+                if ($calls === 2) {
+                    return Http::response(['error' => ['message' => 'Patch failed']], 500);
+                }
+
+                return Http::response(['error' => ['message' => 'Create replacement failed']], 403);
+            },
+        ]);
+
+        [$company, $linkedUser, $member, $source] = $this->bookableSetup();
+
+        $reservation = app(ReservationBookingService::class)->book($company, [
+            'phone' => '+254712345678',
+            'name' => 'Jane Doe',
+            'source' => 'Consultation',
+            'appointment_staff_id' => $member->id,
+            'start_date' => now('UTC')->addDay()->setTime(10, 0)->toDateTimeString(),
+            'end_date' => now('UTC')->addDay()->setTime(10, 30)->toDateTimeString(),
+            'duration_minutes' => 30,
+        ]);
+
+        $newStart = now('UTC')->addDays(2)->setTime(11, 0);
+        app(ReservationBookingService::class)->reschedule($reservation, [
+            'appointment_staff_id' => $member->id,
+            'start_date' => $newStart->toDateTimeString(),
+            'end_date' => $newStart->copy()->addMinutes(30)->toDateTimeString(),
+            'duration_minutes' => 30,
+        ]);
+
+        $reservation->refresh();
+        $this->assertNotNull($reservation->google_calendar_sync_error);
+        $this->assertStringContainsString('Create replacement failed', (string) $reservation->google_calendar_sync_error);
+    }
+
+    /**
+     * @return array{0: Company, 1: User, 2: AppointmentStaff, 3: Source}
+     */
+    private function bookableSetup(): array
+    {
+        $company = Company::factory()->create();
+        $linkedUser = User::factory()->create(['company_id' => $company->id]);
+        $this->connectGoogleCalendar($linkedUser);
+        $company->update(['user_id' => $linkedUser->id]);
+
+        $member = AppointmentStaff::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'user_id' => $linkedUser->id,
+            'name' => 'Brenda',
+            'email' => 'brenda@gmail.com',
+            'is_active' => true,
+        ]);
+
+        $source = Source::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'name' => 'Consultation',
+            'timezone' => 'UTC',
+            'is_bookable' => true,
+            'default_duration_minutes' => 30,
+            'duration_options' => [30],
+            'buffer_minutes' => 0,
+            'min_notice_hours' => 0,
+            'max_advance_days' => 30,
+            'working_hours' => collect(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])
+                ->mapWithKeys(fn ($day) => [$day => ['enabled' => true, 'start' => '00:00', 'end' => '23:59']])
+                ->all(),
+        ]);
+
+        SourceStaff::create([
+            'source_id' => $source->id,
+            'appointment_staff_id' => $member->id,
+            'is_active' => true,
+        ]);
+
+        session(['company_id' => $company->id]);
+
+        return [$company, $linkedUser, $member, $source];
+    }
 }

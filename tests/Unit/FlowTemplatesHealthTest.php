@@ -61,4 +61,18 @@ class FlowTemplatesHealthTest extends TestCase
             }
         }
     }
+
+    public function test_spa_template_wires_booking_and_management_failure_outputs(): void
+    {
+        $result = (new FlowHealthValidator)->validate(
+            config('flow-templates.spa_wellness_booking.flow_data'),
+            ['template_mode' => true]
+        );
+
+        $warnings = implode(' ', $result['warnings']);
+
+        $this->assertStringNotContainsString('Book appointment node [book_appointment-1] should wire', $warnings);
+        $this->assertStringNotContainsString('Manage booking node [manage_booking-1] should wire', $warnings);
+        $this->assertStringNotContainsString('Manage booking node [manage_booking-reschedule] should wire', $warnings);
+    }
 }

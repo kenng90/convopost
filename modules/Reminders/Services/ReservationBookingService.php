@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Modules\Reminders\Jobs\SyncReservationCalendarJob;
 use Modules\Reminders\Models\AppointmentStaff;
 use Modules\Reminders\Models\Reservation;
 use Modules\Reminders\Models\Source;
@@ -30,7 +31,7 @@ class ReservationBookingService
      */
     public function book(Company $company, array $payload): Reservation
     {
-        return DB::transaction(function () use ($company, $payload) {
+        $reservation = DB::transaction(function () use ($company, $payload) {
             session(['company_id' => $company->id]);
 
             $source = $this->resolveSource($company, $payload['source']);
@@ -62,35 +63,45 @@ class ReservationBookingService
                 'voice_call_id' => $payload['voice_call_id'] ?? null,
             ]);
 
-            $this->syncCalendarEvent($reservation->fresh(['contact', 'source', 'appointmentStaffMember']));
+            $this->queueCalendarSync($reservation->id, 'create');
 
-            $reservation = $reservation->fresh(['contact', 'source', 'appointmentStaffMember']);
-            $this->staffNotifications->notifyBooked($reservation);
-
-            return $reservation;
+            return $reservation->fresh(['contact', 'source', 'appointmentStaffMember']);
         });
+
+        $this->staffNotifications->notifyBooked($reservation);
+
+        return $reservation;
     }
 
-    public function cancel(Reservation $reservation): Reservation
+    public function cancel(Reservation $reservation, ?string $cancellationSource = null): Reservation
     {
-        return DB::transaction(function () use ($reservation) {
+        $reservation = DB::transaction(function () use ($reservation, $cancellationSource) {
             if ($reservation->cancelled_at) {
                 return $reservation;
             }
 
             $this->deletePendingReminderMessages($reservation);
-            $this->deleteCalendarEvent($reservation);
+
+            $this->queueCalendarSync(
+                $reservation->id,
+                'delete',
+                $reservation->google_calendar_user_id,
+                $reservation->google_event_id ?: $reservation->external_id,
+                $reservation->google_calendar_id
+            );
 
             $reservation->update([
                 'status' => 2,
                 'cancelled_at' => now(),
+                'cancellation_source' => $cancellationSource,
             ]);
 
-            $reservation = $reservation->fresh(['contact', 'source', 'appointmentStaffMember']);
-            $this->staffNotifications->notifyCancelled($reservation);
-
-            return $reservation;
+            return $reservation->fresh(['contact', 'source', 'appointmentStaffMember']);
         });
+
+        $this->staffNotifications->notifyCancelled($reservation);
+
+        return $reservation;
     }
 
     /**
@@ -98,7 +109,13 @@ class ReservationBookingService
      */
     public function reschedule(Reservation $reservation, array $payload): Reservation
     {
-        return DB::transaction(function () use ($reservation, $payload) {
+        $previousCalendar = [
+            'user_id' => $reservation->google_calendar_user_id,
+            'event_id' => $reservation->google_event_id ?: $reservation->external_id,
+            'calendar_id' => $reservation->google_calendar_id,
+        ];
+
+        $reservation = DB::transaction(function () use ($reservation, $payload, $previousCalendar) {
             if ($reservation->cancelled_at || (int) $reservation->status !== 1) {
                 throw new \RuntimeException('Cancelled reservations cannot be rescheduled.');
             }
@@ -126,6 +143,10 @@ class ReservationBookingService
             $this->deletePendingReminderMessages($reservation);
 
             $reservation->update([
+                'previous_start_date' => $reservation->start_date,
+                'previous_end_date' => $reservation->end_date,
+                'rescheduled_at' => now(),
+                'reschedule_count' => ((int) $reservation->reschedule_count) + 1,
                 'start_date' => $start,
                 'end_date' => $end,
                 'appointment_staff_id' => $appointmentStaffId,
@@ -136,12 +157,141 @@ class ReservationBookingService
             $reservation->refresh();
             $reservation->load(['contact', 'source', 'appointmentStaffMember']);
 
-            $this->syncCalendarEvent($reservation, true);
+            $this->queueCalendarSync(
+                $reservation->id,
+                'update',
+                $previousCalendar['user_id'],
+                $previousCalendar['event_id'],
+                $previousCalendar['calendar_id']
+            );
+
             $reservation->makeMessages();
-            $this->staffNotifications->notifyRescheduled($reservation);
 
             return $reservation->fresh(['contact', 'source', 'appointmentStaffMember']);
         });
+
+        $this->staffNotifications->notifyRescheduled($reservation);
+
+        return $reservation;
+    }
+
+    public function performCalendarCreate(Reservation $reservation): void
+    {
+        $this->syncCalendarEvent($reservation, false);
+    }
+
+    public function performCalendarUpdate(
+        Reservation $reservation,
+        ?int $previousCalendarUserId = null,
+        ?string $previousEventId = null,
+        ?string $previousCalendarId = null
+    ): void {
+        $member = $reservation->appointmentStaffMember;
+        $source = $reservation->source;
+
+        if (! $member || ! $source) {
+            return;
+        }
+
+        $newCalendarUser = $this->resolveCalendarUserForMember($member, $reservation->company_id);
+        $staffChangedCalendar = $previousCalendarUserId
+            && $newCalendarUser
+            && (int) $previousCalendarUserId !== (int) $newCalendarUser->id;
+
+        if ($staffChangedCalendar && $previousEventId && $previousCalendarUserId) {
+            $previousUser = User::find($previousCalendarUserId);
+            if ($previousUser) {
+                $deleted = $this->googleCalendarService->deleteEvent(
+                    $previousUser,
+                    $previousEventId,
+                    $previousCalendarId
+                );
+
+                if (! $deleted) {
+                    $reservation->update([
+                        'google_calendar_sync_error' => __('Could not remove the previous Google Calendar event after staff reassignment.'),
+                    ]);
+                }
+            }
+
+            $this->syncCalendarEvent($reservation, false);
+
+            return;
+        }
+
+        $this->syncCalendarEvent($reservation, true, $previousCalendarUserId, $previousEventId);
+    }
+
+    public function performCalendarDelete(
+        ?Reservation $reservation,
+        ?int $previousCalendarUserId = null,
+        ?string $previousEventId = null,
+        ?string $previousCalendarId = null
+    ): void {
+        $calendarUserId = $previousCalendarUserId ?? $reservation?->google_calendar_user_id;
+        $eventId = $previousEventId ?? ($reservation?->google_event_id ?: $reservation?->external_id);
+        $calendarId = $previousCalendarId ?? $reservation?->google_calendar_id;
+
+        if (! $calendarUserId || ! $eventId) {
+            return;
+        }
+
+        $calendarUser = User::find($calendarUserId);
+        if (! $calendarUser) {
+            return;
+        }
+
+        $deleted = $this->googleCalendarService->deleteEvent($calendarUser, $eventId, $calendarId);
+
+        if (! $deleted && $reservation) {
+            $reservation->update([
+                'google_calendar_sync_error' => __('Could not delete Google Calendar event.'),
+            ]);
+        } elseif ($deleted && $reservation) {
+            $reservation->update([
+                'google_calendar_sync_error' => null,
+            ]);
+        }
+    }
+
+    private function queueCalendarSync(
+        int $reservationId,
+        string $action,
+        ?int $previousCalendarUserId = null,
+        ?string $previousEventId = null,
+        ?string $previousCalendarId = null
+    ): void {
+        $dispatch = function () use (
+            $reservationId,
+            $action,
+            $previousCalendarUserId,
+            $previousEventId,
+            $previousCalendarId
+        ): void {
+            SyncReservationCalendarJob::dispatch(
+                $reservationId,
+                $action,
+                $previousCalendarUserId,
+                $previousEventId,
+                $previousCalendarId
+            );
+        };
+
+        // RefreshDatabase wraps each test in a transaction, so afterCommit callbacks
+        // never fire mid-test. Run the sync job immediately under PHPUnit.
+        if (app()->runningUnitTests()) {
+            SyncReservationCalendarJob::dispatchSync(
+                $reservationId,
+                $action,
+                $previousCalendarUserId,
+                $previousEventId,
+                $previousCalendarId
+            );
+
+            return;
+        }
+
+        DB::afterCommit($dispatch);
     }
 
     private function resolveSource(Company $company, string|int $sourceRef): Source
@@ -202,8 +352,12 @@ class ReservationBookingService
         return [$start, $end, $member->id, $member->user_id, $duration];
     }
 
-    private function syncCalendarEvent(Reservation $reservation, bool $updating = false): void
-    {
+    private function syncCalendarEvent(
+        Reservation $reservation,
+        bool $updating = false,
+        ?int $fallbackCalendarUserId = null,
+        ?string $fallbackEventId = null
+    ): void {
         $member = $reservation->appointmentStaffMember;
         $source = $reservation->source;
         if (! $member || ! $source) {
@@ -214,19 +368,43 @@ class ReservationBookingService
             ? User::find($reservation->google_calendar_user_id)
             : null;
 
-        if ($updating && $calendarUser && ($reservation->google_event_id || $reservation->external_id)) {
+        if (! $calendarUser && $fallbackCalendarUserId) {
+            $calendarUser = User::find($fallbackCalendarUserId);
+        }
+
+        $eventId = $reservation->google_event_id ?: $reservation->external_id ?: $fallbackEventId;
+
+        if ($updating && $calendarUser && $eventId) {
             $attendeeEmail = $member->email && $calendarUser
                 ? $this->googleCalendarService->attendeeEmailForMember($member, $calendarUser)
                 : $member->email;
 
-            $this->googleCalendarService->updateEventForReservation(
+            // Temporarily ensure update uses the known event id when only external_id existed.
+            if (! $reservation->google_event_id && $fallbackEventId) {
+                $reservation->google_event_id = $fallbackEventId;
+            }
+
+            $updated = $this->googleCalendarService->updateEventForReservation(
                 $calendarUser,
                 $reservation,
                 $source,
                 $attendeeEmail
             );
 
-            return;
+            if ($updated) {
+                $reservation->update([
+                    'google_event_id' => $eventId,
+                    'google_calendar_user_id' => $calendarUser->id,
+                    'google_calendar_sync_error' => null,
+                ]);
+
+                return;
+            }
+
+            // If the existing event could not be patched, fall through and create a fresh one.
+            $reservation->update([
+                'google_calendar_sync_error' => __('Could not update Google Calendar event; creating a replacement.'),
+            ]);
         }
 
         $company = Company::find($reservation->company_id);
@@ -259,20 +437,14 @@ class ReservationBookingService
         $reservation->update(['google_calendar_sync_error' => $error]);
     }
 
-    private function deleteCalendarEvent(Reservation $reservation): void
+    private function resolveCalendarUserForMember(AppointmentStaff $member, int $companyId): ?User
     {
-        if (! $reservation->google_calendar_user_id) {
-            return;
+        $linked = $member->calendarUser();
+        if ($linked && $this->googleCalendarService->isConnected($linked)) {
+            return $linked;
         }
 
-        $calendarUser = User::find($reservation->google_calendar_user_id);
-        if ($calendarUser) {
-            $this->googleCalendarService->deleteEventForReservation(
-                $calendarUser,
-                $reservation,
-                $reservation->source
-            );
-        }
+        return $this->googleCalendarService->resolveCompanyCalendarHost($companyId);
     }
 
     private function deletePendingReminderMessages(Reservation $reservation): void
