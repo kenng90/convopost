@@ -23,7 +23,11 @@ class Reservation extends Model
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
+        'previous_start_date' => 'datetime',
+        'previous_end_date' => 'datetime',
         'cancelled_at' => 'datetime',
+        'rescheduled_at' => 'datetime',
+        'reschedule_count' => 'integer',
         'duration_minutes' => 'integer',
         'payment_amount' => 'decimal:2',
         'payment_total_amount' => 'decimal:2',

@@ -4,7 +4,9 @@ namespace Modules\Flowmaker\Models\Nodes;
 
 use App\Models\Company;
 use App\Services\Flowmaker\FlowRunLogger;
+use App\Services\WhatsApp\InteractiveListLimits;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Reminders\Models\Reservation;
@@ -14,6 +16,8 @@ use Modules\Reminders\Services\ReservationBookingService;
 class ManageBooking extends Node
 {
     private const LIST_LIMIT = 10;
+
+    private const PAGINATED_LIST_SIZE = self::LIST_LIMIT - 1;
 
     public function listenForReply($message, $data): void
     {
@@ -36,47 +40,79 @@ class ManageBooking extends Node
             return;
         }
 
+        if ($selection['action'] === 'select') {
+            $this->pinReservation($contact, (int) $selection['value']);
+            $reservation = $this->resolveReservation($contact);
+
+            if (! $reservation) {
+                $this->handleNotFound($contact, $message, $data);
+
+                return;
+            }
+
+            $this->continueWithReservation($contact, $reservation, $message, $data);
+
+            return;
+        }
+
+        if ($selection['action'] === 'confirm_cancel') {
+            $reservation = $this->resolveReservation($contact);
+
+            if (! $reservation) {
+                $this->handleNotFound($contact, $message, $data);
+
+                return;
+            }
+
+            $this->performCancel($contact, $reservation, $message, $data);
+
+            return;
+        }
+
+        if ($selection['action'] === 'abort_cancel') {
+            $contact->sendMessage(__('Okay — your booking was kept.'), false, false, 'TEXT');
+            $contact->clearContactState($this->flow_id, 'current_node');
+            $this->clearManageState($contact);
+
+            return;
+        }
+
         $reservation = $this->resolveReservation($contact);
 
         if (! $reservation) {
-            $contact->sendMessage(__('No upcoming booking was found for this contact.'), false, false, 'TEXT');
-            $contact->clearContactState($this->flow_id, 'current_node');
-            $this->routeToHandle($contact, 'not_found', $message, $data);
+            $this->handleNotFound($contact, $message, $data);
 
             return;
         }
 
         if ($selection['action'] === 'cancel') {
-            app(ReservationBookingService::class)->cancel($reservation);
-            FlowRunLogger::log($this->flow_id, $contact->id, 'booking_cancelled', $this->id, (string) $reservation->id);
-            $contact->sendMessage(__('Your booking has been cancelled.'), false, false, 'TEXT');
-            $contact->clearContactState($this->flow_id, 'current_node');
-            $this->routeToHandle($contact, 'cancelled', $message, $data);
+            $this->pinReservation($contact, (int) $reservation->id);
+            $this->sendCancelConfirmation($contact, $reservation);
 
             return;
         }
 
         if ($selection['action'] === 'reschedule') {
-            $this->setState($contact, 'reschedule_reservation_id', (string) $reservation->id);
-            $contact->clearContactState($this->flow_id, 'current_node');
+            $this->pinReservation($contact, (int) $reservation->id);
+            $this->setState($contact, 'date_offset', '0');
+            $this->setState($contact, 'slot_offset', '0');
+            $this->setState($contact, 'reschedule_date', '');
             $this->promptRescheduleDates($contact, $reservation, $message, $data);
 
             return;
         }
 
         if ($selection['action'] === 'more_dates') {
-            $offset = (int) $this->getState($contact, 'date_offset') + self::LIST_LIMIT;
+            $offset = (int) $this->getState($contact, 'date_offset') + self::PAGINATED_LIST_SIZE;
             $this->setState($contact, 'date_offset', (string) $offset);
-            $contact->clearContactState($this->flow_id, 'current_node');
             $this->promptRescheduleDates($contact, $reservation, $message, $data);
 
             return;
         }
 
         if ($selection['action'] === 'more_slots') {
-            $offset = (int) $this->getState($contact, 'slot_offset') + self::LIST_LIMIT;
+            $offset = (int) $this->getState($contact, 'slot_offset') + self::PAGINATED_LIST_SIZE;
             $this->setState($contact, 'slot_offset', (string) $offset);
-            $contact->clearContactState($this->flow_id, 'current_node');
             $this->promptRescheduleSlots($contact, $reservation, $message, $data);
 
             return;
@@ -84,8 +120,8 @@ class ManageBooking extends Node
 
         if ($selection['action'] === 'reschedule_date') {
             $this->setState($contact, 'reschedule_date', $selection['value']);
-            $this->setState($contact, 'reschedule_reservation_id', (string) $reservation->id);
-            $contact->clearContactState($this->flow_id, 'current_node');
+            $this->pinReservation($contact, (int) $reservation->id);
+            $this->setState($contact, 'slot_offset', '0');
             $this->promptRescheduleSlots($contact, $reservation, $message, $data);
 
             return;
@@ -111,54 +147,113 @@ class ManageBooking extends Node
             return ['success' => false];
         }
 
-        $reservation = $this->resolveReservation($contact);
+        $this->clearPaginationState($contact);
 
-        if (! $reservation) {
-            $contact->sendMessage(__('No upcoming booking was found.'), false, false, 'TEXT');
-            $this->routeToHandle($contact, 'not_found', $message, $data);
+        $upcoming = $this->upcomingReservations($contact);
+
+        if ($upcoming->isEmpty()) {
+            $this->handleNotFound($contact, $message, $data);
 
             return ['success' => false];
         }
 
-        $settings = $this->getDataAsArray()['settings'] ?? [];
-        $action = (string) ($settings['default_action'] ?? 'menu');
-
-        if ($action === 'cancel') {
-            app(ReservationBookingService::class)->cancel($reservation);
-            FlowRunLogger::log($this->flow_id, $contact->id, 'booking_cancelled', $this->id, (string) $reservation->id);
-            $contact->sendMessage(__('Your booking has been cancelled.'), false, false, 'TEXT');
-            $this->routeToHandle($contact, 'cancelled', $message, $data);
+        if ($upcoming->count() > 1 && $this->getPinnedReservationId($contact) === null) {
+            $this->waitForReply($contact);
+            $this->sendReservationPicker($contact, $upcoming);
 
             return ['success' => true];
         }
 
-        $contact->setContactState($this->flow_id, 'current_node', $this->id);
-        $this->sendActionMenu($contact, $reservation);
+        $reservation = $this->resolveReservation($contact, $upcoming);
+
+        if (! $reservation) {
+            $this->handleNotFound($contact, $message, $data);
+
+            return ['success' => false];
+        }
+
+        $this->pinReservation($contact, (int) $reservation->id);
+        $this->continueWithReservation($contact, $reservation, $message, $data);
 
         return ['success' => true];
     }
 
-    private function resolveReservation(Contact $contact): ?Reservation
+    private function continueWithReservation(Contact $contact, Reservation $reservation, $message, $data): void
     {
         $settings = $this->getDataAsArray()['settings'] ?? [];
-        $referenceVar = trim((string) ($settings['reference_variable'] ?? 'booking_reference'));
+        $action = (string) ($settings['default_action'] ?? 'menu');
 
+        if ($action === 'cancel') {
+            $this->sendCancelConfirmation($contact, $reservation);
+
+            return;
+        }
+
+        if ($action === 'reschedule') {
+            $this->setState($contact, 'date_offset', '0');
+            $this->setState($contact, 'slot_offset', '0');
+            $this->setState($contact, 'reschedule_date', '');
+            $this->promptRescheduleDates($contact, $reservation, $message, $data);
+
+            return;
+        }
+
+        $this->sendActionMenu($contact, $reservation);
+    }
+
+    /**
+     * @param  Collection<int, Reservation>|null  $upcoming
+     */
+    private function resolveReservation(Contact $contact, ?Collection $upcoming = null): ?Reservation
+    {
+        $pinnedId = $this->getPinnedReservationId($contact);
+
+        if ($pinnedId !== null) {
+            $pinned = Reservation::withoutGlobalScopes()
+                ->with('source')
+                ->where('company_id', $contact->company_id)
+                ->where('contact_id', $contact->id)
+                ->where('id', $pinnedId)
+                ->whereNull('cancelled_at')
+                ->where('status', 1)
+                ->where('start_date', '>=', now())
+                ->first();
+
+            if ($pinned) {
+                return $pinned;
+            }
+        }
+
+        $settings = $this->getDataAsArray()['settings'] ?? [];
+        $referenceVar = trim((string) ($settings['reference_variable'] ?? 'booking_reference'));
         $reference = trim((string) $contact->getContactStateValue($this->flow_id, $referenceVar));
 
         if ($reference !== '' && ctype_digit($reference)) {
             $byId = Reservation::withoutGlobalScopes()
+                ->with('source')
                 ->where('company_id', $contact->company_id)
                 ->where('contact_id', $contact->id)
                 ->where('id', (int) $reference)
                 ->whereNull('cancelled_at')
                 ->where('status', 1)
+                ->where('start_date', '>=', now())
                 ->first();
 
             if ($byId) {
-                return $byId->loadMissing('source');
+                return $byId;
             }
         }
 
+        $upcoming ??= $this->upcomingReservations($contact);
+
+        return $upcoming->first();
+    }
+
+    /**
+     * @return Collection<int, Reservation>
+     */
+    private function upcomingReservations(Contact $contact): Collection
+    {
         return Reservation::withoutGlobalScopes()
             ->with('source')
             ->where('company_id', $contact->company_id)
@@ -167,7 +262,38 @@ class ManageBooking extends Node
             ->where('status', 1)
             ->where('start_date', '>=', now())
             ->orderBy('start_date')
-            ->first();
+            ->get();
+    }
+
+    /**
+     * @param  Collection<int, Reservation>  $reservations
+     */
+    private function sendReservationPicker(Contact $contact, Collection $reservations): void
+    {
+        $rows = $reservations
+            ->take(self::LIST_LIMIT)
+            ->map(function (Reservation $reservation) {
+                $timezone = $reservation->source?->timezone ?: 'UTC';
+                $when = $reservation->start_date?->timezone($timezone)->format('M j, g:i A') ?? '';
+
+                return [
+                    'id' => $this->listItemId('select', (string) $reservation->id),
+                    'title' => mb_substr((string) ($reservation->source?->name ?? __('Appointment')), 0, 24),
+                    'description' => $when,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $this->sendList(
+            $contact,
+            __('Your bookings'),
+            __('Which appointment would you like to manage?'),
+            '',
+            __('Choose'),
+            __('Upcoming'),
+            $rows
+        );
     }
 
     private function sendActionMenu(Contact $contact, Reservation $reservation): void
@@ -188,6 +314,7 @@ class ManageBooking extends Node
             ];
         }
 
+        $this->waitForReply($contact);
         $this->sendList(
             $contact,
             (string) ($settings['header'] ?? __('Manage your booking')),
@@ -197,6 +324,44 @@ class ManageBooking extends Node
             __('Actions'),
             $rows
         );
+    }
+
+    private function sendCancelConfirmation(Contact $contact, Reservation $reservation): void
+    {
+        $timezone = $reservation->source?->timezone ?: 'UTC';
+        $when = $reservation->start_date?->timezone($timezone)->format('M j, Y g:i A') ?? '';
+
+        $this->waitForReply($contact);
+        $this->sendList(
+            $contact,
+            __('Confirm cancellation'),
+            __('Cancel your appointment on :when?', ['when' => $when]),
+            '',
+            __('Confirm'),
+            __('Confirm'),
+            [
+                [
+                    'id' => $this->listItemId('action', 'confirm_cancel'),
+                    'title' => __('Yes, cancel'),
+                    'description' => __('This cannot be undone'),
+                ],
+                [
+                    'id' => $this->listItemId('action', 'abort_cancel'),
+                    'title' => __('Keep booking'),
+                    'description' => __('Do not cancel'),
+                ],
+            ]
+        );
+    }
+
+    private function performCancel(Contact $contact, Reservation $reservation, $message, $data): void
+    {
+        app(ReservationBookingService::class)->cancel($reservation, 'whatsapp_manage_booking');
+        FlowRunLogger::log($this->flow_id, $contact->id, 'booking_cancelled', $this->id, (string) $reservation->id);
+        $contact->sendMessage(__('Your booking has been cancelled.'), false, false, 'TEXT');
+        $contact->clearContactState($this->flow_id, 'current_node');
+        $this->clearManageState($contact);
+        $this->routeToHandle($contact, 'cancelled', $message, $data);
     }
 
     private function promptRescheduleSlots(Contact $contact, Reservation $reservation, $message, $data): void
@@ -215,13 +380,18 @@ class ManageBooking extends Node
 
         if ($slots === []) {
             $contact->sendMessage(__('No times available on that date. Please pick another day.'), false, false, 'TEXT');
+            $this->setState($contact, 'date_offset', '0');
             $this->promptRescheduleDates($contact, $reservation, $message, $data);
 
             return;
         }
 
         $offset = (int) $this->getState($contact, 'slot_offset');
-        $page = array_slice($slots, $offset, self::LIST_LIMIT);
+        $remaining = max(0, count($slots) - $offset);
+        $pageSize = $remaining > self::LIST_LIMIT
+            ? self::PAGINATED_LIST_SIZE
+            : self::LIST_LIMIT;
+        $page = array_slice($slots, $offset, $pageSize);
         $rows = collect($page)->map(fn (array $slot) => [
             'id' => $this->listItemId('reschedule_slot', $slot['id']),
             'title' => $slot['title'],
@@ -236,7 +406,7 @@ class ManageBooking extends Node
             ];
         }
 
-        $contact->setContactState($this->flow_id, 'current_node', $this->id);
+        $this->waitForReply($contact);
         $this->sendList(
             $contact,
             __('Select time'),
@@ -263,8 +433,23 @@ class ManageBooking extends Node
         $to = $from->copy()->addDays((int) $source->max_advance_days);
         $dates = app(AvailabilityService::class)->availableDates($source, $from, $to, $duration);
 
+        if ($dates === []) {
+            if (! $this->getNextNodeId('error')) {
+                $contact->sendMessage(__('No alternative appointment dates are available right now.'), false, false, 'TEXT');
+            }
+            $contact->clearContactState($this->flow_id, 'current_node');
+            $this->clearManageState($contact);
+            $this->routeToHandle($contact, 'error', $message, $data);
+
+            return;
+        }
+
         $offset = (int) $this->getState($contact, 'date_offset');
-        $page = array_slice($dates, $offset, self::LIST_LIMIT);
+        $remaining = max(0, count($dates) - $offset);
+        $pageSize = $remaining > self::LIST_LIMIT
+            ? self::PAGINATED_LIST_SIZE
+            : self::LIST_LIMIT;
+        $page = array_slice($dates, $offset, $pageSize);
         $timezone = $source->timezone ?: 'UTC';
 
         $rows = collect($page)->map(function (string $date) use ($timezone) {
@@ -283,7 +468,7 @@ class ManageBooking extends Node
             ];
         }
 
-        $contact->setContactState($this->flow_id, 'current_node', $this->id);
+        $this->waitForReply($contact);
         $this->sendList(
             $contact,
             __('Select date'),
@@ -310,13 +495,23 @@ class ManageBooking extends Node
 
             $contact->sendMessage(__('Your booking has been rescheduled to :when.', ['when' => $when]), false, false, 'TEXT');
             $contact->clearContactState($this->flow_id, 'current_node');
-            $this->clearRescheduleState($contact);
+            $this->clearManageState($contact);
             $this->routeToHandle($contact, 'rescheduled', $message, $data);
         } catch (\Throwable $exception) {
             Log::warning('Manage booking reschedule failed', ['error' => $exception->getMessage()]);
-            $contact->sendMessage($exception->getMessage(), false, false, 'TEXT');
+            if (! $this->getNextNodeId('error')) {
+                $contact->sendMessage(__('We could not reschedule your booking. Please try again or contact our team.'), false, false, 'TEXT');
+            }
             $this->routeToHandle($contact, 'error', $message, $data);
         }
+    }
+
+    private function handleNotFound(Contact $contact, $message, $data): void
+    {
+        $contact->sendMessage(__('No upcoming booking was found for this contact.'), false, false, 'TEXT');
+        $contact->clearContactState($this->flow_id, 'current_node');
+        $this->clearManageState($contact);
+        $this->routeToHandle($contact, 'not_found', $message, $data);
     }
 
     /**
@@ -328,6 +523,10 @@ class ManageBooking extends Node
             $decoded = $this->decodeValue($matches[1]);
 
             return ['action' => $decoded, 'value' => $decoded];
+        }
+
+        if (preg_match('/^mb-select-([^_]+)_id'.preg_quote($this->id, '/').'_flow'.preg_quote((string) $this->flow_id, '/').'$/', $extraData, $matches)) {
+            return ['action' => 'select', 'value' => $this->decodeValue($matches[1])];
         }
 
         if (preg_match('/^mb-reschedule_date-([^_]+)_id'.preg_quote($this->id, '/').'_flow'.preg_quote((string) $this->flow_id, '/').'$/', $extraData, $matches)) {
@@ -374,23 +573,39 @@ class ManageBooking extends Node
         $company = Company::find($contact->company_id);
         $token = $company?->getConfig('plain_token', '') ?? '';
 
+        $constrained = InteractiveListLimits::constrainListFields(
+            (string) ($contact->changeVariables($header, $this->flow_id) ?? ''),
+            (string) $contact->changeVariables($body, $this->flow_id),
+            (string) ($contact->changeVariables($footer, $this->flow_id) ?? ''),
+            (string) $contact->changeVariables($buttonText, $this->flow_id),
+            $sectionTitle,
+            $rows
+        );
+
         $payload = [
             'token' => $token,
             'phone' => $contact->phone,
-            'message' => (string) $contact->changeVariables($body, $this->flow_id),
-            'header' => (string) ($contact->changeVariables($header, $this->flow_id) ?? ''),
-            'footer' => (string) ($contact->changeVariables($footer, $this->flow_id) ?? ''),
+            'message' => $constrained['body'],
+            'header' => $constrained['header'],
+            'footer' => $constrained['footer'],
             'action' => [
-                'button' => (string) $contact->changeVariables($buttonText, $this->flow_id),
+                'button' => $constrained['button'],
                 'sections' => [[
-                    'title' => $sectionTitle,
-                    'rows' => $rows,
+                    'title' => $constrained['section_title'],
+                    'rows' => $constrained['rows'],
                 ]],
             ],
         ];
 
         try {
-            \Illuminate\Support\Facades\Http::post(config('app.url').'/api/wpbox/sendlistmessage', $payload);
+            $response = \Illuminate\Support\Facades\Http::post(config('app.url').'/api/wpbox/sendlistmessage', $payload);
+
+            if ($response->failed()) {
+                Log::error('Manage booking list message failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+            }
         } catch (\Throwable $exception) {
             Log::error('Manage booking list message failed', ['error' => $exception->getMessage()]);
         }
@@ -403,6 +618,11 @@ class ManageBooking extends Node
         if ($next) {
             $next->process($message, $data);
         }
+    }
+
+    private function waitForReply(Contact $contact): void
+    {
+        $contact->setContactState($this->flow_id, 'current_node', $this->id);
     }
 
     private function stateKey(string $suffix): string
@@ -420,9 +640,39 @@ class ManageBooking extends Node
         $contact->setContactState($this->flow_id, $this->stateKey($suffix), $value);
     }
 
-    private function clearRescheduleState(Contact $contact): void
+    private function pinReservation(Contact $contact, int $reservationId): void
     {
-        foreach (['reschedule_date', 'reschedule_reservation_id', 'date_offset', 'slot_offset'] as $suffix) {
+        $this->setState($contact, 'selected_reservation_id', (string) $reservationId);
+        $this->setState($contact, 'reschedule_reservation_id', (string) $reservationId);
+    }
+
+    private function getPinnedReservationId(Contact $contact): ?int
+    {
+        $pinned = $this->getState($contact, 'selected_reservation_id');
+
+        if ($pinned === '' || ! ctype_digit($pinned)) {
+            $pinned = $this->getState($contact, 'reschedule_reservation_id');
+        }
+
+        return ($pinned !== '' && ctype_digit($pinned)) ? (int) $pinned : null;
+    }
+
+    private function clearPaginationState(Contact $contact): void
+    {
+        $this->setState($contact, 'date_offset', '0');
+        $this->setState($contact, 'slot_offset', '0');
+        $this->setState($contact, 'reschedule_date', '');
+    }
+
+    private function clearManageState(Contact $contact): void
+    {
+        foreach ([
+            'selected_reservation_id',
+            'reschedule_reservation_id',
+            'reschedule_date',
+            'date_offset',
+            'slot_offset',
+        ] as $suffix) {
             $contact->clearContactState($this->flow_id, $this->stateKey($suffix));
         }
     }

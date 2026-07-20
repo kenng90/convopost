@@ -130,7 +130,6 @@ class FlowTemplatesConfigTest extends TestCase
     public function test_payment_templates_use_request_payment_not_mpesa_stk_push(): void
     {
         foreach ([
-            'spa_wellness_booking',
             'whatsapp_shop_checkout',
             'microfinance_banking_bot',
             'hotel_tour_concierge_bot',
@@ -150,6 +149,79 @@ class FlowTemplatesConfigTest extends TestCase
                 $this->assertNotContains($handle, ['mpesa-success', 'mpesa-failed'], "Template {$key} still uses legacy M-Pesa handles");
             }
         }
+    }
+
+    public function test_spa_template_uses_dynamic_booking_and_complete_recovery_paths(): void
+    {
+        $flowData = config('flow-templates.spa_wellness_booking.flow_data');
+        $nodes = collect($flowData['nodes']);
+        $edges = collect($flowData['edges']);
+
+        $bookNode = $nodes->firstWhere('id', 'book_appointment-1');
+        $this->assertNotNull($bookNode);
+        $this->assertSame('', $bookNode['data']['settings']['source_name']);
+        $this->assertSame('', $bookNode['data']['settings']['duration_minutes']);
+        $this->assertTrue($bookNode['data']['settings']['allow_payment_retry']);
+        $this->assertFalse($bookNode['data']['settings']['allow_pay_at_venue']);
+        $this->assertLessThanOrEqual(60, mb_strlen((string) ($bookNode['data']['settings']['footer'] ?? '')));
+        $this->assertTrue((bool) config('flow-templates.spa_wellness_booking.requires_setup_wizard'));
+
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['type'] ?? '') === 'manage_booking'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'manage_booking-reschedule'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['type'] ?? '') === 'send_booking_link'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'spa-faq-openai'));
+        $this->assertFalse($nodes->contains(fn (array $node) => ($node['type'] ?? '') === 'request_payment'));
+
+        $rescheduleNode = $nodes->firstWhere('id', 'manage_booking-reschedule');
+        $this->assertNotNull($rescheduleNode);
+        $this->assertTrue($rescheduleNode['data']['settings']['allow_reschedule']);
+        $this->assertSame('reschedule', $rescheduleNode['data']['settings']['default_action']);
+
+        $cancelNode = $nodes->firstWhere('id', 'manage_booking-1');
+        $this->assertNotNull($cancelNode);
+        $this->assertSame('cancel', $cancelNode['data']['settings']['default_action']);
+
+        $menu = $nodes->firstWhere('id', 'list_message-1');
+        $menuTitles = collect($menu['data']['settings']['sections'][0]['rows'] ?? [])
+            ->pluck('title')
+            ->all();
+        $this->assertContains('Reschedule', $menuTitles);
+        $this->assertContains('Cancel appointment', $menuTitles);
+
+        foreach (['success', 'unavailable', 'error'] as $handle) {
+            $this->assertTrue(
+                $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'book_appointment-1'
+                    && ($edge['sourceHandle'] ?? '') === $handle),
+                "Spa booking is missing [{$handle}] output."
+            );
+        }
+
+        foreach (['rescheduled', 'not_found', 'error'] as $handle) {
+            $this->assertTrue(
+                $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'manage_booking-reschedule'
+                    && ($edge['sourceHandle'] ?? '') === $handle),
+                "Spa reschedule is missing [{$handle}] output."
+            );
+        }
+
+        foreach (['cancelled', 'not_found', 'error'] as $handle) {
+            $this->assertTrue(
+                $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'manage_booking-1'
+                    && ($edge['sourceHandle'] ?? '') === $handle),
+                "Spa cancel is missing [{$handle}] output."
+            );
+        }
+
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'list_message-1'
+                && ($edge['target'] ?? '') === 'manage_booking-reschedule'
+                && ($edge['sourceHandle'] ?? '') === 'section1-row2')
+        );
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'keyword_trigger-1'
+                && ($edge['target'] ?? '') === 'manage_booking-reschedule'
+                && ($edge['sourceHandle'] ?? '') === 'keyword-kw4')
+        );
     }
 
     public function test_shop_checkout_includes_order_status_after_payment(): void

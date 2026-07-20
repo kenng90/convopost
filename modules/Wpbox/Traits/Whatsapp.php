@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Services\Billing\CreditBillingResolver;
 use App\Services\Billing\CreditCharger;
+use App\Services\WhatsApp\InteractiveListLimits;
 use App\Services\WhatsApp\WebhookCompanyResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -777,21 +778,21 @@ trait Whatsapp
                     $dataToSend['type'] = 'interactive';
 
                     $dataToSend['interactive']['body'] = [
-                        'text' => $message->value,
+                        'text' => InteractiveListLimits::truncate($message->value, InteractiveListLimits::BODY),
                     ];
 
                     //Header if available
                     if (strlen($message->header_text) > 0) {
                         $dataToSend['interactive']['header'] = [
                             'type' => 'text',
-                            'text' => $message->header_text,
+                            'text' => InteractiveListLimits::truncate($message->header_text, InteractiveListLimits::HEADER),
                         ];
                     }
 
                     //Footer if available
                     if (strlen($message->footer_text) > 0) {
                         $dataToSend['interactive']['footer'] = [
-                            'text' => $message->footer_text,
+                            'text' => InteractiveListLimits::truncate($message->footer_text, InteractiveListLimits::FOOTER),
                         ];
                     }
 
@@ -812,7 +813,9 @@ trait Whatsapp
                             } else {
                                 $dataToSend['interactive']['type'] = 'list';
 
-                                $dataToSend['interactive']['action'] = json_decode($message->buttons, true);
+                                $dataToSend['interactive']['action'] = InteractiveListLimits::constrainListAction(
+                                    json_decode($message->buttons, true) ?? []
+                                );
                             }
                         }
 
@@ -882,8 +885,14 @@ trait Whatsapp
                 //If error
 
                 if (isset($content['error'])) {
-                    $message->error = $content['error']['message'];
+                    $errorMessage = $content['error']['message'] ?? 'Unknown error';
+                    $message->error = $errorMessage;
                     $message->update();
+                    Log::error('WhatsApp API rejected message', [
+                        'message_id' => $message->id,
+                        'status' => $statusCode,
+                        'error' => $content['error'],
+                    ]);
                 } else {
                     $message->fb_message_id = $content['messages'][0]['id'];
                     $message->update();

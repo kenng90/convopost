@@ -3,15 +3,17 @@
 namespace Modules\Reminders\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Modules\Reminders\Models\AppointmentStaff;
 use Modules\Reminders\Models\Reservation;
 use Modules\Reminders\Models\Source;
+use Modules\Reminders\Models\SourceStaff;
+use Modules\Reminders\Services\ReservationBookingService;
 use Modules\Wpbox\Events\Chatlistchange;
 use Modules\Wpbox\Http\Controllers\APIController;
 use Modules\Wpbox\Models\Contact as WpboxContact;
-use Modules\Wpbox\Models\Message;
 use Modules\Wpbox\Traits\Contacts;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -464,15 +466,49 @@ class ReservationsController extends Controller
     {
         $this->authChecker();
 
-        //Create new reminder
-        $reservation = $this->provider::create([
-            'contact_id' => $request->contact_id,
-            'source_id' => $request->source_id,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
-            'external_id' => $request->external_id,
-        ]);
-        $reservation->save();
+        $company = $this->getCompany();
+        if (! $company) {
+            abort(403);
+        }
+
+        $contact = WpboxContact::withoutGlobalScopes()->findOrFail($request->contact_id);
+        $source = Source::findOrFail($request->source_id);
+        $start = Carbon::parse($request->start_date, $source->timezone ?: 'UTC');
+        $end = Carbon::parse($request->end_date, $source->timezone ?: 'UTC');
+
+        $staffId = SourceStaff::query()
+            ->where('source_id', $source->id)
+            ->where('is_active', true)
+            ->whereHas('appointmentStaff', fn ($query) => $query->where('is_active', true))
+            ->value('appointment_staff_id');
+
+        if (! $staffId && $request->filled('appointment_staff_id')) {
+            $staffId = (int) $request->appointment_staff_id;
+        }
+
+        if (! $staffId) {
+            return redirect()->back()
+                ->withInput()
+                ->withStatus(__('Assign an active team member to this service before creating appointments.'));
+        }
+
+        try {
+            app(ReservationBookingService::class)->book($company, [
+                'phone' => $contact->phone,
+                'name' => $contact->name,
+                'source' => $source->id,
+                'start_date' => $start->toDateTimeString(),
+                'end_date' => $end->toDateTimeString(),
+                'appointment_staff_id' => (int) $staffId,
+                'duration_minutes' => max(5, $start->diffInMinutes($end)),
+                'external_id' => $request->external_id,
+                'booking_source' => 'admin',
+            ]);
+        } catch (\Throwable $exception) {
+            return redirect()->back()
+                ->withInput()
+                ->withStatus($exception->getMessage());
+        }
 
         return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_added', ['item' => __($this->title)]));
     }
@@ -520,14 +556,43 @@ class ReservationsController extends Controller
     {
         $this->authChecker();
         $item = $this->provider::findOrFail($id);
+        $bookingService = app(ReservationBookingService::class);
 
-        $item->contact_id = $request->contact_id;
-        $item->source_id = $request->source_id;
-        $item->start_date = $request->start_date;
-        $item->end_date = $request->end_date;
-        $item->external_id = $request->external_id;
+        $startChanged = Carbon::parse($request->start_date)->toDateTimeString()
+            !== optional($item->start_date)->toDateTimeString();
+        $endChanged = Carbon::parse($request->end_date)->toDateTimeString()
+            !== optional($item->end_date)->toDateTimeString();
 
-        $item->update();
+        if ($startChanged || $endChanged) {
+            if (! $item->appointment_staff_id) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withStatus(__('This appointment has no team member assigned, so it cannot be rescheduled from here.'));
+            }
+
+            try {
+                $item = $bookingService->reschedule($item, [
+                    'start_date' => $request->start_date,
+                    'end_date' => $request->end_date,
+                    'appointment_staff_id' => $item->appointment_staff_id,
+                    'staff_user_id' => $item->staff_user_id,
+                    'duration_minutes' => max(
+                        5,
+                        Carbon::parse($request->start_date)->diffInMinutes(Carbon::parse($request->end_date))
+                    ),
+                ]);
+            } catch (\Throwable $exception) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withStatus($exception->getMessage());
+            }
+        }
+
+        $item->update([
+            'contact_id' => $request->contact_id,
+            'source_id' => $request->source_id,
+            'external_id' => $request->external_id,
+        ]);
 
         return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_updated', ['item' => __($this->title)]));
     }
@@ -543,15 +608,8 @@ class ReservationsController extends Controller
         $this->authChecker();
         $item = $this->provider::findOrFail($id);
 
-        //Delete the messages
-        try {
-            Message::where('extra', $item->id)->where('status', 0)->delete();
-        } catch (\Throwable $th) {
-            //throw $th;
-        }
+        app(ReservationBookingService::class)->cancel($item, 'admin');
 
-        $item->delete();
-
-        return redirect()->route($this->webroute_path.'index')->withStatus(__('crud.item_has_been_removed', ['item' => __($this->title)]));
+        return redirect()->route($this->webroute_path.'index')->withStatus(__('Appointment cancelled.'));
     }
 }

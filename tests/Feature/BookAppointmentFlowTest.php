@@ -154,6 +154,94 @@ class BookAppointmentFlowTest extends TestCase
         );
     }
 
+    public function test_dynamic_booking_paginates_services_without_exceeding_whatsapp_limit(): void
+    {
+        Http::fake();
+
+        foreach (range(1, 10) as $index) {
+            Source::withoutGlobalScopes()->create([
+                'company_id' => $this->company->id,
+                'name' => sprintf('Service %02d', $index),
+                'is_bookable' => true,
+                'default_duration_minutes' => 30,
+                'duration_options' => [30],
+                'timezone' => 'UTC',
+                'min_notice_hours' => 0,
+                'max_advance_days' => 30,
+            ]);
+        }
+
+        $this->node = new BookAppointment([
+            'id' => 'book-1',
+            'type' => 'book_appointment',
+            'data' => [
+                'settings' => [
+                    'source_name' => '',
+                    'duration_minutes' => '',
+                ],
+            ],
+        ], []);
+        $this->node->flow_id = $this->flow->id;
+
+        $messageData = $this->messageData();
+        $this->node->process('', $messageData);
+
+        Http::assertSent(function ($request) {
+            $rows = $request['action']['sections'][0]['rows'] ?? [];
+
+            return count($rows) === 10
+                && ($rows[9]['title'] ?? '') === 'More…';
+        });
+
+        $this->node->isStartNode = true;
+        $this->simulateListReply('more', 'service', $messageData);
+
+        Http::assertSent(function ($request) {
+            $rows = $request['action']['sections'][0]['rows'] ?? [];
+
+            return count($rows) === 2
+                && collect($rows)->contains(fn (array $row) => $row['title'] === 'Service 10');
+        });
+
+        $this->simulateListReply('service', 'Service 10', $messageData);
+
+        $this->assertSame(
+            'Service 10',
+            $this->contact->getContactStateValue($this->flow->id, 'ba_book-1_source_name')
+        );
+    }
+
+    public function test_book_appointment_list_truncates_footer_to_whatsapp_limit(): void
+    {
+        Http::fake();
+
+        $longFooter = 'Paid services will request the configured deposit before confirmation.';
+        $this->assertSame(70, mb_strlen($longFooter));
+
+        $this->node = new BookAppointment([
+            'id' => 'book-1',
+            'type' => 'book_appointment',
+            'data' => [
+                'settings' => [
+                    'source_name' => '',
+                    'duration_minutes' => '',
+                    'footer' => $longFooter,
+                ],
+            ],
+        ], []);
+        $this->node->flow_id = $this->flow->id;
+
+        $this->node->process('', $this->messageData());
+
+        Http::assertSent(function ($request) {
+            return ($request['footer'] ?? null) === mb_substr(
+                'Paid services will request the configured deposit before confirmation.',
+                0,
+                60
+            );
+        });
+    }
+
     public function test_flow_resume_booking_payment_success_stores_variables(): void
     {
         Http::fake();

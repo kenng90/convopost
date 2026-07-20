@@ -5,6 +5,7 @@ namespace Modules\Flowmaker\Models\Nodes;
 use App\Models\Company;
 use App\Services\Flowmaker\BookingWebhookService;
 use App\Services\Flowmaker\FlowRunLogger;
+use App\Services\WhatsApp\InteractiveListLimits;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +23,8 @@ use Modules\Reminders\Support\BookingPaymentConfig;
 class BookAppointment extends Node
 {
     private const LIST_LIMIT = 10;
+
+    private const PAGINATED_LIST_SIZE = self::LIST_LIMIT - 1;
 
     public function listenForReply($message, $data): void
     {
@@ -233,7 +236,7 @@ class BookAppointment extends Node
         $source = $this->resolveSelectedSource($company, $contact);
 
         if (! $source) {
-            return $this->promptServiceSelection($contact, $company);
+            return $this->promptServiceSelection($contact, $company, $message, $data);
         }
 
         if (! $this->getState($contact, 'duration_minutes')) {
@@ -247,7 +250,7 @@ class BookAppointment extends Node
         }
 
         if (! $this->getState($contact, 'selected_date')) {
-            return $this->promptDateSelection($contact, $source);
+            return $this->promptDateSelection($contact, $source, $message, $data);
         }
 
         if (! $this->getState($contact, 'slot_id')) {
@@ -318,7 +321,9 @@ class BookAppointment extends Node
             ]);
 
             FlowRunLogger::log($this->flow_id, $contact->id, 'booking_error', $this->id, $exception->getMessage());
-            $contact->sendMessage($exception->getMessage(), false, false, 'TEXT');
+            if (! $this->getNextNodeId('error')) {
+                $contact->sendMessage(__('We could not complete your booking. Please try again or contact our team.'), false, false, 'TEXT');
+            }
             $this->routeToHandle($contact, 'error', $message, $data);
         }
 
@@ -407,13 +412,15 @@ class BookAppointment extends Node
         }
     }
 
-    private function promptServiceSelection(Contact $contact, Company $company): array
+    private function promptServiceSelection(Contact $contact, Company $company, $message, $data): array
     {
         $services = app(BookingCatalogService::class)->bookableServicesForCompany($company);
 
         if ($services === []) {
-            $contact->sendMessage(__('No bookable services are available right now.'), false, false, 'TEXT');
-            $this->routeToHandle($contact, 'error', '', new \stdClass());
+            if (! $this->getNextNodeId('error')) {
+                $contact->sendMessage(__('No bookable services are available right now.'), false, false, 'TEXT');
+            }
+            $this->routeToHandle($contact, 'error', $message, $data);
 
             return ['success' => false];
         }
@@ -471,7 +478,7 @@ class BookAppointment extends Node
         );
     }
 
-    private function promptDateSelection(Contact $contact, Source $source): array
+    private function promptDateSelection(Contact $contact, Source $source, $message = '', $data = null): array
     {
         $duration = (int) $this->getState($contact, 'duration_minutes');
         $from = now($source->timezone ?: 'UTC')->startOfDay();
@@ -479,9 +486,11 @@ class BookAppointment extends Node
         $dates = app(AvailabilityService::class)->availableDates($source, $from, $to, $duration);
 
         if ($dates === []) {
-            $contact->sendMessage(__('No available dates right now. Please try again later.'), false, false, 'TEXT');
+            if (! $this->getNextNodeId('unavailable')) {
+                $contact->sendMessage(__('No available dates right now. Please try again later.'), false, false, 'TEXT');
+            }
             FlowRunLogger::log($this->flow_id, $contact->id, 'booking_unavailable', $this->id);
-            $this->routeToHandle($contact, 'unavailable', '', new \stdClass());
+            $this->routeToHandle($contact, 'unavailable', $message, $data);
 
             return ['success' => false];
         }
@@ -523,7 +532,7 @@ class BookAppointment extends Node
             $this->setState($contact, 'selected_date', '');
             $this->setState($contact, 'slot_id', '');
 
-            return $this->promptDateSelection($contact, $source);
+            return $this->promptDateSelection($contact, $source, $message, $data);
         }
 
         $settings = $this->getDataAsArray()['settings'] ?? [];
@@ -562,21 +571,30 @@ class BookAppointment extends Node
         $company = Company::find($contact->company_id);
         $token = $company?->getConfig('plain_token', '') ?? '';
 
+        $constrained = InteractiveListLimits::constrainListFields(
+            (string) ($contact->changeVariables($header, $this->flow_id) ?? ''),
+            (string) $contact->changeVariables($body, $this->flow_id),
+            (string) ($contact->changeVariables($footer, $this->flow_id) ?? ''),
+            (string) $contact->changeVariables($buttonText, $this->flow_id),
+            $sectionTitle,
+            collect($rows)->map(fn (array $row) => [
+                'id' => $row['id'],
+                'title' => (string) ($row['title'] ?? ''),
+                'description' => (string) ($row['description'] ?? ''),
+            ])->all()
+        );
+
         $payload = [
             'token' => $token,
             'phone' => $contact->phone,
-            'message' => (string) $contact->changeVariables($body, $this->flow_id),
-            'header' => (string) ($contact->changeVariables($header, $this->flow_id) ?? ''),
-            'footer' => (string) ($contact->changeVariables($footer, $this->flow_id) ?? ''),
+            'message' => $constrained['body'],
+            'header' => $constrained['header'],
+            'footer' => $constrained['footer'],
             'action' => [
-                'button' => (string) $contact->changeVariables($buttonText, $this->flow_id),
+                'button' => $constrained['button'],
                 'sections' => [[
-                    'title' => $sectionTitle,
-                    'rows' => collect($rows)->map(fn (array $row) => [
-                        'id' => $row['id'],
-                        'title' => (string) ($row['title'] ?? ''),
-                        'description' => (string) ($row['description'] ?? ''),
-                    ])->all(),
+                    'title' => $constrained['section_title'],
+                    'rows' => $constrained['rows'],
                 ]],
             ],
         ];
@@ -584,7 +602,14 @@ class BookAppointment extends Node
         $contact->setContactState($this->flow_id, 'current_node', $this->id);
 
         try {
-            Http::post(config('app.url').'/api/wpbox/sendlistmessage', $payload);
+            $response = Http::post(config('app.url').'/api/wpbox/sendlistmessage', $payload);
+
+            if ($response->failed()) {
+                Log::error('Book appointment list message failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+            }
         } catch (\Throwable $exception) {
             Log::error('Book appointment list message failed', ['error' => $exception->getMessage()]);
         }
@@ -700,7 +725,11 @@ class BookAppointment extends Node
      */
     private function paginatedRows(array $rows, int $offset, string $type): array
     {
-        $page = array_slice($rows, $offset, self::LIST_LIMIT);
+        $remaining = max(0, count($rows) - $offset);
+        $pageSize = $remaining > self::LIST_LIMIT
+            ? self::PAGINATED_LIST_SIZE
+            : self::LIST_LIMIT;
+        $page = array_slice($rows, $offset, $pageSize);
 
         if ($offset + count($page) < count($rows)) {
             $page[] = [
@@ -727,7 +756,7 @@ class BookAppointment extends Node
         }
 
         $current = (int) $this->getState($contact, $key);
-        $this->setState($contact, $key, (string) ($current + self::LIST_LIMIT));
+        $this->setState($contact, $key, (string) ($current + self::PAGINATED_LIST_SIZE));
     }
 
     private function logStepSelection(Contact $contact, string $step): void

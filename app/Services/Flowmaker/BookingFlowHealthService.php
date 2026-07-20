@@ -10,8 +10,6 @@ use Modules\Reminders\Services\EventCatalogService;
 
 class BookingFlowHealthService
 {
-    private const LIST_LIMIT = 10;
-
     /**
      * @param  array<string, mixed>  $flowData
      * @return array<int, string>
@@ -37,9 +35,6 @@ class BookingFlowHealthService
                 }
 
                 $fixedService = trim((string) ($settings['source_name'] ?? ''));
-                if ($fixedService === '' && $serviceCount > self::LIST_LIMIT) {
-                    $warnings[] = "Book appointment node [{$id}]: {$serviceCount} services exceed WhatsApp list limit (".self::LIST_LIMIT.'). Only the first '.self::LIST_LIMIT.' appear; use a fixed service or pagination.';
-                }
 
                 if (! $this->handleConnected($edges, $id, 'error')) {
                     $warnings[] = "Book appointment node [{$id}]: wire the Error output for payment and booking failures.";

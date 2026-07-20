@@ -23,7 +23,7 @@ interface NodeSettings {
   buttonText?: string;
   reference_variable?: string;
   allow_reschedule?: boolean;
-  default_action?: 'menu' | 'cancel';
+  default_action?: 'menu' | 'cancel' | 'reschedule';
 }
 
 const defaultSettings: NodeSettings = {
@@ -98,7 +98,8 @@ const ManageBookingNode = ({ id, data }: ManageBookingNodeProps) => {
                 onChange={e => update({ default_action: e.target.value as NodeSettings['default_action'] })}
               >
                 <option value="menu">Show cancel / reschedule menu</option>
-                <option value="cancel">Cancel immediately</option>
+                <option value="reschedule">Start reschedule (pick date & time)</option>
+                <option value="cancel">Start cancel (ask for confirmation)</option>
               </select>
             </div>
 
