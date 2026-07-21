@@ -61,6 +61,10 @@ class LandingPageTest extends TestCase
         $response->assertSee('Forms ↔ Flow Builder bridge', false);
         $response->assertSee('38+ automation nodes', false);
         $response->assertSee('WhatsApp, SMS &amp; email channels', false);
+        $response->assertSee('ConvoConnect SMS', false);
+        $response->assertSee('Sender ID', false);
+        $response->assertSee('KES 0.6', false);
+        $response->assertDontSee('Twilio SMS', false);
         $response->assertSee('/api/wpbox/sendmessage', false);
         $response->assertSee('/popup/whatsapp', false);
         $response->assertSee('property="og:title"', false);
