@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CreateEmptyCatalogRequest;
+use App\Http\Requests\ImportCatalogExcelRequest;
 use App\Http\Requests\ManageCatalogItemsRequest;
+use App\Http\Requests\PreviewCatalogExcelRequest;
+use App\Http\Requests\ReimportCatalogExcelRequest;
 use App\Http\Requests\UpdateCatalogCommerceSettingsRequest;
 use App\Models\CatalogCollection;
 use App\Models\CatalogItem;
@@ -12,6 +15,7 @@ use App\Models\ListCatalog;
 use App\Services\Catalog\ApiCatalogImportService;
 use App\Services\Catalog\CatalogAnalyticsService;
 use App\Services\Catalog\CatalogAvailabilitySyncService;
+use App\Services\Catalog\CatalogBookableImportService;
 use App\Services\Catalog\CatalogCategoryNormalizer;
 use App\Services\Catalog\CatalogExperimentService;
 use App\Services\Catalog\CatalogFlowUsageService;
@@ -57,37 +61,24 @@ class ListCatalogController extends Controller
         protected CatalogItemPayloadService $catalogItemPayloadService,
         protected CatalogGoLiveService $catalogGoLiveService,
         protected CatalogAvailabilitySyncService $catalogAvailabilitySyncService,
+        protected CatalogBookableImportService $catalogBookableImportService,
     ) {
     }
 
     /**
      * Preview Excel file without saving
      */
-    public function previewExcel(Request $request)
+    public function previewExcel(PreviewCatalogExcelRequest $request)
     {
-        if (! auth()->check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized',
-            ], 401);
-        }
-
         try {
-            $request->validate([
-                'file' => 'required|file|mimes:xlsx,xls,csv',
-                'vertical' => 'nullable|string|max:64',
-            ]);
-
             $vertical = $request->input('vertical');
+            $catalogMode = $request->input('catalog_mode');
 
             $file = $request->file('file');
             $path = $file->store('temp');
             $fullPath = storage_path('app/'.$path);
 
-            // Parse the Excel file
             $parseResult = $this->excelService->parseExcel($fullPath);
-
-            // Clean up temp file
             unlink($fullPath);
 
             $columnMapping = $vertical
@@ -103,7 +94,7 @@ class ListCatalogController extends Controller
                 ? $this->catalogTemplateRegistry->excelHeadersForVertical($vertical)
                 : ExcelImportService::TEMPLATE_HEADERS;
 
-            return response()->json([
+            $response = [
                 'success' => true,
                 'items' => $this->excelService->previewItems($previewItems),
                 'columns' => $parseResult['columns'],
@@ -111,8 +102,28 @@ class ListCatalogController extends Controller
                 'template_headers' => $templateHeaders,
                 'total_count' => $parseResult['total_count'],
                 'headers' => $parseResult['headers'],
-            ]);
+            ];
 
+            $shouldBuildPlan = $request->boolean('include_bookable_plan')
+                || $this->catalogBookableImportService->supportsMode($catalogMode);
+
+            if ($shouldBuildPlan && $this->catalogBookableImportService->supportsMode($catalogMode)) {
+                $company = $this->getCompany() ?? abort(403);
+                $allItems = $this->excelService->transformItems(
+                    $parseResult['items'],
+                    $columnMapping,
+                    $vertical
+                );
+                $response['bookable_plan'] = $this->catalogBookableImportService->buildPlan(
+                    $company,
+                    $allItems,
+                    [],
+                    $catalogMode,
+                    $vertical
+                );
+            }
+
+            return response()->json($response);
         } catch (\Exception $e) {
             Log::error('Excel preview failed', ['error' => $e->getMessage()]);
 
@@ -126,24 +137,9 @@ class ListCatalogController extends Controller
     /**
      * Import Excel file and create catalog
      */
-    public function importExcel(Request $request)
+    public function importExcel(ImportCatalogExcelRequest $request)
     {
-        if (! auth()->check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized',
-            ], 401);
-        }
-
         try {
-            $request->validate([
-                'file' => 'required|file|mimes:xlsx,xls,csv',
-                'catalogName' => 'required|string|max:255',
-                'columnMapping' => 'nullable|json',
-                'catalog_mode' => 'nullable|string|in:'.implode(',', CatalogMode::all()),
-                'vertical' => 'nullable|string|max:64',
-            ]);
-
             $file = $request->file('file');
             $catalogName = $request->input('catalogName');
             $catalogMode = $request->input('catalog_mode', CatalogMode::COMMERCE);
@@ -168,10 +164,30 @@ class ListCatalogController extends Controller
                 $vertical
             );
 
-            // Validate items
             $this->excelService->validateItems($transformedItems);
 
             $company = $this->getCompany() ?? abort(403);
+            $bookingStats = null;
+
+            if ($this->catalogBookableImportService->supportsMode($catalogMode) && $this->hasBookingPlanPayload($request)) {
+                $applied = $this->catalogBookableImportService->applyPlan(
+                    $company,
+                    $transformedItems,
+                    $request->input('booking_decisions', []),
+                    $request->input('booking_defaults', []),
+                    $catalogMode,
+                    $request->input('booking_shared'),
+                    $vertical
+                );
+                $transformedItems = $applied['items'];
+                $bookingStats = [
+                    'created' => $applied['created'],
+                    'linked' => $applied['linked'],
+                    'skipped' => $applied['skipped'],
+                    'strategy' => $applied['strategy'] ?? null,
+                ];
+            }
+
             $itemCount = count($transformedItems);
 
             if (! $this->catalogItemPlanLimit->canAdd($company, $itemCount)) {
@@ -182,7 +198,6 @@ class ListCatalogController extends Controller
                 ], 403);
             }
 
-            // Create catalog
             $catalogData = [
                 'company_id' => $this->activeCompanyId(),
                 'name' => $catalogName,
@@ -199,6 +214,7 @@ class ListCatalogController extends Controller
                     'imported_at' => now(),
                     'catalog_mode' => $catalogMode,
                     'vertical' => $vertical,
+                    'booking_stats' => $bookingStats,
                 ],
             ];
 
@@ -209,10 +225,23 @@ class ListCatalogController extends Controller
 
             $templateProvision = $this->orderInvoiceTemplateService->ensureForCompany($company);
 
-            // Clean up original file
             unlink($fullPath);
 
             $responseMessage = "Catalog '{$catalogName}' created with ".count($transformedItems).' items.';
+            if ($bookingStats) {
+                if (($bookingStats['strategy'] ?? null) === 'shared') {
+                    if (($bookingStats['skipped'] ?? 0) > 0 && ($bookingStats['linked'] ?? 0) === 0) {
+                        $responseMessage .= ' Listings imported without a shared bookable service.';
+                    } elseif (($bookingStats['created'] ?? 0) > 0) {
+                        $responseMessage .= " Created 1 shared bookable service and linked {$bookingStats['linked']} listing(s).";
+                    } else {
+                        $responseMessage .= " Linked {$bookingStats['linked']} listing(s) to a shared bookable service.";
+                    }
+                } else {
+                    $bookable = $bookingStats['created'] + $bookingStats['linked'];
+                    $responseMessage .= " {$bookable} bookable · {$bookingStats['skipped']} showcase only.";
+                }
+            }
             if (! $templateProvision['ready']) {
                 $responseMessage .= ' '.$templateProvision['message'];
             }
@@ -224,13 +253,13 @@ class ListCatalogController extends Controller
                 'catalog' => $this->formatCatalogSummary($catalog),
                 'items' => $transformedItems,
                 'itemCount' => count($transformedItems),
+                'booking_stats' => $bookingStats,
                 'order_template' => [
                     'ready' => $templateProvision['ready'],
                     'status' => $templateProvision['status'],
                     'message' => $templateProvision['message'],
                 ],
             ]);
-
         } catch (\Exception $e) {
             Log::error('Excel import failed', ['error' => $e->getMessage()]);
 
@@ -903,19 +932,8 @@ class ListCatalogController extends Controller
         ]);
     }
 
-    public function reimportExcel(Request $request, $id)
+    public function reimportExcel(ReimportCatalogExcelRequest $request, $id)
     {
-        if (! auth()->check()) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
-        }
-
-        $request->validate([
-            'file' => 'required|file|mimes:xlsx,xls,csv',
-            'columnMapping' => 'nullable|json',
-            'remove_missing' => 'nullable|boolean',
-            'preview_only' => 'nullable|boolean',
-        ]);
-
         $companyId = $this->activeCompanyId();
         $catalog = ListCatalog::where('id', $id)->where('company_id', $companyId)->firstOrFail();
         $company = Company::findOrFail($companyId);
@@ -940,21 +958,58 @@ class ListCatalogController extends Controller
             );
             $this->excelService->validateItems($importedItems);
 
-            $preview = $this->catalogReimportService->previewMerge(
-                $this->catalogItemRepository->getItemsArray($catalog),
-                $importedItems
-            );
+            $existingItems = $this->catalogItemRepository->getItemsArray($catalog);
+            $catalogMode = $catalog->resolvedCatalogMode();
+            $bookingStats = null;
+
+            if (
+                $this->catalogBookableImportService->supportsMode($catalogMode)
+                && ! $request->boolean('preview_only')
+                && $this->hasBookingPlanPayload($request)
+            ) {
+                $applied = $this->catalogBookableImportService->applyPlan(
+                    $company,
+                    $importedItems,
+                    $request->input('booking_decisions', []),
+                    $request->input('booking_defaults', []),
+                    $catalogMode,
+                    $request->input('booking_shared'),
+                    $catalog->resolvedVertical()
+                );
+                $importedItems = $applied['items'];
+                $bookingStats = [
+                    'created' => $applied['created'],
+                    'linked' => $applied['linked'],
+                    'skipped' => $applied['skipped'],
+                    'strategy' => $applied['strategy'] ?? null,
+                ];
+            }
+
+            $preview = $this->catalogReimportService->previewMerge($existingItems, $importedItems);
 
             if ($request->boolean('preview_only')) {
-                return response()->json([
+                $response = [
                     'success' => true,
                     'preview' => $preview,
                     'import_count' => count($importedItems),
-                ]);
+                ];
+
+                if ($this->catalogBookableImportService->supportsMode($catalogMode)) {
+                    $response['bookable_plan'] = $this->catalogBookableImportService->buildPlan(
+                        $company,
+                        $importedItems,
+                        $existingItems,
+                        $catalogMode,
+                        $catalog->resolvedVertical()
+                    );
+                    $response['catalog_mode'] = $catalogMode;
+                }
+
+                return response()->json($response);
             }
 
             $merge = $this->catalogReimportService->mergeByItemId(
-                $this->catalogItemRepository->getItemsArray($catalog),
+                $existingItems,
                 $importedItems,
                 $request->boolean('remove_missing')
             );
@@ -979,6 +1034,7 @@ class ListCatalogController extends Controller
                     'updated' => $merge['updated'],
                     'unchanged' => $merge['unchanged'],
                 ],
+                'booking_stats' => $bookingStats,
             ]);
             $catalog->save();
 
@@ -986,11 +1042,28 @@ class ListCatalogController extends Controller
                 $this->catalogItemPlanLimit->recordUsage($company->id, $merge['added']);
             }
 
+            $message = "Catalog updated: {$merge['added']} added, {$merge['updated']} updated.";
+            if ($bookingStats) {
+                if (($bookingStats['strategy'] ?? null) === 'shared') {
+                    if (($bookingStats['skipped'] ?? 0) > 0 && ($bookingStats['linked'] ?? 0) === 0) {
+                        $message .= ' Listings updated without a shared bookable service.';
+                    } elseif (($bookingStats['created'] ?? 0) > 0) {
+                        $message .= " Created 1 shared bookable service and linked {$bookingStats['linked']} listing(s).";
+                    } else {
+                        $message .= " Linked {$bookingStats['linked']} listing(s) to a shared bookable service.";
+                    }
+                } else {
+                    $bookable = $bookingStats['created'] + $bookingStats['linked'];
+                    $message .= " {$bookable} bookable · {$bookingStats['skipped']} showcase only.";
+                }
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => "Catalog updated: {$merge['added']} added, {$merge['updated']} updated.",
+                'message' => $message,
                 'catalog' => $this->formatCatalogSummary($catalog->fresh()),
                 'stats' => $merge,
+                'booking_stats' => $bookingStats,
             ]);
         } finally {
             if (file_exists($fullPath)) {
@@ -1589,6 +1662,11 @@ class ListCatalogController extends Controller
         }
 
         $collection->items()->sync($sync);
+    }
+
+    private function hasBookingPlanPayload(ImportCatalogExcelRequest|ReimportCatalogExcelRequest|Request $request): bool
+    {
+        return $request->filled('booking_decisions') || $request->filled('booking_shared');
     }
 
     private function formatCatalogSummary(ListCatalog $catalog): array

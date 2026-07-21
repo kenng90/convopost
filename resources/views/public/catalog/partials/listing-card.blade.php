@@ -49,10 +49,13 @@
     $hardDisabledStatuses = ['Sold', 'Leased', 'Reserved', 'Fully Booked'];
     $isHardDisabled = in_array($statusValue, $hardDisabledStatuses, true);
     $isUnderOffer = $statusValue === 'Under Offer';
-    $ctaDisabled = $isHardDisabled || $isUnderOffer;
-    $ctaLabel = $ctaDisabled
+    $bookDisabled = $isHardDisabled || $isUnderOffer;
+    $inquireDisabled = false;
+    $inquireCtaLabel = $presentation['inquire_cta_label'] ?? 'Inquire';
+    $bookCtaLabel = $presentation['book_cta_label'] ?? ($presentation['cta_label'] ?? 'Book');
+    $cardCtaLabel = $bookDisabled
         ? (string) $statusValue
-        : ($presentation['cta_label'] ?? 'Inquire on WhatsApp');
+        : $bookCtaLabel;
 
     $skipHighlightKeys = [$statusField];
     if ($vertical === 'automotive') {
@@ -73,8 +76,11 @@
         'price' => isset($item['price']) ? (float) $item['price'] : null,
         'images' => $images,
         'status' => (string) $statusValue,
-        'ctaDisabled' => $ctaDisabled,
-        'ctaLabel' => $ctaLabel,
+        'bookDisabled' => $bookDisabled,
+        'inquireDisabled' => $inquireDisabled,
+        'bookCtaLabel' => $bookCtaLabel,
+        'inquireCtaLabel' => $inquireCtaLabel,
+        'statusLabel' => (string) $statusValue,
         'highlights' => [],
     ];
 
@@ -149,8 +155,8 @@
             data-card-id="{{ $cardId }}"
             role="button"
             tabindex="0"
-            onclick='openItemDetailDrawer(@js($drawerPayload))'
-            onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();openItemDetailDrawer(@js($drawerPayload));}'
+            onclick="openItemDetailDrawer(@js($drawerPayload))"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openItemDetailDrawer(@js($drawerPayload));}"
         >
             @if(count($images) > 1)
                 <div class="listing-gallery-track">
@@ -189,8 +195,8 @@
                 class="product-title listing-open-detail"
                 role="button"
                 tabindex="0"
-                onclick='openItemDetailDrawer(@js($drawerPayload))'
-                onkeydown='if(event.key==="Enter"||event.key===" "){event.preventDefault();openItemDetailDrawer(@js($drawerPayload));}'
+                onclick="openItemDetailDrawer(@js($drawerPayload))"
+                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openItemDetailDrawer(@js($drawerPayload));}"
             >{{ $displayTitle }}</div>
             <div class="product-description">{{ $item['description'] ?? '' }}</div>
 
@@ -293,7 +299,7 @@
             <button
                 type="button"
                 class="btn btn-link btn-sm p-0 mb-2 align-self-start listing-view-details"
-                onclick='openItemDetailDrawer(@js($drawerPayload))'
+                onclick="openItemDetailDrawer(@js($drawerPayload))"
             >
                 View details
             </button>
@@ -302,13 +308,13 @@
                 type="button"
                 class="add-to-cart-btn{{ $isUnderOffer ? ' cta-soft-disabled' : '' }}"
                 style="background-color: #25D366;"
-                onclick="openBookingPanel(@js($item['id']), @js($displayTitle), this)"
-                @if($ctaDisabled) disabled @endif
+                onclick="openBookingPanel(@js($item['id']), @js($displayTitle), this, { intent: 'book' })"
+                @if($bookDisabled) disabled @endif
             >
-                @if($ctaDisabled)
-                    <i class="fas fa-ban mr-2"></i>{{ $ctaLabel }}
+                @if($bookDisabled)
+                    <i class="fas fa-ban mr-2"></i>{{ $cardCtaLabel }}
                 @else
-                    <i class="fab fa-whatsapp mr-2"></i>{{ $ctaLabel }}
+                    <i class="fas fa-calendar-check mr-2"></i>{{ $cardCtaLabel }}
                 @endif
             </button>
         </div>

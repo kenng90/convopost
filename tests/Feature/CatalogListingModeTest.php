@@ -98,10 +98,16 @@ class CatalogListingModeTest extends TestCase
         $response = $this->get(route('catalog.public', $catalog->id));
 
         $response->assertOk();
+        $response->assertSee('Book test drive', false);
         $response->assertSee('Inquire on WhatsApp', false);
+        $response->assertSee('itemDetailInquireCta', false);
+        $response->assertSee('itemDetailBookCta', false);
+        $response->assertSee('startWhatsAppInquiry', false);
         $response->assertSee('2021 Toyota RAV4', false);
         $response->assertSee('itemDetailDrawer', false);
         $response->assertSee('View details', false);
+        $response->assertSee('openItemDetailDrawer(JSON.parse(', false);
+        $response->assertDontSee("onclick='openItemDetailDrawer", false);
         $response->assertDontSee('Your Cart', false);
         $response->assertDontSee('Add to Cart', false);
     }

@@ -146,7 +146,14 @@ class CatalogTemplateRegistry
             'item_noun_plural' => $modeConfig['item_noun_plural'] ?? 'items',
             'public_title_suffix' => $modeConfig['public_title_suffix'] ?? 'Catalog',
             'search_placeholder' => $modeConfig['search_placeholder'] ?? 'Search...',
-            'cta_label' => $modeConfig['cta_label'] ?? 'Contact us',
+            'inquire_cta_label' => $modeConfig['inquire_cta_label'] ?? 'Inquire on WhatsApp',
+            'book_cta_label' => $verticalConfig['book_cta_label']
+                ?? $modeConfig['cta_label']
+                ?? 'Book',
+            // Primary card CTA for listing/service is Book; commerce keeps Add to Cart.
+            'cta_label' => ($modeConfig['supports_cart'] ?? false)
+                ? ($modeConfig['cta_label'] ?? 'Add to Cart')
+                : ($verticalConfig['book_cta_label'] ?? $modeConfig['cta_label'] ?? 'Book'),
             'status_field' => $verticalConfig['status_field'] ?? 'stockStatus',
             'status_options' => $verticalConfig['status_options'] ?? [],
             'card_highlights' => $verticalConfig['card_highlights'] ?? [],
