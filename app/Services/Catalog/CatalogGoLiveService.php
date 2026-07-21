@@ -36,8 +36,18 @@ class CatalogGoLiveService
         $hasPublishedFlow = collect($flows)->contains(fn ($flow) => ! empty($flow['is_active']) || ! empty($flow['id']));
 
         $mode = $catalog?->resolvedCatalogMode() ?? 'commerce';
+        $isBookableMode = in_array($mode, [CatalogMode::LISTING, CatalogMode::SERVICE], true);
+        $linkedBookableCount = 0;
+        if ($catalog && $isBookableMode) {
+            foreach ($catalog->items ?? [] as $item) {
+                $metadata = is_array($item['metadata'] ?? null) ? $item['metadata'] : [];
+                if ((int) ($metadata['booking_source_id'] ?? 0) > 0) {
+                    $linkedBookableCount++;
+                }
+            }
+        }
 
-        return [
+        $steps = [
             [
                 'key' => 'catalog',
                 'title' => __('Create your catalog'),
@@ -55,6 +65,22 @@ class CatalogGoLiveService
                 'action_params' => $catalog ? ['id' => $catalog->id] : [],
                 'action_label' => __('Manage items'),
             ],
+        ];
+
+        if ($isBookableMode) {
+            $steps[] = [
+                'key' => 'bookable_links',
+                'title' => __('Link bookable services'),
+                'description' => __('Connect each listing to an appointment service so customers can book slots.'),
+                'completed' => $itemCount > 0 && $linkedBookableCount === $itemCount,
+                'optional' => true,
+                'action_route' => $catalog ? 'catalogs.items.page' : 'catalogs.page',
+                'action_params' => $catalog ? ['id' => $catalog->id] : [],
+                'action_label' => __('Manage items'),
+            ];
+        }
+
+        return array_merge($steps, [
             [
                 'key' => 'whatsapp',
                 'title' => __('Connect WhatsApp checkout number'),
@@ -91,7 +117,7 @@ class CatalogGoLiveService
                 'action_url' => $catalog ? $this->catalogUrlService->publicUrl($catalog, $company) : null,
                 'action_label' => __('Open public page'),
             ],
-        ];
+        ]);
     }
 
     /**

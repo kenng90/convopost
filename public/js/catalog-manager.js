@@ -47,7 +47,740 @@ function setupImportModalHandlers() {
 
     window.jQuery(modal).on('show.bs.modal', () => {
         updateImportVerticalOptions();
+        resetImportWizard();
     });
+}
+
+let importBookablePlan = null;
+let reimportBookablePlan = null;
+
+function isBookableCatalogMode(mode) {
+    return mode === 'listing' || mode === 'service';
+}
+
+function resetImportWizard() {
+    importBookablePlan = null;
+    showImportDetailsStep();
+    const rows = document.getElementById('importBookableRows');
+    if (rows) {
+        rows.innerHTML = '';
+    }
+}
+
+function resetReimportWizard() {
+    reimportBookablePlan = null;
+    showReimportDetailsStep();
+    const rows = document.getElementById('reimportBookableRows');
+    if (rows) {
+        rows.innerHTML = '';
+    }
+}
+
+function showImportDetailsStep() {
+    const details = document.getElementById('importStepDetails');
+    const bookable = document.getElementById('importStepBookable');
+    const backBtn = document.getElementById('importBookableBackBtn');
+    const primaryBtn = document.getElementById('importPrimaryBtn');
+    const title = document.getElementById('catalogImportModalTitle');
+
+    if (details) details.style.display = '';
+    if (bookable) bookable.style.display = 'none';
+    if (backBtn) backBtn.style.display = 'none';
+    if (primaryBtn) {
+        primaryBtn.textContent = isBookableCatalogMode(document.getElementById('importCatalogMode')?.value)
+            ? 'Next'
+            : 'Import';
+    }
+    if (title) title.textContent = 'Import from Excel';
+}
+
+function showImportBookableStep() {
+    const details = document.getElementById('importStepDetails');
+    const bookable = document.getElementById('importStepBookable');
+    const backBtn = document.getElementById('importBookableBackBtn');
+    const primaryBtn = document.getElementById('importPrimaryBtn');
+    const title = document.getElementById('catalogImportModalTitle');
+
+    if (details) details.style.display = 'none';
+    if (bookable) bookable.style.display = '';
+    if (backBtn) backBtn.style.display = '';
+    if (primaryBtn) primaryBtn.textContent = 'Import';
+    if (title) title.textContent = 'Make these bookable';
+    updateBookingStaffWarning('import');
+}
+
+function showReimportDetailsStep() {
+    const details = document.getElementById('reimportStepDetails');
+    const bookable = document.getElementById('reimportStepBookable');
+    const backBtn = document.getElementById('reimportBookableBackBtn');
+    const primaryBtn = document.getElementById('reimportPrimaryBtn');
+
+    if (details) details.style.display = '';
+    if (bookable) bookable.style.display = 'none';
+    if (backBtn) backBtn.style.display = 'none';
+    if (primaryBtn) {
+        const mode = document.getElementById('reimportCatalogMode')?.value || 'commerce';
+        primaryBtn.textContent = isBookableCatalogMode(mode) ? 'Next' : 'Update catalog';
+    }
+}
+
+function showReimportBookableStep() {
+    const details = document.getElementById('reimportStepDetails');
+    const bookable = document.getElementById('reimportStepBookable');
+    const backBtn = document.getElementById('reimportBookableBackBtn');
+    const primaryBtn = document.getElementById('reimportPrimaryBtn');
+
+    if (details) details.style.display = 'none';
+    if (bookable) bookable.style.display = '';
+    if (backBtn) backBtn.style.display = '';
+    if (primaryBtn) primaryBtn.textContent = 'Update catalog';
+    updateBookingStaffWarning('reimport');
+}
+
+function updateBookingStaffWarning(prefix) {
+    const staffSelect = document.getElementById(`${prefix}BookingStaff`);
+    const warning = document.getElementById(`${prefix}BookingStaffWarning`);
+    if (!staffSelect || !warning) {
+        return;
+    }
+
+    const selected = Array.from(staffSelect.selectedOptions || []).map(o => o.value).filter(Boolean);
+    let hasCreate = false;
+
+    const sharedAction = document.getElementById(`${prefix}SharedAction`);
+    const sharedPanel = document.getElementById(`${prefix}BookableSharedPanel`);
+    if (sharedPanel && sharedPanel.style.display !== 'none' && sharedAction) {
+        hasCreate = sharedAction.value === 'create';
+    } else {
+        hasCreate = Array.from(document.querySelectorAll(`#${prefix}BookableRows select.bookable-action-select`))
+            .some(select => select.value === 'create');
+    }
+
+    warning.style.display = hasCreate && selected.length === 0 ? 'block' : 'none';
+}
+
+function buildWorkingHoursFromInputs(prefix) {
+    const weekdays = document.getElementById(`${prefix}HoursWeekdays`)?.checked;
+    const weekend = document.getElementById(`${prefix}HoursWeekend`)?.checked;
+    const start = document.getElementById(`${prefix}HoursStart`)?.value || '09:00';
+    const end = document.getElementById(`${prefix}HoursEnd`)?.value || '17:00';
+    const days = {
+        monday: weekdays,
+        tuesday: weekdays,
+        wednesday: weekdays,
+        thursday: weekdays,
+        friday: weekdays,
+        saturday: weekend,
+        sunday: weekend,
+    };
+
+    const hours = {};
+    Object.keys(days).forEach(day => {
+        hours[day] = {
+            enabled: !!days[day],
+            start,
+            end,
+        };
+    });
+
+    return hours;
+}
+
+function collectBookingDefaults(prefix) {
+    const staffSelect = document.getElementById(`${prefix}BookingStaff`);
+    const staffIds = staffSelect
+        ? Array.from(staffSelect.selectedOptions || []).map(o => parseInt(o.value, 10)).filter(Boolean)
+        : [];
+
+    return {
+        default_duration_minutes: parseInt(document.getElementById(`${prefix}BookingDuration`)?.value || '30', 10) || 30,
+        timezone: document.getElementById(`${prefix}BookingTimezone`)?.value || 'UTC',
+        working_hours: buildWorkingHoursFromInputs(prefix),
+        staff_ids: staffIds,
+    };
+}
+
+function collectBookingShared(prefix) {
+    const action = document.getElementById(`${prefix}SharedAction`)?.value || 'skip';
+    const name = document.getElementById(`${prefix}SharedName`)?.value || '';
+    const sourceId = parseInt(document.getElementById(`${prefix}SharedSource`)?.value || '0', 10) || null;
+    const duration = parseInt(document.getElementById(`${prefix}BookingDuration`)?.value || '30', 10) || 30;
+
+    return {
+        action,
+        name,
+        source_id: action === 'link' ? sourceId : null,
+        duration_minutes: duration,
+    };
+}
+
+function collectBookingDecisions(prefix) {
+    const rows = document.querySelectorAll(`#${prefix}BookableRows tr[data-item-id]`);
+    return Array.from(rows).map(row => {
+        const itemId = row.getAttribute('data-item-id');
+        const action = row.querySelector('.bookable-action-select')?.value || 'skip';
+        const name = row.querySelector('.bookable-name-input')?.value || '';
+        const sourceId = parseInt(row.querySelector('.bookable-source-select')?.value || '0', 10) || null;
+        const duration = parseInt(row.getAttribute('data-duration') || '30', 10) || 30;
+
+        return {
+            item_id: itemId,
+            action,
+            name,
+            source_id: action === 'link' ? sourceId : null,
+            duration_minutes: duration,
+        };
+    });
+}
+
+function appendBookingPlanPayload(formData, prefix, plan) {
+    formData.append('booking_defaults', JSON.stringify(collectBookingDefaults(prefix)));
+
+    if (plan?.strategy === 'shared') {
+        formData.append('booking_shared', JSON.stringify(collectBookingShared(prefix)));
+        return;
+    }
+
+    formData.append('booking_decisions', JSON.stringify(collectBookingDecisions(prefix)));
+}
+
+function populateBookablePlanUI(prefix, plan) {
+    const staffSelect = document.getElementById(`${prefix}BookingStaff`);
+    const tbody = document.getElementById(`${prefix}BookableRows`);
+    const durationInput = document.getElementById(`${prefix}BookingDuration`);
+    const timezoneInput = document.getElementById(`${prefix}BookingTimezone`);
+    const sharedPanel = document.getElementById(`${prefix}BookableSharedPanel`);
+    const rowsPanel = document.getElementById(`${prefix}BookableRowsPanel`);
+    const title = document.getElementById(`${prefix}BookableTitle`);
+    const subtitle = document.getElementById(`${prefix}BookableSubtitle`);
+
+    if (!plan) {
+        return;
+    }
+
+    if (durationInput && plan.defaults?.default_duration_minutes) {
+        durationInput.value = plan.defaults.default_duration_minutes;
+    }
+    if (timezoneInput && plan.defaults?.timezone) {
+        timezoneInput.value = plan.defaults.timezone;
+    }
+
+    if (staffSelect) {
+        staffSelect.innerHTML = (plan.staff || []).map(staff => (
+            `<option value="${staff.id}">${escapeHtml(staff.name)}</option>`
+        )).join('');
+        staffSelect.onchange = () => updateBookingStaffWarning(prefix);
+    }
+
+    if (plan.strategy === 'shared') {
+        if (title) title.textContent = 'Shared bookable service';
+        if (subtitle) {
+            subtitle.textContent = 'Listings share one appointment type named after the listing type (for example Real estate or Automotive).';
+        }
+        if (sharedPanel) sharedPanel.style.display = '';
+        if (rowsPanel) rowsPanel.style.display = 'none';
+
+        const shared = plan.shared || {};
+        const actionSelect = document.getElementById(`${prefix}SharedAction`);
+        const nameInput = document.getElementById(`${prefix}SharedName`);
+        const sourceSelect = document.getElementById(`${prefix}SharedSource`);
+        const itemCount = document.getElementById(`${prefix}SharedItemCount`);
+
+        if (nameInput) nameInput.value = shared.name || '';
+        if (actionSelect) actionSelect.value = shared.action || 'create';
+        if (sourceSelect) {
+            sourceSelect.innerHTML = `<option value="">Select service...</option>` + (plan.sources || []).map(source => (
+                `<option value="${source.id}" ${String(source.id) === String(shared.source_id || '') ? 'selected' : ''}>${escapeHtml(source.name)}</option>`
+            )).join('');
+            sourceSelect.disabled = (shared.action || 'create') !== 'link';
+        }
+        if (itemCount) {
+            itemCount.textContent = `${shared.item_count || 0} listing(s) will use this shared service.`;
+        }
+        if (actionSelect) {
+            actionSelect.onchange = () => {
+                if (sourceSelect) {
+                    sourceSelect.disabled = actionSelect.value !== 'link';
+                }
+                updateBookingStaffWarning(prefix);
+            };
+        }
+
+        updateBookingStaffWarning(prefix);
+        return;
+    }
+
+    if (title) title.textContent = 'Make these bookable';
+    if (subtitle) {
+        subtitle.textContent = 'Create appointment services or link existing ones so customers can book slots.';
+    }
+    if (sharedPanel) sharedPanel.style.display = 'none';
+    if (rowsPanel) rowsPanel.style.display = '';
+
+    if (!tbody) {
+        return;
+    }
+
+    tbody.innerHTML = (plan.rows || []).map(row => {
+        const action = row.action || 'create';
+        const selectedSource = row.source_id || '';
+        return `
+            <tr data-item-id="${escapeAttr(row.item_id)}" data-duration="${escapeAttr(String(row.duration_minutes || 30))}">
+                <td class="small">${escapeHtml(row.title || row.item_id)}</td>
+                <td><input type="text" class="form-control form-control-sm bookable-name-input" value="${escapeAttr(row.name || row.title || '')}"></td>
+                <td>
+                    <select class="form-control form-control-sm bookable-action-select">
+                        <option value="create" ${action === 'create' ? 'selected' : ''}>Create new</option>
+                        <option value="link" ${action === 'link' ? 'selected' : ''}>Link existing</option>
+                        <option value="skip" ${action === 'skip' ? 'selected' : ''}>Skip</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="form-control form-control-sm bookable-source-select" ${action === 'link' ? '' : 'disabled'}>
+                        <option value="">Select service...</option>
+                        ${(plan.sources || []).map(source => (
+                            `<option value="${source.id}" ${String(source.id) === String(selectedSource) ? 'selected' : ''}>${escapeHtml(source.name)}</option>`
+                        )).join('')}
+                    </select>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    tbody.querySelectorAll('.bookable-action-select').forEach(select => {
+        select.addEventListener('change', () => {
+            const row = select.closest('tr');
+            const sourceSelect = row?.querySelector('.bookable-source-select');
+            if (sourceSelect) {
+                sourceSelect.disabled = select.value !== 'link';
+            }
+            updateBookingStaffWarning(prefix);
+        });
+    });
+
+    updateBookingStaffWarning(prefix);
+}
+
+function handleImportPrimaryAction() {
+    const mode = document.getElementById('importCatalogMode')?.value || 'commerce';
+    const onDetails = document.getElementById('importStepBookable')?.style.display === 'none'
+        || !document.getElementById('importStepBookable');
+
+    if (isBookableCatalogMode(mode) && onDetails) {
+        goToImportBookableStep();
+        return;
+    }
+
+    submitImportForm();
+}
+
+function goToImportBookableStep() {
+    const fileInput = document.getElementById('catalogFile');
+    const catalogName = document.getElementById('catalogName');
+    const primaryBtn = document.getElementById('importPrimaryBtn');
+
+    if (!fileInput || !fileInput.files.length) {
+        showError('Please select a file');
+        return;
+    }
+
+    if (!catalogName || !catalogName.value.trim()) {
+        showError('Please enter a catalog name');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('catalog_mode', document.getElementById('importCatalogMode')?.value || 'service');
+    formData.append('vertical', document.getElementById('importCatalogVertical')?.value || 'general_service');
+    formData.append('include_bookable_plan', '1');
+
+    if (primaryBtn) {
+        primaryBtn.disabled = true;
+        primaryBtn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Loading...';
+    }
+
+    fetch('/api/list-catalogs/preview-excel', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRF-TOKEN': csrfToken() },
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (primaryBtn) {
+                primaryBtn.disabled = false;
+                primaryBtn.textContent = 'Next';
+            }
+
+            if (!data.success || !data.bookable_plan) {
+                showError(data.message || 'Could not prepare bookable services step');
+                return;
+            }
+
+            importBookablePlan = data.bookable_plan;
+            populateBookablePlanUI('import', importBookablePlan);
+            showImportBookableStep();
+        })
+        .catch(error => {
+            if (primaryBtn) {
+                primaryBtn.disabled = false;
+                primaryBtn.textContent = 'Next';
+            }
+            showError('Error preparing bookable step: ' + error.message);
+        });
+}
+
+function checkImportPlanLimit(file) {
+    if (!catalogUsage || catalogUsage.unlimited) {
+        return;
+    }
+
+    const previewStatus = document.getElementById('importPreviewStatus');
+    if (!previewStatus) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('catalog_mode', document.getElementById('importCatalogMode')?.value || 'commerce');
+    formData.append('vertical', document.getElementById('importCatalogVertical')?.value || 'retail');
+
+    fetch('/api/list-catalogs/preview-excel', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRF-TOKEN': csrfToken() },
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                return;
+            }
+
+            const count = data.total_count || 0;
+            const remaining = catalogUsage.remaining ?? 0;
+            previewStatus.style.display = 'block';
+
+            if (count > remaining) {
+                previewStatus.className = 'text-sm mt-2 text-danger';
+                previewStatus.textContent = `⚠ This file has ${count} items but you only have ${remaining} slots left on your plan.`;
+            }
+        });
+}
+
+function previewImportFile() {
+    const fileInput = document.getElementById('catalogFile');
+    const previewStatus = document.getElementById('importPreviewStatus');
+
+    if (!fileInput || !fileInput.files.length || !previewStatus) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('catalog_mode', document.getElementById('importCatalogMode')?.value || 'commerce');
+    formData.append('vertical', document.getElementById('importCatalogVertical')?.value || 'retail');
+
+    previewStatus.style.display = 'block';
+    previewStatus.className = 'text-sm mt-2 text-muted';
+    previewStatus.textContent = 'Checking columns...';
+
+    fetch('/api/list-catalogs/preview-excel', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRF-TOKEN': csrfToken() },
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                previewStatus.className = 'text-sm mt-2 text-danger';
+                previewStatus.textContent = data.message || 'Could not read file';
+                return;
+            }
+
+            const mappedLabels = Object.values(data.column_mapping || {});
+            previewStatus.className = 'text-sm mt-2 text-success';
+            previewStatus.textContent = `✓ ${data.total_count || 0} row(s) found. Mapped: ${mappedLabels.join(', ')}`;
+            checkImportPlanLimit(fileInput.files[0]);
+        })
+        .catch(error => {
+            previewStatus.className = 'text-sm mt-2 text-danger';
+            previewStatus.textContent = 'Error checking file: ' + error.message;
+        });
+}
+
+function submitImportForm() {
+    const fileInput = document.getElementById('catalogFile');
+    const catalogName = document.getElementById('catalogName');
+    const mode = document.getElementById('importCatalogMode')?.value || 'commerce';
+
+    if (!fileInput || !fileInput.files.length) {
+        showError('Please select a file');
+        return;
+    }
+
+    if (!catalogName || !catalogName.value.trim()) {
+        showError('Please enter a catalog name');
+        return;
+    }
+
+    if (isBookableCatalogMode(mode) && !importBookablePlan) {
+        goToImportBookableStep();
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('catalogName', catalogName.value.trim());
+    formData.append('catalog_mode', mode);
+    formData.append('vertical', document.getElementById('importCatalogVertical')?.value || 'retail');
+
+    if (isBookableCatalogMode(mode)) {
+        appendBookingPlanPayload(formData, 'import', importBookablePlan);
+    }
+
+    const btn = document.getElementById('importPrimaryBtn');
+    const originalText = btn ? btn.textContent : 'Import';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Importing...';
+    }
+
+    fetch('/api/list-catalogs/import-excel', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRF-TOKEN': csrfToken() },
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+
+            if (data.success) {
+                showSuccess(data.message);
+                $('#catalogImportModal').modal('hide');
+                document.getElementById('catalogImportForm').reset();
+                document.getElementById('fileName').textContent = '';
+                resetImportWizard();
+                loadCatalogs();
+                showPostImportChecklist(data.catalog, data.booking_stats);
+                openGoLiveWizard(data.catalog?.id);
+            } else {
+                showError(data.message || 'Failed to import catalog');
+            }
+        })
+        .catch(error => {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+            showError('Error importing catalog: ' + error.message);
+        });
+}
+
+function openReimportModal(catalogId, catalogName, catalogMode = 'commerce') {
+    document.getElementById('reimportCatalogId').value = catalogId;
+    document.getElementById('reimportCatalogName').textContent = catalogName;
+    document.getElementById('reimportCatalogMode').value = catalogMode || 'commerce';
+    document.getElementById('reimportFile').value = '';
+    document.getElementById('reimportPreviewStatus').textContent = '';
+    resetReimportWizard();
+    $('#reimportCatalogModal').modal('show');
+}
+
+function previewReimportFile() {
+    const catalogId = document.getElementById('reimportCatalogId').value;
+    const fileInput = document.getElementById('reimportFile');
+    const status = document.getElementById('reimportPreviewStatus');
+
+    if (!fileInput.files.length) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('preview_only', '1');
+
+    status.textContent = 'Analyzing changes...';
+
+    fetch(`/api/list-catalogs/${catalogId}/reimport-excel`, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRF-TOKEN': csrfToken() },
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) {
+                status.textContent = data.message || 'Preview failed';
+                return;
+            }
+
+            const p = data.preview;
+            status.textContent = `Preview: ${p.to_add} to add, ${p.to_update} to update, ${p.to_remove} removable → ${p.resulting_count} total items`;
+
+            if (data.bookable_plan) {
+                reimportBookablePlan = data.bookable_plan;
+            }
+            if (data.catalog_mode) {
+                document.getElementById('reimportCatalogMode').value = data.catalog_mode;
+            }
+        });
+}
+
+function handleReimportPrimaryAction() {
+    const mode = document.getElementById('reimportCatalogMode')?.value || 'commerce';
+    const onDetails = document.getElementById('reimportStepBookable')?.style.display === 'none'
+        || !document.getElementById('reimportStepBookable');
+
+    if (isBookableCatalogMode(mode) && onDetails) {
+        goToReimportBookableStep();
+        return;
+    }
+
+    submitReimport();
+}
+
+function goToReimportBookableStep() {
+    const catalogId = document.getElementById('reimportCatalogId').value;
+    const fileInput = document.getElementById('reimportFile');
+    const primaryBtn = document.getElementById('reimportPrimaryBtn');
+
+    if (!fileInput.files.length) {
+        showError('Select a file to re-import');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('preview_only', '1');
+
+    if (primaryBtn) {
+        primaryBtn.disabled = true;
+        primaryBtn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Loading...';
+    }
+
+    fetch(`/api/list-catalogs/${catalogId}/reimport-excel`, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRF-TOKEN': csrfToken() },
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (primaryBtn) {
+                primaryBtn.disabled = false;
+                primaryBtn.textContent = 'Next';
+            }
+
+            if (!data.success || !data.bookable_plan) {
+                showError(data.message || 'Could not prepare bookable services step');
+                return;
+            }
+
+            reimportBookablePlan = data.bookable_plan;
+            if (data.catalog_mode) {
+                document.getElementById('reimportCatalogMode').value = data.catalog_mode;
+            }
+            populateBookablePlanUI('reimport', reimportBookablePlan);
+            showReimportBookableStep();
+        })
+        .catch(error => {
+            if (primaryBtn) {
+                primaryBtn.disabled = false;
+                primaryBtn.textContent = 'Next';
+            }
+            showError('Error preparing bookable step: ' + error.message);
+        });
+}
+
+function submitReimport() {
+    const catalogId = document.getElementById('reimportCatalogId').value;
+    const fileInput = document.getElementById('reimportFile');
+    const removeMissing = document.getElementById('reimportRemoveMissing').checked;
+    const mode = document.getElementById('reimportCatalogMode')?.value || 'commerce';
+
+    if (!fileInput.files.length) {
+        showError('Select a file to re-import');
+        return;
+    }
+
+    if (isBookableCatalogMode(mode) && !reimportBookablePlan) {
+        goToReimportBookableStep();
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('remove_missing', removeMissing ? '1' : '0');
+
+    if (isBookableCatalogMode(mode)) {
+        appendBookingPlanPayload(formData, 'reimport', reimportBookablePlan);
+    }
+
+    const btn = document.getElementById('reimportPrimaryBtn');
+    const originalText = btn ? btn.textContent : 'Update catalog';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Updating...';
+    }
+
+    fetch(`/api/list-catalogs/${catalogId}/reimport-excel`, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRF-TOKEN': csrfToken() },
+    })
+        .then(r => r.json())
+        .then(data => {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+
+            if (data.success) {
+                $('#reimportCatalogModal').modal('hide');
+                resetReimportWizard();
+                loadCatalogs();
+                showSuccess(data.message);
+            } else {
+                showError(data.message || 'Re-import failed');
+            }
+        })
+        .catch(err => {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+            showError(err.message);
+        });
+}
+
+function showPostImportChecklist(catalog, bookingStats = null) {
+    if (!catalog) {
+        return;
+    }
+
+    const body = document.getElementById('postImportChecklistBody');
+    const bookingLine = bookingStats
+        ? `<p class="text-muted small">${(bookingStats.created || 0) + (bookingStats.linked || 0)} bookable · ${bookingStats.skipped || 0} showcase only</p>`
+        : '';
+
+    body.innerHTML = `
+        <p class="mb-3"><strong>${escapeHtml(catalog.name)}</strong> is ready with ${catalog.item_count || 0} product(s).</p>
+        ${bookingLine}
+        <ol class="mb-3 pl-3">
+            <li class="mb-2"><a href="${escapeAttr(catalog.public_url)}" target="_blank">Preview your shop</a></li>
+            <li class="mb-2"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyCatalogLink('${escapeAttr(catalog.public_url)}')">Copy shop link</button></li>
+            <li class="mb-2"><a href="/catalogs/${catalog.id}/items">Add or edit products</a></li>
+            <li class="mb-2">Add a <strong>Send Catalog Link</strong> node in Flowmaker and select this catalog</li>
+            <li>Attach to Voice AI below if you use phone orders</li>
+        </ol>
+        <div id="postImportQr" class="text-center"></div>
+    `;
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(catalog.public_url)}`;
+    document.getElementById('postImportQr').innerHTML = `<img src="${qrUrl}" alt="QR code" class="img-fluid" style="max-width:180px"><p class="small text-muted mt-2">Scan to open shop</p>`;
+
+    $('#postImportChecklistModal').modal('show');
 }
 
 function loadCatalogTemplates() {
@@ -254,7 +987,7 @@ function displayCatalogs(catalogs) {
 <a href="${escapeAttr(catalog.public_url)}" target="_blank" class="btn btn-sm btn-info mr-1" title="Open shop"><i class="ni ni-shop"></i></a>
     <a href="javascript:void(0)" class="btn btn-sm btn-outline-primary mr-1" title="Analytics" onclick="showCatalogAnalytics(${catalog.id})"><i class="ni ni-chart-bar-32"></i></a>
     <a href="/catalogs/${catalog.id}/items" class="btn btn-sm btn-success mr-1" title="Manage items"><i class="ni ni-bag-17"></i></a>
-    <a href="javascript:void(0)" class="btn btn-sm btn-outline-warning mr-1" title="Re-import Excel" onclick="openReimportModal(${catalog.id}, '${escapeAttr(catalog.name)}')"><i class="ni ni-cloud-upload-96"></i></a>
+    <a href="javascript:void(0)" class="btn btn-sm btn-outline-warning mr-1" title="Re-import Excel" onclick="openReimportModal(${catalog.id}, '${escapeAttr(catalog.name)}', '${escapeAttr(catalog.catalog_mode || 'commerce')}')"><i class="ni ni-cloud-upload-96"></i></a>
     <a href="javascript:void(0)" class="btn btn-sm btn-warning mr-1" title="Edit" onclick="openEditCatalog(${catalog.id})"><i class="ni ni-settings-gear-65"></i></a>
     <a href="javascript:void(0)" class="btn btn-sm btn-danger" title="Delete" onclick="deleteCatalog(${catalog.id}, '${escapeAttr(catalog.name)}')"><i class="ni ni-fat-remove"></i></a>
                 </td>
@@ -329,6 +1062,12 @@ function updateImportVerticalOptions() {
     }
 
     updateImportTemplateHelp();
+
+    const primaryBtn = document.getElementById('importPrimaryBtn');
+    const bookableStep = document.getElementById('importStepBookable');
+    if (primaryBtn && (!bookableStep || bookableStep.style.display === 'none')) {
+        primaryBtn.textContent = isBookableCatalogMode(modeSelect.value) ? 'Next' : 'Import';
+    }
 }
 
 function importTemplateFilename(mode, vertical) {
@@ -481,7 +1220,7 @@ function updateFileName() {
 
     if (fileInput && fileInput.files.length > 0) {
         fileName.textContent = '✓ ' + fileInput.files[0].name;
-        checkImportPlanLimit(fileInput.files);
+        checkImportPlanLimit(fileInput.files[0]);
     } else {
         fileName.textContent = '';
         if (previewStatus) {
@@ -489,236 +1228,6 @@ function updateFileName() {
             previewStatus.textContent = '';
         }
     }
-}
-
-function checkImportPlanLimit(file) {
-    if (!catalogUsage || catalogUsage.unlimited) {
-        return;
-    }
-
-    const previewStatus = document.getElementById('importPreviewStatus');
-    if (!previewStatus) {
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    fetch('/api/list-catalogs/preview-excel', {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-CSRF-TOKEN': csrfToken() },
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (!data.success) {
-                return;
-            }
-
-            const count = data.total_count || 0;
-            const remaining = catalogUsage.remaining ?? 0;
-            previewStatus.style.display = 'block';
-
-            if (count > remaining) {
-                previewStatus.className = 'text-sm mt-2 text-danger';
-                previewStatus.textContent = `⚠ This file has ${count} items but you only have ${remaining} slots left on your plan.`;
-            }
-        });
-}
-
-function previewImportFile() {
-    const fileInput = document.getElementById('catalogFile');
-    const previewStatus = document.getElementById('importPreviewStatus');
-
-    if (!fileInput || !fileInput.files.length || !previewStatus) {
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-
-    previewStatus.style.display = 'block';
-    previewStatus.className = 'text-sm mt-2 text-muted';
-    previewStatus.textContent = 'Checking columns...';
-
-    fetch('/api/list-catalogs/preview-excel', {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-CSRF-TOKEN': csrfToken() },
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (!data.success) {
-                previewStatus.className = 'text-sm mt-2 text-danger';
-                previewStatus.textContent = data.message || 'Could not read file';
-                return;
-            }
-
-            const mappedLabels = Object.values(data.column_mapping || {});
-            previewStatus.className = 'text-sm mt-2 text-success';
-            previewStatus.textContent = `✓ ${data.total_count || 0} row(s) found. Mapped: ${mappedLabels.join(', ')}`;
-            checkImportPlanLimit(fileInput.files[0]);
-        })
-        .catch(error => {
-            previewStatus.className = 'text-sm mt-2 text-danger';
-            previewStatus.textContent = 'Error checking file: ' + error.message;
-        });
-}
-
-function submitImportForm() {
-    const fileInput = document.getElementById('catalogFile');
-    const catalogName = document.getElementById('catalogName');
-
-    if (!fileInput || !fileInput.files.length) {
-        showError('Please select a file');
-        return;
-    }
-
-    if (!catalogName || !catalogName.value.trim()) {
-        showError('Please enter a catalog name');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-    formData.append('catalogName', catalogName.value.trim());
-    formData.append('catalog_mode', document.getElementById('importCatalogMode')?.value || 'commerce');
-    formData.append('vertical', document.getElementById('importCatalogVertical')?.value || 'retail');
-
-    const btn = document.querySelector('[onclick="submitImportForm()"]');
-    const originalText = btn ? btn.textContent : 'Import';
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Importing...';
-    }
-
-    fetch('/api/list-catalogs/import-excel', {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-CSRF-TOKEN': csrfToken() },
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
-
-            if (data.success) {
-                showSuccess(data.message);
-                $('#catalogImportModal').modal('hide');
-                document.getElementById('catalogImportForm').reset();
-                document.getElementById('fileName').textContent = '';
-                loadCatalogs();
-                showPostImportChecklist(data.catalog);
-                openGoLiveWizard(data.catalog?.id);
-            } else {
-                showError(data.message || 'Failed to import catalog');
-            }
-        })
-        .catch(error => {
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = originalText;
-            }
-            showError('Error importing catalog: ' + error.message);
-        });
-}
-
-function openReimportModal(catalogId, catalogName) {
-    document.getElementById('reimportCatalogId').value = catalogId;
-    document.getElementById('reimportCatalogName').textContent = catalogName;
-    document.getElementById('reimportFile').value = '';
-    document.getElementById('reimportPreviewStatus').textContent = '';
-    $('#reimportCatalogModal').modal('show');
-}
-
-function previewReimportFile() {
-    const catalogId = document.getElementById('reimportCatalogId').value;
-    const fileInput = document.getElementById('reimportFile');
-    const status = document.getElementById('reimportPreviewStatus');
-
-    if (!fileInput.files.length) {
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-    formData.append('preview_only', '1');
-
-    status.textContent = 'Analyzing changes...';
-
-    fetch(`/api/list-catalogs/${catalogId}/reimport-excel`, {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-CSRF-TOKEN': csrfToken() },
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (!data.success) {
-                status.textContent = data.message || 'Preview failed';
-                return;
-            }
-
-            const p = data.preview;
-            status.textContent = `Preview: ${p.to_add} to add, ${p.to_update} to update, ${p.to_remove} removable → ${p.resulting_count} total items`;
-        });
-}
-
-function submitReimport() {
-    const catalogId = document.getElementById('reimportCatalogId').value;
-    const fileInput = document.getElementById('reimportFile');
-    const removeMissing = document.getElementById('reimportRemoveMissing').checked;
-
-    if (!fileInput.files.length) {
-        showError('Select a file to re-import');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-    formData.append('remove_missing', removeMissing ? '1' : '0');
-
-    fetch(`/api/list-catalogs/${catalogId}/reimport-excel`, {
-        method: 'POST',
-        body: formData,
-        headers: { 'X-CSRF-TOKEN': csrfToken() },
-    })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                $('#reimportCatalogModal').modal('hide');
-                loadCatalogs();
-                showSuccess(data.message);
-            } else {
-                showError(data.message || 'Re-import failed');
-            }
-        })
-        .catch(err => showError(err.message));
-}
-
-function showPostImportChecklist(catalog) {
-    if (!catalog) {
-        return;
-    }
-
-    const body = document.getElementById('postImportChecklistBody');
-    body.innerHTML = `
-        <p class="mb-3"><strong>${escapeHtml(catalog.name)}</strong> is ready with ${catalog.item_count || 0} product(s).</p>
-        <ol class="mb-3 pl-3">
-            <li class="mb-2"><a href="${escapeAttr(catalog.public_url)}" target="_blank">Preview your shop</a></li>
-            <li class="mb-2"><button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyCatalogLink('${escapeAttr(catalog.public_url)}')">Copy shop link</button></li>
-            <li class="mb-2"><a href="/catalogs/${catalog.id}/items">Add or edit products</a></li>
-            <li class="mb-2">Add a <strong>Send Catalog Link</strong> node in Flowmaker and select this catalog</li>
-            <li>Attach to Voice AI below if you use phone orders</li>
-        </ol>
-        <div id="postImportQr" class="text-center"></div>
-    `;
-
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(catalog.public_url)}`;
-    document.getElementById('postImportQr').innerHTML = `<img src="${qrUrl}" alt="QR code" class="img-fluid" style="max-width:180px"><p class="small text-muted mt-2">Scan to open shop</p>`;
-
-    $('#postImportChecklistModal').modal('show');
 }
 
 function openGoLiveWizard(catalogId) {

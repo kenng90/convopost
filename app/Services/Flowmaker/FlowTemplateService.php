@@ -61,7 +61,7 @@ class FlowTemplateService
 
         $flowData = $template['flow_data'];
         if (! empty($template['form_bundle']) && $companyId) {
-            $whatsappForm = app(WhatsappFormTemplateService::class)->createFromTemplate(
+            $whatsappForm = app(WhatsappFormTemplateService::class)->findOrCreateFromTemplate(
                 $template['form_bundle'],
                 (int) $companyId
             );

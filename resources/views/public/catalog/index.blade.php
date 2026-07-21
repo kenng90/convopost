@@ -549,6 +549,38 @@
             border-top: 1px solid #dee2e6;
         }
 
+        .item-detail-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        @media (min-width: 400px) {
+            .item-detail-actions {
+                flex-direction: row;
+            }
+
+            .item-detail-actions .checkout-btn {
+                flex: 1;
+                width: auto;
+            }
+        }
+
+        .item-detail-inquire-btn {
+            background: #fff !important;
+            color: #25D366 !important;
+            border: 2px solid #25D366 !important;
+        }
+
+        .item-detail-inquire-btn:hover:not(:disabled) {
+            background: #f0fff4 !important;
+        }
+
+        .item-detail-inquire-btn:disabled,
+        .item-detail-book-btn:disabled {
+            opacity: 0.65;
+        }
+
         .delivery-details-section {
             margin-bottom: 16px;
             padding-bottom: 16px;
@@ -1148,9 +1180,12 @@
             <button type="button" onclick="closeItemDetailDrawer()" style="position: absolute; right: 15px; top: 15px; background: none; border: none; font-size: 20px; cursor: pointer;" aria-label="Close details">×</button>
         </div>
         <div class="item-detail-body" id="itemDetailBody"></div>
-        <div class="cart-footer">
-            <button type="button" class="checkout-btn" id="itemDetailCta" style="background-color: #25D366; width: 100%;">
-                <i class="fab fa-whatsapp mr-2"></i>{{ $presentation['cta_label'] ?? 'Inquire on WhatsApp' }}
+        <div class="cart-footer item-detail-actions" id="itemDetailActions">
+            <button type="button" class="checkout-btn item-detail-inquire-btn" id="itemDetailInquireCta">
+                <i class="fab fa-whatsapp mr-2"></i>{{ $presentation['inquire_cta_label'] ?? 'Inquire on WhatsApp' }}
+            </button>
+            <button type="button" class="checkout-btn item-detail-book-btn" id="itemDetailBookCta" style="background-color: #25D366;">
+                <i class="fas fa-calendar-check mr-2"></i>{{ $presentation['book_cta_label'] ?? ($presentation['cta_label'] ?? 'Book') }}
             </button>
         </div>
     </div>
@@ -1724,6 +1759,7 @@
         let selectedBookingItemId = null;
         let selectedBookingItemTitle = '';
         let bookingMode = 'whatsapp';
+        let bookingIntent = 'book';
         let bookingSourceConfig = null;
         let bookingDates = [];
         let bookingSlots = [];
@@ -1734,6 +1770,63 @@
         const bookingStorageKey = 'catalog_{{ $catalog->id }}_booking';
         const completionType = flowNodeSettings.completionType || 'booking';
         const requirePreferredDateTime = !!flowNodeSettings.requirePreferredDateTime;
+        const catalogBookCtaLabel = @json($presentation['book_cta_label'] ?? ($presentation['cta_label'] ?? 'Book'));
+        const catalogInquireCtaLabel = @json($presentation['inquire_cta_label'] ?? 'Inquire on WhatsApp');
+        let inquiryOpening = false;
+
+        function isInquiryFlow() {
+            return bookingIntent === 'inquire' || bookingMode === 'inquiry';
+        }
+
+        async function startWhatsAppInquiry(itemId, triggerButton) {
+            if (!itemId || inquiryOpening) {
+                return;
+            }
+
+            inquiryOpening = true;
+            const originalHtml = triggerButton ? triggerButton.innerHTML : '';
+            if (triggerButton) {
+                triggerButton.disabled = true;
+                triggerButton.innerHTML = '<span class="spinner-border spinner-border-sm mr-2"></span>Opening WhatsApp...';
+            }
+
+            try {
+                const payload = {
+                    item_id: itemId,
+                    flow_token: flowToken,
+                };
+
+                const response = await fetch(`/catalog/${catalogId}/generate-inquiry`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Could not start WhatsApp inquiry.');
+                }
+
+                if (!data.whatsapp_url) {
+                    throw new Error('WhatsApp number is not configured for this business.');
+                }
+
+                trackCatalogEvent('listing_inquiry', { item_id: itemId });
+                closeItemDetailDrawer();
+                window.open(data.whatsapp_url, '_blank');
+            } catch (error) {
+                alert(error.message || 'Could not open WhatsApp inquiry.');
+            } finally {
+                inquiryOpening = false;
+                if (triggerButton) {
+                    triggerButton.disabled = false;
+                    triggerButton.innerHTML = originalHtml;
+                }
+            }
+        }
 
         function bookingView(name) {
             const views = {
@@ -1929,7 +2022,7 @@
             detailsHint.textContent = mode === 'inquiry'
                 ? 'Required to send your inquiry on WhatsApp.'
                 : 'Required to send your booking request on WhatsApp.';
-            submitLabel.textContent = mode === 'inquiry' ? 'Inquire on WhatsApp' : @json($presentation['cta_label'] ?? 'Book on WhatsApp');
+            submitLabel.textContent = mode === 'inquiry' ? catalogInquireCtaLabel : catalogBookCtaLabel;
             submitIcon.className = 'fab fa-whatsapp mr-2';
             phoneField.style.display = mode === 'inquiry' ? 'none' : 'block';
             dateField.style.display = mode === 'inquiry' ? 'none' : 'block';
@@ -1946,6 +2039,12 @@
                 params.set('flow_token', flowToken);
             }
 
+            if (bookingIntent === 'inquire') {
+                bookingSourceConfig = null;
+                configureBookingUiForMode('inquiry');
+                return;
+            }
+
             const response = await fetch(`/catalog/${catalogId}/items/${encodeURIComponent(itemId)}/booking-config?` + params.toString());
             const data = await response.json();
 
@@ -1954,9 +2053,14 @@
             }
 
             bookingSourceConfig = data.source || null;
-            configureBookingUiForMode(data.mode || 'whatsapp');
+            let mode = data.mode || 'whatsapp';
+            // Book CTA should never collapse into inquiry-only when the user chose Book.
+            if (mode === 'inquiry') {
+                mode = bookingSourceConfig ? 'slots' : 'whatsapp';
+            }
+            configureBookingUiForMode(mode);
 
-            if (data.mode === 'slots') {
+            if (mode === 'slots') {
                 populateBookingDurationOptions();
                 setBookingPanelLoading(true, 'Loading available dates...');
                 await loadBookingDates();
@@ -2108,7 +2212,7 @@
                 return valid ? details : null;
             }
 
-            if (completionType !== 'inquiry' && bookingMode !== 'inquiry' && !details.customerPhone) {
+            if (!isInquiryFlow() && !details.customerPhone) {
                 setBookingFieldError('fieldBookingCustomerPhone', 'errorBookingCustomerPhone', 'Phone is required.');
                 valid = false;
             }
@@ -2156,19 +2260,20 @@
             }
         }
 
-        async function openBookingPanel(itemId, itemTitle, triggerButton) {
+        async function openBookingPanel(itemId, itemTitle, triggerButton, options = {}) {
             if (bookingPanelOpening) {
                 return;
             }
 
+            bookingIntent = options.intent === 'inquire' ? 'inquire' : 'book';
             bookingPanelOpening = true;
             setBookingCardButtonLoading(triggerButton, true);
 
             selectedBookingItemId = itemId;
             selectedBookingItemTitle = itemTitle || 'Listing';
-            document.getElementById('bookingPanelTitle').textContent = completionType === 'inquiry'
-                ? 'Inquire: ' + selectedBookingItemTitle
-                : 'Book: ' + selectedBookingItemTitle;
+            document.getElementById('bookingPanelTitle').textContent = bookingIntent === 'inquire'
+                ? (catalogInquireCtaLabel + ': ' + selectedBookingItemTitle)
+                : (catalogBookCtaLabel + ': ' + selectedBookingItemTitle);
 
             loadBookingDetails();
             hideBookingBanners();
@@ -2176,13 +2281,13 @@
 
             document.getElementById('bookingSidebar').classList.add('open');
             document.getElementById('bookingOverlay').classList.add('visible');
-            setBookingPanelLoading(true, 'Loading booking options...');
+            setBookingPanelLoading(true, bookingIntent === 'inquire' ? 'Loading inquiry form...' : 'Loading booking options...');
 
             try {
                 await loadBookingConfig(itemId);
                 bookingView('form');
             } catch (error) {
-                configureBookingUiForMode('whatsapp');
+                configureBookingUiForMode(bookingIntent === 'inquire' ? 'inquiry' : 'whatsapp');
                 bookingView('form');
                 showBookingErrorBanner(error.message || 'Could not load booking options.');
             } finally {
@@ -2309,7 +2414,7 @@
         }
 
         function submitWhatsAppBooking(details) {
-            const endpoint = (bookingMode === 'inquiry' || completionType === 'inquiry')
+            const endpoint = isInquiryFlow()
                 ? `/catalog/${catalogId}/generate-inquiry`
                 : `/catalog/${catalogId}/generate-booking`;
 
@@ -2320,7 +2425,7 @@
                 flow_token: flowToken,
             };
 
-            if (bookingMode !== 'inquiry' && completionType !== 'inquiry') {
+            if (!isInquiryFlow()) {
                 payload.customerPhone = details.customerPhone;
                 payload.preferredDateTime = details.preferredDateTime || null;
             }
@@ -2348,7 +2453,7 @@
                     return;
                 }
 
-                trackCatalogEvent((bookingMode === 'inquiry' || completionType === 'inquiry') ? 'listing_inquiry' : 'listing_booking', {
+                trackCatalogEvent(isInquiryFlow() ? 'listing_inquiry' : 'listing_booking', {
                     item_id: selectedBookingItemId,
                 });
 
@@ -2399,7 +2504,8 @@
             itemDetailDrawerItem = item || null;
             itemDetailGalleryIndex = 0;
             const body = document.getElementById('itemDetailBody');
-            const cta = document.getElementById('itemDetailCta');
+            const inquireCta = document.getElementById('itemDetailInquireCta');
+            const bookCta = document.getElementById('itemDetailBookCta');
             if (!body || !item) {
                 return;
             }
@@ -2439,17 +2545,34 @@
                 <div class="item-detail-description">${escapeHtml(item.description || 'No description provided.')}</div>
             `;
 
-            if (cta) {
-                cta.disabled = !!item.ctaDisabled;
-                cta.innerHTML = item.ctaDisabled
-                    ? `<i class="fas fa-ban mr-2"></i>${escapeHtml(item.ctaLabel || item.status || 'Unavailable')}`
-                    : `<i class="fab fa-whatsapp mr-2"></i>${escapeHtml(item.ctaLabel || @json($presentation['cta_label'] ?? 'Inquire on WhatsApp'))}`;
-                cta.onclick = () => {
-                    if (item.ctaDisabled) {
+            const inquireLabel = item.inquireCtaLabel || catalogInquireCtaLabel;
+            const bookLabel = item.bookDisabled
+                ? (item.statusLabel || item.status || 'Unavailable')
+                : (item.bookCtaLabel || catalogBookCtaLabel);
+
+            if (inquireCta) {
+                inquireCta.disabled = !!item.inquireDisabled;
+                inquireCta.innerHTML = `<i class="fab fa-whatsapp mr-2"></i>${escapeHtml(inquireLabel)}`;
+                inquireCta.onclick = () => {
+                    if (item.inquireDisabled) {
+                        return;
+                    }
+                    startWhatsAppInquiry(item.id, inquireCta);
+                };
+            }
+
+            if (bookCta) {
+                bookCta.disabled = !!item.bookDisabled;
+                bookCta.classList.toggle('cta-soft-disabled', !!item.bookDisabled && String(item.status || '') === 'Under Offer');
+                bookCta.innerHTML = item.bookDisabled
+                    ? `<i class="fas fa-ban mr-2"></i>${escapeHtml(bookLabel)}`
+                    : `<i class="fas fa-calendar-check mr-2"></i>${escapeHtml(bookLabel)}`;
+                bookCta.onclick = () => {
+                    if (item.bookDisabled) {
                         return;
                     }
                     closeItemDetailDrawer();
-                    openBookingPanel(item.id, item.title || 'Listing', cta);
+                    openBookingPanel(item.id, item.title || 'Listing', bookCta, { intent: 'book' });
                 };
             }
 
