@@ -46,14 +46,14 @@ tailwind.config = {
 }
 </script>
 <style>
-  *, body { font-family: 'DM Sans', sans-serif; }
+  *, body { font-family: 'DM Sans', sans-serif; font-size: 17px; line-height: 1.65; }
   h1,h2,h3,h4,h5,.font-display { font-family: 'Syne', sans-serif; }
 
   :root {
     --wa-green: #25D366;
     --wa-dark: #128C7E;
     --wa-darker: #075E54;
-    --hero-bg: #040f0c;
+    --hero-bg: #f4faf7;
   }
 
   html { scroll-padding-top: 72px; }
@@ -63,7 +63,7 @@ tailwind.config = {
     content: '';
     position: absolute;
     inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
     pointer-events: none;
     z-index: 0;
   }
@@ -77,8 +77,8 @@ tailwind.config = {
 
   /* Grid pattern */
   .grid-pattern {
-    background-image: linear-gradient(rgba(37,211,102,0.04) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(37,211,102,0.04) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(7,94,84,0.06) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(7,94,84,0.06) 1px, transparent 1px);
     background-size: 48px 48px;
   }
 
@@ -107,15 +107,15 @@ tailwind.config = {
   }
   .card-lift:hover {
     transform: translateY(-6px) scale(1.01);
-    box-shadow: 0 20px 60px rgba(37,211,102,0.12);
+    box-shadow: 0 20px 60px rgba(7,94,84,0.10);
   }
 
   /* Navbar blur */
   .navbar-blur {
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    background: rgba(4,15,12,0.85);
-    border-bottom: 1px solid rgba(37,211,102,0.08);
+    background: rgba(255,255,255,0.88);
+    border-bottom: 1px solid rgba(7,94,84,0.08);
   }
 
   /* Phone mockup */
@@ -123,7 +123,7 @@ tailwind.config = {
     background: #1a1a2e;
     border-radius: 40px;
     border: 2px solid rgba(37,211,102,0.15);
-    box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04), inset 0 0 0 1px rgba(255,255,255,0.04);
+    box-shadow: 0 40px 100px rgba(7,94,84,0.18), 0 0 0 1px rgba(7,94,84,0.06);
   }
   .phone-notch {
     background: #0d0d1a;
@@ -153,24 +153,21 @@ tailwind.config = {
     line-height: 1.7;
   }
 
-  /* Gradient text */
   .grad-text {
-    background: linear-gradient(135deg, #25D366 0%, #128C7E 50%, #a8e6cf 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #128C7E;
+    font-size: 1.5rem; /* Adjust as needed */
   }
 
   /* Flow node */
   .flow-node {
-    background: rgba(37,211,102,0.06);
-    border: 1px solid rgba(37,211,102,0.2);
+    background: rgba(37,211,102,0.08);
+    border: 1px solid rgba(37,211,102,0.25);
     border-radius: 12px;
     transition: all 0.2s ease;
   }
   .flow-node:hover {
-    background: rgba(37,211,102,0.12);
-    border-color: rgba(37,211,102,0.4);
+    background: rgba(37,211,102,0.14);
+    border-color: rgba(37,211,102,0.45);
     transform: scale(1.02);
   }
   .flow-line {
@@ -206,7 +203,7 @@ tailwind.config = {
     top: 20%;
     height: 60%;
     width: 1px;
-    background: rgba(37,211,102,0.15);
+    background: rgba(7,94,84,0.15);
   }
 
   /* Badge */
@@ -224,7 +221,7 @@ tailwind.config = {
 
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #040f0c; }
+  ::-webkit-scrollbar-track { background: #eef5f1; }
   ::-webkit-scrollbar-thumb { background: rgba(37,211,102,0.3); border-radius: 3px; }
 
   /* Accordion transition */
@@ -232,19 +229,19 @@ tailwind.config = {
 
   /* Dots */
   .dots-bg {
-    background-image: radial-gradient(rgba(37,211,102,0.08) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(7,94,84,0.1) 1px, transparent 1px);
     background-size: 24px 24px;
   }
 
   /* Integration card */
   .integration-card {
-    background: rgba(255,255,255,0.02);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: #ffffff;
+    border: 1px solid rgba(7,94,84,0.1);
     transition: all 0.2s ease;
   }
   .integration-card:hover {
-    background: rgba(37,211,102,0.04);
-    border-color: rgba(37,211,102,0.2);
+    background: rgba(37,211,102,0.06);
+    border-color: rgba(37,211,102,0.35);
     transform: translateY(-3px);
   }
 
@@ -257,75 +254,139 @@ tailwind.config = {
     outline: 2px solid #25D366;
     outline-offset: 2px;
   }
+
+  /* Nominal-inspired editorial surfaces */
+  .section-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #25D366;
+  }
+  .hero-brand {
+    font-size: clamp(2rem, 3.6vw, 3.25rem);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    text-transform: none;
+  }
+  .hero-title {
+    font-size: clamp(2.85rem, 6vw, 4.75rem);
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+  }
+  .section-title {
+    font-size: clamp(2.15rem, 4.2vw, 3.35rem);
+    line-height: 1.12;
+    letter-spacing: -0.03em;
+  }
+  .body-lg {
+    font-size: clamp(1.125rem, 1.4vw, 1.25rem);
+    line-height: 1.7;
+  }
+  .hero-phone {
+    width: min(100%, 320px);
+    height: 560px;
+    margin-left: auto;
+    margin-right: auto;
+    transform: rotate(-2deg);
+    box-shadow: 0 32px 80px rgba(7,94,84,0.16), 0 0 0 1px rgba(7,94,84,0.06);
+  }
+  @media (min-width: 1024px) {
+    .hero-phone {
+      margin-right: 0;
+      transform: rotate(-3deg) translateY(8px);
+    }
+  }
+  .infographic-panel {
+    box-shadow: 0 24px 60px rgba(7,94,84,0.08), inset 0 1px 0 rgba(255,255,255,0.8);
+  }
+  .outcome-num {
+    font-size: clamp(3rem, 8vw, 5.5rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+  }
+  .reveal-line {
+    background: linear-gradient(90deg, transparent, rgba(37,211,102,0.35), transparent);
+    height: 1px;
+  }
+  @keyframes dash-flow {
+    to { stroke-dashoffset: -24; }
+  }
+  .infographic-panel svg path[stroke-dasharray] {
+    animation: dash-flow 2.4s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .infographic-panel svg path[stroke-dasharray] { animation: none !important; }
+  }
 </style>
 </head>
 
-<body class="bg-[#040f0c] text-white" x-data="{ mobileOpen: false, billing: 'monthly', faqOpen: null }">
+<body class="bg-[#f7faf8] text-gray-900" x-data="{ mobileOpen: false, billing: 'monthly', faqOpen: null }">
 
 <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:text-black focus:font-semibold" style="background:#25D366;">Skip to content</a>
 
 <!-- ===== NAVBAR ===== -->
 <nav class="navbar-blur fixed top-0 left-0 right-0 z-50" style="height:72px;">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-full">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6 flex items-center justify-between h-full">
     <!-- Logo -->
     <a href="{{ route('landing') }}" class="flex items-center gap-2.5 flex-shrink-0">
       <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#25D366,#075E54);">
       <img src="{{ config('settings.logo', asset('favicon.ico')) }}" alt="{{ config('settings.site_name', config('app.name')) }}" class="w-full h-full object-contain p-1" />
       </div>
-      <span class="font-display font-800 text-lg tracking-tight text-white">{{ config('settings.site_name', config('app.name')) }}</span>
+      <span class="font-display font-800 text-lg tracking-tight text-gray-900">{{ config('settings.site_name', config('app.name')) }}</span>
     </a>
 
     <!-- Desktop Nav -->
     <div class="hidden lg:flex items-center gap-7">
-      <a href="#features" class="text-sm text-gray-400 hover:text-white transition-colors">Features</a>
-      <a href="#platform" class="text-sm text-gray-400 hover:text-white transition-colors">Platform</a>
-      <a href="#journeys" class="text-sm text-gray-400 hover:text-white transition-colors">Journeys</a>
-      <a href="#bookings" class="text-sm text-gray-400 hover:text-white transition-colors">Bookings</a>
-      <a href="#catalog" class="text-sm text-gray-400 hover:text-white transition-colors">Catalog</a>
-      <a href="#automation" class="text-sm text-gray-400 hover:text-white transition-colors">Automation</a>
-      <a href="#integrations" class="text-sm text-gray-400 hover:text-white transition-colors">Integrations</a>
-      <a href="#api" class="text-sm text-gray-400 hover:text-white transition-colors">API</a>
-      <a href="#pricing" class="text-sm text-gray-400 hover:text-white transition-colors">Pricing</a>
-      <a href="#faq" class="text-sm text-gray-400 hover:text-white transition-colors">FAQ</a>
-      <!-- <a href="#book" class="text-sm text-gray-400 hover:text-white transition-colors">Book Demo</a> -->
+      <a href="#features" class="text-[15px] text-gray-600 hover:text-gray-900 transition-colors">Features</a>
+      <a href="#how-it-works" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Platform</a>
+      <a href="#journeys" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Journeys</a>
+      <a href="#bookings" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Bookings</a>
+      <a href="#catalog" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Catalog</a>
+      <a href="#automation" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Automation</a>
+      <a href="#integrations" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Integrations</a>
+      <a href="#api" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">API</a>
+      <a href="#pricing" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
+      <a href="#faq" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">FAQ</a>
+      <!-- <a href="#book" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Book Demo</a> -->
       @if(isset($hasBlog) && $hasBlog)
-      <a href="/blog" class="text-sm text-gray-400 hover:text-white transition-colors">Blog</a>
+      <a href="/blog" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Blog</a>
       @endif
     </div>
 
     <!-- CTAs -->
     <div class="hidden lg:flex items-center gap-3">
-      <a href="{{ route('login') }}" class="text-sm text-gray-300 hover:text-white transition-colors font-medium">Sign In</a>
+      <a href="{{ route('login') }}" class="text-base text-gray-700 hover:text-gray-900 transition-colors font-medium">Sign In</a>
       @if($registrationEnabled)
-      <a href="{{ route('register') }}" class="text-sm font-semibold px-4 py-2 rounded-lg text-black transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">Get Started Free</a>
+      <a href="{{ route('register') }}" class="text-base font-semibold px-5 py-2.5 rounded-lg text-black transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">Get Started Free</a>
       @endif
     </div>
 
     <!-- Mobile toggle -->
-    <button type="button" class="lg:hidden text-gray-400 hover:text-white" @click="mobileOpen = !mobileOpen" :aria-expanded="mobileOpen.toString()" aria-controls="mobile-menu" aria-label="Toggle navigation menu">
+    <button type="button" class="lg:hidden text-gray-600 hover:text-gray-900" @click="mobileOpen = !mobileOpen" :aria-expanded="mobileOpen.toString()" aria-controls="mobile-menu" aria-label="Toggle navigation menu">
       <svg x-show="!mobileOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
       <svg x-show="mobileOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
   </div>
 
   <!-- Mobile Menu -->
-  <div id="mobile-menu" x-show="mobileOpen" x-cloak class="lg:hidden border-t border-white/5 px-4 py-4 space-y-1" style="background:rgba(4,15,12,0.98);">
-    <a href="#features" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Features</a>
-    <a href="#platform" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Platform</a>
-    <a href="#journeys" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Journeys</a>
-    <a href="#bookings" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Bookings</a>
-    <a href="#catalog" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Catalog</a>
-    <a href="#automation" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Automation</a>
-    <a href="#integrations" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Integrations</a>
-    <a href="#api" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">API</a>
-    <a href="#pricing" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Pricing</a>
-    <a href="#faq" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">FAQ</a>
+  <div id="mobile-menu" x-show="mobileOpen" x-cloak class="lg:hidden border-t border-gray-200 px-4 py-4 space-y-1" style="background:rgba(255,255,255,0.98);">
+    <a href="#features" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Features</a>
+    <a href="#how-it-works" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Platform</a>
+    <a href="#journeys" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Journeys</a>
+    <a href="#bookings" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Bookings</a>
+    <a href="#catalog" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Catalog</a>
+    <a href="#automation" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Automation</a>
+    <a href="#integrations" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Integrations</a>
+    <a href="#api" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">API</a>
+    <a href="#pricing" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Pricing</a>
+    <a href="#faq" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">FAQ</a>
     
     @if(isset($hasBlog) && $hasBlog)
-    <a href="/blog" class="block py-2.5 text-sm text-gray-300 hover:text-white" @click="mobileOpen=false">Blog</a>
+    <a href="/blog" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Blog</a>
     @endif
     <div class="pt-3 flex flex-col gap-2">
-      <a href="{{ route('login') }}" class="text-center py-2.5 text-sm text-gray-300 border border-white/10 rounded-lg">Sign In</a>
+      <a href="{{ route('login') }}" class="text-center py-2.5 text-base text-gray-700 border border-gray-200 rounded-lg">Sign In</a>
       @if($registrationEnabled)
       <a href="{{ route('register') }}" class="text-center py-2.5 text-sm font-semibold text-black rounded-lg" style="background:#25D366;">Get Started Free</a>
       @endif
@@ -335,148 +396,83 @@ tailwind.config = {
 
 <!-- ===== HERO ===== -->
 <main id="main-content">
-<section class="relative min-h-screen flex items-center pt-20 overflow-hidden noise hero-glow grid-pattern">
-  <!-- Background elements -->
+<section class="relative min-h-[100svh] flex items-center pt-28 pb-16 overflow-hidden noise">
   <div class="absolute inset-0 z-0">
-    <div class="absolute top-1/4 left-1/4 w-96 h-96 rounded-full opacity-10 blur-3xl" style="background:radial-gradient(circle,#25D366,transparent 70%);"></div>
-    <div class="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full opacity-8 blur-3xl" style="background:radial-gradient(circle,#128C7E,transparent 70%);"></div>
+    <div class="absolute inset-0" style="background:
+      radial-gradient(ellipse 70% 55% at 78% 42%, rgba(37,211,102,0.16) 0%, transparent 58%),
+      radial-gradient(ellipse 50% 40% at 12% 70%, rgba(18,140,126,0.10) 0%, transparent 55%),
+      linear-gradient(180deg, #eef8f2 0%, #f7faf8 50%, #ffffff 100%);"></div>
+    <div class="absolute inset-0 grid-pattern opacity-30"></div>
   </div>
 
-  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-16 grid lg:grid-cols-2 gap-16 items-center">
-    <!-- Left: Copy -->
-    <div>
-      <div class="badge inline-flex mb-6">
-        <span class="w-2 h-2 rounded-full mr-2 pulse-ring relative" style="background:#25D366;"></span>
-        Social commerce platform · Official Meta WhatsApp Business API
-      </div>
-
-      <h1 class="font-display text-5xl sm:text-6xl lg:text-7xl font-800 leading-[1.05] mb-6" style="letter-spacing:-0.02em;">
-        The social commerce<br />
-        platform for<br />
-        <span class="grad-text">WhatsApp</span>
-      </h1>
-
-      <p class="text-lg text-gray-400 leading-relaxed mb-8 max-w-xl">
-        Sell from chat, move contacts through journey pipelines, take bookings, and get paid — product catalogs, kanban CRM, team inbox, and M-Pesa in one platform. Guided activation helps most teams send their first reply in about 15 minutes.
-      </p>
-
-      <div class="flex flex-wrap gap-3 mb-10">
-        @if($registrationEnabled)
-        <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
-          Start Free Today
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-        </a>
-        @else
-        <a href="{{ route('login') }}" class="inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
-          Sign In
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-        </a>
-        @endif
-        <a href="#features" class="inline-flex items-center gap-2 px-6 py-3.5 text-sm font-semibold text-white rounded-xl border border-white/10 hover:border-white/20 transition-all hover:bg-white/5">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          See Features
-        </a>
-      </div>
-
-      <!-- Social proof -->
-      <div class="flex items-center gap-4">
-        <div class="flex -space-x-2">
-          <div class="w-8 h-8 rounded-full border-2 border-[#040f0c] flex items-center justify-center text-xs font-bold" style="background:linear-gradient(135deg,#667eea,#764ba2);">A</div>
-          <div class="w-8 h-8 rounded-full border-2 border-[#040f0c] flex items-center justify-center text-xs font-bold" style="background:linear-gradient(135deg,#f093fb,#f5576c);">B</div>
-          <div class="w-8 h-8 rounded-full border-2 border-[#040f0c] flex items-center justify-center text-xs font-bold" style="background:linear-gradient(135deg,#4facfe,#00f2fe);">C</div>
-          <div class="w-8 h-8 rounded-full border-2 border-[#040f0c] flex items-center justify-center text-xs font-bold" style="background:linear-gradient(135deg,#43e97b,#38f9d7);">D</div>
-          <div class="w-8 h-8 rounded-full border-2 border-[#040f0c] flex items-center justify-center text-xs font-semibold text-gray-300" style="background:#1a2a1a;">+</div>
-        </div>
-        <div>
-          <div class="flex text-yellow-400 text-sm mb-0.5">★★★★★</div>
-          <p class="text-xs text-gray-500"><span class="text-white font-semibold">Built for teams</span> selling and supporting on WhatsApp</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Right: Phone Mockup -->
-    <div class="relative flex justify-center items-center">
-      <!-- Floating stat badges -->
-      <div class="absolute -left-4 top-12 float2 hidden md:block">
-        <div class="bg-[#0f1f1a] border border-green-900/40 rounded-2xl px-4 py-3 shadow-2xl">
-          <p class="text-xs text-gray-500 mb-1">Sales via WhatsApp today</p>
-          <p class="text-xl font-display font-bold" style="color:#25D366;">KES 284K</p>
-          <div class="flex items-center gap-1 mt-1">
-            <span class="text-xs text-emerald-400">↑ 18%</span>
-            <span class="text-xs text-gray-600">vs yesterday</span>
-          </div>
+  <div class="relative z-10 max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6 w-full">
+    <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      {{-- Copy --}}
+      <div class="max-w-2xl">
+        <p class="font-display hero-brand font-800 text-gray-900 mb-4">{{ $siteName }}</p>
+        <h1 class="font-display hero-title font-800 text-gray-900 mb-5">
+          The social commerce<br class="hidden sm:block" />
+          platform for <span class=" hero-title font-800  grad-text">WhatsApp</span>
+        </h1>
+        <p class="body-lg text-gray-600 mb-8">
+          Sell from chat, move contacts through journey pipelines, take bookings, and get paid — product catalogs, kanban CRM, team inbox, and M-Pesa in one platform. Guided activation helps most teams send their first reply in about 15 minutes.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          @if($registrationEnabled)
+          <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-7 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90" style="background:#25D366;">
+            Start Free Today
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </a>
+          @else
+          <a href="{{ route('login') }}" class="inline-flex items-center gap-2 px-7 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90" style="background:#25D366;">
+            Sign In
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </a>
+          @endif
+          <a href="#how-it-works" class="inline-flex items-center gap-2 px-7 py-4 text-base font-semibold text-gray-800 rounded-xl border border-gray-200 bg-white/70 hover:border-gray-300 transition-all hover:bg-white">
+            See how it works
+          </a>
         </div>
       </div>
 
-      <div class="absolute -right-4 bottom-20 float3 hidden md:block">
-        <div class="bg-[#0f1f1a] border border-green-900/40 rounded-2xl px-4 py-3 shadow-2xl">
-          <div class="flex items-center gap-2 mb-1">
-            <div class="w-2 h-2 rounded-full" style="background:#25D366;"></div>
-            <p class="text-xs text-gray-400">Campaign sent</p>
-          </div>
-          <p class="text-sm font-semibold text-white">Campaign delivered</p>
-          <p class="text-xs text-gray-500 mt-0.5">Delivery &amp; read analytics</p>
-        </div>
-      </div>
-
-      <!-- Phone -->
-      <div class="phone-frame w-64 sm:w-72 float overflow-hidden" style="height:560px;">
-        <div class="phone-notch"></div>
-        <!-- WhatsApp header -->
-        <div class="flex items-center gap-2.5 px-3 py-2.5" style="background:#1f2c34;">
-          <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style="background:linear-gradient(135deg,#25D366,#075E54);">CC</div>
-          <div class="flex-1 min-w-0">
-            <p class="text-xs font-semibold text-white">StyleHive Shop</p>
-            <p class="text-xs" style="color:#25D366;">● Online</p>
-          </div>
-          <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-        </div>
-
-        <!-- Chat messages -->
-        <div class="px-3 py-3 space-y-3 overflow-hidden" style="background:#0b1418; height:calc(100% - 130px);">
-          <div class="flex justify-start">
-            <div class="bubble-in px-3 py-2 max-w-[80%]">
-              <p class="text-xs text-white">👋 Hi John! New arrivals just dropped. Want to see the catalog?</p>
-              <p class="text-right text-xs text-gray-500 mt-1">09:41</p>
+      {{-- Product visual — contained, not clipped --}}
+      <div class="relative flex justify-center lg:justify-end">
+        <div class="absolute -inset-8 rounded-full blur-3xl opacity-40 pointer-events-none" style="background:radial-gradient(circle,rgba(37,211,102,0.35),transparent 70%);"></div>
+        <div class="phone-frame hero-phone overflow-hidden float relative z-10">
+          <div class="phone-notch"></div>
+          <div class="flex items-center gap-2.5 px-3 py-2.5" style="background:#1f2c34;">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style="background:linear-gradient(135deg,#25D366,#075E54);">CC</div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-semibold text-white">StyleHive Shop</p>
+              <p class="text-[11px]" style="color:#25D366;">● Online · selling now</p>
             </div>
           </div>
-          <div class="flex justify-end">
-            <div class="bubble-out px-3 py-2 max-w-[80%]">
-              <p class="text-xs text-white">Yes — do you have the blue sneakers in 42?</p>
-              <p class="text-right text-xs text-gray-400 mt-1">09:42 ✓✓</p>
+          <div class="px-3 py-3 space-y-3 overflow-hidden" style="background:#0b1418; height:calc(100% - 90px);">
+            <div class="flex justify-start">
+              <div class="bubble-in px-3 py-2 max-w-[85%]">
+                <p class="text-xs text-white leading-relaxed">New arrivals just dropped. Want the catalog?</p>
+              </div>
             </div>
-          </div>
-          <!-- Product card -->
-          <div class="bg-[#1f2c34] rounded-xl overflow-hidden border border-white/5">
-            <div class="px-3 pt-3 pb-2">
-              <div class="flex items-center gap-2 mb-2">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style="background:rgba(37,211,102,0.15);">👟</div>
-                <div class="flex-1 min-w-0">
+            <div class="flex justify-end">
+              <div class="bubble-out px-3 py-2 max-w-[85%]">
+                <p class="text-xs text-white leading-relaxed">Blue sneakers in 42?</p>
+              </div>
+            </div>
+            <div class="rounded-xl overflow-hidden border border-white/10 p-3" style="background:#1f2c34;">
+              <div class="flex items-center gap-2.5 mb-2">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center text-base" style="background:rgba(37,211,102,0.18);">👟</div>
+                <div class="min-w-0">
                   <p class="text-xs font-semibold text-white">Blue Runner Sneakers</p>
-                  <p class="text-xs" style="color:#25D366;">KES 4,500 · Size 42</p>
+                  <p class="text-[11px]" style="color:#25D366;">KES 4,500 · Size 42</p>
                 </div>
               </div>
-              <button class="w-full mt-1 py-1.5 rounded-lg text-xs font-semibold text-black" style="background:#25D366;">Buy on WhatsApp →</button>
+              <div class="w-full py-2 rounded-lg text-center text-[11px] font-semibold text-black" style="background:#25D366;">Buy on WhatsApp →</div>
             </div>
-          </div>
-          <div class="flex justify-end">
-            <div class="bubble-out px-3 py-2 max-w-[80%]">
-              <p class="text-xs text-white">I'll take them!</p>
-              <p class="text-right text-xs text-gray-400 mt-1">09:43 ✓✓</p>
+            <div class="flex justify-start">
+              <div class="bubble-in px-3 py-2 max-w-[90%]">
+                <p class="text-xs text-white leading-relaxed">✅ M-Pesa received · Order #1042 confirmed.</p>
+              </div>
             </div>
-          </div>
-          <div class="flex justify-start">
-            <div class="bubble-in px-3 py-2 max-w-[80%]">
-              <p class="text-xs text-white">✅ M-Pesa received · Order #1042 confirmed. Delivery tomorrow!</p>
-              <p class="text-right text-xs text-gray-500 mt-1">09:44</p>
-            </div>
-          </div>
-        </div>
-        <!-- Input bar -->
-        <div class="flex items-center gap-2 px-3 py-2" style="background:#1f2c34;">
-          <div class="flex-1 bg-[#2a3942] rounded-full px-3 py-1.5 text-xs text-gray-500">Type a message</div>
-          <div class="w-7 h-7 rounded-full flex items-center justify-center" style="background:#25D366;">
-            <svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </div>
         </div>
       </div>
@@ -484,24 +480,95 @@ tailwind.config = {
   </div>
 </section>
 
-<!-- ===== STATS BAR ===== -->
-<section class="border-y border-white/5 py-8" style="background:rgba(37,211,102,0.03);">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-2 lg:grid-cols-4 gap-0">
-    <div class="stat-item text-center px-6 py-4">
-      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">Meta</p>
-      <p class="text-sm text-gray-500">Official WhatsApp Business API</p>
+<!-- ===== STATS / OUTCOMES ===== -->
+<section class="border-y border-gray-200 py-16" style="background:#eef8f3;">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-12">
+      <div>
+        <p class="section-label mb-3">Outcomes</p>
+        <h2 class="font-display section-title font-800 text-gray-900">Built to sell and support<br/>on WhatsApp — end to end.</h2>
+      </div>
+      <p class="text-gray-600 max-w-md text-base leading-relaxed">Official Meta API. Multichannel campaigns. Guided activation. Visual automation with 38+ nodes.</p>
     </div>
-    <div class="stat-item text-center px-6 py-4">
-      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">3</p>
-      <p class="text-sm text-gray-500">Campaign channels: WhatsApp, SMS, email</p>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
+      <div class="stat-item px-2 lg:px-6">
+        <p class="font-display outcome-num font-800 grad-text mb-2">Meta</p>
+        <p class="text-base text-gray-600">Official WhatsApp Business API</p>
+      </div>
+      <div class="stat-item px-2 lg:px-6">
+        <p class="font-display outcome-num font-800 grad-text mb-2">3</p>
+        <p class="text-base text-gray-600">Campaign channels: WhatsApp, SMS, email</p>
+      </div>
+      <div class="stat-item px-2 lg:px-6">
+        <p class="font-display outcome-num font-800 grad-text mb-2">~15 min</p>
+        <p class="text-base text-gray-600">Guided path to first reply</p>
+      </div>
+      <div class="stat-item px-2 lg:px-6">
+        <p class="font-display outcome-num font-800 grad-text mb-2">38+</p>
+        <p class="text-base text-gray-600">Automation node types in Flowmaker</p>
+      </div>
     </div>
-    <div class="stat-item text-center px-6 py-4">
-      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">~15 min</p>
-      <p class="text-sm text-gray-500">Guided path to first reply</p>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section id="how-it-works" class="py-24 relative overflow-hidden">
+  <div class="absolute inset-0 dots-bg opacity-40"></div>
+  <div class="relative z-10 max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
+    <div class="mb-14 max-w-2xl">
+      <p class="section-label mb-3">How it works</p>
+      <h2 class="font-display section-title font-800 mb-4">Connect. Orchestrate.<br/><span class="grad-text">Engage. Collect.</span></h2>
+      <p class="text-gray-600">{{ $siteName }} plugs into WhatsApp and runs your commerce workflows — so your team spends less time stitching tools and more time closing.</p>
     </div>
-    <div class="stat-item text-center px-6 py-4">
-      <p class="font-display text-3xl sm:text-4xl font-800 grad-text mb-1">38+</p>
-      <p class="text-sm text-gray-500">Automation node types in Flowmaker</p>
+    @include('wpsupportlanding::landing.partials.infographics.how_it_works')
+    <div class="mt-12">
+      @include('wpsupportlanding::landing.partials.infographics.commerce_loop')
+    </div>
+  </div>
+</section>
+
+<!-- ===== WHAT WE DO ===== -->
+<section class="py-24 border-b border-gray-200">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
+    <div class="mb-12 max-w-2xl">
+      <p class="section-label mb-3">What we do</p>
+      <h2 class="font-display section-title font-800 mb-4">Social commerce that<br/><span class="grad-text">runs the work.</span></h2>
+      <p class="text-gray-600">Traditional chat tools assist your team. {{ $siteName }} runs selling, support, and automation on WhatsApp.</p>
+    </div>
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="rounded-3xl border border-gray-200 p-8" style="background:linear-gradient(180deg,rgba(37,211,102,0.06),transparent);">
+        <p class="section-label mb-4">Sell</p>
+        <h3 class="font-display text-3xl font-800 text-gray-900 mb-3">Commerce</h3>
+        <p class="text-base text-gray-600 mb-6 leading-relaxed">Catalogs, branded shops, invoices, and M-Pesa / Paystack — close inside the conversation.</p>
+        <ul class="space-y-2.5 text-base text-gray-700">
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Product Catalog & Shop</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Invoices & Payments</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Shopify & WooCommerce sync</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Bookings & events</li>
+        </ul>
+      </div>
+      <div class="rounded-3xl border border-gray-200 p-8" style="background:#ffffff;">
+        <p class="section-label mb-4">Support</p>
+        <h3 class="font-display text-3xl font-800 text-gray-900 mb-3">Inbox</h3>
+        <p class="text-base text-gray-600 mb-6 leading-relaxed">Shared team inbox with Customer 360 — journeys, bookings, orders, and Copilot in one panel.</p>
+        <ul class="space-y-2.5 text-base text-gray-700">
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Shared Team Inbox</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Journey Pipelines</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> WhatsApp Calling</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Agent Copilot</li>
+        </ul>
+      </div>
+      <div class="rounded-3xl border border-gray-200 p-8" style="background:#ffffff;">
+        <p class="section-label mb-4">Automate</p>
+        <h3 class="font-display text-3xl font-800 text-gray-900 mb-3">Orchestration</h3>
+        <p class="text-base text-gray-600 mb-6 leading-relaxed">Campaigns across WhatsApp, SMS & email channels, native Forms, and 38+ Flowmaker nodes.</p>
+        <ul class="space-y-2.5 text-base text-gray-700">
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Campaigns & Broadcasts</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> WhatsApp Flows</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Flow Automation</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Developer APIs</li>
+        </ul>
+      </div>
     </div>
   </div>
 </section>
@@ -509,123 +576,128 @@ tailwind.config = {
 <!-- ===== FEATURES GRID ===== -->
 <section id="features" class="py-24 relative">
   <div class="absolute inset-0 dots-bg opacity-50"></div>
-  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
+  <div class="relative z-10 max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Commerce + operations</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Everything to sell and<br/>support on WhatsApp</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Catalogs and checkout for social selling, plus journey pipelines, inbox, multichannel campaigns, bookings, WhatsApp Forms, and payments — one platform for your entire WhatsApp business.</p>
+      <h2 class="font-display section-title font-800 mb-4">Everything to sell and<br/>support on WhatsApp</h2>
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Catalogs and checkout for social selling, plus journey pipelines, inbox, multichannel campaigns, bookings, WhatsApp Forms, and payments — one platform for your entire WhatsApp business.</p>
+    </div>
+
+    <div class="mb-16">
+      @include('wpsupportlanding::landing.partials.infographics.platform_ecosystem')
     </div>
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <!-- Card 1 -->
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">👥</div>
-        <h3 class="font-display font-700 text-lg mb-2">Shared Team Inbox</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Multi-agent inbox with Customer 360 — journeys, bookings, orders, and conversation context in one panel. Agent Copilot surfaces knowledge-base replies and quick replies agents can accept or edit.</p>
+        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">Shared Team Inbox</h3>
+        <p class="text-base text-gray-600 mb-4 leading-relaxed">Multi-agent inbox with Customer 360 — journeys, bookings, orders, and conversation context in one panel. Agent Copilot surfaces knowledge-base replies and quick replies agents can accept or edit.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Customer 360 unified sidebar</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Knowledge-based Copilot suggestions</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Chat assignment & agent handover</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Bookings, catalog & store sidebars</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Customer 360 unified sidebar</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Knowledge-based Copilot suggestions</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Chat assignment & agent handover</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Bookings, catalog & store sidebars</li>
         </ul>
       </div>
       <!-- Card 2 -->
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">📢</div>
-        <h3 class="font-display font-700 text-lg mb-2">Campaigns & Broadcasts</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Multichannel campaigns across WhatsApp, SMS, and email — file upload, contact groups, or quick lists — with delivery analytics and timezone-aware scheduling.</p>
+        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">Campaigns & Broadcasts</h3>
+        <p class="text-base text-gray-600 mb-4 leading-relaxed">Multichannel campaigns across WhatsApp, SMS, and email — file upload, contact groups, or quick lists — with delivery analytics and timezone-aware scheduling.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>WhatsApp, SMS &amp; email channels</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>File, group &amp; quick audiences</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Segments, scheduling &amp; analytics</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>API-triggered campaign sends</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>WhatsApp, SMS &amp; email channels</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>ConvoConnect SMS · Sender ID · KES 0.6 / SMS</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>File, group &amp; quick audiences</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Segments, scheduling &amp; analytics</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>API-triggered campaign sends</li>
         </ul>
       </div>
       <!-- Card 3 -->
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">🗂️</div>
-        <h3 class="font-display font-700 text-lg mb-2">Journey Pipelines</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Kanban CRM with ready-made playbooks for sales, support, e-commerce, and events — move contacts across stages and fire WhatsApp campaigns automatically.</p>
+        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">Journey Pipelines</h3>
+        <p class="text-base text-gray-600 mb-4 leading-relaxed">Kanban CRM with ready-made playbooks for sales, support, e-commerce, and events — move contacts across stages and fire WhatsApp campaigns automatically.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>7 templates: sales, support, revenue & more</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Stage-triggered WhatsApp campaigns</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Auto-enroll new contacts & group rules</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Journey sidebar in chat</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>7 templates: sales, support, revenue & more</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Stage-triggered WhatsApp campaigns</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Auto-enroll new contacts & group rules</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Journey sidebar in chat</li>
         </ul>
       </div>
       <!-- Card 4 -->
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">⚡</div>
-        <h3 class="font-display font-700 text-lg mb-2">Flow Automation</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Install curated flow templates in one click, or describe what you want and let the AI Flow Assistant draft automation for you to review.</p>
+        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">Flow Automation</h3>
+        <p class="text-base text-gray-600 mb-4 leading-relaxed">Install curated flow templates in one click, or describe what you want and let the AI Flow Assistant draft automation for you to review.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Flow template library (payments, booking, support)</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>AI Flow Assistant — natural language to draft</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Visual no-code flow builder</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>38+ nodes: forms, bookings, payments &amp; AI</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Flow template library (payments, booking, support)</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>AI Flow Assistant — natural language to draft</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Visual no-code flow builder</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>38+ nodes: forms, bookings, payments &amp; AI</li>
         </ul>
       </div>
       <!-- Card 5 -->
       <div class="card-lift border rounded-2xl p-6 relative overflow-hidden" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
         <div class="absolute top-3 right-3 badge text-xs">New</div>
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.15);">📋</div>
-        <h3 class="font-display font-700 text-lg mb-2">WhatsApp Flows</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Native interactive forms that open inside WhatsApp — then convert submissions into Flowmaker automations with booking and commerce prefills.</p>
+        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">WhatsApp Flows</h3>
+        <p class="text-base text-gray-600 mb-4 leading-relaxed">Native interactive forms that open inside WhatsApp — then convert submissions into Flowmaker automations with booking and commerce prefills.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Drag-and-drop form builder</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>One-click publish to Meta</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Convert responses into automations</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Booking &amp; commerce data exchange</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Drag-and-drop form builder</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>One-click publish to Meta</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Convert responses into automations</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Booking &amp; commerce data exchange</li>
         </ul>
       </div>
       <!-- Card 6 -->
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">📞</div>
-        <h3 class="font-display font-700 text-lg mb-2">WhatsApp Calling</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Inbound and outbound WhatsApp voice calls with AI-assisted greetings, post-call booking handoff, and call analytics.</p>
+        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">WhatsApp Calling</h3>
+        <p class="text-base text-gray-600 mb-4 leading-relaxed">Inbound and outbound WhatsApp voice calls with AI-assisted greetings, post-call booking handoff, and call analytics.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Inbound &amp; outbound WhatsApp calls</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>AI voice context &amp; booking handoff</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Call analytics dashboard</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Agent performance reports</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Inbound &amp; outbound WhatsApp calls</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>AI voice context &amp; booking handoff</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Call analytics dashboard</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Agent performance reports</li>
         </ul>
       </div>
       <!-- Card 7 -->
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">💰</div>
-        <h3 class="font-display font-700 text-lg mb-2">Invoices & Payments</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Share public invoice pages, collect M-Pesa or Paystack in-chat, and sync paid status back to contacts and journey stages automatically.</p>
+        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">Invoices & Payments</h3>
+        <p class="text-base text-gray-600 mb-4 leading-relaxed">Share public invoice pages, collect M-Pesa or Paystack in-chat, and sync paid status back to contacts and journey stages automatically.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Public invoice &amp; payment links</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>M-Pesa STK push integration</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Paystack commerce checkout</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Auto-update CRM on payment</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Public invoice &amp; payment links</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>M-Pesa STK push integration</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Paystack commerce checkout</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Auto-update CRM on payment</li>
         </ul>
       </div>
       <!-- Card 8 -->
       <div class="card-lift border rounded-2xl p-6 relative overflow-hidden" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
         <div class="absolute top-3 right-3 badge text-xs">Updated</div>
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.15);">📅</div>
-        <h3 class="font-display font-700 text-lg mb-2">Bookings</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Full booking app with multi-staff scheduling, public widgets, events with seat limits, and automated WhatsApp reminders — configurable from Company Apps.</p>
+        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">Bookings</h3>
+        <p class="text-base text-gray-600 mb-4 leading-relaxed">Full booking app with multi-staff scheduling, public widgets, events with seat limits, and automated WhatsApp reminders — configurable from Company Apps.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Multi-staff & department scheduling</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Embeddable booking widgets & events</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Google Calendar sync</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>WhatsApp reminder campaigns</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Multi-staff & department scheduling</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Embeddable booking widgets & events</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Google Calendar sync</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>WhatsApp reminder campaigns</li>
         </ul>
       </div>
       <!-- Card 9 -->
       <div class="card-lift border rounded-2xl p-6 relative overflow-hidden" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
         <div class="absolute top-3 right-3 badge text-xs">Updated</div>
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.15);">🛍️</div>
-        <h3 class="font-display font-700 text-lg mb-2">Product Catalog & Shop</h3>
-        <p class="text-sm text-gray-500 mb-4 leading-relaxed">Build branded WhatsApp shops, sync from Shopify or WooCommerce, and sell directly from the chat sidebar.</p>
+        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">Product Catalog & Shop</h3>
+        <p class="text-base text-gray-600 mb-4 leading-relaxed">Build branded WhatsApp shops, sync from Shopify or WooCommerce, and sell directly from the chat sidebar.</p>
         <ul class="space-y-2">
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Branded shop links & in-chat selling</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Store sync & inventory tracking</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Checkout via WhatsApp or invoice</li>
-          <li class="flex items-start gap-2 text-sm text-gray-400"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Catalog analytics & A/B tests</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Branded shop links & in-chat selling</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Store sync & inventory tracking</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Checkout via WhatsApp or invoice</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Catalog analytics & A/B tests</li>
         </ul>
       </div>
     </div>
@@ -633,65 +705,65 @@ tailwind.config = {
 </section>
 
 <!-- ===== PLATFORM INTELLIGENCE ===== -->
-<section id="platform" class="py-24 border-y border-white/5 relative overflow-hidden" style="background:rgba(37,211,102,0.02);">
+<section id="platform" class="py-24 border-y border-gray-200 relative overflow-hidden" style="background:#f3faf6;">
   <div class="absolute inset-0 dots-bg opacity-40"></div>
-  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
+  <div class="relative z-10 max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Go live faster · Run smarter</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Operations intelligence<br/>built into the platform</h2>
-      <p class="text-gray-400 max-w-2xl mx-auto">From guided activation to revenue dashboards and proactive health alerts — ConvoConnect helps you launch quickly and stay on top of what matters.</p>
+      <h2 class="font-display section-title font-800 mb-4">Operations intelligence<br/>built into the platform</h2>
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">From guided activation to revenue dashboards and proactive health alerts — ConvoConnect helps you launch quickly and stay on top of what matters.</p>
     </div>
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">🚀</div>
-        <h3 class="font-display font-700 text-base mb-2">Activation OS</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">Guided onboarding tracks WhatsApp setup, a test message, your first contacts, and first flow — so owners go live in minutes, not days.</p>
+        <h3 class="font-display font-700 text-lg mb-2 text-gray-900">Activation OS</h3>
+        <p class="text-base text-gray-600 leading-relaxed">Guided onboarding tracks WhatsApp setup, a test message, your first contacts, and first flow — so owners go live in minutes, not days.</p>
       </div>
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">👤</div>
-        <h3 class="font-display font-700 text-base mb-2">Customer 360</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">See journeys, bookings, orders, invoices, and conversation history in one inbox sidebar — agents never hunt across tabs again.</p>
+        <h3 class="font-display font-700 text-lg mb-2 text-gray-900">Customer 360</h3>
+        <p class="text-base text-gray-600 leading-relaxed">See journeys, bookings, orders, invoices, and conversation history in one inbox sidebar — agents never hunt across tabs again.</p>
       </div>
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">✨</div>
-        <h3 class="font-display font-700 text-base mb-2">Agent Copilot</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">Surfaces knowledge articles, quick replies, and greeting suggestions agents can accept or edit — with generative AI available in the Flow Assistant for building automations.</p>
+        <h3 class="font-display font-700 text-lg mb-2 text-gray-900">Agent Copilot</h3>
+        <p class="text-base text-gray-600 leading-relaxed">Surfaces knowledge articles, quick replies, and greeting suggestions agents can accept or edit — with generative AI available in the Flow Assistant for building automations.</p>
       </div>
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">📊</div>
-        <h3 class="font-display font-700 text-base mb-2">Revenue &amp; credits</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">Pipeline value, paid invoices, messaging credits, and managed AI credit wallets on your home screen — see usage and WhatsApp revenue at a glance.</p>
+        <h3 class="font-display font-700 text-lg mb-2 text-gray-900">Revenue &amp; credits</h3>
+        <p class="text-base text-gray-600 leading-relaxed">Pipeline value, paid invoices, messaging credits, and managed AI credit wallets on your home screen — see usage and WhatsApp revenue at a glance.</p>
       </div>
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">🔔</div>
-        <h3 class="font-display font-700 text-base mb-2">Health Monitor</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">Proactive alerts for disconnected numbers, failed webhooks, low credits, and stalled journeys — fix issues before customers notice.</p>
+        <h3 class="font-display font-700 text-lg mb-2 text-gray-900">Health Monitor</h3>
+        <p class="text-base text-gray-600 leading-relaxed">Proactive alerts for disconnected numbers, failed webhooks, low credits, and stalled journeys — fix issues before customers notice.</p>
       </div>
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4" style="background:rgba(37,211,102,0.1);">👥</div>
-        <h3 class="font-display font-700 text-base mb-2">Organization Managers</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">Invite managers with scoped module access on seat-based plans — they run inbox and campaigns without full owner permissions.</p>
+        <h3 class="font-display font-700 text-lg mb-2 text-gray-900">Organization Managers</h3>
+        <p class="text-base text-gray-600 leading-relaxed">Invite managers with scoped module access on seat-based plans — they run inbox and campaigns without full owner permissions.</p>
       </div>
     </div>
   </div>
 </section>
 
 <!-- ===== WHATSAPP FLOWS SPOTLIGHT ===== -->
-<section class="py-24 border-y border-white/5" style="background:rgba(37,211,102,0.02);">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-16 items-center">
+<section class="py-24 border-y border-gray-200" style="background:#f3faf6;">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6 grid lg:grid-cols-2 gap-16 items-center">
     <div>
       <div class="badge inline-flex mb-6">WhatsApp Native Forms</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 leading-tight mb-6">Forms that open<br/><span class="grad-text">inside WhatsApp.</span></h2>
-      <p class="text-gray-400 leading-relaxed mb-8">WhatsApp Flows are interactive, multi-screen forms that open natively inside WhatsApp — no links, no browsers, no friction. ConvoConnect gives you a drag-and-drop builder, one-click Meta publish, and a bridge into Flowmaker for bookings and commerce.</p>
+      <h2 class="font-display section-title font-800 leading-tight mb-6">Forms that open<br/><span class="grad-text">inside WhatsApp.</span></h2>
+      <p class="text-gray-600 leading-relaxed mb-8">WhatsApp Flows are interactive, multi-screen forms that open natively inside WhatsApp — no links, no browsers, no friction. ConvoConnect gives you a drag-and-drop builder, one-click Meta publish, and a bridge into Flowmaker for bookings and commerce.</p>
       <ul class="space-y-4 mb-8">
         <li class="flex items-start gap-3">
           <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style="background:rgba(37,211,102,0.15);">
             <svg class="w-3.5 h-3.5" style="color:#25D366;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
           </div>
           <div>
-            <p class="font-semibold text-white text-sm">All input types supported</p>
-            <p class="text-sm text-gray-500">Text fields, radio buttons, dropdowns, date pickers, checkboxes, and opt-in confirmations.</p>
+            <p class="font-semibold text-gray-900 text-sm">All input types supported</p>
+            <p class="text-sm text-gray-600">Text fields, radio buttons, dropdowns, date pickers, checkboxes, and opt-in confirmations.</p>
           </div>
         </li>
         <li class="flex items-start gap-3">
@@ -699,8 +771,8 @@ tailwind.config = {
             <svg class="w-3.5 h-3.5" style="color:#25D366;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
           </div>
           <div>
-            <p class="font-semibold text-white text-sm">One-click publish to Meta</p>
-            <p class="text-sm text-gray-500">Build in our editor and deploy directly to Meta's servers — no JSON editing or API calls needed.</p>
+            <p class="font-semibold text-gray-900 text-sm">One-click publish to Meta</p>
+            <p class="text-sm text-gray-600">Build in our editor and deploy directly to Meta's servers — no JSON editing or API calls needed.</p>
           </div>
         </li>
         <li class="flex items-start gap-3">
@@ -708,8 +780,8 @@ tailwind.config = {
             <svg class="w-3.5 h-3.5" style="color:#25D366;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
           </div>
           <div>
-            <p class="font-semibold text-white text-sm">Forms ↔ Flow Builder bridge</p>
-            <p class="text-sm text-gray-500">Convert submissions into automations with dynamic data exchange — prefill bookings, catalogs, and payment steps from form answers.</p>
+            <p class="font-semibold text-gray-900 text-sm">Forms ↔ Flow Builder bridge</p>
+            <p class="text-sm text-gray-600">Convert submissions into automations with dynamic data exchange — prefill bookings, catalogs, and payment steps from form answers.</p>
           </div>
         </li>
         <li class="flex items-start gap-3">
@@ -717,8 +789,8 @@ tailwind.config = {
             <svg class="w-3.5 h-3.5" style="color:#25D366;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
           </div>
           <div>
-            <p class="font-semibold text-white text-sm">Response dashboard & exports</p>
-            <p class="text-sm text-gray-500">View every submission in a structured table. Export to CSV or push to your CRM automatically.</p>
+            <p class="font-semibold text-gray-900 text-sm">Response dashboard & exports</p>
+            <p class="text-sm text-gray-600">View every submission in a structured table. Export to CSV or push to your CRM automatically.</p>
           </div>
         </li>
       </ul>
@@ -729,9 +801,9 @@ tailwind.config = {
 
     <!-- Form Builder Mockup -->
     <div class="relative">
-      <div class="bg-[#0d1a15] border border-white/[0.07] rounded-2xl overflow-hidden shadow-2xl">
+      <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl">
         <!-- Toolbar -->
-        <div class="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style="background:#0a1410;">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style="background:#f8fbf9;">
           <div class="flex items-center gap-2">
             <div class="w-3 h-3 rounded-full bg-red-500 opacity-70"></div>
             <div class="w-3 h-3 rounded-full bg-yellow-400 opacity-70"></div>
@@ -742,21 +814,21 @@ tailwind.config = {
         </div>
         <div class="flex" style="min-height:320px;">
           <!-- Sidebar -->
-          <div class="w-36 border-r border-white/[0.06] px-3 py-3 space-y-1.5" style="background:#0a1410;">
-            <p class="text-xs text-gray-600 uppercase tracking-wider mb-2" style="font-size:9px;">Components</p>
-            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:bg-white/5 cursor-pointer transition-colors">
+          <div class="w-36 border-r border-white/[0.06] px-3 py-3 space-y-1.5" style="background:#f8fbf9;">
+            <p class="text-xs text-gray-500 uppercase tracking-wider mb-2" style="font-size:9px;">Components</p>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:bg-white cursor-pointer transition-colors">
               <span>📝</span> Text Input
             </div>
-            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:bg-white/5 cursor-pointer transition-colors">
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:bg-white cursor-pointer transition-colors">
               <span>🔘</span> Radio Group
             </div>
-            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:bg-white/5 cursor-pointer transition-colors">
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:bg-white cursor-pointer transition-colors">
               <span>▾</span> Dropdown
             </div>
-            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:bg-white/5 cursor-pointer transition-colors">
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:bg-white cursor-pointer transition-colors">
               <span>📅</span> Date Picker
             </div>
-            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:bg-white/5 cursor-pointer transition-colors">
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-gray-400 hover:bg-white cursor-pointer transition-colors">
               <span>☑️</span> Opt-in
             </div>
             <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors" style="color:#25D366;background:rgba(37,211,102,0.08);">
@@ -765,20 +837,20 @@ tailwind.config = {
           </div>
           <!-- Canvas -->
           <div class="flex-1 px-4 py-4 space-y-2.5">
-            <p class="text-xs text-gray-600 mb-3" style="font-size:9px; text-transform:uppercase; letter-spacing:.08em;">Screen 1 of 2 · Preview</p>
+            <p class="text-xs text-gray-500 mb-3" style="font-size:9px; text-transform:uppercase; letter-spacing:.08em;">Screen 1 of 2 · Preview</p>
             <!-- Form fields -->
-            <div class="bg-[#162318] border border-white/[0.06] rounded-xl p-3 relative group cursor-pointer" style="border-left:3px solid #25D366;">
+            <div class="bg-[#f3faf6] border border-gray-200 rounded-xl p-3 relative group cursor-pointer" style="border-left:3px solid #25D366;">
               <div class="flex items-center justify-between mb-1">
                 <p class="text-xs text-gray-400 font-medium">Full Name</p>
                 <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                  <span class="text-gray-600 cursor-pointer hover:text-white">✎</span>
+                  <span class="text-gray-600 cursor-pointer hover:text-gray-900">✎</span>
                   <span class="text-gray-600 cursor-pointer hover:text-red-400">✕</span>
                 </div>
               </div>
-              <div class="h-6 bg-[#1f2c34] rounded-md border border-white/5"></div>
-              <p class="text-xs text-gray-600 mt-1" style="font-size:9px;">Required · Text</p>
+              <div class="h-6 bg-[#e8f5ee] rounded-md border border-white/5"></div>
+              <p class="text-xs text-gray-500 mt-1" style="font-size:9px;">Required · Text</p>
             </div>
-            <div class="bg-[#1a1a2a] border border-white/[0.06] rounded-xl p-3 group cursor-pointer hover:border-white/10 transition-colors">
+            <div class="bg-[#f8fbf9] border border-gray-200 rounded-xl p-3 group cursor-pointer hover:border-gray-200 transition-colors">
               <p class="text-xs text-gray-400 font-medium mb-1">Business Size</p>
               <div class="space-y-1">
                 <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full border border-gray-600"></div><p class="text-xs text-gray-500">1–10 employees</p></div>
@@ -786,10 +858,10 @@ tailwind.config = {
                 <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full border border-gray-600"></div><p class="text-xs text-gray-500">50+ employees</p></div>
               </div>
             </div>
-            <div class="bg-[#1a1a2a] border border-white/[0.06] rounded-xl p-3 group cursor-pointer hover:border-white/10 transition-colors">
+            <div class="bg-[#f8fbf9] border border-gray-200 rounded-xl p-3 group cursor-pointer hover:border-gray-200 transition-colors">
               <p class="text-xs text-gray-400 font-medium mb-1">Demo Date</p>
-              <div class="h-6 bg-[#1f2c34] rounded-md border border-white/5 flex items-center px-2">
-                <p class="text-xs text-gray-600">MM / DD / YYYY</p>
+              <div class="h-6 bg-[#e8f5ee] rounded-md border border-white/5 flex items-center px-2">
+                <p class="text-xs text-gray-500">MM / DD / YYYY</p>
               </div>
             </div>
             <!-- Submit -->
@@ -797,10 +869,10 @@ tailwind.config = {
           </div>
         </div>
         <!-- Footer -->
-        <div class="flex items-center justify-between px-4 py-2.5 border-t border-white/[0.06]" style="background:#0a1410;">
-          <p class="text-xs text-gray-600">Drag to reorder components</p>
+        <div class="flex items-center justify-between px-4 py-2.5 border-t border-gray-200" style="background:#f8fbf9;">
+          <p class="text-xs text-gray-500">Drag to reorder components</p>
           <div class="flex gap-2">
-            <button class="text-xs px-3 py-1 rounded-lg border border-white/10 text-gray-400">Preview</button>
+            <button class="text-xs px-3 py-1 rounded-lg border border-gray-200 text-gray-400">Preview</button>
             <button class="text-xs px-3 py-1 rounded-lg text-black font-semibold" style="background:#25D366;">Publish to Meta</button>
           </div>
         </div>
@@ -810,29 +882,33 @@ tailwind.config = {
 </section>
 
 <!-- ===== JOURNEYS SPOTLIGHT ===== -->
-<section id="journeys" class="py-24 border-y border-white/5" style="background:rgba(126,34,206,0.03);">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+<section id="journeys" class="py-24 border-y border-gray-200" style="background:#f5f3ff;">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Journey Pipelines</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Move every contact<br/><span class="grad-text">through a pipeline.</span></h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Kanban journeys with stage automation — launch from templates, trigger WhatsApp campaigns when contacts move, and manage pipelines from the inbox sidebar.</p>
+      <h2 class="font-display section-title font-800 mb-4">Move every contact<br/><span class="grad-text">through a pipeline.</span></h2>
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Kanban journeys with stage automation — launch from templates, trigger WhatsApp campaigns when contacts move, and manage pipelines from the inbox sidebar.</p>
+    </div>
+
+    <div class="mb-16">
+      @include('wpsupportlanding::landing.partials.infographics.journey_kanban')
     </div>
 
     <div class="grid md:grid-cols-3 gap-4 mb-16">
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">📋</div>
-        <p class="font-display font-700 text-base mb-2">1. Pick a Playbook</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Start from seven templates — sales, support, marketing, onboarding, revenue, e-commerce, or event registrations — each with ordered stages ready to go.</p>
+        <p class="font-display font-700 text-lg mb-2 text-gray-900">1. Pick a Playbook</p>
+        <p class="text-base text-gray-600 leading-relaxed">Start from seven templates — sales, support, marketing, onboarding, revenue, e-commerce, or event registrations — each with ordered stages ready to go.</p>
       </div>
       <div class="card-lift border rounded-2xl p-6 text-center" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.15);">🧭</div>
         <p class="font-display font-700 text-base mb-2" style="color:#25D366;">2. Drag Contacts on Kanban</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Move contacts across stages visually. Attach campaigns to stages so WhatsApp messages fire automatically when someone enters a step.</p>
+        <p class="text-base text-gray-600 leading-relaxed">Move contacts across stages visually. Attach campaigns to stages so WhatsApp messages fire automatically when someone enters a step.</p>
       </div>
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">📊</div>
-        <p class="font-display font-700 text-base mb-2">3. Track Pipeline Value</p>
-        <p class="text-sm text-gray-500 leading-relaxed">See stage counts, activity history, and revenue metrics on your dashboard. Auto-enroll new contacts or route by group rules from Company Apps.</p>
+        <p class="font-display font-700 text-lg mb-2 text-gray-900">3. Track Pipeline Value</p>
+        <p class="text-base text-gray-600 leading-relaxed">See stage counts, activity history, and revenue metrics on your dashboard. Auto-enroll new contacts or route by group rules from Company Apps.</p>
       </div>
     </div>
 
@@ -843,29 +919,29 @@ tailwind.config = {
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🎯</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Stage-triggered campaigns</p>
-              <p class="text-sm text-gray-500">Link a broadcast template to any stage. When a contact moves there — manually or via automation — the campaign queues with optional delay.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Stage-triggered campaigns</p>
+              <p class="text-sm text-gray-600">Link a broadcast template to any stage. When a contact moves there — manually or via automation — the campaign queues with optional delay.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🆕</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Auto-enroll new contacts</p>
-              <p class="text-sm text-gray-500">Turn on auto-enrollment in Company Apps to add every new contact to your default journey's first stage automatically.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Auto-enroll new contacts</p>
+              <p class="text-sm text-gray-600">Turn on auto-enrollment in Company Apps to add every new contact to your default journey's first stage automatically.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">💬</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Contact journeys sidebar</p>
-              <p class="text-sm text-gray-500">Agents move contacts between stages, view pipeline context, and launch stage campaigns without leaving the chat inbox.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Contact journeys sidebar</p>
+              <p class="text-sm text-gray-600">Agents move contacts between stages, view pipeline context, and launch stage campaigns without leaving the chat inbox.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">⚙️</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Per-app settings in Company Apps</p>
-              <p class="text-sm text-gray-500">Enable journeys, confirm before send, staff permissions, and default journey ID — all grouped under one Journeys tab in workspace settings.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Per-app settings in Company Apps</p>
+              <p class="text-sm text-gray-600">Enable journeys, confirm before send, staff permissions, and default journey ID — all grouped under one Journeys tab in workspace settings.</p>
             </div>
           </div>
         </div>
@@ -875,8 +951,8 @@ tailwind.config = {
       </div>
 
       <div class="relative">
-        <div class="bg-[#0d1a15] border border-white/[0.07] rounded-2xl overflow-hidden shadow-2xl">
-          <div class="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style="background:#0a1410;">
+        <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style="background:#f8fbf9;">
             <div class="flex items-center gap-2">
               <div class="w-3 h-3 rounded-full bg-red-500 opacity-70"></div>
               <div class="w-3 h-3 rounded-full bg-yellow-400 opacity-70"></div>
@@ -892,15 +968,15 @@ tailwind.config = {
               ['Proposal', '5', '#d97706'],
               ['Won', '3', '#25D366'],
             ] as [$stage, $count, $color])
-            <div class="rounded-xl border border-white/[0.06] p-2" style="background:rgba(255,255,255,0.02);">
+            <div class="rounded-xl border border-gray-200 p-2" style="background:#ffffff;">
               <div class="flex items-center justify-between mb-2">
                 <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{{ $stage }}</p>
                 <span class="text-[10px] px-1.5 py-0.5 rounded-full text-gray-300" style="background:{{ $color }}33;color:{{ $color }};">{{ $count }}</span>
               </div>
               <div class="space-y-1.5">
                 @for($i = 0; $i < min(2, (int) $count); $i++)
-                <div class="rounded-lg px-2 py-1.5 border border-white/[0.05]" style="background:#162318;">
-                  <p class="text-[10px] text-white font-medium">Contact {{ $i + 1 }}</p>
+                <div class="rounded-lg px-2 py-1.5 border border-gray-200" style="background:#f3faf6;">
+                  <p class="text-[10px] text-gray-900 font-medium">Contact {{ $i + 1 }}</p>
                   <p class="text-[9px] text-gray-500">Moved today</p>
                 </div>
                 @endfor
@@ -908,8 +984,8 @@ tailwind.config = {
             </div>
             @endforeach
           </div>
-          <div class="px-4 py-2.5 border-t border-white/[0.06] flex items-center justify-between" style="background:#0a1410;">
-            <p class="text-xs text-gray-600">Stage campaign queued on move</p>
+          <div class="px-4 py-2.5 border-t border-gray-200 flex items-center justify-between" style="background:#f8fbf9;">
+            <p class="text-xs text-gray-500">Stage campaign queued on move</p>
             <div class="flex gap-2">
               <div class="badge text-xs">Templates ✓</div>
               <div class="badge text-xs">Kanban ✓</div>
@@ -922,30 +998,34 @@ tailwind.config = {
 </section>
 
 <!-- ===== BOOKINGS SPOTLIGHT ===== -->
-<section id="bookings" class="py-24 border-y border-white/5" style="background:rgba(37,211,102,0.02);">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+<section id="bookings" class="py-24 border-y border-gray-200" style="background:#f3faf6;">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Bookings</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Book appointments.<br/><span class="grad-text">Run events. Reduce no-shows.</span></h2>
-      <p class="text-gray-400 max-w-xl mx-auto">The Bookings app inside ConvoConnect — multi-staff scheduling, public widgets, event registrations, Google Calendar sync, and WhatsApp reminders. Configure everything from one Bookings tab in Company Apps.</p>
+      <h2 class="font-display section-title font-800 mb-4">Book appointments.<br/><span class="grad-text">Run events. Reduce no-shows.</span></h2>
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">The Bookings app inside ConvoConnect — multi-staff scheduling, public widgets, event registrations, Google Calendar sync, and WhatsApp reminders. Configure everything from one Bookings tab in Company Apps.</p>
+    </div>
+
+    <div class="mb-16">
+      @include('wpsupportlanding::landing.partials.infographics.booking_lifecycle')
     </div>
 
     <!-- 3-step flow -->
     <div class="grid md:grid-cols-3 gap-4 mb-16">
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">⚙️</div>
-        <p class="font-display font-700 text-base mb-2">1. Set Up Services & Staff</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Define bookable services, departments, working hours, and team members. Choose round-robin, least-busy, or customer-picks-staff assignment.</p>
+        <p class="font-display font-700 text-lg mb-2 text-gray-900">1. Set Up Services & Staff</p>
+        <p class="text-base text-gray-600 leading-relaxed">Define bookable services, departments, working hours, and team members. Choose round-robin, least-busy, or customer-picks-staff assignment.</p>
       </div>
       <div class="card-lift border rounded-2xl p-6 text-center" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.15);">🌐</div>
         <p class="font-display font-700 text-base mb-2" style="color:#25D366;">2. Share Your Booking Page</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Embed a branded widget on your site or share a public booking link. Customers pick services, staff, and available slots — no app download needed.</p>
+        <p class="text-base text-gray-600 leading-relaxed">Embed a branded widget on your site or share a public booking link. Customers pick services, staff, and available slots — no app download needed.</p>
       </div>
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">🔔</div>
-        <p class="font-display font-700 text-base mb-2">3. Automate Reminders</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Send WhatsApp utility-template reminders before and after appointments. Staff get notified on book, cancel, and reschedule — synced to Google Calendar.</p>
+        <p class="font-display font-700 text-lg mb-2 text-gray-900">3. Automate Reminders</p>
+        <p class="text-base text-gray-600 leading-relaxed">Send WhatsApp utility-template reminders before and after appointments. Staff get notified on book, cancel, and reschedule — synced to Google Calendar.</p>
       </div>
     </div>
 
@@ -957,29 +1037,29 @@ tailwind.config = {
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">👥</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Multi-staff & department scheduling</p>
-              <p class="text-sm text-gray-500">Assign services to teams, set per-staff hours, and handle holiday closures. Smart assignment modes distribute bookings fairly.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Multi-staff & department scheduling</p>
+              <p class="text-sm text-gray-600">Assign services to teams, set per-staff hours, and handle holiday closures. Smart assignment modes distribute bookings fairly.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🎟️</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Events with seat capacity</p>
-              <p class="text-sm text-gray-500">Run workshops, classes, or webinars with multiple occurrences, party sizes, and registration management — all from one dashboard.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Events with seat capacity</p>
+              <p class="text-sm text-gray-600">Run workshops, classes, or webinars with multiple occurrences, party sizes, and registration management — all from one dashboard.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">💬</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Bookings sidebar in chat</p>
-              <p class="text-sm text-gray-500">Agents see a contact's upcoming appointments and event registrations right in the inbox sidebar — open chat from any booking detail page.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Bookings sidebar in chat</p>
+              <p class="text-sm text-gray-600">Agents see a contact's upcoming appointments and event registrations right in the inbox sidebar — open chat from any booking detail page.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🔌</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">REST API with scoped keys</p>
-              <p class="text-sm text-gray-500">Integrate with your CRM or website using slot-based booking API. Scoped public keys keep your main account secure.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">REST API with scoped keys</p>
+              <p class="text-sm text-gray-600">Integrate with your CRM or website using slot-based booking API. Scoped public keys keep your main account secure.</p>
             </div>
           </div>
         </div>
@@ -990,8 +1070,8 @@ tailwind.config = {
 
       <!-- Booking widget mockup -->
       <div class="relative">
-        <div class="bg-[#0d1a15] border border-white/[0.07] rounded-2xl overflow-hidden shadow-2xl">
-          <div class="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style="background:#0a1410;">
+        <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style="background:#f8fbf9;">
             <div class="flex items-center gap-2">
               <div class="w-3 h-3 rounded-full bg-red-500 opacity-70"></div>
               <div class="w-3 h-3 rounded-full bg-yellow-400 opacity-70"></div>
@@ -1002,7 +1082,7 @@ tailwind.config = {
           </div>
           <div class="px-5 py-5 space-y-4">
             <div class="text-center mb-2">
-              <p class="text-sm font-semibold text-white">Book an Appointment</p>
+              <p class="text-base font-semibold text-gray-900">Book an Appointment</p>
               <p class="text-xs text-gray-500">Select a service and available time</p>
             </div>
             <div class="grid grid-cols-2 gap-2">
@@ -1011,7 +1091,7 @@ tailwind.config = {
                 <p class="text-xs text-gray-500">45 min · KES 2,500</p>
               </div>
               <div class="flow-node px-3 py-2.5 text-center">
-                <p class="text-xs font-semibold text-white">Beard Trim</p>
+                <p class="text-xs font-semibold text-gray-900">Beard Trim</p>
                 <p class="text-xs text-gray-500">20 min · KES 800</p>
               </div>
             </div>
@@ -1026,14 +1106,14 @@ tailwind.config = {
             <div class="flex items-center gap-3 px-3 py-2 rounded-xl" style="background:rgba(37,211,102,0.06);border:1px solid rgba(37,211,102,0.15);">
               <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style="background:linear-gradient(135deg,#25D366,#075E54);">SM</div>
               <div>
-                <p class="text-xs font-semibold text-white">Sarah Mwangi</p>
+                <p class="text-xs font-semibold text-gray-900">Sarah Mwangi</p>
                 <p class="text-xs text-gray-500">Senior Stylist</p>
               </div>
             </div>
             <button class="w-full py-2.5 rounded-xl text-xs font-semibold text-black" style="background:#25D366;">Confirm Booking →</button>
           </div>
-          <div class="px-4 py-2.5 border-t border-white/[0.06] flex items-center justify-between" style="background:#0a1410;">
-            <p class="text-xs text-gray-600">Powered by ConvoConnect</p>
+          <div class="px-4 py-2.5 border-t border-gray-200 flex items-center justify-between" style="background:#f8fbf9;">
+            <p class="text-xs text-gray-500">Powered by ConvoConnect</p>
             <div class="flex gap-2">
               <div class="badge text-xs">Calendar ✓</div>
               <div class="badge text-xs">Reminders ✓</div>
@@ -1046,30 +1126,30 @@ tailwind.config = {
 </section>
 
 <!-- ===== CATALOG SPOTLIGHT ===== -->
-<section id="catalog" class="py-24 border-y border-white/5" style="background:rgba(18,140,126,0.02);">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+<section id="catalog" class="py-24 border-y border-gray-200" style="background:#f0faf7;">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Product Catalog & Commerce</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Import products. Sell inside<br/><span class="grad-text">WhatsApp.</span></h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Import from Excel, Shopify, or WooCommerce with live inventory sync. Share branded shop links, sell from the chat sidebar, and collect payment via invoice or M-Pesa.</p>
+      <h2 class="font-display section-title font-800 mb-4">Import products. Sell inside<br/><span class="grad-text">WhatsApp.</span></h2>
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Import from Excel, Shopify, or WooCommerce with live inventory sync. Share branded shop links, sell from the chat sidebar, and collect payment via invoice or M-Pesa.</p>
     </div>
 
     <!-- 3-step flow -->
     <div class="grid md:grid-cols-3 gap-4 mb-16">
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">🛒</div>
-        <p class="font-display font-700 text-base mb-2">1. Import Your Catalog</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Import from Shopify, WooCommerce, Excel, or your own API. Ongoing store sync keeps prices and stock up to date automatically.</p>
+        <p class="font-display font-700 text-lg mb-2 text-gray-900">1. Import Your Catalog</p>
+        <p class="text-base text-gray-600 leading-relaxed">Import from Shopify, WooCommerce, Excel, or your own API. Ongoing store sync keeps prices and stock up to date automatically.</p>
       </div>
       <div class="card-lift border rounded-2xl p-6 text-center" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.15);">⚡</div>
         <p class="font-display font-700 text-base mb-2" style="color:#25D366;">2. Sell from Chat or Flows</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Send shop links or individual products from the inbox sidebar. Add catalog nodes to flows — checkout resumes the automation automatically.</p>
+        <p class="text-base text-gray-600 leading-relaxed">Send shop links or individual products from the inbox sidebar. Add catalog nodes to flows — checkout resumes the automation automatically.</p>
       </div>
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6 text-center">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">💳</div>
-        <p class="font-display font-700 text-base mb-2">3. Invoice & Collect Payment</p>
-        <p class="text-sm text-gray-500 leading-relaxed">Generate a PDF invoice and send a payment link in the same conversation. Accept M-Pesa STK or Paystack — confirmed in seconds.</p>
+        <p class="font-display font-700 text-lg mb-2 text-gray-900">3. Invoice & Collect Payment</p>
+        <p class="text-base text-gray-600 leading-relaxed">Generate a PDF invoice and send a payment link in the same conversation. Accept M-Pesa STK or Paystack — confirmed in seconds.</p>
       </div>
     </div>
 
@@ -1082,36 +1162,36 @@ tailwind.config = {
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">📦</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Branded WhatsApp shops</p>
-              <p class="text-sm text-gray-500">Create catalogs with images, variants, and collections. Share at /shop/yourbrand — customers browse and add to cart without leaving WhatsApp.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Branded WhatsApp shops</p>
+              <p class="text-sm text-gray-600">Create catalogs with images, variants, and collections. Share at /shop/yourbrand — customers browse and add to cart without leaving WhatsApp.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">💬</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Catalog sidebar in chat</p>
-              <p class="text-sm text-gray-500">Search and send individual products or shop links directly from the inbox. Agents close sales without switching tools.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Catalog sidebar in chat</p>
+              <p class="text-sm text-gray-600">Search and send individual products or shop links directly from the inbox. Agents close sales without switching tools.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🔄</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Live store sync & inventory</p>
-              <p class="text-sm text-gray-500">Shopify and WooCommerce webhooks keep stock accurate. Inventory reservations prevent overselling during checkout.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Live store sync & inventory</p>
+              <p class="text-sm text-gray-600">Shopify and WooCommerce webhooks keep stock accurate. Inventory reservations prevent overselling during checkout.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🧾</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Checkout & payments</p>
-              <p class="text-sm text-gray-500">Customers checkout via WhatsApp message or auto-generated invoice. M-Pesa STK and Paystack confirm payment and trigger next flow steps.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Checkout & payments</p>
+              <p class="text-sm text-gray-600">Customers checkout via WhatsApp message or auto-generated invoice. M-Pesa STK and Paystack confirm payment and trigger next flow steps.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">📊</div>
             <div>
-              <p class="text-sm font-semibold text-white mb-0.5">Analytics & A/B experiments</p>
-              <p class="text-sm text-gray-500">Track views, cart adds, and checkouts. Run weighted catalog experiments to optimize which products convert best.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Analytics & A/B experiments</p>
+              <p class="text-sm text-gray-600">Track views, cart adds, and checkouts. Run weighted catalog experiments to optimize which products convert best.</p>
             </div>
           </div>
         </div>
@@ -1122,9 +1202,9 @@ tailwind.config = {
 
       <!-- Right: mockup -->
       <div class="relative">
-        <div class="bg-[#0d1a15] border border-white/[0.07] rounded-2xl overflow-hidden shadow-2xl">
+        <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl">
           <!-- Bar -->
-          <div class="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style="background:#0a1410;">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style="background:#f8fbf9;">
             <div class="flex items-center gap-2">
               <div class="w-3 h-3 rounded-full bg-red-500 opacity-70"></div>
               <div class="w-3 h-3 rounded-full bg-yellow-400 opacity-70"></div>
@@ -1138,7 +1218,7 @@ tailwind.config = {
             <div class="flow-node px-4 py-3 w-full text-center">
               <div class="flex items-center gap-2 justify-center mb-0.5">
                 <span class="text-base">💬</span>
-                <p class="text-xs font-semibold text-white">Keyword: "shop"</p>
+                <p class="text-xs font-semibold text-gray-900">Keyword: "shop"</p>
               </div>
               <p class="text-xs text-gray-500">Trigger when customer types shop</p>
             </div>
@@ -1154,7 +1234,7 @@ tailwind.config = {
             <div class="flow-node px-4 py-3 w-full text-center">
               <div class="flex items-center gap-2 justify-center mb-0.5">
                 <span class="text-base">🧾</span>
-                <p class="text-xs font-semibold text-white">Generate Invoice</p>
+                <p class="text-xs font-semibold text-gray-900">Generate Invoice</p>
               </div>
               <p class="text-xs text-gray-500">Auto-create PDF invoice from order</p>
             </div>
@@ -1162,12 +1242,12 @@ tailwind.config = {
             <div class="grid grid-cols-2 gap-3 w-full">
               <div class="flow-node px-3 py-3 text-center">
                 <span class="text-sm">📱</span>
-                <p class="text-xs font-semibold text-white mt-1">M-Pesa STK</p>
+                <p class="text-xs font-semibold text-gray-900 mt-1">M-Pesa STK</p>
                 <p class="text-xs text-gray-500">Push to phone</p>
               </div>
               <div class="flow-node px-3 py-3 text-center">
                 <span class="text-sm">💳</span>
-                <p class="text-xs font-semibold text-white mt-1">Paystack</p>
+                <p class="text-xs font-semibold text-gray-900 mt-1">Paystack</p>
                 <p class="text-xs text-gray-500">Card payment</p>
               </div>
             </div>
@@ -1180,8 +1260,8 @@ tailwind.config = {
               <p class="text-xs text-gray-500">Send receipt · update order status</p>
             </div>
           </div>
-          <div class="px-4 py-2.5 border-t border-white/[0.06] flex items-center justify-between" style="background:#0a1410;">
-            <p class="text-xs text-gray-600">Drag to add more nodes</p>
+          <div class="px-4 py-2.5 border-t border-gray-200 flex items-center justify-between" style="background:#f8fbf9;">
+            <p class="text-xs text-gray-500">Drag to add more nodes</p>
             <div class="flex gap-2">
               <div class="badge text-xs">Catalog ✓</div>
               <div class="badge text-xs">Payments ✓</div>
@@ -1194,14 +1274,18 @@ tailwind.config = {
 </section>
 
 <!-- ===== AUTOMATION SECTION ===== -->
-<section id="automation" class="py-24 relative overflow-hidden" style="background:#050f0b;">
+<section id="automation" class="py-24 relative overflow-hidden" style="background:#f3faf6;">
   <div class="absolute inset-0 grid-pattern"></div>
   <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px" style="background:linear-gradient(90deg,transparent,rgba(37,211,102,0.3),transparent);"></div>
-  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
+  <div class="relative z-10 max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Workflow Automation</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Orchestrate every<br/>customer touchpoint</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Build sales, support, and onboarding flows visually — start from curated templates, convert WhatsApp Forms into automations, or describe what you need and let the AI Flow Assistant draft it for you.</p>
+      <h2 class="font-display section-title font-800 mb-4">Orchestrate every<br/>customer touchpoint</h2>
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Build sales, support, and onboarding flows visually — start from curated templates, convert WhatsApp Forms into automations, or describe what you need and let the AI Flow Assistant draft it for you.</p>
+    </div>
+
+    <div class="mb-16">
+      @include('wpsupportlanding::landing.partials.infographics.automation_nodes')
     </div>
 
     <div class="grid lg:grid-cols-2 gap-12 items-center">
@@ -1211,7 +1295,7 @@ tailwind.config = {
           <div class="flow-node px-5 py-3 w-64 text-center">
             <div class="flex items-center gap-2 justify-center mb-1">
               <span class="text-lg">⚡</span>
-              <p class="text-sm font-semibold text-white">Trigger Node</p>
+              <p class="text-base font-semibold text-gray-900">Trigger Node</p>
             </div>
             <p class="text-xs text-gray-500">Keyword "book" received</p>
           </div>
@@ -1219,7 +1303,7 @@ tailwind.config = {
           <div class="flow-node px-5 py-3 w-64 text-center">
             <div class="flex items-center gap-2 justify-center mb-1">
               <span class="text-lg">💬</span>
-              <p class="text-sm font-semibold text-white">Send Message</p>
+              <p class="text-base font-semibold text-gray-900">Send Message</p>
             </div>
             <p class="text-xs text-gray-500">"Hi! Ready to book? Fill our form 👇"</p>
           </div>
@@ -1235,12 +1319,12 @@ tailwind.config = {
           <div class="grid grid-cols-2 gap-4 w-full max-w-sm">
             <div class="flow-node px-3 py-3 text-center">
               <span class="text-sm">✅</span>
-              <p class="text-xs font-semibold text-white mt-1">Confirmed</p>
+              <p class="text-xs font-semibold text-gray-900 mt-1">Confirmed</p>
               <p class="text-xs text-gray-500">Send receipt</p>
             </div>
             <div class="flow-node px-3 py-3 text-center">
               <span class="text-sm">🔁</span>
-              <p class="text-xs font-semibold text-white mt-1">Retry</p>
+              <p class="text-xs font-semibold text-gray-900 mt-1">Retry</p>
               <p class="text-xs text-gray-500">Send reminder</p>
             </div>
           </div>
@@ -1249,46 +1333,46 @@ tailwind.config = {
 
       <!-- Node types -->
       <div class="space-y-3">
-        <h3 class="font-display font-700 text-xl mb-4">38+ automation nodes</h3>
+        <h3 class="font-display font-700 text-xl mb-4 text-gray-900">38+ automation nodes</h3>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
           <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">⚡</div>
           <div>
-            <p class="text-sm font-semibold text-white mb-0.5">Triggers &amp; branching</p>
+            <p class="text-base font-semibold text-gray-900 mb-0.5">Triggers &amp; branching</p>
             <p class="text-xs text-gray-500">Keywords, inbound messages, form submissions, waits, conditions, HTTP/webhooks, and scheduled steps.</p>
           </div>
         </div>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
           <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">💬</div>
           <div>
-            <p class="text-sm font-semibold text-white mb-0.5">Messaging &amp; WhatsApp Forms</p>
+            <p class="text-base font-semibold text-gray-900 mb-0.5">Messaging &amp; WhatsApp Forms</p>
             <p class="text-xs text-gray-500">Text, media, lists, templates, questions, and native WhatsApp Flow forms with data exchange.</p>
           </div>
         </div>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
           <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">🛍️</div>
           <div>
-            <p class="text-sm font-semibold text-white mb-0.5">Commerce &amp; payments</p>
+            <p class="text-base font-semibold text-gray-900 mb-0.5">Commerce &amp; payments</p>
             <p class="text-xs text-gray-500">Catalogs, order status, pricing, M-Pesa and payment requests that resume the flow on success.</p>
           </div>
         </div>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
           <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">📅</div>
           <div>
-            <p class="text-sm font-semibold text-white mb-0.5">Bookings &amp; events</p>
+            <p class="text-base font-semibold text-gray-900 mb-0.5">Bookings &amp; events</p>
             <p class="text-xs text-gray-500">Appointment and event nodes that collect availability, confirm slots, and sync with Google Calendar.</p>
           </div>
         </div>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
           <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">🗂️</div>
           <div>
-            <p class="text-sm font-semibold text-white mb-0.5">CRM &amp; assignment</p>
+            <p class="text-base font-semibold text-gray-900 mb-0.5">CRM &amp; assignment</p>
             <p class="text-xs text-gray-500">Update contacts, assign agents or groups, enroll journeys, and write to your flow datastore.</p>
           </div>
         </div>
         <div class="flow-node px-4 py-3.5 flex items-start gap-4">
           <div class="w-9 h-9 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background:rgba(37,211,102,0.1);">🤖</div>
           <div>
-            <p class="text-sm font-semibold text-white mb-0.5">AI Flow Assistant &amp; AI nodes</p>
+            <p class="text-base font-semibold text-gray-900 mb-0.5">AI Flow Assistant &amp; AI nodes</p>
             <p class="text-xs text-gray-500">Draft flows in natural language with managed AI credits, then run knowledge-based AI steps with human handover.</p>
           </div>
         </div>
@@ -1299,45 +1383,49 @@ tailwind.config = {
 
 <!-- ===== INTEGRATIONS ===== -->
 <section id="integrations" class="py-24 relative">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Integrations</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Connects with<br/>your stack</h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Connect the tools that power selling and outreach — Meta Embedded Signup, store sync, commerce payments, SMS, email, and an embeddable WhatsApp widget.</p>
+      <h2 class="font-display section-title font-800 mb-4">Connects with<br/>your stack</h2>
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Connect the tools that power selling and outreach — Meta Embedded Signup, store sync, commerce payments, ConvoConnect SMS with Sender ID, email, and an embeddable WhatsApp widget.</p>
+    </div>
+
+    <div class="mb-12">
+      @include('wpsupportlanding::landing.partials.infographics.channel_orchestration')
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(149,191,71,0.1);" aria-hidden="true">🛍️</div>
-        <div><p class="text-sm font-semibold text-white">Shopify</p><p class="text-xs text-gray-500 mt-0.5">Products, orders &amp; webhooks</p></div>
+        <div><p class="text-base font-semibold text-gray-900">Shopify</p><p class="text-xs text-gray-500 mt-0.5">Products, orders &amp; webhooks</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(150,88,183,0.1);" aria-hidden="true">🛒</div>
-        <div><p class="text-sm font-semibold text-white">WooCommerce</p><p class="text-xs text-gray-500 mt-0.5">Products, orders &amp; webhooks</p></div>
+        <div><p class="text-base font-semibold text-gray-900">WooCommerce</p><p class="text-xs text-gray-500 mt-0.5">Products, orders &amp; webhooks</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(0,150,64,0.1);" aria-hidden="true">📱</div>
-        <div><p class="text-sm font-semibold text-white">M-Pesa</p><p class="text-xs text-gray-500 mt-0.5">STK push commerce payments</p></div>
+        <div><p class="text-base font-semibold text-gray-900">M-Pesa</p><p class="text-xs text-gray-500 mt-0.5">STK push commerce payments</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(0,174,239,0.1);" aria-hidden="true">💳</div>
-        <div><p class="text-sm font-semibold text-white">Paystack</p><p class="text-xs text-gray-500 mt-0.5">Card checkout for invoices</p></div>
+        <div><p class="text-base font-semibold text-gray-900">Paystack</p><p class="text-xs text-gray-500 mt-0.5">Card checkout for invoices</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(99,91,255,0.1);" aria-hidden="true">💳</div>
-        <div><p class="text-sm font-semibold text-white">Stripe</p><p class="text-xs text-gray-500 mt-0.5">SaaS plan subscriptions</p></div>
+        <div><p class="text-base font-semibold text-gray-900">Stripe</p><p class="text-xs text-gray-500 mt-0.5">SaaS plan subscriptions</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(245,47,47,0.1);" aria-hidden="true">📨</div>
-        <div><p class="text-sm font-semibold text-white">Twilio SMS</p><p class="text-xs text-gray-500 mt-0.5">SMS campaigns &amp; alerts</p></div>
+        <div><p class="text-base font-semibold text-gray-900">ConvoConnect SMS</p><p class="text-xs text-gray-500 mt-0.5">Sender ID · KES 0.6 / SMS</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(37,99,235,0.1);" aria-hidden="true">📧</div>
-        <div><p class="text-sm font-semibold text-white">SMTP Email</p><p class="text-xs text-gray-500 mt-0.5">Email campaigns &amp; notices</p></div>
+        <div><p class="text-base font-semibold text-gray-900">SMTP Email</p><p class="text-xs text-gray-500 mt-0.5">Email campaigns &amp; notices</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(24,119,242,0.1);" aria-hidden="true">🔵</div>
-        <div><p class="text-sm font-semibold text-white">Meta Embedded</p><p class="text-xs text-gray-500 mt-0.5">One-click WhatsApp onboarding</p></div>
+        <div><p class="text-base font-semibold text-gray-900">Meta Embedded</p><p class="text-xs text-gray-500 mt-0.5">One-click WhatsApp onboarding</p></div>
       </div>
     </div>
 
@@ -1353,65 +1441,65 @@ tailwind.config = {
 </section>
 
 <!-- ===== API SECTION ===== -->
-<section id="api" class="py-24 relative overflow-hidden" style="background:#030a07;">
+<section id="api" class="py-24 relative overflow-hidden" style="background:#eef8f3;">
   <div class="absolute inset-0 grid-pattern opacity-60"></div>
   <div class="absolute top-0 left-0 right-0 h-px" style="background:linear-gradient(90deg,transparent,rgba(37,211,102,0.2),transparent);"></div>
-  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6">
+  <div class="relative z-10 max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Developer API</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Automate with<br/><span class="grad-text">developer APIs</span></h2>
-      <p class="text-gray-400 max-w-xl mx-auto">Send WhatsApp messages, manage contacts, trigger campaigns, sync catalogs, and collect invoice payments programmatically with plan-gated API access.</p>
+      <h2 class="font-display section-title font-800 mb-4">Automate with<br/><span class="grad-text">developer APIs</span></h2>
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Send WhatsApp messages, manage contacts, trigger campaigns, sync catalogs, and collect invoice payments programmatically with plan-gated API access.</p>
     </div>
 
     <div class="grid lg:grid-cols-2 gap-12 items-start">
       <!-- Endpoints list -->
       <div class="space-y-2">
-        <h3 class="font-display font-700 text-lg mb-5">Available endpoints</h3>
+        <h3 class="font-display font-700 text-lg mb-5 text-gray-900">Available endpoints</h3>
         <div class="space-y-2">
-          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/api/wpbox/sendmessage</code>
-            <span class="text-xs text-gray-600 ml-auto">Send message</span>
+            <code class="text-base text-gray-700">/api/wpbox/sendmessage</code>
+            <span class="text-xs text-gray-500 ml-auto">Send message</span>
           </div>
-          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/api/wpbox/sendtemplatemessage</code>
-            <span class="text-xs text-gray-600 ml-auto">Send template</span>
+            <code class="text-base text-gray-700">/api/wpbox/sendtemplatemessage</code>
+            <span class="text-xs text-gray-500 ml-auto">Send template</span>
           </div>
-          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(59,130,246,0.15);color:#60a5fa;">GET</span>
-            <code class="text-sm text-gray-300">/api/wpbox/getContacts</code>
-            <span class="text-xs text-gray-600 ml-auto">List contacts</span>
+            <code class="text-base text-gray-700">/api/wpbox/getContacts</code>
+            <span class="text-xs text-gray-500 ml-auto">List contacts</span>
           </div>
-          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/api/wpbox/makeContact</code>
-            <span class="text-xs text-gray-600 ml-auto">Create contact</span>
+            <code class="text-base text-gray-700">/api/wpbox/makeContact</code>
+            <span class="text-xs text-gray-500 ml-auto">Create contact</span>
           </div>
-          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/api/wpbox/sendcampaigns</code>
-            <span class="text-xs text-gray-600 ml-auto">Trigger campaign</span>
+            <code class="text-base text-gray-700">/api/wpbox/sendcampaigns</code>
+            <span class="text-xs text-gray-500 ml-auto">Trigger campaign</span>
           </div>
-          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(59,130,246,0.15);color:#60a5fa;">GET</span>
-            <code class="text-sm text-gray-300">/api/v1/catalog/catalogs</code>
-            <span class="text-xs text-gray-600 ml-auto">List catalogs</span>
+            <code class="text-base text-gray-700">/api/v1/catalog/catalogs</code>
+            <span class="text-xs text-gray-500 ml-auto">List catalogs</span>
           </div>
-          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/api/v1/catalog/catalogs/{id}/sync</code>
-            <span class="text-xs text-gray-600 ml-auto">Sync catalog</span>
+            <code class="text-base text-gray-700">/api/v1/catalog/catalogs/{id}/sync</code>
+            <span class="text-xs text-gray-500 ml-auto">Sync catalog</span>
           </div>
-          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
-            <code class="text-sm text-gray-300">/api/invoice/{uuid}/pay</code>
-            <span class="text-xs text-gray-600 ml-auto">Initiate payment</span>
+            <code class="text-base text-gray-700">/api/invoice/{uuid}/pay</code>
+            <span class="text-xs text-gray-500 ml-auto">Initiate payment</span>
           </div>
-          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(59,130,246,0.15);color:#60a5fa;">GET</span>
-            <code class="text-sm text-gray-300">/api/wpbox/me</code>
-            <span class="text-xs text-gray-600 ml-auto">API account info</span>
+            <code class="text-base text-gray-700">/api/wpbox/me</code>
+            <span class="text-xs text-gray-500 ml-auto">API account info</span>
           </div>
         </div>
         <div class="pt-4">
@@ -1423,7 +1511,7 @@ tailwind.config = {
 
       <!-- Code snippet -->
       <div>
-        <h3 class="font-display font-700 text-lg mb-5">Send a message in seconds</h3>
+        <h3 class="font-display font-700 text-lg mb-5 text-gray-900">Send a message in seconds</h3>
         <div class="code-block p-5 overflow-x-auto">
           <pre class="text-sm leading-relaxed"><code><span style="color:#569cd6;">const</span> <span style="color:#9cdcfe;">response</span> <span style="color:#d4d4d4;">= </span><span style="color:#569cd6;">await</span> <span style="color:#dcdcaa;">fetch</span><span style="color:#d4d4d4;">(</span>
   <span style="color:#ce9178;">"{{ url('/api/wpbox/sendmessage') }}"</span><span style="color:#d4d4d4;">,</span>
@@ -1454,10 +1542,10 @@ tailwind.config = {
 
 <!-- ===== PRICING ===== -->
 <section id="pricing" class="py-24">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-12">
       <div class="badge inline-flex mb-4">Pricing</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800 mb-4">Simple, transparent pricing</h2>
+      <h2 class="font-display section-title font-800 mb-4">Simple, transparent pricing</h2>
       <p class="text-gray-400">No surprise bills. Pick a plan, connect your WhatsApp number, and grow.</p>
     </div>
 
@@ -1480,9 +1568,9 @@ tailwind.config = {
         <div class="mb-6">
           <p class="text-sm mb-1 font-medium" style="color:#25D366;">{{ $plan->name }}</p>
           <div class="flex items-baseline gap-1">
-            <span class="text-gray-400 text-lg font-semibold self-start mt-1">{{ $currencySymbol }}</span>
-            <span class="font-display text-4xl font-800 text-white">{{ number_format($plan->price, 0) }}</span>
-            <span class="text-gray-400 text-sm">/ {{ $periodLabel }}</span>
+            <span class="text-gray-500 text-lg font-semibold self-start mt-1">{{ $currencySymbol }}</span>
+            <span class="font-display text-4xl font-800 text-gray-900">{{ number_format($plan->price, 0) }}</span>
+            <span class="text-gray-600 text-sm">/ {{ $periodLabel }}</span>
           </div>
           @if($plan->description)
           <p class="text-xs text-gray-500 mt-2 leading-relaxed">{{ $plan->description }}</p>
@@ -1494,30 +1582,30 @@ tailwind.config = {
         @if(count($features) > 0)
         <ul class="space-y-2.5">
           @foreach($features as $feature)
-          <li class="flex items-center gap-2.5 text-sm text-gray-300">
+          <li class="flex items-center gap-2.5 text-base text-gray-700">
             <svg class="w-4 h-4 flex-shrink-0" style="color:#25D366;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
             {{ $feature }}
           </li>
           @endforeach
         </ul>
         @endif
-        <p class="text-xs text-gray-600 mt-4 text-center">No contracts · Cancel anytime</p>
+        <p class="text-xs text-gray-500 mt-4 text-center">No contracts · Cancel anytime</p>
       </div>
       @else
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-7">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-7">
         <div class="mb-6">
-          <p class="text-sm text-gray-400 mb-1 font-medium">{{ $plan->name }}</p>
+          <p class="text-sm text-gray-600 mb-1 font-medium">{{ $plan->name }}</p>
           <div class="flex items-baseline gap-1">
             <span class="text-gray-500 text-lg font-semibold self-start mt-1">{{ $currencySymbol }}</span>
-            <span class="font-display text-4xl font-800 text-white">{{ number_format($plan->price, 0) }}</span>
+            <span class="font-display text-4xl font-800 text-gray-900">{{ number_format($plan->price, 0) }}</span>
             <span class="text-gray-500 text-sm">/ {{ $periodLabel }}</span>
           </div>
           @if($plan->description)
-          <p class="text-xs text-gray-600 mt-2 leading-relaxed">{{ $plan->description }}</p>
+          <p class="text-xs text-gray-500 mt-2 leading-relaxed">{{ $plan->description }}</p>
           @endif
         </div>
         @if($registrationEnabled)
-        <a href="{{ route('register') }}" class="block w-full text-center py-2.5 rounded-xl border border-white/10 text-sm font-semibold text-white hover:bg-white/5 transition-all mb-6">Get Started</a>
+        <a href="{{ route('register') }}" class="block w-full text-center py-2.5 rounded-xl border border-gray-200 text-base font-semibold text-gray-900 hover:bg-white transition-all mb-6">Get Started</a>
         @endif
         @if(count($features) > 0)
         <ul class="space-y-2.5">
@@ -1529,48 +1617,48 @@ tailwind.config = {
           @endforeach
         </ul>
         @endif
-        <p class="text-xs text-gray-600 mt-4 text-center">No contracts · Cancel anytime</p>
+        <p class="text-xs text-gray-500 mt-4 text-center">No contracts · Cancel anytime</p>
       </div>
       @endif
 
       @endforeach
     </div>
     @else
-    <p class="text-center text-gray-500 text-sm">No pricing plans available at this time.</p>
+    <p class="text-center text-gray-600 text-sm">No pricing plans available at this time.</p>
     @endif
   </div>
 </section>
 
 <!-- ===== TESTIMONIALS ===== -->
-<section class="py-24 border-t border-white/5" style="background:rgba(37,211,102,0.02);">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+<section class="py-24 border-t border-gray-200" style="background:#f3faf6;">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Testimonials</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800">Loved by businesses<br/>across Africa & beyond</h2>
+      <h2 class="font-display section-title font-800 text-gray-900">Loved by businesses<br/>across Africa & beyond</h2>
     </div>
     <div class="grid md:grid-cols-3 gap-4">
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="flex text-yellow-400 mb-4 text-sm">★★★★★</div>
-        <p class="text-gray-300 text-sm leading-relaxed mb-5">"The new booking widgets cut our no-show rate in half. Customers book directly from WhatsApp, get automatic reminders, and our stylists see everything synced to Google Calendar. Game changer for salons."</p>
+        <p class="text-gray-700 text-sm leading-relaxed mb-5">"The new booking widgets cut our no-show rate in half. Customers book directly from WhatsApp, get automatic reminders, and our stylists see everything synced to Google Calendar. Game changer for salons."</p>
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm" style="background:linear-gradient(135deg,#25D366,#075E54);">AM</div>
-          <div><p class="text-sm font-semibold text-white">Amina Mwangi</p><p class="text-xs text-gray-500">CEO, StyleHive Kenya</p></div>
+          <div><p class="text-base font-semibold text-gray-900">Amina Mwangi</p><p class="text-xs text-gray-500">CEO, StyleHive Kenya</p></div>
         </div>
       </div>
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="flex text-yellow-400 mb-4 text-sm">★★★★★</div>
-        <p class="text-gray-300 text-sm leading-relaxed mb-5">"File broadcasts with per-row template variables saved us hours. We upload a CSV, map columns to contact fields, and reach 10,000 customers with personalized messages — pause and resume whenever we need."</p>
+        <p class="text-gray-700 text-sm leading-relaxed mb-5">"File broadcasts with per-row template variables saved us hours. We upload a CSV, map columns to contact fields, and reach 10,000 customers with personalized messages — pause and resume whenever we need."</p>
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm" style="background:linear-gradient(135deg,#4facfe,#00f2fe);">DO</div>
-          <div><p class="text-sm font-semibold text-white">David Okonkwo</p><p class="text-xs text-gray-500">Founder, WhatsApp Agency (Lagos)</p></div>
+          <div><p class="text-base font-semibold text-gray-900">David Okonkwo</p><p class="text-xs text-gray-500">Founder, WhatsApp Agency (Lagos)</p></div>
         </div>
       </div>
-      <div class="card-lift bg-white/[0.02] border border-white/[0.06] rounded-2xl p-6">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="flex text-yellow-400 mb-4 text-sm">★★★★★</div>
-        <p class="text-gray-300 text-sm leading-relaxed mb-5">"We sell products straight from the chat sidebar now — search catalog, send a product link, customer checks out on WhatsApp. Replaced our separate e-commerce chat tool entirely."</p>
+        <p class="text-gray-700 text-sm leading-relaxed mb-5">"We sell products straight from the chat sidebar now — search catalog, send a product link, customer checks out on WhatsApp. Replaced our separate e-commerce chat tool entirely."</p>
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm" style="background:linear-gradient(135deg,#667eea,#764ba2);">TN</div>
-          <div><p class="text-sm font-semibold text-white">Taiwo Nwosu</p><p class="text-xs text-gray-500">Head of CX, PayStack Partner</p></div>
+          <div><p class="text-base font-semibold text-gray-900">Taiwo Nwosu</p><p class="text-xs text-gray-500">Head of CX, Datalink Partner</p></div>
         </div>
       </div>
     </div>
@@ -1578,129 +1666,129 @@ tailwind.config = {
 </section>
 
 <!-- ===== FAQ ===== -->
-<section id="faq" class="py-24 border-t border-white/5">
-  <div class="max-w-3xl mx-auto px-4 sm:px-6">
+<section id="faq" class="py-24 border-t border-gray-200">
+  <div class="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">FAQ</div>
-      <h2 class="font-display text-4xl sm:text-5xl font-800">Common questions</h2>
+      <h2 class="font-display section-title font-800 text-gray-900">Common questions</h2>
     </div>
 
     <div class="space-y-2">
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 1 ? null : 1" :aria-expanded="(faqOpen === 1).toString()" aria-controls="faq-panel-1" id="faq-button-1">
-          <span class="text-sm font-semibold text-white">Do I need a WhatsApp Business API account to use ConvoConnect?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 1 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">Do I need a WhatsApp Business API account to use ConvoConnect?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 1 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-1" x-show="faqOpen === 1" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-1">
-          <p class="text-sm text-gray-400 leading-relaxed">No — ConvoConnect is built on the official Meta WhatsApp Business Cloud API. Our Activation OS walks you through Embedded Signup, team setup, and your first flow — most businesses send their first reply within 15 minutes.</p>
+          <p class="text-base text-gray-600 leading-relaxed">No — ConvoConnect is built on the official Meta WhatsApp Business Cloud API. Our Activation OS walks you through Embedded Signup, team setup, and your first flow — most businesses send their first reply within 15 minutes.</p>
         </div>
       </div>
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 2 ? null : 2" :aria-expanded="(faqOpen === 2).toString()" aria-controls="faq-panel-2" id="faq-button-2">
-          <span class="text-sm font-semibold text-white">Can I connect multiple WhatsApp numbers to one account?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 2 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">Can I connect multiple WhatsApp numbers to one account?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 2 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-2" x-show="faqOpen === 2" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-2">
-          <p class="text-sm text-gray-400 leading-relaxed">Yes — plan limits determine how many WhatsApp numbers you can connect. Each number has its own inbox, flows, campaigns, and contacts, and you manage everything from a single dashboard. Check the pricing section for current plan entitlements.</p>
+          <p class="text-base text-gray-600 leading-relaxed">Yes — plan limits determine how many WhatsApp numbers you can connect. Each number has its own inbox, flows, campaigns, and contacts, and you manage everything from a single dashboard. Check the pricing section for current plan entitlements.</p>
         </div>
       </div>
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 3 ? null : 3" :aria-expanded="(faqOpen === 3).toString()" aria-controls="faq-panel-3" id="faq-button-3">
-          <span class="text-sm font-semibold text-white">What exactly are WhatsApp Flows — are they different from chatbots?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 3 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">What exactly are WhatsApp Flows — are they different from chatbots?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 3 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-3" x-show="faqOpen === 3" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-3">
-          <p class="text-sm text-gray-400 leading-relaxed">Yes — completely different. WhatsApp Flows are interactive, multi-screen forms that open inside WhatsApp itself (like an app within WhatsApp). They support text inputs, dropdowns, radio buttons, date pickers, checkboxes, and opt-ins. Our Flowmaker automations are the chatbot/workflow engine that decides when to send a message or trigger a WhatsApp Flow.</p>
+          <p class="text-base text-gray-600 leading-relaxed">Yes — completely different. WhatsApp Flows are interactive, multi-screen forms that open inside WhatsApp itself (like an app within WhatsApp). They support text inputs, dropdowns, radio buttons, date pickers, checkboxes, and opt-ins. Our Flowmaker automations are the chatbot/workflow engine that decides when to send a message or trigger a WhatsApp Flow.</p>
         </div>
       </div>
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 4 ? null : 4" :aria-expanded="(faqOpen === 4).toString()" aria-controls="faq-panel-4" id="faq-button-4">
-          <span class="text-sm font-semibold text-white">Which integrations are currently available?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 4 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">Which integrations are currently available?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 4 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-4" x-show="faqOpen === 4" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-4">
-          <p class="text-sm text-gray-400 leading-relaxed">We support Shopify and WooCommerce catalog sync, M-Pesa and Paystack for commerce payments, Stripe for SaaS subscriptions, Google Calendar for bookings, Twilio SMS, SMTP email, Meta Embedded Signup, and our embeddable WhatsApp chat widget. Messaging and catalog APIs plus payment webhooks let you build custom integrations.</p>
+          <p class="text-base text-gray-600 leading-relaxed">We support Shopify and WooCommerce catalog sync, M-Pesa and Paystack for commerce payments, Stripe for SaaS subscriptions, Google Calendar for bookings, ConvoConnect SMS (optional Sender ID, KES 0.6 per SMS), SMTP email, Meta Embedded Signup, and our embeddable WhatsApp chat widget. Messaging and catalog APIs plus payment webhooks let you build custom integrations.</p>
         </div>
       </div>
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 5 ? null : 5" :aria-expanded="(faqOpen === 5).toString()" aria-controls="faq-panel-5" id="faq-button-5">
-          <span class="text-sm font-semibold text-white">Do you support M-Pesa payments?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 5 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">Do you support M-Pesa payments?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 5 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-5" x-show="faqOpen === 5" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-5">
-          <p class="text-sm text-gray-400 leading-relaxed">Yes. Native M-Pesa STK push handles commerce payments for Kenya and East Africa, and Paystack supports card checkout on invoices. Successful payments trigger confirmation messages and can resume automation flows. Stripe is used for ConvoConnect SaaS subscriptions, not in-chat commerce checkout.</p>
+          <p class="text-base text-gray-600 leading-relaxed">Yes. Native M-Pesa STK push handles commerce payments for Kenya and East Africa, and Paystack supports card checkout on invoices. Successful payments trigger confirmation messages and can resume automation flows. Stripe is used for ConvoConnect SaaS subscriptions, not in-chat commerce checkout.</p>
         </div>
       </div>
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 6 ? null : 6" :aria-expanded="(faqOpen === 6).toString()" aria-controls="faq-panel-6" id="faq-button-6">
-          <span class="text-sm font-semibold text-white">Is there a free trial? Do I need a credit card?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 6 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">Is there a free trial? Do I need a credit card?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 6 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-6" x-show="faqOpen === 6" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-6">
-          <p class="text-sm text-gray-400 leading-relaxed">You can create an account and explore available plans in the pricing section. Features, messaging credits, managed AI credits, and seat limits depend on the plan you choose — upgrade anytime as you need campaigns, catalog commerce, or higher limits.</p>
+          <p class="text-base text-gray-600 leading-relaxed">You can create an account and explore available plans in the pricing section. Features, messaging credits, managed AI credits, and seat limits depend on the plan you choose — upgrade anytime as you need campaigns, catalog commerce, or higher limits.</p>
         </div>
       </div>
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 7 ? null : 7" :aria-expanded="(faqOpen === 7).toString()" aria-controls="faq-panel-7" id="faq-button-7">
-          <span class="text-sm font-semibold text-white">How is ConvoConnect different from Meta's Business Agent?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 7 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">How is ConvoConnect different from Meta's Business Agent?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 7 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-7" x-show="faqOpen === 7" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-7">
-          <p class="text-sm text-gray-400 leading-relaxed">Meta's Business Agent handles simple FAQ support. ConvoConnect is a full social commerce platform: sell from catalog sidebars and branded shops, run journey pipelines and multichannel campaigns (WhatsApp, SMS, email), take bookings, manage a Customer 360 inbox with knowledge-based Copilot suggestions, collect M-Pesa and Paystack payments, and track revenue — with AI Flow Assistant and AI nodes as tools you control, not a black-box replacement for your stack.</p>
+          <p class="text-base text-gray-600 leading-relaxed">Meta's Business Agent handles simple FAQ support. ConvoConnect is a full social commerce platform: sell from catalog sidebars and branded shops, run journey pipelines and multichannel campaigns (WhatsApp, SMS, email), take bookings, manage a Customer 360 inbox with knowledge-based Copilot suggestions, collect M-Pesa and Paystack payments, and track revenue — with AI Flow Assistant and AI nodes as tools you control, not a black-box replacement for your stack.</p>
         </div>
       </div>
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 8 ? null : 8" :aria-expanded="(faqOpen === 8).toString()" aria-controls="faq-panel-8" id="faq-button-8">
-          <span class="text-sm font-semibold text-white">How does the booking system work?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 8 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">How does the booking system work?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 8 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-8" x-show="faqOpen === 8" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-8">
-          <p class="text-sm text-gray-400 leading-relaxed">Set up bookable services, departments, and staff with working hours. Share a public booking page or embed a widget on your website. Customers pick services, staff, and available time slots. Bookings sync to Google Calendar, appear in the chat sidebar, and trigger automated WhatsApp reminder campaigns. You can also run events with seat capacity and registrations.</p>
+          <p class="text-base text-gray-600 leading-relaxed">Set up bookable services, departments, and staff with working hours. Share a public booking page or embed a widget on your website. Customers pick services, staff, and available time slots. Bookings sync to Google Calendar, appear in the chat sidebar, and trigger automated WhatsApp reminder campaigns. You can also run events with seat capacity and registrations.</p>
         </div>
       </div>
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 9 ? null : 9" :aria-expanded="(faqOpen === 9).toString()" aria-controls="faq-panel-9" id="faq-button-9">
-          <span class="text-sm font-semibold text-white">What campaign broadcast types are available?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 9 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">What campaign broadcast types are available?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 9 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-9" x-show="faqOpen === 9" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-9">
-          <p class="text-sm text-gray-400 leading-relaxed">Campaigns run across WhatsApp, SMS, and email. Audience modes include <strong class="text-gray-300">file</strong> (CSV/Excel with variables), <strong class="text-gray-300">group</strong> (contact groups or subscribers), and <strong class="text-gray-300">quick</strong> (pasted phone lists). All support segments, scheduling, pause/resume, delivery analytics, and API-triggered sends.</p>
+          <p class="text-base text-gray-600 leading-relaxed">Campaigns run across WhatsApp, ConvoConnect SMS, and email. SMS includes optional Sender ID registration and transparent pricing at KES 0.6 per SMS. Audience modes include <strong class="text-gray-800">file</strong> (CSV/Excel with variables), <strong class="text-gray-800">group</strong> (contact groups or subscribers), and <strong class="text-gray-800">quick</strong> (pasted phone lists). All support segments, scheduling, pause/resume, delivery analytics, and API-triggered sends.</p>
         </div>
       </div>
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 10 ? null : 10" :aria-expanded="(faqOpen === 10).toString()" aria-controls="faq-panel-10" id="faq-button-10">
-          <span class="text-sm font-semibold text-white">Can I sell products directly in WhatsApp chat?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 10 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">Can I sell products directly in WhatsApp chat?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 10 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-10" x-show="faqOpen === 10" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-10">
-          <p class="text-sm text-gray-400 leading-relaxed">Yes. Build product catalogs and branded shop pages, then sell from the inbox catalog sidebar — search products and send shop links without leaving the conversation. Catalogs sync from Shopify, WooCommerce, Excel, or your own API. Customers checkout via WhatsApp or receive a public invoice page with M-Pesa or Paystack payment that syncs back to your CRM.</p>
+          <p class="text-base text-gray-600 leading-relaxed">Yes. Build product catalogs and branded shop pages, then sell from the inbox catalog sidebar — search products and send shop links without leaving the conversation. Catalogs sync from Shopify, WooCommerce, Excel, or your own API. Customers checkout via WhatsApp or receive a public invoice page with M-Pesa or Paystack payment that syncs back to your CRM.</p>
         </div>
       </div>
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 11 ? null : 11" :aria-expanded="(faqOpen === 11).toString()" aria-controls="faq-panel-11" id="faq-button-11">
-          <span class="text-sm font-semibold text-white">What are flow templates and the AI Flow Assistant?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 11 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">What are flow templates and the AI Flow Assistant?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 11 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-11" x-show="faqOpen === 11" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-11">
-          <p class="text-sm text-gray-400 leading-relaxed">Flow templates are pre-built automations for common use cases — payment reminders, booking confirmations, support triage, and more. Install one in a click, then customize. The AI Flow Assistant lets you describe what you want in plain language and generates a draft flow you review and publish — no blank canvas required.</p>
+          <p class="text-base text-gray-600 leading-relaxed">Flow templates are pre-built automations for common use cases — payment reminders, booking confirmations, support triage, and more. Install one in a click, then customize. The AI Flow Assistant lets you describe what you want in plain language and generates a draft flow you review and publish — no blank canvas required.</p>
         </div>
       </div>
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 12 ? null : 12" :aria-expanded="(faqOpen === 12).toString()" aria-controls="faq-panel-12" id="faq-button-12">
-          <span class="text-sm font-semibold text-white">Can I invite managers without giving them full owner access?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 12 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">Can I invite managers without giving them full owner access?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 12 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-12" x-show="faqOpen === 12" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-12">
-          <p class="text-sm text-gray-400 leading-relaxed">Yes. Organization managers get scoped access to specific modules — like inbox, campaigns, or flows — without billing or WhatsApp setup permissions. They see Customer 360, Copilot suggestions, and revenue widgets based on what you grant them. Owners keep control of activation, integrations, and account settings.</p>
+          <p class="text-base text-gray-600 leading-relaxed">Yes. Organization managers get scoped access to specific modules — like inbox, campaigns, or flows — without billing or WhatsApp setup permissions. They see Customer 360, Copilot suggestions, and revenue widgets based on what you grant them. Owners keep control of activation, integrations, and account settings.</p>
         </div>
       </div>
-      <div class="border border-white/[0.06] rounded-2xl overflow-hidden bg-white/[0.02]">
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
         <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 13 ? null : 13" :aria-expanded="(faqOpen === 13).toString()" aria-controls="faq-panel-13" id="faq-button-13">
-          <span class="text-sm font-semibold text-white">What are journey pipelines?</span>
-          <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform" :class="faqOpen === 13 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="text-lg font-semibold text-gray-900">What are journey pipelines?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 13 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-13" x-show="faqOpen === 13" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-13">
-          <p class="text-sm text-gray-400 leading-relaxed">Journey pipelines are kanban boards for your WhatsApp contacts. Create pipelines from templates (sales, support, e-commerce, events, and more), drag contacts between stages, and attach WhatsApp campaigns that fire when someone enters a stage. New contacts can auto-enroll, agents manage journeys from the inbox sidebar, and owners configure the app from the Journeys tab in Company Apps.</p>
+          <p class="text-base text-gray-600 leading-relaxed">Journey pipelines are kanban boards for your WhatsApp contacts. Create pipelines from templates (sales, support, e-commerce, events, and more), drag contacts between stages, and attach WhatsApp campaigns that fire when someone enters a stage. New contacts can auto-enroll, agents manage journeys from the inbox sidebar, and owners configure the app from the Journeys tab in Company Apps.</p>
         </div>
       </div>
     </div>
@@ -1708,15 +1796,15 @@ tailwind.config = {
 </section>
 
 <!-- ===== FINAL CTA ===== -->
-<section class="py-24 relative overflow-hidden" style="background:#030a07;">
-  <div class="absolute inset-0" style="background:radial-gradient(ellipse 80% 60% at 50% 50%, rgba(37,211,102,0.08) 0%, transparent 70%);"></div>
+<section class="py-24 relative overflow-hidden" style="background:#eef8f3;">
+  <div class="absolute inset-0" style="background:radial-gradient(ellipse 80% 60% at 50% 50%, rgba(37,211,102,0.15) 0%, transparent 70%);"></div>
   <div class="absolute top-0 left-0 right-0 h-px" style="background:linear-gradient(90deg,transparent,rgba(37,211,102,0.3),transparent);"></div>
-  <div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 text-center">
+  <div class="relative z-10 max-w-5xl mx-auto px-3 sm:px-4 lg:px-6 text-center">
     <div class="badge inline-flex mb-6">Guided activation</div>
-    <h2 class="font-display text-5xl sm:text-6xl lg:text-7xl font-800 leading-tight mb-6" style="letter-spacing:-0.02em;">
+    <h2 class="font-display section-title font-800 leading-tight mb-6 text-gray-900" style="letter-spacing:-0.02em;">
       Start selling on<br/><span class="grad-text">WhatsApp today</span>
     </h2>
-    <p class="text-xl text-gray-400 mb-10 max-w-xl mx-auto">Journey pipelines, catalogs, multichannel campaigns, bookings, inbox, and payments in one social commerce platform.</p>
+    <p class="body-lg text-gray-600 mb-10 max-w-xl mx-auto">Journey pipelines, catalogs, multichannel campaigns, bookings, inbox, and payments in one social commerce platform.</p>
     <div class="flex flex-wrap justify-center gap-4 mb-6">
       @if($registrationEnabled)
       <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
@@ -1729,7 +1817,7 @@ tailwind.config = {
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
       </a>
       @endif
-      <a href="#pricing" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-white rounded-xl border border-white/10 hover:border-white/20 transition-all hover:bg-white/5">See Pricing</a>
+      <a href="#pricing" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-gray-800 rounded-xl border border-gray-200 hover:border-gray-300 transition-all hover:bg-white">See Pricing</a>
     </div>
     <p class="text-sm text-gray-600">Cancel anytime · Seat-based plans · Messaging &amp; managed AI credits</p>
   </div>
@@ -1737,8 +1825,8 @@ tailwind.config = {
 </main>
 
 <!-- ===== FOOTER ===== -->
-<footer class="border-t border-white/[0.05] py-16" style="background:#020907;">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+<footer class="border-t border-gray-200 py-16" style="background:#ecf6f1;">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
       <!-- Brand -->
       <div class="lg:col-span-2">
@@ -1746,22 +1834,22 @@ tailwind.config = {
           <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#25D366,#075E54);">
           <img src="{{ config('settings.logo', asset('favicon.ico')) }}" alt="{{ config('settings.site_name', config('app.name')) }}" class="w-full h-full object-contain p-1" />
           </div>
-          <span class="font-display font-800 text-lg tracking-tight">{{ config('settings.site_name', config('app.name')) }}</span>
+          <span class="font-display font-800 text-lg tracking-tight text-gray-900">{{ config('settings.site_name', config('app.name')) }}</span>
         </a>
-        <p class="text-sm text-gray-500 leading-relaxed max-w-xs mb-5">The social commerce platform for WhatsApp — sell from chat, run journey pipelines, take bookings, and get paid. Built on the official Meta WhatsApp Business API.</p>
+        <p class="text-base text-gray-600 leading-relaxed max-w-xs mb-5">The social commerce platform for WhatsApp — sell from chat, run journey pipelines, take bookings, and get paid. Built on the official Meta WhatsApp Business API.</p>
       </div>
       <!-- Product -->
       <div>
         <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">Product</p>
         <ul class="space-y-2.5">
-          <li><a href="#features" class="text-sm text-gray-400 hover:text-white transition-colors">Features</a></li>
-          <li><a href="#journeys" class="text-sm text-gray-400 hover:text-white transition-colors">Journeys</a></li>
-          <li><a href="#bookings" class="text-sm text-gray-400 hover:text-white transition-colors">Bookings</a></li>
-          <li><a href="#catalog" class="text-sm text-gray-400 hover:text-white transition-colors">Product Catalog</a></li>
-          <li><a href="#automation" class="text-sm text-gray-400 hover:text-white transition-colors">Automation</a></li>
-          <li><a href="#integrations" class="text-sm text-gray-400 hover:text-white transition-colors">Integrations</a></li>
-          <li><a href="#api" class="text-sm text-gray-400 hover:text-white transition-colors">API Docs</a></li>
-          <li><a href="#pricing" class="text-sm text-gray-400 hover:text-white transition-colors">Pricing</a></li>
+          <li><a href="#features" class="text-[15px] text-gray-600 hover:text-gray-900 transition-colors">Features</a></li>
+          <li><a href="#journeys" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Journeys</a></li>
+          <li><a href="#bookings" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Bookings</a></li>
+          <li><a href="#catalog" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Product Catalog</a></li>
+          <li><a href="#automation" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Automation</a></li>
+          <li><a href="#integrations" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Integrations</a></li>
+          <li><a href="#api" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">API Docs</a></li>
+          <li><a href="#pricing" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</a></li>
         </ul>
       </div>
       <!-- Company -->
@@ -1769,22 +1857,22 @@ tailwind.config = {
         <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4">Company</p>
         <ul class="space-y-2.5">
           @if(isset($hasBlog) && $hasBlog)
-          <li><a href="/blog" class="text-sm text-gray-400 hover:text-white transition-colors">Blog</a></li>
+          <li><a href="/blog" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Blog</a></li>
           @endif
-          <li><a href="{{ route('policy.show') }}" class="text-sm text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
-          <li><a href="{{ route('terms.show') }}" class="text-sm text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
-          <li><a href="#faq" class="text-sm text-gray-400 hover:text-white transition-colors">FAQ</a></li>
-          <li><a href="#pricing" class="text-sm text-gray-400 hover:text-white transition-colors">Pricing</a></li>
+          <li><a href="{{ route('policy.show') }}" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Privacy Policy</a></li>
+          <li><a href="{{ route('terms.show') }}" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Terms of Service</a></li>
+          <li><a href="#faq" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">FAQ</a></li>
+          <li><a href="#pricing" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</a></li>
         </ul>
       </div>
     </div>
 
     <!-- Bottom bar -->
-    <div class="border-t border-white/[0.05] pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p class="text-xs text-gray-600">© {{ date('Y') }} {{ $siteName }}. All rights reserved.</p>
-      <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/[0.06]" style="background:rgba(37,211,102,0.04);">
+    <div class="border-t border-gray-200 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="text-xs text-gray-500">© {{ date('Y') }} {{ $siteName }}. All rights reserved.</p>
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200" style="background:rgba(37,211,102,0.04);">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.105.547 4.085 1.505 5.805L0 24l6.388-1.493A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.815 9.815 0 01-5.003-1.368l-.359-.214-3.72.869.936-3.624-.236-.373A9.818 9.818 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg>
-        <p class="text-xs text-gray-500">Built on <span class="text-gray-300">Meta WhatsApp Business API</span></p>
+        <p class="text-xs text-gray-500">Built on <span class="text-gray-800">Meta WhatsApp Business API</span></p>
       </div>
     </div>
   </div>
