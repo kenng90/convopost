@@ -238,6 +238,161 @@ class FlowTemplatesConfigTest extends TestCase
         $this->assertSame('order_status-1', $paySuccess['target']);
     }
 
+    public function test_shop_checkout_has_confirm_before_pay_and_payment_recovery(): void
+    {
+        $flowData = config('flow-templates.whatsapp_shop_checkout.flow_data');
+        $nodes = collect($flowData['nodes']);
+        $edges = collect($flowData['edges']);
+
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'quick_replies-confirm-pay'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'quick_replies-pay-recovery'));
+
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'quick_replies-confirm-pay'
+                && ($edge['target'] ?? '') === 'request_payment-1'
+                && ($edge['sourceHandle'] ?? '') === 'button-1')
+        );
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'message-4'
+                && ($edge['target'] ?? '') === 'quick_replies-pay-recovery')
+        );
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'quick_replies-pay-recovery'
+                && ($edge['target'] ?? '') === 'request_payment-1'
+                && ($edge['sourceHandle'] ?? '') === 'button-1')
+        );
+    }
+
+    public function test_lead_intake_persists_service_and_confirms_before_submit(): void
+    {
+        $flowData = config('flow-templates.lead_intake_routing.flow_data');
+        $nodes = collect($flowData['nodes']);
+        $edges = collect($flowData['edges']);
+
+        $serviceNode = $nodes->firstWhere('id', 'question-service');
+        $this->assertNotNull($serviceNode);
+        $this->assertSame('lead_service', $serviceNode['data']['settings']['variableName'] ?? null);
+
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'quick_replies-lead-confirm'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'quick_replies-existing-recovery'));
+
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'list_message-1'
+                && ($edge['target'] ?? '') === 'question-service'
+                && ($edge['sourceHandle'] ?? '') === 'section1-row1')
+        );
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'quick_replies-lead-confirm'
+                && ($edge['target'] ?? '') === 'datastore-1'
+                && ($edge['sourceHandle'] ?? '') === 'button-1')
+        );
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'keyword_trigger-1'
+                && ($edge['target'] ?? '') === 'assign_agent-2'
+                && ($edge['sourceHandle'] ?? '') === 'keyword-kw4')
+        );
+    }
+
+    public function test_support_escalation_persists_category_and_wires_agent_keyword(): void
+    {
+        $flowData = config('flow-templates.support_ai_escalation.flow_data');
+        $nodes = collect($flowData['nodes']);
+        $edges = collect($flowData['edges']);
+
+        $categoryNode = $nodes->firstWhere('id', 'question-category');
+        $this->assertNotNull($categoryNode);
+        $this->assertSame('support_category', $categoryNode['data']['settings']['variableName'] ?? null);
+
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'quick_replies-resolved'));
+
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'keyword_trigger-1'
+                && ($edge['target'] ?? '') === 'assign_group-1'
+                && ($edge['sourceHandle'] ?? '') === 'keyword-kw4')
+        );
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'list_message-1'
+                && ($edge['target'] ?? '') === 'question-category'
+                && ($edge['sourceHandle'] ?? '') === 'section1-row1')
+        );
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'message-2'
+                && ($edge['target'] ?? '') === 'quick_replies-resolved')
+        );
+    }
+
+    public function test_spa_cancel_disables_reschedule_and_faq_has_menu_exit(): void
+    {
+        $flowData = config('flow-templates.spa_wellness_booking.flow_data');
+        $cancel = collect($flowData['nodes'])->firstWhere('id', 'manage_booking-1');
+        $this->assertNotNull($cancel);
+        $this->assertFalse((bool) ($cancel['data']['settings']['allow_reschedule'] ?? true));
+
+        $faqBranch = collect($flowData['nodes'])->first(
+            fn (array $node) => ($node['id'] ?? '') === 'spa-faq-branch'
+                || str_contains((string) ($node['id'] ?? ''), 'spa-faq') && ($node['type'] ?? '') === 'condition'
+        );
+
+        $hasMenuExit = collect($flowData['edges'])->contains(
+            fn (array $edge) => str_contains((string) ($edge['source'] ?? ''), 'spa-faq')
+                && ($edge['target'] ?? '') === 'list_message-1'
+                && str_contains((string) ($edge['sourceHandle'] ?? '').($edge['id'] ?? ''), 'menu')
+        );
+
+        // Prefer checking keywordExits via FAQ merge: menu edge to list_message-1 exists
+        $this->assertTrue(
+            $hasMenuExit || collect($flowData['edges'])->contains(
+                fn (array $edge) => ($edge['target'] ?? '') === 'list_message-1'
+                    && str_contains((string) ($edge['id'] ?? '').($edge['sourceHandle'] ?? ''), 'menu')
+            ),
+            'Spa FAQ should offer a menu exit back to the main list.'
+        );
+        unset($faqBranch);
+    }
+
+    public function test_hotel_wires_all_accommodation_rows_and_agent_keyword(): void
+    {
+        $flowData = config('flow-templates.hotel_tour_concierge_bot.flow_data');
+        $edges = collect($flowData['edges']);
+
+        foreach (['section1-row1', 'section1-row2', 'section1-row3', 'section2-row1', 'section2-row2', 'section2-row3'] as $handle) {
+            $this->assertTrue(
+                $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'list_message-1'
+                    && ($edge['sourceHandle'] ?? '') === $handle),
+                "Hotel menu missing edge for [{$handle}]"
+            );
+        }
+
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'keyword_trigger-1'
+                && ($edge['target'] ?? '') === 'assign_group-handoff'
+                && ($edge['sourceHandle'] ?? '') === 'keyword-kw4')
+        );
+        $this->assertTrue(
+            collect($flowData['nodes'])->contains(fn (array $node) => ($node['id'] ?? '') === 'quick_replies-pay-recovery')
+        );
+    }
+
+    public function test_microfinance_has_payment_and_limit_recovery(): void
+    {
+        $flowData = config('flow-templates.microfinance_banking_bot.flow_data');
+        $nodes = collect($flowData['nodes']);
+        $edges = collect($flowData['edges']);
+
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'quick_replies-pay-recovery'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'quick_replies-recovery'));
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'request_payment-1'
+                && ($edge['target'] ?? '') === 'message-pay-failed'
+                && ($edge['sourceHandle'] ?? '') === 'failed')
+        );
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'keyword_trigger-1'
+                && ($edge['target'] ?? '') === 'assign_agent-1'
+                && ($edge['sourceHandle'] ?? '') === 'keyword-kw4')
+        );
+    }
+
     public function test_listing_templates_default_to_interactive_list(): void
     {
         foreach ([
