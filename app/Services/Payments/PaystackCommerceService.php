@@ -61,9 +61,7 @@ class PaystackCommerceService implements PaymentGateway
             ];
         }
 
-        $email = $options['email']
-            ?? $invoice->customer_email
-            ?? $this->fallbackEmail($invoice);
+        $email = $this->resolveCustomerEmail($invoice, $options);
 
         $amount = isset($options['amount']) ? (float) $options['amount'] : (float) $invoice->amount;
         $amountMinor = (int) round($amount * 100);
@@ -189,10 +187,32 @@ class PaystackCommerceService implements PaymentGateway
         return ['success' => true, 'payment' => $payment, 'message' => 'Ignored event '.$event];
     }
 
+    /**
+     * Paystack requires a valid email. Catalog/checkout invoices often have none,
+     * so build a placeholder Paystack will accept (never use .local / .test).
+     */
+    private function resolveCustomerEmail(Invoice $invoice, array $options = []): string
+    {
+        $candidates = [
+            $options['email'] ?? null,
+            $invoice->customer_email,
+        ];
+
+        foreach ($candidates as $candidate) {
+            $email = is_string($candidate) ? trim($candidate) : '';
+            if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return $email;
+            }
+        }
+
+        return $this->fallbackEmail($invoice);
+    }
+
     private function fallbackEmail(Invoice $invoice): string
     {
         $phone = preg_replace('/\D+/', '', (string) $invoice->customer_phone) ?: 'customer';
 
-        return $phone.'@pay.convocon.local';
+        // Stable public domain — Paystack rejects .local/.test and may reject ephemeral hosts.
+        return $phone.'@pay.convoconnect.com';
     }
 }
