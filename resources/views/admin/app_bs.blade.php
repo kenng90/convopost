@@ -8,7 +8,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         
         @yield('title')
-        <title>{{ config('app.name', 'Site') }}</title>
+        <title>{{ config('app.name', 'Convoconnect') }}</title>
 
          <!-- Fonts -->
          <link rel="preconnect" href="https://fonts.bunny.net">

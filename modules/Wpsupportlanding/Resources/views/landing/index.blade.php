@@ -433,6 +433,13 @@ tailwind.config = {
             See how it works
           </a>
         </div>
+        <p class="mt-6 text-sm text-gray-500">
+          Need help beyond WhatsApp?
+          <a href="{{ route('services.automation') }}" class="group inline-flex items-center gap-1.5 ml-1 font-semibold text-gray-800 transition-colors hover:text-[#128C7E]">
+            <span class="border-b border-dashed border-gray-400 group-hover:border-[#128C7E] transition-colors">I want to automate processes across my business</span>
+            <svg class="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </a>
+        </p>
       </div>
 
       {{-- Product visual — contained, not clipped --}}

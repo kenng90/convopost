@@ -93,6 +93,27 @@ class DashboardController extends Controller
         return $response;
     }
 
+    public function automationServices()
+    {
+        $locale = Cookie::get('lang') ? Cookie::get('lang') : config('settings.app_locale');
+        if (isset($_GET['lang'])) {
+            $locale = $_GET['lang'];
+        }
+
+        if ($locale != 'android-chrome-256x256.png') {
+            App::setLocale(strtolower($locale));
+            session(['applocale_change' => strtolower($locale)]);
+        }
+
+        $response = new \Illuminate\Http\Response(view('wpsupportlanding::landing.automation'));
+
+        App::setLocale(strtolower($locale));
+        $response->withCookie(cookie('lang', $locale, 120));
+        App::setLocale(strtolower($locale));
+
+        return $response;
+    }
+
     public function privacyPolicy()
     {
         return $this->renderLegalPage('policy.md', 'wpsupportlanding::landing.privacy');
