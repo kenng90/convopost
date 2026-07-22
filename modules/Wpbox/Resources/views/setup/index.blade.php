@@ -4,6 +4,9 @@
     <div class="container-fluid">
         <div class="header-body">
             <h1 class="mb-3 mt--3">💬 {{__('WhatsApp Cloud API Setup')}}</h1>
+            <p class="text-white mb-0">
+                {{ __('Connect your WhatsApp Business number by completing the steps below in order. The panel on the right shows what is still missing.') }}
+            </p>
             <div class="row align-items-center pt-2">
             </div>
         </div>

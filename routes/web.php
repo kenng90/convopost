@@ -32,6 +32,7 @@ use Spatie\WelcomeNotification\WelcomesNewUsers;
 
 Route::get('/', [FrontEndController::class, 'index'])->name('landing');
 Route::get('/new', [FrontEndController::class, 'register'])->name('newcompany.register');
+Route::get('/automation', [\Modules\Wpsupportlanding\Http\Controllers\DashboardController::class, 'automationServices'])->name('services.automation');
 Route::get('/privacy-policy', [\Modules\Wpsupportlanding\Http\Controllers\DashboardController::class, 'privacyPolicy'])->name('policy.show');
 Route::get('/terms-of-service', [\Modules\Wpsupportlanding\Http\Controllers\DashboardController::class, 'termsOfService'])->name('terms.show');
 Route::get('/'.config('settings.url_route', 'company').'/{alias}', [FrontEndController::class, 'company'])->name('vendor');
