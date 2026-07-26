@@ -351,7 +351,7 @@ class Campaign extends Model
                 $component['parameters'] = [];
 
                 if (isset($variables_match[$lowKey])) {
-                    $this->setParameter($variables_match[$lowKey], $variablesValues[$lowKey], $component, $header_text, $contact);
+                    $this->setParameter($variables_match[$lowKey], $variablesValues[$lowKey] ?? [], $component, $header_text, $contact);
                     unset($component['text']);
                     unset($component['format']);
                     unset($component['example']);
@@ -362,7 +362,7 @@ class Campaign extends Model
                 $component['parameters'] = [];
 
                 if (isset($variables_match[$lowKey])) {
-                    $this->setParameter($variables_match[$lowKey], $variablesValues[$lowKey], $component, $content, $contact);
+                    $this->setParameter($variables_match[$lowKey], $variablesValues[$lowKey] ?? [], $component, $content, $contact);
                     unset($component['text']);
                     unset($component['format']);
                     unset($component['example']);
@@ -437,7 +437,7 @@ class Campaign extends Model
                             $paramType = 'coupon_code';
                         }
 
-                        $this->setParameter($variables_match[$lowKey][$keyButton], $variablesValues[$lowKey][$keyButton], $button, $buttonName, $contact, $paramType);
+                        $this->setParameter($variables_match[$lowKey][$keyButton], $variablesValues[$lowKey][$keyButton] ?? [], $button, $buttonName, $contact, $paramType);
 
                         array_push($APIComponents, $button);
                         array_push($buttons, $valueButton);
