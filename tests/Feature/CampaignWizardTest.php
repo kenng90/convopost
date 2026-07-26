@@ -138,6 +138,38 @@ class CampaignWizardTest extends TestCase
         ]);
     }
 
+    public function test_wizard_launches_whatsapp_campaign_with_contact_field_mapping_without_paramvalues_body(): void
+    {
+        $template = $this->makeTemplate();
+        Contact::create([
+            'company_id' => $this->company->id,
+            'name' => 'Jane',
+            'phone' => '+254700000077',
+            'subscribed' => 1,
+        ]);
+
+        $this->actingAsOwner();
+
+        Livewire::test(CampaignWizard::class)
+            ->set('name', 'Contact field launch')
+            ->set('groupId', 0)
+            ->set('templateId', $template->id)
+            ->set('parammatch', ['body' => ['1' => '-1']])
+            ->call('launchCampaign')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('wa_campaings', [
+            'name' => 'Contact field launch',
+            'company_id' => $this->company->id,
+            'status' => Campaign::STATUS_SENDING,
+        ]);
+
+        $this->assertDatabaseHas('messages', [
+            'company_id' => $this->company->id,
+            'value' => 'Hi Jane',
+        ]);
+    }
+
     public function test_wizard_saves_sms_draft_with_custom_body(): void
     {
         Contact::create([
