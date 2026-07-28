@@ -14,9 +14,9 @@ class DispatchScheduledCampaigns extends Command
     public function handle(CampaignDispatchService $dispatchService): int
     {
         $limit = $this->option('limit') !== null ? (int) $this->option('limit') : null;
-        $sent = $dispatchService->dispatchPendingBatch($limit);
+        $sent = $dispatchService->enqueuePendingBatch($limit);
 
-        $this->info("Dispatched {$sent} campaign message(s).");
+        $this->info("Queued or dispatched {$sent} campaign message(s).");
 
         return self::SUCCESS;
     }

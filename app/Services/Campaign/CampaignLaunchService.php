@@ -2,6 +2,7 @@
 
 namespace App\Services\Campaign;
 
+use App\Jobs\Campaign\PrepareCampaignMessagesJob;
 use App\Models\Company;
 use App\Services\Billing\CreditBillingResolver;
 use App\Services\Billing\CreditCharger;
@@ -9,11 +10,9 @@ use App\Services\Billing\CreditCostService;
 use App\Services\Campaign\Templates\CampaignTemplateResolver;
 use App\Services\Campaign\Templates\EmailTemplateProvider;
 use App\Services\Campaign\Templates\SmsTemplateProvider;
-use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;
 use Modules\Wpbox\Models\Campaign;
-use Modules\Wpbox\Models\Contact;
 use Modules\Wpbox\Models\Template;
 
 class CampaignLaunchService
@@ -26,6 +25,7 @@ class CampaignLaunchService
         private readonly CreditCharger $charger,
         private readonly CreditCostService $costs,
         private readonly CampaignMediaService $mediaService,
+        private readonly CampaignRecipientGuard $recipientGuard,
     ) {
     }
 
@@ -41,6 +41,7 @@ class CampaignLaunchService
 
         if (! $draft) {
             $this->assertSufficientCredits($company, $channel, $payload);
+            $this->recipientGuard->assertWithinLimit($this->resolveRecipientCount($company, $payload));
         }
 
         return match ($broadcastType) {
@@ -70,14 +71,9 @@ class CampaignLaunchService
             return $campaign;
         }
 
-        $request = $this->buildRequestFromPayload($payload);
-        $campaign->makeMessages($request);
-        $campaign->update([
-            'status' => Campaign::STATUS_SENDING,
-            'launched_at' => now(),
-        ]);
+        $this->queuePreparation($campaign, $payload);
 
-        return $campaign;
+        return $campaign->fresh();
     }
 
     /**
@@ -107,27 +103,9 @@ class CampaignLaunchService
             return $campaign;
         }
 
-        $contacts = $phones->map(fn ($phone) => Contact::firstOrCreate(
-            ['phone' => $phone, 'company_id' => $company->id],
-            ['name' => $phone, 'subscribed' => 1]
-        ));
+        $this->queuePreparation($campaign, $payload);
 
-        $request = $this->buildRequestFromPayload($payload);
-        $queued = $campaign->queueMessagesForContacts($request, $contacts);
-
-        if ($queued === 0) {
-            $campaign->delete();
-            throw ValidationException::withMessages([
-                'quick_phones' => [__('No valid phone numbers found.')],
-            ]);
-        }
-
-        $campaign->update([
-            'status' => Campaign::STATUS_SENDING,
-            'launched_at' => now(),
-        ]);
-
-        return $campaign;
+        return $campaign->fresh();
     }
 
     /**
@@ -140,9 +118,7 @@ class CampaignLaunchService
         $channel = $payload['channel'] ?? Campaign::CHANNEL_WHATSAPP;
         $data = $this->fileParser->parseFromPath($file->getRealPath(), $file->getClientOriginalExtension());
         $headers = $data['headers'];
-        $rows = $data['rows'];
         $recipientColumn = $payload['recipient_column'] ?? $payload['phone_column'] ?? '';
-
         $columnIndex = $this->fileParser->resolveColumnIndex($headers, $recipientColumn);
 
         if ($columnIndex === false) {
@@ -151,17 +127,18 @@ class CampaignLaunchService
             ]);
         }
 
-        $validCount = $this->fileParser->countValidRecipientRows($rows, $headers, $columnIndex, $channel);
+        $validCount = $this->fileParser->countValidRecipientRows(
+            $data['rows'],
+            $headers,
+            $columnIndex,
+            $channel
+        );
 
         if ($validCount === 0) {
             throw ValidationException::withMessages([
                 'contact_file' => [__('No valid recipients found in file.')],
             ]);
         }
-
-        $fileColumnMap = $payload['file_column_map'] ?? [];
-        $staticParamValues = $payload['paramvalues'] ?? [];
-        $parammatch = $this->buildFileBroadcastParamMatch($payload['parammatch'] ?? [], $fileColumnMap);
 
         $attributes = $this->baseCampaignAttributes($company, $payload, $draft, 'file');
         $attributes['send_to'] = 0;
@@ -174,70 +151,44 @@ class CampaignLaunchService
             return $campaign;
         }
 
-        $messages = [];
-        $demoLimit = config('settings.is_demo', false) ? 5 : null;
-        $request = $this->buildRequestFromPayload($payload);
+        $storedPath = $file->store('campaign-uploads/'.$campaign->id, 'local');
+        $payload['contact_file_path'] = $storedPath;
+        $payload['contact_file_extension'] = $file->getClientOriginalExtension();
+        unset($payload['contact_file']);
 
-        foreach ($rows as $row) {
-            if (empty(array_filter($row))) {
-                continue;
-            }
+        $payload['parammatch'] = $this->buildFileBroadcastParamMatch($payload['parammatch'] ?? [], $payload['file_column_map'] ?? []);
 
-            while (count($row) < count($headers)) {
-                $row[] = '';
-            }
+        $this->queuePreparation($campaign, $payload);
 
-            $cell = $row[$columnIndex] ?? null;
+        return $campaign->fresh();
+    }
 
-            if ($channel === Campaign::CHANNEL_EMAIL) {
-                $email = $this->fileParser->normalizeEmailFromCell($cell);
-                if ($email === null) {
-                    continue;
-                }
-                $contact = Contact::firstOrCreate(
-                    ['email' => $email, 'company_id' => $company->id],
-                    ['name' => $email, 'phone' => '', 'subscribed' => 1]
-                );
-            } else {
-                $phone = $this->fileParser->normalizePhoneFromCell($cell);
-                if ($phone === null) {
-                    continue;
-                }
-                $contact = Contact::firstOrCreate(
-                    ['phone' => $phone, 'company_id' => $company->id],
-                    ['name' => $phone, 'subscribed' => 1]
-                );
-            }
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function queuePreparation(Campaign $campaign, array $payload): void
+    {
+        $storedPayload = $this->normalizeLaunchPayload($payload);
 
-            $perRowParams = $this->applyFileColumnMapToParamValues($staticParamValues, $fileColumnMap, $headers, $row);
-
-            if ($demoLimit !== null && count($messages) >= $demoLimit) {
-                break;
-            }
-
-            $messageData = $campaign->buildMessageDataForContact($contact, $request, $perRowParams);
-
-            if ($messageData !== null) {
-                $messages[] = $messageData;
-            }
-        }
-
-        if (count($messages) === 0) {
-            $campaign->delete();
-            throw ValidationException::withMessages([
-                'contact_file' => [__('Could not build messages for this template.')],
-            ]);
-        }
-
-        $campaign->insertCampaignMessages($messages);
         $campaign->update([
-            'send_to' => count($messages),
-            'total_contacts' => count($messages),
-            'status' => Campaign::STATUS_SENDING,
-            'launched_at' => now(),
+            'status' => Campaign::STATUS_PREPARING,
+            'launch_payload' => $storedPayload,
+            'messages_prepared_count' => 0,
+            'preparation_error' => null,
         ]);
 
-        return $campaign;
+        PrepareCampaignMessagesJob::dispatch($campaign->id);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function normalizeLaunchPayload(array $payload): array
+    {
+        unset($payload['contact_file'], $payload['pdf'], $payload['imageupload']);
+
+        return $payload;
     }
 
     /**
@@ -263,8 +214,12 @@ class CampaignLaunchService
             'broadcast_type' => $broadcastType,
             'channel' => $channel,
             'timezone_mode' => $payload['timezone_mode'] ?? Campaign::TIMEZONE_MODE_CONTACT,
-            'status' => $draft ? Campaign::STATUS_DRAFT : Campaign::STATUS_SCHEDULED,
-            'total_contacts' => Contact::where('company_id', $company->id)->count(),
+            'status' => $draft ? Campaign::STATUS_DRAFT : Campaign::STATUS_PREPARING,
+            'total_contacts' => $this->audience->subscribedCount($company, [
+                'group_id' => $payload['group_id'] ?? null,
+                'segment_id' => $payload['segment_id'] ?? null,
+                'contact_id' => $payload['contact_id'] ?? null,
+            ]),
             'ab_variant' => $payload['ab_variant'] ?? null,
             'recurrence_rule' => $payload['recurrence_rule'] ?? null,
             'recurrence_next_at' => $payload['recurrence_next_at'] ?? null,
@@ -405,27 +360,11 @@ class CampaignLaunchService
             );
         }
 
-        return $this->audience->resolve($company, [
+        return $this->audience->subscribedCount($company, [
             'group_id' => $payload['group_id'] ?? null,
             'segment_id' => $payload['segment_id'] ?? null,
             'contact_id' => $payload['contact_id'] ?? null,
-        ])['subscribed_count'];
-    }
-
-    /**
-     * @param  array<string, mixed>  $payload
-     */
-    private function buildRequestFromPayload(array $payload): Request
-    {
-        $request = new Request();
-        $request->merge([
-            'paramvalues' => $payload['paramvalues'] ?? [],
-            'parammatch' => $payload['parammatch'] ?? [],
-            'send_now' => ($payload['send_now'] ?? true) ? 'on' : null,
-            'send_time' => $payload['send_time'] ?? null,
         ]);
-
-        return $request;
     }
 
     /**
@@ -462,45 +401,5 @@ class CampaignLaunchService
         }
 
         return $parammatch;
-    }
-
-    /**
-     * @param  array<string, mixed>  $staticParamValues
-     * @param  array<string, array<string, string>>  $fileColumnMap
-     * @param  array<int, string>  $headers
-     * @param  array<int, mixed>  $row
-     * @return array<string, mixed>
-     */
-    private function applyFileColumnMapToParamValues(array $staticParamValues, array $fileColumnMap, array $headers, array $row): array
-    {
-        $perRowParams = json_decode(json_encode($staticParamValues), true) ?? [];
-
-        foreach (['body', 'header'] as $section) {
-            if (! isset($fileColumnMap[$section])) {
-                continue;
-            }
-
-            foreach ($fileColumnMap[$section] as $variableId => $colName) {
-                if (empty($colName)) {
-                    continue;
-                }
-
-                $colIdx = $this->fileParser->resolveColumnIndex($headers, $colName);
-
-                if ($colIdx === false) {
-                    continue;
-                }
-
-                $cellValue = $row[$colIdx] ?? '';
-
-                if (is_int($cellValue) || is_float($cellValue)) {
-                    $cellValue = number_format((float) $cellValue, 0, '', '');
-                }
-
-                $perRowParams[$section][$variableId] = trim((string) $cellValue);
-            }
-        }
-
-        return $perRowParams;
     }
 }

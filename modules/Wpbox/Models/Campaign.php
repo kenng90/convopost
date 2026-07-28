@@ -29,6 +29,10 @@ class Campaign extends Model
 
     public const STATUS_PAUSED_INSUFFICIENT_CREDITS = 'paused_insufficient_credits';
 
+    public const STATUS_PREPARING = 'preparing';
+
+    public const STATUS_PREPARATION_FAILED = 'preparation_failed';
+
     public const STATUS_ACTIVE = 'active';
 
     public const STATUS_INACTIVE = 'inactive';
@@ -49,10 +53,13 @@ class Campaign extends Model
 
     protected $casts = [
         'recurrence_rule' => 'array',
+        'launch_payload' => 'array',
         'launched_at' => 'datetime',
         'completed_at' => 'datetime',
         'recurrence_next_at' => 'datetime',
     ];
+
+    protected ?Template $cachedTemplate = null;
 
     public function template()
     {
@@ -252,7 +259,7 @@ class Campaign extends Model
             $audience = $resolver->resolve($company, ['segment_id' => $this->segment_id]);
             $contacts = $audience['contacts'];
         } elseif ($this->group_id == null && $this->contact_id == null && $contact == null) {
-            $contacts = Contact::where('subscribed', 1)->get();
+            $contacts = Contact::where('company_id', $this->company_id)->where('subscribed', 1)->get();
         } elseif ($this->group_id != null) {
             $contacts = Group::findOrFail($this->group_id)
                 ->contacts()
@@ -307,9 +314,28 @@ class Campaign extends Model
             return;
         }
 
-        foreach (array_chunk($messages, 500) as $chunk) {
+        $chunkSize = max(100, (int) config('wpbox.campaign_insert_chunk', 1000));
+
+        foreach (array_chunk($messages, $chunkSize) as $chunk) {
             Message::insert($chunk);
         }
+    }
+
+    public function warmTemplateCache(): ?Template
+    {
+        if ($this->cachedTemplate !== null) {
+            return $this->cachedTemplate;
+        }
+
+        if (! $this->template_id) {
+            return null;
+        }
+
+        $this->cachedTemplate = Template::withoutGlobalScope(\App\Scopes\CompanyScope::class)
+            ->where('id', $this->template_id)
+            ->first();
+
+        return $this->cachedTemplate;
     }
 
     /**
@@ -327,7 +353,7 @@ class Campaign extends Model
             return $this->buildEmailMessageDataForContact($contact, $request, $variablesValuesOverride);
         }
 
-        $template = Template::withoutGlobalScope(\App\Scopes\CompanyScope::class)->where('id', $this->template_id)->first();
+        $template = $this->warmTemplateCache();
 
         if (! $template) {
             return null;

@@ -21,7 +21,29 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->configureDriversWithoutRedisExtension();
+    }
+
+    /**
+     * Fall back to database/file drivers when QUEUE_CONNECTION=redis but phpredis is missing.
+     */
+    private function configureDriversWithoutRedisExtension(): void
+    {
+        if (extension_loaded('redis')) {
+            return;
+        }
+
+        if (config('queue.default') === 'redis') {
+            config(['queue.default' => 'database']);
+        }
+
+        if (config('cache.default') === 'redis') {
+            config(['cache.default' => 'file']);
+        }
+
+        if (config('session.driver') === 'redis') {
+            config(['session.driver' => 'file']);
+        }
     }
 
     /**

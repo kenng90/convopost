@@ -193,11 +193,13 @@ class CampaignWizard extends Component
         try {
             $campaign = $this->launch(draft: false);
 
-            if ($this->sendNow) {
-                app(CampaignDispatchService::class)->dispatchPendingBatch();
-            }
+            app(CampaignDispatchService::class)->enqueuePendingBatch();
 
-            session()->flash('status', __('Campaign launched successfully.'));
+            $message = $campaign->status === Campaign::STATUS_PREPARING
+                ? __('Campaign is being prepared. Messages will send once preparation completes.')
+                : __('Campaign launched successfully.');
+
+            session()->flash('status', $message);
             $this->redirect(route('campaigns.show', $campaign));
         } catch (ValidationException $e) {
             throw $e;

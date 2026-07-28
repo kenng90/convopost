@@ -26,7 +26,7 @@ class SmsCampaignBatchSender
         $sent = 0;
         $remaining = collect();
 
-        foreach ($messages->groupBy('company_id') as $companyId => $companyMessages) {
+        foreach ($messages->groupBy('company_id') as $companyMessages) {
             /** @var Message $first */
             $first = $companyMessages->first();
             $first->loadMissing(['campaign.company', 'contact']);
@@ -93,6 +93,28 @@ class SmsCampaignBatchSender
         }
 
         $creditAction = 'send_sms_message';
+        $maxBatch = max(2, (int) config('wpbox.hostpinnacle_bulk_max_batch', 10000));
+        $sent = 0;
+
+        foreach (array_chunk($rows, $maxBatch) as $index => $rowChunk) {
+            $offset = $index * $maxBatch;
+            $messageChunk = array_slice($validMessages, $offset, count($rowChunk));
+            $sent += $this->sendBulkRows($company, $rowChunk, $messageChunk, $creditAction);
+        }
+
+        return $sent;
+    }
+
+    /**
+     * @param  array<int, array{phone: string, message: string}>  $rows
+     * @param  array<int, Message>  $validMessages
+     */
+    private function sendBulkRows(Company $company, array $rows, array $validMessages, string $creditAction): int
+    {
+        if ($rows === []) {
+            return 0;
+        }
+
         $requiredCredits = count($validMessages);
         if (! $this->charger->canCharge($company, $creditAction, $requiredCredits)) {
             $error = $this->charger->insufficientCreditsMessage($creditAction, $requiredCredits);

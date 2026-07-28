@@ -18,6 +18,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('campaigns:dispatch-scheduled')->everyMinute();
         $schedule->command('campaigns:check-completion')->everyFiveMinutes();
         $schedule->command('campaigns:process-recurring')->everyFifteenMinutes();
+        $schedule->command('campaigns:flush-counters')->everyMinute();
         $schedule->command('voice-booking:expire-holds')->everyFiveMinutes();
     }
 

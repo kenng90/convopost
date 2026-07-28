@@ -3,6 +3,7 @@
 namespace Modules\Wpbox\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\Campaign\PrepareCampaignMessagesJob;
 use App\Services\Campaign\ApiCampaignService;
 use App\Services\Campaign\CampaignDispatchService;
 use App\Services\Campaign\CampaignEstimateService;
@@ -745,7 +746,7 @@ class CampaignsController extends Controller
         ]);
 
         if ($request->has('send_now')) {
-            app(CampaignDispatchService::class)->dispatchPendingBatch();
+            app(CampaignDispatchService::class)->enqueuePendingBatch();
         }
 
         if ($request->has('contact_id')) {
@@ -959,7 +960,7 @@ class CampaignsController extends Controller
 
     public function sendSchuduledMessages(CampaignDispatchService $dispatchService)
     {
-        $sent = $dispatchService->dispatchPendingBatch();
+        $sent = $dispatchService->enqueuePendingBatch();
 
         return response()->json(['status' => 'ok', 'sent' => $sent]);
     }
@@ -1030,17 +1031,22 @@ class CampaignsController extends Controller
             return redirect()->back()->withStatus(__('Only draft campaigns can be launched.'));
         }
 
-        $request = new Request(['send_now' => 'on']);
-        $campaign->makeMessages($request);
         $campaign->update([
-            'status' => Campaign::STATUS_SENDING,
-            'launched_at' => now(),
+            'status' => Campaign::STATUS_PREPARING,
+            'launch_payload' => [
+                'send_now' => true,
+                'paramvalues' => json_decode($campaign->variables ?? '[]', true) ?? [],
+                'parammatch' => json_decode($campaign->variables_match ?? '[]', true) ?? [],
+            ],
+            'messages_prepared_count' => 0,
+            'preparation_error' => null,
             'is_active' => true,
         ]);
 
-        app(CampaignDispatchService::class)->dispatchPendingBatch();
+        PrepareCampaignMessagesJob::dispatch($campaign->id);
+        app(\App\Services\Campaign\CampaignDispatchService::class)->enqueuePendingBatch();
 
-        return redirect()->route($this->webroute_path.'show', $campaign)->withStatus(__('Campaign launched.'));
+        return redirect()->route($this->webroute_path.'show', $campaign)->withStatus(__('Campaign is being prepared. Messages will send once preparation completes.'));
     }
 
     //Delete campaign
