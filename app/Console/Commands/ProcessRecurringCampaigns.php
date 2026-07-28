@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\Campaign\PrepareCampaignMessagesJob;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Modules\Wpbox\Models\Campaign;
@@ -26,19 +27,17 @@ class ProcessRecurringCampaigns extends Command
 
         foreach ($due as $campaign) {
             $clone = $campaign->cloneAsDraft($campaign->name.' — '.now()->format('Y-m-d H:i'));
-            $clone->status = Campaign::STATUS_SCHEDULED;
+            $clone->status = Campaign::STATUS_PREPARING;
             $clone->recurrence_rule = null;
             $clone->recurrence_next_at = null;
+            $clone->launch_payload = [
+                'send_now' => true,
+                'paramvalues' => json_decode($campaign->variables ?? '[]', true) ?? [],
+                'parammatch' => json_decode($campaign->variables_match ?? '[]', true) ?? [],
+            ];
             $clone->save();
 
-            $request = new \Illuminate\Http\Request();
-            $request->merge(['send_now' => 'on']);
-
-            $clone->makeMessages($request);
-            $clone->update([
-                'status' => Campaign::STATUS_SENDING,
-                'launched_at' => now(),
-            ]);
+            PrepareCampaignMessagesJob::dispatch($clone->id);
 
             $campaign->recurrence_next_at = $this->nextOccurrence($campaign);
 

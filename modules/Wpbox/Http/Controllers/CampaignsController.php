@@ -3,11 +3,13 @@
 namespace Modules\Wpbox\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\Campaign\PrepareCampaignMessagesJob;
 use App\Services\Campaign\ApiCampaignService;
 use App\Services\Campaign\CampaignDispatchService;
 use App\Services\Campaign\CampaignEstimateService;
 use App\Services\Campaign\CampaignShowPresenter;
 use App\Services\Campaign\CampaignTemplateVariablesParser;
+use App\Services\Telephony\Sms\SmsAvailability;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -58,36 +60,55 @@ class CampaignsController extends Controller
 
         $this->authChecker();
 
-        $whatsappReady = $this->getCompany()->getConfig('whatsapp_webhook_verified', 'no') == 'yes'
-            && $this->getCompany()->getConfig('whatsapp_settings_done', 'no') == 'yes';
+        $company = $this->getCompany();
+        $activeChannel = request('channel', Campaign::CHANNEL_WHATSAPP);
 
-        $items = $this->provider::with('template')
+        if (! array_key_exists($activeChannel, Campaign::broadcastChannelLabels())) {
+            $activeChannel = Campaign::CHANNEL_WHATSAPP;
+        }
+
+        $whatsappReady = $company->getConfig('whatsapp_webhook_verified', 'no') == 'yes'
+            && $company->getConfig('whatsapp_settings_done', 'no') == 'yes';
+
+        $smsReady = app(SmsAvailability::class)->isReady($company);
+
+        $items = $this->provider::with(['template', 'company'])
             ->broadcastsOnly()
+            ->forChannel($activeChannel)
             ->orderBy('id', 'desc');
 
-        if (isset($_GET['name']) && strlen($_GET['name']) > 1) {
-            $items = $items->where('name', 'like', '%'.$_GET['name'].'%');
+        if (request()->filled('name') && strlen((string) request('name')) > 1) {
+            $items = $items->where('name', 'like', '%'.request('name').'%');
         }
 
-        if (! empty($_GET['status'])) {
-            $items = $items->where('status', $_GET['status']);
+        if (request()->filled('status')) {
+            $items = $items->where('status', request('status'));
         }
 
-        if (! empty($_GET['broadcast_type'])) {
-            $items = $items->where('broadcast_type', $_GET['broadcast_type']);
+        if (request()->filled('broadcast_type')) {
+            $items = $items->where('broadcast_type', request('broadcast_type'));
         }
 
-        $items = $items->paginate(100);
+        $items = $items->paginate(100)->appends(request()->query());
+
+        $channelCounts = [];
+        foreach (array_keys(Campaign::broadcastChannelLabels()) as $channel) {
+            $channelCounts[$channel] = Campaign::broadcastsOnly()->forChannel($channel)->count();
+        }
 
         return view($this->view_path.'index', [
             'total_contacts' => Contact::count(),
             'whatsappReady' => $whatsappReady,
+            'smsReady' => $smsReady,
+            'activeChannel' => $activeChannel,
+            'channelCounts' => $channelCounts,
+            'channelLabels' => Campaign::broadcastChannelLabels(),
             'dispatcherLastRun' => cache('campaign_dispatcher_last_run'),
             'setup' => [
 
                 'title' => __('crud.item_managment', ['item' => __($this->titlePlural)]),
                 'iscontent' => true,
-                'action_link' => route($this->webroute_path.'wizard'),
+                'action_link' => route($this->webroute_path.'wizard', ['channel' => $activeChannel]),
                 'action_name' => __('Send new campaign').' 📢',
                 'action_link2' => route('campaigns.integrations'),
                 'action_name2' => __('Integrations hub'),
@@ -99,7 +120,7 @@ class CampaignsController extends Controller
                 'fields' => [],
                 'custom_table' => true,
                 'parameter_name' => $this->parameter_name,
-                'parameters' => count($_GET) != 0,
+                'parameters' => request()->query() !== [],
             ]]);
     }
 
@@ -725,7 +746,7 @@ class CampaignsController extends Controller
         ]);
 
         if ($request->has('send_now')) {
-            app(CampaignDispatchService::class)->dispatchPendingBatch();
+            app(CampaignDispatchService::class)->enqueuePendingBatch();
         }
 
         if ($request->has('contact_id')) {
@@ -939,7 +960,7 @@ class CampaignsController extends Controller
 
     public function sendSchuduledMessages(CampaignDispatchService $dispatchService)
     {
-        $sent = $dispatchService->dispatchPendingBatch();
+        $sent = $dispatchService->enqueuePendingBatch();
 
         return response()->json(['status' => 'ok', 'sent' => $sent]);
     }
@@ -1010,17 +1031,22 @@ class CampaignsController extends Controller
             return redirect()->back()->withStatus(__('Only draft campaigns can be launched.'));
         }
 
-        $request = new Request(['send_now' => 'on']);
-        $campaign->makeMessages($request);
         $campaign->update([
-            'status' => Campaign::STATUS_SENDING,
-            'launched_at' => now(),
+            'status' => Campaign::STATUS_PREPARING,
+            'launch_payload' => [
+                'send_now' => true,
+                'paramvalues' => json_decode($campaign->variables ?? '[]', true) ?? [],
+                'parammatch' => json_decode($campaign->variables_match ?? '[]', true) ?? [],
+            ],
+            'messages_prepared_count' => 0,
+            'preparation_error' => null,
             'is_active' => true,
         ]);
 
-        app(CampaignDispatchService::class)->dispatchPendingBatch();
+        PrepareCampaignMessagesJob::dispatch($campaign->id);
+        app(\App\Services\Campaign\CampaignDispatchService::class)->enqueuePendingBatch();
 
-        return redirect()->route($this->webroute_path.'show', $campaign)->withStatus(__('Campaign launched.'));
+        return redirect()->route($this->webroute_path.'show', $campaign)->withStatus(__('Campaign is being prepared. Messages will send once preparation completes.'));
     }
 
     //Delete campaign

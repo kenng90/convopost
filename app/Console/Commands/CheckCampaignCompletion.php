@@ -3,10 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Services\Campaign\CampaignAnalyticsService;
+use App\Services\Campaign\CampaignMetricsService;
 use App\Services\Campaign\CampaignWebhookDispatcher;
 use Illuminate\Console\Command;
 use Modules\Wpbox\Models\Campaign;
-use Modules\Wpbox\Models\Message;
 
 class CheckCampaignCompletion extends Command
 {
@@ -17,16 +17,18 @@ class CheckCampaignCompletion extends Command
     public function handle(
         CampaignWebhookDispatcher $webhooks,
         CampaignAnalyticsService $analytics,
+        CampaignMetricsService $metrics,
     ): int {
         $candidates = Campaign::withoutGlobalScopes()
             ->whereIn('status', [Campaign::STATUS_SENDING, Campaign::STATUS_SCHEDULED])
             ->where('send_to', '>', 0)
             ->get();
 
+        $pendingCounts = $metrics->pendingCountsByCampaign($candidates->pluck('id')->all());
         $completed = 0;
 
         foreach ($candidates as $campaign) {
-            $pending = $campaign->messages()->where('status', Message::STATUS_PENDING)->count();
+            $pending = $pendingCounts[$campaign->id] ?? 0;
 
             if ($pending > 0) {
                 if ($campaign->status !== Campaign::STATUS_SENDING) {

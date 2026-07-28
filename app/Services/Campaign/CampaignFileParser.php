@@ -162,4 +162,98 @@ class CampaignFileParser
 
         return $count;
     }
+
+    /**
+     * @return array<int, string>
+     */
+    public function readHeadersFromPath(string $path, string $extension): array
+    {
+        $ext = strtolower($extension);
+
+        if (in_array($ext, ['csv', 'txt'], true)) {
+            if (($handle = fopen($path, 'r')) === false) {
+                return [];
+            }
+
+            $headers = fgetcsv($handle) ?: [];
+            fclose($handle);
+
+            return array_map('trim', $headers);
+        }
+
+        return $this->parseFromPath($path, $extension)['headers'];
+    }
+
+    /**
+     * @param  array<int, string>  $headers
+     */
+    public function countValidRecipientRowsFromPath(string $path, string $extension, array $headers, int $columnIndex, string $channel): int
+    {
+        $count = 0;
+
+        foreach ($this->iterateRowsFromPath($path, $extension, $headers) as $row) {
+            if (empty(array_filter($row))) {
+                continue;
+            }
+
+            while (count($row) < count($headers)) {
+                $row[] = '';
+            }
+
+            $value = $row[$columnIndex] ?? null;
+            $valid = $channel === \Modules\Wpbox\Models\Campaign::CHANNEL_EMAIL
+                ? $this->normalizeEmailFromCell($value) !== null
+                : $this->normalizePhoneFromCell($value) !== null;
+
+            if ($valid) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * @param  array<int, string>  $headers
+     * @return \Generator<int, array<int, mixed>>
+     */
+    public function iterateRowsFromPath(string $path, string $extension, array $headers): \Generator
+    {
+        $ext = strtolower($extension);
+
+        if (in_array($ext, ['csv', 'txt'], true)) {
+            yield from $this->iterateCsvRows($path, $headers);
+
+            return;
+        }
+
+        foreach ($this->parseFromPath($path, $extension)['rows'] as $row) {
+            yield $row;
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $headers
+     * @return \Generator<int, array<int, mixed>>
+     */
+    public function iterateCsvRows(string $path, array $headers): \Generator
+    {
+        if (($handle = fopen($path, 'r')) === false) {
+            return;
+        }
+
+        $first = true;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            if ($first) {
+                $first = false;
+
+                continue;
+            }
+
+            yield $row;
+        }
+
+        fclose($handle);
+    }
 }

@@ -70,6 +70,7 @@ class CampaignChannelRegistry
     {
         $creditAction = 'send_sms_message';
         $sent = 0;
+        $sentIds = [];
 
         foreach ($messages as $message) {
             if (! $message instanceof Message) {
@@ -84,12 +85,32 @@ class CampaignChannelRegistry
                 continue;
             }
 
-            $this->charger->charge($company, $creditAction, $company->id);
-            $message->provider_message_id = $providerMessageId;
-            $message->status = Message::STATUS_SENT;
-            $message->error = '';
-            $message->save();
+            $sentIds[] = $message->id;
             $sent++;
+        }
+
+        if ($sentIds === []) {
+            return 0;
+        }
+
+        $this->charger->charge($company, $creditAction, $company->id, $sent);
+
+        Message::withoutGlobalScopes()
+            ->whereIn('id', $sentIds)
+            ->update([
+                'provider_message_id' => $providerMessageId,
+                'status' => Message::STATUS_SENT,
+                'error' => '',
+            ]);
+
+        $campaignIds = collect($messages)
+            ->filter(fn ($message) => $message instanceof Message && in_array($message->id, $sentIds, true))
+            ->groupBy(fn (Message $message) => (int) $message->campaign_id);
+
+        foreach ($campaignIds as $campaignId => $group) {
+            Campaign::withoutGlobalScopes()
+                ->whereKey($campaignId)
+                ->increment('sended_to', $group->count());
         }
 
         return $sent;

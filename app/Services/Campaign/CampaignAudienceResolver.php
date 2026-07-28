@@ -17,27 +17,7 @@ class CampaignAudienceResolver
      */
     public function resolve(Company $company, array $options = []): array
     {
-        $query = Contact::query()->where('company_id', $company->id);
-
-        if (! empty($options['contact_id'])) {
-            $query->where('id', $options['contact_id']);
-        } elseif (! empty($options['segment_id'])) {
-            $segment = CampaignSegment::where('company_id', $company->id)
-                ->find($options['segment_id']);
-
-            if ($segment) {
-                $this->applySegmentFilters($query, $segment->filters ?? []);
-            }
-        } elseif (isset($options['group_id']) && $options['group_id'] !== null && (string) $options['group_id'] !== '0') {
-            $group = Group::where('company_id', $company->id)->find($options['group_id']);
-
-            if ($group) {
-                $contactIds = $group->contacts()->pluck('contacts.id');
-                $query->whereIn('id', $contactIds);
-            }
-        } elseif (! empty($options['phones']) && is_array($options['phones'])) {
-            $query->whereIn('phone', $options['phones']);
-        }
+        $query = $this->baseQuery($company, $options);
 
         $total = (clone $query)->count();
         $subscribed = (clone $query)->where('subscribed', 1)->count();
@@ -46,8 +26,55 @@ class CampaignAudienceResolver
             'total_count' => $total,
             'subscribed_count' => $subscribed,
             'excluded_count' => max(0, $total - $subscribed),
-            'contacts' => (clone $query)->where('subscribed', 1)->get(),
+            'contacts' => (clone $query)->where('subscribed', 1)->limit(max(1, (int) config('wpbox.campaign_audience_preview_limit', 500)))->get(),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function subscribedQuery(Company $company, array $options = []): Builder
+    {
+        return $this->baseQuery($company, $options)->where('subscribed', 1);
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public function subscribedCount(Company $company, array $options = []): int
+    {
+        return $this->subscribedQuery($company, $options)->count();
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    private function baseQuery(Company $company, array $options): Builder
+    {
+        $query = Contact::query()->where('contacts.company_id', $company->id);
+
+        if (! empty($options['contact_id'])) {
+            $query->where('contacts.id', $options['contact_id']);
+        } elseif (! empty($options['segment_id'])) {
+            $segment = CampaignSegment::where('company_id', $company->id)
+                ->find($options['segment_id']);
+
+            if ($segment) {
+                $this->applySegmentFilters($query, $segment->filters ?? []);
+            }
+        } elseif (isset($options['group_id']) && $options['group_id'] !== null && (string) $options['group_id'] !== '0') {
+            $groupId = (int) $options['group_id'];
+
+            $query->whereIn('contacts.id', function ($subquery) use ($groupId) {
+                $subquery->select('contact_id')
+                    ->from('groups_contacts')
+                    ->where('group_id', $groupId);
+            });
+        } elseif (! empty($options['phones']) && is_array($options['phones'])) {
+            $query->whereIn('phone', $options['phones']);
+        }
+
+        return $query;
     }
 
     /**
