@@ -83,6 +83,40 @@ class Campaign extends Model
             ->where('is_reminder', false);
     }
 
+    public function scopeForChannel($query, string $channel)
+    {
+        if ($channel === self::CHANNEL_WHATSAPP) {
+            return $query->where(function ($query) {
+                $query->where('channel', self::CHANNEL_WHATSAPP)
+                    ->orWhereNull('channel');
+            });
+        }
+
+        return $query->where('channel', $channel);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function broadcastChannelLabels(): array
+    {
+        return [
+            self::CHANNEL_WHATSAPP => 'WhatsApp',
+            self::CHANNEL_SMS => 'SMS',
+            self::CHANNEL_EMAIL => 'Email',
+        ];
+    }
+
+    public function resolvedChannel(): string
+    {
+        return $this->channel ?? self::CHANNEL_WHATSAPP;
+    }
+
+    public function isWhatsappChannel(): bool
+    {
+        return $this->resolvedChannel() === self::CHANNEL_WHATSAPP;
+    }
+
     public function isBroadcast(): bool
     {
         return ! $this->is_bot && ! $this->is_api && ! $this->is_reminder && $this->contact_id === null;
