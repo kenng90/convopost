@@ -176,6 +176,13 @@
                                                         <i class="ni ni-settings"></i> Automate
                                                     </button>
                                                     <div class="dropdown-menu dropdown-menu-right">
+                                                        <h6 class="dropdown-header">Works with any form</h6>
+                                                        <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'collect']) }}">
+                                                            <strong>Collect responses</strong>
+                                                            <div class="small text-muted">Send form → thank you → end</div>
+                                                        </a>
+                                                        <div class="dropdown-divider"></div>
+                                                        <h6 class="dropdown-header">Advanced</h6>
                                                         <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'lead']) }}">Lead capture</a>
                                                         <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'book_live']) }}">
                                                             <strong>Live slot booking</strong>

@@ -780,9 +780,9 @@ class FlowsController extends Controller
                 ->with('error', __('Publish this form to WhatsApp (Go Live) before using it in automation.'));
         }
 
-        $recipe = strtolower((string) $request->query('recipe', 'lead'));
+        $recipe = strtolower((string) $request->query('recipe', 'collect'));
         if (! in_array($recipe, WhatsappFormAutomationFactory::RECIPES, true)) {
-            $recipe = 'lead';
+            $recipe = 'collect';
         }
 
         try {
