@@ -315,23 +315,35 @@ class WhatsAppFlow extends Node
         if (! empty($conditions)) {
             Log::info('WhatsApp Flow: evaluating conditions', ['conditionCount' => count($conditions)]);
 
-            foreach ($conditions as $conditionIndex => $condition) {
-                if ($this->evaluateCondition($condition, $responseData)) {
-                    Log::info('WhatsApp Flow: condition matched', ['conditionIndex' => $conditionIndex]);
-                    $nextNode = $this->getNextNodeId("condition_{$conditionIndex}");
-                    if ($nextNode) {
-                        $nextNode->process($message, $data);
+            $routeHandle = $this->resolveConditionRouteHandle($conditions, $responseData);
 
-                        return;
-                    }
-                }
+            if ($routeHandle === null) {
+                Log::warning('WhatsApp Flow: condition matched but no route handle is connected', [
+                    'connected_handles' => $this->connectedSourceHandles(),
+                ]);
+
+                return;
             }
 
-            Log::info('WhatsApp Flow: no conditions matched, routing to else');
-            $nextNode = $this->getNextNodeId('else');
+            if ($routeHandle === 'else') {
+                Log::info('WhatsApp Flow: no conditions matched, routing to else');
+            } else {
+                Log::info('WhatsApp Flow: routing to handle', ['handle' => $routeHandle]);
+            }
+
+            $nextNode = $this->getNextNodeId($routeHandle);
             if ($nextNode) {
                 $nextNode->process($message, $data);
+
+                return;
             }
+
+            Log::warning('WhatsApp Flow: resolved handle has no wired target node', [
+                'handle' => $routeHandle,
+                'connected_handles' => $this->connectedSourceHandles(),
+            ]);
+
+            return;
         } else {
             $nextNode = $this->getNextNodeId('onFlowCompleted');
             if ($nextNode) {
@@ -722,13 +734,81 @@ class WhatsAppFlow extends Node
     }
 
     /**
+     * Resolve which outbound handle to use after response conditions are evaluated.
+     *
+     * @param  list<array<string, mixed>>  $conditions
+     * @param  array<string, mixed>  $responseData
+     */
+    protected function resolveConditionRouteHandle(array $conditions, array $responseData): ?string
+    {
+        foreach ($conditions as $conditionIndex => $condition) {
+            if (! $this->evaluateCondition($condition, $responseData)) {
+                continue;
+            }
+
+            Log::info('WhatsApp Flow: condition matched', ['conditionIndex' => $conditionIndex]);
+
+            $conditionHandle = "condition_{$conditionIndex}";
+            if ($this->hasOutgoingHandle($conditionHandle)) {
+                return $conditionHandle;
+            }
+
+            Log::warning('WhatsApp Flow: matched condition handle is not connected', [
+                'conditionIndex' => $conditionIndex,
+                'expected_handle' => $conditionHandle,
+            ]);
+
+            if ($this->hasOutgoingHandle('onFlowCompleted')) {
+                Log::info('WhatsApp Flow: falling back to onFlowCompleted for matched condition');
+
+                return 'onFlowCompleted';
+            }
+
+            return null;
+        }
+
+        return $this->hasOutgoingHandle('else') ? 'else' : null;
+    }
+
+    protected function hasOutgoingHandle(string $handleId): bool
+    {
+        return $this->getNextNodeId($handleId) !== null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function connectedSourceHandles(): array
+    {
+        $handles = [];
+
+        foreach ($this->outgoingEdges as $edge) {
+            $handle = $edge->getSourceHandle();
+            if (is_string($handle) && $handle !== '') {
+                $handles[] = $handle;
+            }
+        }
+
+        return $handles;
+    }
+
+    /**
      * Get the next node by handle ID
      */
     protected function getNextNodeId($handleId = null)
     {
         foreach ($this->outgoingEdges as $edge) {
-            $sourceHandle = $edge->getSourceHandle() ?? '';
-            if ($handleId === null || str_contains($sourceHandle, $handleId)) {
+            $sourceHandle = (string) ($edge->getSourceHandle() ?? '');
+            if ($handleId === null) {
+                $target = $edge->getTarget();
+                if ($target) {
+                    return $target;
+                }
+
+                continue;
+            }
+
+            if ($sourceHandle === (string) $handleId || str_contains($sourceHandle, (string) $handleId)) {
                 return $edge->getTarget();
             }
         }

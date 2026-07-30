@@ -90,6 +90,29 @@ interface CustomFieldOption {
   name: string;
 }
 
+interface OutputRowProps {
+  label: string;
+  handleId: string;
+  colorClass: string;
+  hint?: string;
+}
+
+const OutputRow = ({ label, handleId, colorClass, hint }: OutputRowProps) => (
+  <div className="relative flex items-center min-h-[30px] py-1 px-2 border-b border-gray-100 last:border-b-0">
+    <div className="pr-3 min-w-0">
+      <div className="text-[10px] font-medium text-gray-700 truncate">{label}</div>
+      {hint ? <div className="text-[9px] text-gray-400 truncate">{hint}</div> : null}
+    </div>
+    <Handle
+      type="source"
+      position={Position.Right}
+      id={handleId}
+      className={`${colorClass} !w-3 !h-3 !min-w-[12px] !min-h-[12px] !border-2 !border-white`}
+      style={{ right: -7, top: '50%', transform: 'translateY(-50%)', zIndex: 60 }}
+    />
+  </div>
+);
+
 declare global {
   interface Window {
     data?: {
@@ -126,7 +149,15 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
   const [syncMessage, setSyncMessage] = useState<string>('');
   const [header, setHeader] = useState<string>(data.settings?.header || 'Complete the form');
   const [footer, setFooter] = useState<string>(data.settings?.footer || 'Your responses help us serve you better');
-  const [conditions, setConditions] = useState<Condition[]>(data.settings?.conditions || []);
+  const [conditions, setConditions] = useState<Condition[]>(
+    (data.settings?.conditions || []).map((c: Condition, idx: number) => ({
+      id: c.id || `cond_${idx}_${Math.random().toString(36).slice(2, 6)}`,
+      fieldName: String(c.fieldName || ''),
+      operator: String(c.operator || '=='),
+      value: String(c.value ?? ''),
+      allOf: Array.isArray(c.allOf) ? c.allOf : [],
+    }))
+  );
   const [scoreRules, setScoreRules] = useState<ScoreRule[]>(
     (data.settings?.scoreRules || []).map((r: any) => ({
       id: r.id || Math.random().toString(36).slice(2, 9),
@@ -406,23 +437,35 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
   const journeys = window.data?.journeys || [];
   const selectedJourney = journeys.find((j) => String(j.id) === onComplete.journeyId);
   const stages = selectedJourney?.stages || [];
+  const hasConditions = conditions.length > 0;
+  const hasScoreRouting = scoreThreshold !== '';
+  const usesConditionRouting = hasConditions && !hasScoreRouting;
+
+  const conditionSummary = (condition: Condition, idx: number) => {
+    if (condition.fieldName && condition.value) {
+      return `${condition.fieldName} ${condition.operator} ${condition.value}`;
+    }
+
+    return `Match ${idx + 1}`;
+  };
 
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <div className="bg-white rounded-lg shadow-lg w-[360px]">
+        <div className="bg-white rounded-lg shadow-lg flex w-[460px] overflow-visible">
           <Handle
             type="target"
             position={Position.Left}
             style={{ left: '-4px', background: '#555', zIndex: 50 }}
           />
 
-          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 px-4 pt-3 bg-gray-50">
+          <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 pb-2 border-b border-gray-100 px-4 pt-3 bg-gray-50">
             <Send className="h-4 w-4 text-sky-700" />
-            <div className="font-medium">Collect with WhatsApp Form</div>
+            <div className="font-medium text-sm">Collect with WhatsApp Form</div>
           </div>
 
-          <div className="p-4">
+          <div className="p-4 max-h-[380px] overflow-y-auto">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="header">Message Header</Label>
@@ -743,9 +786,13 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
                     <Plus className="h-3 w-3" /> Add
                   </button>
                 </div>
+                <p className="text-[10px] text-gray-500 mb-2">
+                  Each rule gets its own output on the right. Connect <strong>Match N</strong> handles to different paths.
+                  If a match has no wire, <strong>On completion</strong> is used as fallback when connected.
+                </p>
 
                 {conditions.length === 0 ? (
-                  <p className="text-xs text-gray-500">No conditions. Completions use On completion.</p>
+                  <p className="text-xs text-gray-500">No conditions — completions use <strong>On completion</strong>.</p>
                 ) : (
                   <div className="space-y-2">
                     {conditions.map((condition, idx) => (
@@ -927,71 +974,89 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
-            <span className="text-xs text-gray-500">On completion</span>
-            <Handle
-              type="source"
-              position={Position.Right}
-              id="onFlowCompleted"
-              className="!bg-green-500 !w-3 !h-3 !border-2 !border-white"
-            />
-          </div>
-
-          {scoreThreshold !== '' && (
-            <>
-              <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-white text-xs">
-                <span className="text-emerald-700">Score pass</span>
-                <Handle type="source" position={Position.Right} id="score_pass" className="!bg-emerald-500 !w-3 !h-3 !border-2 !border-white" />
-              </div>
-              <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-white text-xs">
-                <span className="text-amber-700">Score fail</span>
-                <Handle type="source" position={Position.Right} id="score_fail" className="!bg-amber-500 !w-3 !h-3 !border-2 !border-white" />
-              </div>
-            </>
-          )}
-
-          {conditions.map((condition, idx) => (
-            <div key={condition.id} className="flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-white text-xs">
-              <span className="text-gray-500">Match {idx + 1}</span>
-              <Handle
-                type="source"
-                position={Position.Right}
-                id={`condition_${idx}`}
-                className="!bg-blue-500 !w-3 !h-3 !border-2 !border-white"
-              />
-            </div>
-          ))}
-
           <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-white text-xs">
-            <span className="text-gray-500">No match</span>
-            <Handle
-              type="source"
-              position={Position.Right}
-              id="else"
-              className="!bg-gray-400 !w-3 !h-3 !border-2 !border-white"
-            />
-          </div>
-
-          <div className="flex items-center justify-center px-4 py-2 border-t border-gray-100 bg-white">
-            <span className="text-xs text-gray-500 mr-2">Send failed</span>
+            <span className="text-red-600">Send failed</span>
             <Handle
               type="source"
               position={Position.Bottom}
               id="onSendFailed"
-              style={{ bottom: '-4px', left: '25%', background: '#ef4444' }}
+              style={{ bottom: -6, left: '30%', zIndex: 60 }}
               className="!bg-red-500 !w-3 !h-3 !border-2 !border-white"
             />
           </div>
-
-          <div className="flex items-center justify-center px-4 py-2 border-t border-gray-100 bg-white">
-            <span className="text-xs text-gray-500 mr-2">Abandoned / timeout</span>
+          <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-white text-xs">
+            <span className="text-amber-700">Abandoned / timeout</span>
             <Handle
               type="source"
               position={Position.Bottom}
               id="onAbandoned"
-              style={{ bottom: '-4px', left: '75%', background: '#f59e0b' }}
+              style={{ bottom: -6, left: '70%', zIndex: 60 }}
               className="!bg-amber-500 !w-3 !h-3 !border-2 !border-white"
             />
+          </div>
+          </div>
+
+          <div className="w-[118px] shrink-0 border-l border-gray-200 bg-gray-50/90 flex flex-col">
+            <div className="px-2 py-2 border-b border-gray-200 bg-gray-100">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-600">Outputs</div>
+              <div className="text-[9px] text-gray-400 mt-0.5">Drag from dots →</div>
+            </div>
+
+            <div className="flex-1 py-1">
+              {!hasScoreRouting && !usesConditionRouting && (
+                <OutputRow
+                  label="On completion"
+                  handleId="onFlowCompleted"
+                  colorClass="!bg-green-500"
+                  hint="Form submitted"
+                />
+              )}
+
+              {usesConditionRouting && (
+                <OutputRow
+                  label="On completion"
+                  handleId="onFlowCompleted"
+                  colorClass="!bg-green-500"
+                  hint="Fallback when Match has no wire"
+                />
+              )}
+
+              {hasScoreRouting && (
+                <>
+                  <OutputRow
+                    label="Score pass"
+                    handleId="score_pass"
+                    colorClass="!bg-emerald-500"
+                    hint={`≥ ${scoreThreshold}`}
+                  />
+                  <OutputRow
+                    label="Score fail"
+                    handleId="score_fail"
+                    colorClass="!bg-amber-500"
+                    hint={`< ${scoreThreshold}`}
+                  />
+                </>
+              )}
+
+              {usesConditionRouting && conditions.map((condition, idx) => (
+                <OutputRow
+                  key={condition.id}
+                  label={`Match ${idx + 1}`}
+                  handleId={`condition_${idx}`}
+                  colorClass="!bg-blue-500"
+                  hint={conditionSummary(condition, idx)}
+                />
+              ))}
+
+              {usesConditionRouting && (
+                <OutputRow
+                  label="No match"
+                  handleId="else"
+                  colorClass="!bg-gray-400"
+                  hint="Fallback"
+                />
+              )}
+            </div>
           </div>
         </div>
       </ContextMenuTrigger>
