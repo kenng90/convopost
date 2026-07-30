@@ -8,6 +8,7 @@ use App\Scopes\CompanyScope;
 use App\Services\Catalog\CatalogItemPayloadService;
 use App\Services\Catalog\CatalogMode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Validator;
 use Tests\TestCase;
 
 class CatalogItemPayloadServiceTest extends TestCase
@@ -44,5 +45,32 @@ class CatalogItemPayloadServiceTest extends TestCase
         $this->assertSame('3', $payload['metadata']['bedrooms']);
         $this->assertSame('Available', $payload['metadata']['listing_status']);
         $this->assertSame('Karen', $payload['location']);
+    }
+
+    public function test_rules_allow_negative_latitude_and_longitude(): void
+    {
+        $company = Company::factory()->create();
+
+        $catalog = ListCatalog::withoutGlobalScope(CompanyScope::class)->create([
+            'company_id' => $company->id,
+            'name' => 'Homes',
+            'slug' => 'homes-negative-coords',
+            'catalog_mode' => CatalogMode::LISTING,
+            'vertical' => 'real_estate',
+            'version' => 1,
+            'items' => [],
+            'columns' => [],
+            'source' => 'manual',
+        ]);
+
+        $rules = app(CatalogItemPayloadService::class)->rulesForUpdate($catalog);
+
+        $validator = Validator::make([
+            'title' => 'Karen Apartment',
+            'latitude' => -1.3197,
+            'longitude' => 36.7080,
+        ], $rules);
+
+        $this->assertFalse($validator->fails(), $validator->errors()->toJson());
     }
 }

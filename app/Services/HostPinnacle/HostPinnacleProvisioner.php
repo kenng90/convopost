@@ -100,7 +100,7 @@ class HostPinnacleProvisioner
 
     private function finalizeSubAccount(Company $company, string $loginName): bool
     {
-        $password = Str::password(16, letters: true, numbers: true, symbols: false);
+        $password = $this->generateGatewayPassword();
         $passwordResponse = $this->client->resetSubUserPassword($loginName, $password);
         if (! ($passwordResponse['ok'] ?? false)) {
             Log::error('HostPinnacle sub-user password reset failed.', [
@@ -404,5 +404,37 @@ class HostPinnacleProvisioner
         $type = strtolower(trim((string) config('hostpinnacle.sub_user_type', 'customer')));
 
         return in_array($type, ['customer', 'reseller'], true) ? $type : 'customer';
+    }
+
+    /**
+     * HostPinnacle requires 1 uppercase, 1 lowercase, 1 number, 1 special, min 8 chars,
+     * but rejects &, @, #, %, +, /, = (API auth encoding issues).
+     */
+    public function generateGatewayPassword(int $length = 12): string
+    {
+        $length = max(8, $length);
+        $upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $lower = 'abcdefghijkmnpqrstuvwxyz';
+        $digits = '23456789';
+        $specials = '!*_-';
+        $all = $upper.$lower.$digits.$specials;
+
+        $chars = [
+            $upper[random_int(0, strlen($upper) - 1)],
+            $lower[random_int(0, strlen($lower) - 1)],
+            $digits[random_int(0, strlen($digits) - 1)],
+            $specials[random_int(0, strlen($specials) - 1)],
+        ];
+
+        for ($i = count($chars); $i < $length; $i++) {
+            $chars[] = $all[random_int(0, strlen($all) - 1)];
+        }
+
+        for ($i = count($chars) - 1; $i > 0; $i--) {
+            $j = random_int(0, $i);
+            [$chars[$i], $chars[$j]] = [$chars[$j], $chars[$i]];
+        }
+
+        return implode('', $chars);
     }
 }

@@ -69,6 +69,21 @@ class HostPinnacleProvisionerTest extends TestCase
                 && str_contains($body, 'Nairobi');
         });
 
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), '/SMSApi/reseller/resetuserpassword')) {
+                return false;
+            }
+
+            $fields = $request->data();
+
+            return ($fields['userloginname'] ?? null) === 'cc001acmeco'
+                && ($fields['newPassword'] ?? null) === ($fields['confirmpassword'] ?? null)
+                && ($fields['newpassword'] ?? null) === ($fields['confirmpassword'] ?? null)
+                && ($fields['confirmPassword'] ?? null) === ($fields['confirmpassword'] ?? null)
+                && ($fields['newPassword'] ?? '') !== ''
+                && str_contains($request->header('Content-Type')[0] ?? '', 'application/x-www-form-urlencoded');
+        });
+
         $this->assertSame('tenant-api-key', $company->fresh()->getConfig('HOSTPINNACLE_API_KEY'));
         $this->assertSame('pending_approval', $company->fresh()->getConfig('HOSTPINNACLE_SENDER_STATUS'));
     }
@@ -109,6 +124,18 @@ class HostPinnacleProvisionerTest extends TestCase
         $fullName = app(HostPinnacleProvisioner::class)->gatewayFullName($company);
 
         $this->assertSame('Acme Co Ltd', $fullName);
+    }
+
+    public function test_gateway_password_meets_hostpinnacle_policy(): void
+    {
+        $password = app(HostPinnacleProvisioner::class)->generateGatewayPassword();
+
+        $this->assertGreaterThanOrEqual(8, strlen($password));
+        $this->assertMatchesRegularExpression('/[A-Z]/', $password);
+        $this->assertMatchesRegularExpression('/[a-z]/', $password);
+        $this->assertMatchesRegularExpression('/[0-9]/', $password);
+        $this->assertMatchesRegularExpression('/[!*_\-]/', $password);
+        $this->assertDoesNotMatchRegularExpression('/[&@#%+\/=]/', $password);
     }
 
     public function test_build_create_user_payload_matches_gateway_requirements(): void

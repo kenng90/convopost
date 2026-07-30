@@ -146,7 +146,7 @@ class CatalogItemPayloadService
 
                 $type = (string) ($field['type'] ?? 'text');
                 if ($type === 'number') {
-                    $rules[$key] = 'nullable|numeric|min:0';
+                    $rules[$key] = $this->numberFieldRule($key);
                 } elseif ($type === 'select') {
                     $options = $field['options'] ?? [];
                     if ($options !== []) {
@@ -161,5 +161,14 @@ class CatalogItemPayloadService
         }
 
         return $rules;
+    }
+
+    private function numberFieldRule(string $key): string
+    {
+        return match ($key) {
+            'latitude' => 'nullable|numeric|min:-90|max:90',
+            'longitude' => 'nullable|numeric|min:-180|max:180',
+            default => 'nullable|numeric|min:0',
+        };
     }
 }

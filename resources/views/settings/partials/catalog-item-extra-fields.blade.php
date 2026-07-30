@@ -24,7 +24,19 @@
                         @endforeach
                     </select>
                 @elseif($type === 'number')
-                    <input type="number" id="{{ $fieldId }}" class="form-control catalog-vertical-field" data-field-key="{{ $key }}" min="0" step="any">
+                    @php
+                        $numberMin = match ($key) {
+                            'latitude' => '-90',
+                            'longitude' => '-180',
+                            default => '0',
+                        };
+                        $numberMax = match ($key) {
+                            'latitude' => '90',
+                            'longitude' => '180',
+                            default => null,
+                        };
+                    @endphp
+                    <input type="number" id="{{ $fieldId }}" class="form-control catalog-vertical-field" data-field-key="{{ $key }}" min="{{ $numberMin }}" @if($numberMax !== null) max="{{ $numberMax }}" @endif step="any">
                 @else
                     <input type="text" id="{{ $fieldId }}" class="form-control catalog-vertical-field" data-field-key="{{ $key }}">
                 @endif

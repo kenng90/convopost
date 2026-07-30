@@ -76,6 +76,45 @@ class HostPinnacleClient
     }
 
     /**
+     * HostPinnacle's reset-password docs use application/x-www-form-urlencoded.
+     *
+     * @param  array<string, mixed>  $fields
+     * @return array<string, mixed>
+     */
+    public function postResellerForm(string $path, array $fields): array
+    {
+        $credentials = HostPinnacleCredentials::reseller();
+        if ($credentials === null) {
+            return ['ok' => false, 'error' => 'HostPinnacle reseller credentials are not configured.'];
+        }
+
+        $fields['userid'] = $credentials->userId;
+        if ($credentials->password !== '') {
+            $fields['password'] = $credentials->password;
+        }
+        $fields['output'] = $fields['output'] ?? 'json';
+
+        $payload = [];
+        foreach ($fields as $name => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $payload[(string) $name] = is_bool($value) ? ($value ? 'true' : 'false') : (string) $value;
+        }
+
+        $request = Http::timeout(60)->asForm();
+
+        if ($credentials->apiKey !== '') {
+            $request = $request->withHeaders(['apikey' => $credentials->apiKey]);
+        }
+
+        $response = $request->post($this->endpoint($path), $payload);
+
+        return $this->parseResponse($response);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function readAccountStatus(HostPinnacleCredentials $credentials): array
@@ -183,9 +222,15 @@ class HostPinnacleClient
      */
     public function resetSubUserPassword(string $userLoginName, string $newPassword): array
     {
-        return $this->postReseller('/SMSApi/reseller/resetuserpassword', [
+        // Docs list camelCase `newPassword`; the live gateway validates lowercase
+        // `newpassword` vs `confirmpassword`. Sending only one casing fails either
+        // with code 265 or by emailing a reset link instead of setting the password.
+        return $this->postResellerForm('/SMSApi/reseller/resetuserpassword', [
             'userloginname' => $userLoginName,
             'newPassword' => $newPassword,
+            'newpassword' => $newPassword,
+            'confirmPassword' => $newPassword,
+            'confirmpassword' => $newPassword,
             'output' => 'json',
         ]);
     }
@@ -266,9 +311,16 @@ class HostPinnacleClient
 
         $data = $response->json();
         if (! is_array($data)) {
+            $body = trim($response->body());
+            $normalized = strtolower($body);
+
+            if ($body !== '' && str_contains($normalized, 'password changed successfully')) {
+                return ['ok' => true, 'data' => ['response' => ['status' => 'success', 'msg' => $body]]];
+            }
+
             return [
                 'ok' => false,
-                'error' => trim($response->body()) !== '' ? trim($response->body()) : 'Invalid HostPinnacle response',
+                'error' => $body !== '' ? $body : 'Invalid HostPinnacle response',
                 'raw' => null,
             ];
         }
