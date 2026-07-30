@@ -37,6 +37,10 @@
                         };
                     @endphp
                     <input type="number" id="{{ $fieldId }}" class="form-control catalog-vertical-field" data-field-key="{{ $key }}" min="{{ $numberMin }}" @if($numberMax !== null) max="{{ $numberMax }}" @endif step="any">
+                @elseif($type === 'textarea')
+                    <textarea id="{{ $fieldId }}" class="form-control catalog-vertical-field" data-field-key="{{ $key }}" rows="3"></textarea>
+                @elseif($type === 'email')
+                    <input type="email" id="{{ $fieldId }}" class="form-control catalog-vertical-field" data-field-key="{{ $key }}">
                 @else
                     <input type="text" id="{{ $fieldId }}" class="form-control catalog-vertical-field" data-field-key="{{ $key }}">
                 @endif

@@ -151,16 +151,16 @@ class ExcelImportServiceTest extends TestCase
         $this->assertSame('catalog-import-service-general-service.xlsx', $registry->importTemplateFilename('service', 'general_service'));
     }
 
-    public function test_template_spreadsheet_includes_five_sample_rows_for_each_vertical(): void
+    public function test_template_spreadsheet_includes_ten_sample_rows_for_each_vertical(): void
     {
-        foreach (['retail', 'real_estate', 'automotive', 'general_listing', 'general_service'] as $vertical) {
+        foreach (['retail', 'real_estate', 'automotive', 'jobs', 'general_service'] as $vertical) {
             $spreadsheet = $this->service->createTemplateSpreadsheet($vertical);
             $sheet = $spreadsheet->getActiveSheet();
 
             $this->assertSame(
                 1 + ExcelImportService::TEMPLATE_SAMPLE_ROW_COUNT,
                 (int) $sheet->getHighestRow(),
-                "Expected header + 5 sample rows for vertical [{$vertical}]"
+                "Expected header + 10 sample rows for vertical [{$vertical}]"
             );
 
             $this->assertNotSame('', (string) $sheet->getCell([1, 2])->getValue());

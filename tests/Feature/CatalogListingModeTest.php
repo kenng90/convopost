@@ -252,7 +252,7 @@ class CatalogListingModeTest extends TestCase
             'name' => 'Listings',
             'slug' => 'listings',
             'catalog_mode' => CatalogMode::LISTING,
-            'vertical' => 'general_listing',
+            'vertical' => 'real_estate',
             'version' => 1,
             'items' => [],
             'columns' => [],
@@ -313,7 +313,7 @@ class CatalogListingModeTest extends TestCase
             'name' => 'Gallery',
             'slug' => 'gallery',
             'catalog_mode' => CatalogMode::LISTING,
-            'vertical' => 'general_listing',
+            'vertical' => 'real_estate',
             'version' => 1,
             'items' => [],
             'columns' => [],
@@ -384,6 +384,138 @@ class CatalogListingModeTest extends TestCase
             ])
             ->assertOk()
             ->assertJsonMissingPath('item.metadata.booking_source_id');
+    }
+
+    public function test_create_empty_listing_catalog_with_jobs_vertical(): void
+    {
+        [$owner, $company] = $this->actingOwner();
+
+        $response = $this->actingAs($owner)
+            ->withSession(['company_id' => $company->id])
+            ->postJson(route('catalogs.create-empty'), [
+                'name' => 'Open Roles',
+                'description' => 'Current vacancies',
+                'catalog_mode' => CatalogMode::LISTING,
+                'vertical' => 'jobs',
+            ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('catalog.vertical', 'jobs');
+        $response->assertJsonPath('catalog.presentation.supports_booking', false);
+        $response->assertJsonPath('catalog.presentation.apply_cta_label', 'Apply on WhatsApp');
+    }
+
+    public function test_owner_can_add_job_item_with_vertical_fields(): void
+    {
+        [$owner, $company] = $this->actingOwner();
+
+        $catalog = ListCatalog::withoutGlobalScope(CompanyScope::class)->create([
+            'company_id' => $company->id,
+            'name' => 'Careers',
+            'slug' => 'careers',
+            'catalog_mode' => CatalogMode::LISTING,
+            'vertical' => 'jobs',
+            'version' => 1,
+            'items' => [],
+            'columns' => [],
+            'source' => 'manual',
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->withSession(['company_id' => $company->id])
+            ->postJson(route('catalogs.items.add', $catalog->id), [
+                'id' => 'job-1',
+                'title' => 'Sales Representative',
+                'description' => 'Retail sales role',
+                'company' => 'Acme Ltd',
+                'employment_type' => 'Full-time',
+                'salary' => 'KES 45,000',
+                'apply_email' => 'careers@acme.example',
+                'listing_status' => 'Open',
+            ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('item.metadata.company', 'Acme Ltd');
+        $response->assertJsonPath('item.metadata.apply_email', 'careers@acme.example');
+    }
+
+    public function test_public_jobs_catalog_shows_apply_cta_not_booking(): void
+    {
+        [, $company] = $this->actingOwner();
+
+        $catalog = ListCatalog::withoutGlobalScope(CompanyScope::class)->create([
+            'company_id' => $company->id,
+            'name' => 'Careers Board',
+            'slug' => 'careers-board',
+            'catalog_mode' => CatalogMode::LISTING,
+            'vertical' => 'jobs',
+            'version' => 1,
+            'items' => [[
+                'id' => 'job-1',
+                'title' => 'Software Engineer',
+                'description' => 'Build internal tools',
+                'price' => 0,
+                'category' => 'Engineering',
+                'metadata' => [
+                    'company' => 'Tech Co',
+                    'employment_type' => 'Full-time',
+                    'location' => 'Nairobi',
+                    'salary' => 'KES 120,000',
+                    'apply_email' => 'jobs@techco.example',
+                    'listing_status' => 'Open',
+                ],
+            ]],
+            'columns' => [],
+            'source' => 'manual',
+        ]);
+
+        $response = $this->get(route('catalog.public', $catalog->id));
+
+        $response->assertOk();
+        $response->assertSee('Apply on WhatsApp', false);
+        $response->assertSee('Apply via email', false);
+        $response->assertSee('startWhatsAppInquiry', false);
+        $response->assertSee('Tech Co', false);
+        $response->assertSee('mailto:jobs%40techco.example', false);
+        $response->assertDontSee('Book test drive', false);
+    }
+
+    public function test_generate_inquiry_for_job_returns_application_message(): void
+    {
+        [, $company] = $this->actingOwner();
+        $company->setConfig('whatsapp_phone_number', '+254712345678');
+
+        $catalog = ListCatalog::withoutGlobalScope(CompanyScope::class)->create([
+            'company_id' => $company->id,
+            'name' => 'Careers',
+            'slug' => 'careers-inquiry',
+            'catalog_mode' => CatalogMode::LISTING,
+            'vertical' => 'jobs',
+            'version' => 1,
+            'items' => [[
+                'id' => 'job-1',
+                'title' => 'Accountant',
+                'description' => 'Finance team role',
+                'metadata' => [
+                    'company' => 'Finance Co',
+                    'employment_type' => 'Full-time',
+                    'listing_status' => 'Open',
+                ],
+            ]],
+            'columns' => [],
+            'source' => 'manual',
+        ]);
+
+        $response = $this->postJson(route('catalog.generate-inquiry', $catalog->id), [
+            'item_id' => 'job-1',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('message', fn ($message) => is_string($message)
+            && str_contains($message, 'Job application')
+            && str_contains($message, 'Accountant')
+            && str_contains($message, 'I would like to apply'));
     }
 
     /**

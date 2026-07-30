@@ -58,6 +58,40 @@ function isBookableCatalogMode(mode) {
     return mode === 'listing' || mode === 'service';
 }
 
+function currentImportVertical() {
+    return document.getElementById('importCatalogVertical')?.value || '';
+}
+
+function currentReimportVertical() {
+    return document.getElementById('reimportCatalogVertical')?.value || '';
+}
+
+function verticalSupportsBookableImport(mode, vertical) {
+    if (!isBookableCatalogMode(mode)) {
+        return false;
+    }
+
+    if (vertical === 'jobs') {
+        return false;
+    }
+
+    const modeConfig = catalogTemplatesCache.find(entry => entry.key === mode);
+    const verticalConfig = modeConfig?.verticals?.find(entry => entry.key === vertical);
+    if (verticalConfig && verticalConfig.supports_booking === false) {
+        return false;
+    }
+
+    return true;
+}
+
+function isBookableCatalogImport(mode, vertical) {
+    return verticalSupportsBookableImport(mode, vertical || currentImportVertical());
+}
+
+function isBookableCatalogReimport(mode, vertical) {
+    return verticalSupportsBookableImport(mode, vertical || currentReimportVertical());
+}
+
 function resetImportWizard() {
     importBookablePlan = null;
     showImportDetailsStep();
@@ -87,7 +121,7 @@ function showImportDetailsStep() {
     if (bookable) bookable.style.display = 'none';
     if (backBtn) backBtn.style.display = 'none';
     if (primaryBtn) {
-        primaryBtn.textContent = isBookableCatalogMode(document.getElementById('importCatalogMode')?.value)
+        primaryBtn.textContent = isBookableCatalogImport(document.getElementById('importCatalogMode')?.value)
             ? 'Next'
             : 'Import';
     }
@@ -120,7 +154,7 @@ function showReimportDetailsStep() {
     if (backBtn) backBtn.style.display = 'none';
     if (primaryBtn) {
         const mode = document.getElementById('reimportCatalogMode')?.value || 'commerce';
-        primaryBtn.textContent = isBookableCatalogMode(mode) ? 'Next' : 'Update catalog';
+        primaryBtn.textContent = isBookableCatalogReimport(mode) ? 'Next' : 'Update catalog';
     }
 }
 
@@ -366,7 +400,7 @@ function handleImportPrimaryAction() {
     const onDetails = document.getElementById('importStepBookable')?.style.display === 'none'
         || !document.getElementById('importStepBookable');
 
-    if (isBookableCatalogMode(mode) && onDetails) {
+    if (isBookableCatalogImport(mode) && onDetails) {
         goToImportBookableStep();
         return;
     }
@@ -523,7 +557,7 @@ function submitImportForm() {
         return;
     }
 
-    if (isBookableCatalogMode(mode) && !importBookablePlan) {
+    if (isBookableCatalogImport(mode) && !importBookablePlan) {
         goToImportBookableStep();
         return;
     }
@@ -534,7 +568,7 @@ function submitImportForm() {
     formData.append('catalog_mode', mode);
     formData.append('vertical', document.getElementById('importCatalogVertical')?.value || 'retail');
 
-    if (isBookableCatalogMode(mode)) {
+    if (isBookableCatalogImport(mode)) {
         appendBookingPlanPayload(formData, 'import', importBookablePlan);
     }
 
@@ -579,10 +613,14 @@ function submitImportForm() {
         });
 }
 
-function openReimportModal(catalogId, catalogName, catalogMode = 'commerce') {
+function openReimportModal(catalogId, catalogName, catalogMode = 'commerce', catalogVertical = '') {
     document.getElementById('reimportCatalogId').value = catalogId;
     document.getElementById('reimportCatalogName').textContent = catalogName;
     document.getElementById('reimportCatalogMode').value = catalogMode || 'commerce';
+    const verticalInput = document.getElementById('reimportCatalogVertical');
+    if (verticalInput) {
+        verticalInput.value = catalogVertical || '';
+    }
     document.getElementById('reimportFile').value = '';
     document.getElementById('reimportPreviewStatus').textContent = '';
     resetReimportWizard();
@@ -625,6 +663,12 @@ function previewReimportFile() {
             if (data.catalog_mode) {
                 document.getElementById('reimportCatalogMode').value = data.catalog_mode;
             }
+            if (data.catalog_vertical) {
+                const verticalInput = document.getElementById('reimportCatalogVertical');
+                if (verticalInput) {
+                    verticalInput.value = data.catalog_vertical;
+                }
+            }
         });
 }
 
@@ -633,7 +677,7 @@ function handleReimportPrimaryAction() {
     const onDetails = document.getElementById('reimportStepBookable')?.style.display === 'none'
         || !document.getElementById('reimportStepBookable');
 
-    if (isBookableCatalogMode(mode) && onDetails) {
+    if (isBookableCatalogReimport(mode) && onDetails) {
         goToReimportBookableStep();
         return;
     }
@@ -681,6 +725,12 @@ function goToReimportBookableStep() {
             if (data.catalog_mode) {
                 document.getElementById('reimportCatalogMode').value = data.catalog_mode;
             }
+            if (data.catalog_vertical) {
+                const verticalInput = document.getElementById('reimportCatalogVertical');
+                if (verticalInput) {
+                    verticalInput.value = data.catalog_vertical;
+                }
+            }
             populateBookablePlanUI('reimport', reimportBookablePlan);
             showReimportBookableStep();
         })
@@ -704,7 +754,7 @@ function submitReimport() {
         return;
     }
 
-    if (isBookableCatalogMode(mode) && !reimportBookablePlan) {
+    if (isBookableCatalogReimport(mode) && !reimportBookablePlan) {
         goToReimportBookableStep();
         return;
     }
@@ -713,7 +763,7 @@ function submitReimport() {
     formData.append('file', fileInput.files[0]);
     formData.append('remove_missing', removeMissing ? '1' : '0');
 
-    if (isBookableCatalogMode(mode)) {
+    if (isBookableCatalogImport(mode)) {
         appendBookingPlanPayload(formData, 'reimport', reimportBookablePlan);
     }
 
@@ -987,7 +1037,7 @@ function displayCatalogs(catalogs) {
 <a href="${escapeAttr(catalog.public_url)}" target="_blank" class="btn btn-sm btn-info mr-1" title="Open shop"><i class="ni ni-shop"></i></a>
     <a href="javascript:void(0)" class="btn btn-sm btn-outline-primary mr-1" title="Analytics" onclick="showCatalogAnalytics(${catalog.id})"><i class="ni ni-chart-bar-32"></i></a>
     <a href="/catalogs/${catalog.id}/items" class="btn btn-sm btn-success mr-1" title="Manage items"><i class="ni ni-bag-17"></i></a>
-    <a href="javascript:void(0)" class="btn btn-sm btn-outline-warning mr-1" title="Re-import Excel" onclick="openReimportModal(${catalog.id}, '${escapeAttr(catalog.name)}', '${escapeAttr(catalog.catalog_mode || 'commerce')}')"><i class="ni ni-cloud-upload-96"></i></a>
+    <a href="javascript:void(0)" class="btn btn-sm btn-outline-warning mr-1" title="Re-import Excel" onclick="openReimportModal(${catalog.id}, '${escapeAttr(catalog.name)}', '${escapeAttr(catalog.catalog_mode || 'commerce')}', '${escapeAttr(catalog.vertical || '')}')"><i class="ni ni-cloud-upload-96"></i></a>
     <a href="javascript:void(0)" class="btn btn-sm btn-warning mr-1" title="Edit" onclick="openEditCatalog(${catalog.id})"><i class="ni ni-settings-gear-65"></i></a>
     <a href="javascript:void(0)" class="btn btn-sm btn-danger" title="Delete" onclick="deleteCatalog(${catalog.id}, '${escapeAttr(catalog.name)}')"><i class="ni ni-fat-remove"></i></a>
                 </td>
@@ -1037,6 +1087,23 @@ function saveAiCatalogAttachments() {
         .catch(err => showError(err.message));
 }
 
+function updateImportPrimaryButtonLabel() {
+    const modeSelect = document.getElementById('importCatalogMode');
+    const verticalSelect = document.getElementById('importCatalogVertical');
+    const primaryBtn = document.getElementById('importPrimaryBtn');
+    const bookableStep = document.getElementById('importStepBookable');
+
+    if (!primaryBtn || !modeSelect) {
+        return;
+    }
+
+    if (bookableStep && bookableStep.style.display !== 'none') {
+        return;
+    }
+
+    primaryBtn.textContent = isBookableCatalogImport(modeSelect.value, verticalSelect?.value) ? 'Next' : 'Import';
+}
+
 function updateImportVerticalOptions() {
     const modeSelect = document.getElementById('importCatalogMode');
     const verticalGroup = document.getElementById('importCatalogVerticalGroup');
@@ -1048,6 +1115,7 @@ function updateImportVerticalOptions() {
 
     const selectedMode = catalogTemplatesCache.find(mode => mode.key === modeSelect.value) || { verticals: [] };
     const verticals = selectedMode.verticals || [];
+    const previousVertical = verticalSelect.value;
 
     if (verticals.length <= 1) {
         verticalGroup.style.display = 'none';
@@ -1059,15 +1127,18 @@ function updateImportVerticalOptions() {
         verticalSelect.innerHTML = verticals.map(vertical => (
             `<option value="${vertical.key}">${escapeHtml(vertical.label)}</option>`
         )).join('');
+
+        const preferredVertical = verticals.some(vertical => vertical.key === previousVertical)
+            ? previousVertical
+            : (selectedMode.default_vertical || verticals[0]?.key || '');
+
+        if (preferredVertical) {
+            verticalSelect.value = preferredVertical;
+        }
     }
 
     updateImportTemplateHelp();
-
-    const primaryBtn = document.getElementById('importPrimaryBtn');
-    const bookableStep = document.getElementById('importStepBookable');
-    if (primaryBtn && (!bookableStep || bookableStep.style.display === 'none')) {
-        primaryBtn.textContent = isBookableCatalogMode(modeSelect.value) ? 'Next' : 'Import';
-    }
+    updateImportPrimaryButtonLabel();
 }
 
 function importTemplateFilename(mode, vertical) {
@@ -1080,7 +1151,7 @@ function importTemplateFilename(mode, vertical) {
 function updateImportTemplateHelp() {
     const mode = document.getElementById('importCatalogMode')?.value || 'commerce';
     const vertical = document.getElementById('importCatalogVertical')?.value
-        || (mode === 'commerce' ? 'retail' : (mode === 'listing' ? 'general_listing' : 'general_service'));
+        || (mode === 'commerce' ? 'retail' : (mode === 'listing' ? 'real_estate' : 'general_service'));
     const help = document.getElementById('importTemplateHelp');
     const download = document.getElementById('importTemplateDownload');
     const filename = importTemplateFilename(mode, vertical);
@@ -1093,7 +1164,7 @@ function updateImportTemplateHelp() {
             : ['Item ID', 'Title', 'Description', 'Price', 'Category', 'Image URL', 'Image URLs', 'Tags']);
 
     if (help) {
-        help.innerHTML = `Row 1 headers: <strong>${headers.join(', ')}</strong>. Rows 2–6 are sample items for this template. Item ID and Title are required.`;
+        help.innerHTML = `Row 1 headers: <strong>${headers.join(', ')}</strong>. Rows 2–11 are sample items for this template. Item ID and Title are required.`;
     }
 
     if (download) {
@@ -1142,6 +1213,11 @@ function updateCatalogVerticalOptions() {
     verticalSelect.innerHTML = verticals.map(vertical => (
         `<option value="${vertical.key}">${escapeHtml(vertical.label)}</option>`
     )).join('');
+
+    const defaultVertical = selectedMode.default_vertical || verticals[0]?.key || '';
+    if (defaultVertical) {
+        verticalSelect.value = defaultVertical;
+    }
 }
 
 function submitCreateEmptyCatalog() {

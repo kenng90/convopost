@@ -36,6 +36,35 @@ class CatalogBookableImportServiceTest extends TestCase
         $this->assertFalse($this->service->supportsMode(null));
     }
 
+    public function test_supports_bookable_import_is_false_for_jobs_vertical(): void
+    {
+        $this->assertTrue($this->service->supportsBookableImport('listing', 'real_estate'));
+        $this->assertTrue($this->service->supportsBookableImport('listing', 'automotive'));
+        $this->assertFalse($this->service->supportsBookableImport('listing', 'jobs'));
+        $this->assertTrue($this->service->supportsBookableImport('service', 'general_service'));
+    }
+
+    public function test_strip_booking_metadata_from_items(): void
+    {
+        $items = [[
+            'id' => 'job-1',
+            'title' => 'Engineer',
+            'metadata' => [
+                'company' => 'Acme',
+                'booking_source_id' => 99,
+                'booking_source_name' => 'Interviews',
+            ],
+            'booking_source_id' => 99,
+        ]];
+
+        $result = $this->service->stripBookingMetadataFromItems($items);
+
+        $this->assertSame('Acme', $result[0]['metadata']['company']);
+        $this->assertArrayNotHasKey('booking_source_id', $result[0]['metadata']);
+        $this->assertArrayNotHasKey('booking_source_name', $result[0]['metadata']);
+        $this->assertArrayNotHasKey('booking_source_id', $result[0]);
+    }
+
     public function test_parse_duration_minutes_handles_common_formats(): void
     {
         $this->assertSame(30, $this->service->parseDurationMinutes('30'));

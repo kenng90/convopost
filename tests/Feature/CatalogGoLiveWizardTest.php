@@ -79,7 +79,7 @@ class CatalogGoLiveWizardTest extends TestCase
             'name' => 'Listings',
             'slug' => 'listings',
             'catalog_mode' => CatalogMode::LISTING,
-            'vertical' => 'general_listing',
+            'vertical' => 'real_estate',
             'version' => 1,
             'items' => [[
                 'id' => 'L1',
@@ -101,6 +101,36 @@ class CatalogGoLiveWizardTest extends TestCase
         $this->assertNotNull($step);
         $this->assertTrue($step['optional']);
         $this->assertFalse($step['completed']);
+    }
+
+    public function test_go_live_excludes_bookable_links_for_jobs_catalog(): void
+    {
+        [$owner, $company] = $this->actingOwner();
+
+        $catalog = ListCatalog::withoutGlobalScope(CompanyScope::class)->create([
+            'company_id' => $company->id,
+            'name' => 'Careers',
+            'slug' => 'careers',
+            'catalog_mode' => CatalogMode::LISTING,
+            'vertical' => 'jobs',
+            'version' => 1,
+            'items' => [[
+                'id' => 'JOB1',
+                'title' => 'Sales Rep',
+                'metadata' => ['listing_status' => 'Open'],
+            ]],
+            'columns' => [],
+            'source' => 'manual',
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->withSession(['company_id' => $company->id])
+            ->getJson(route('catalogs.go-live', ['catalog_id' => $catalog->id]));
+
+        $response->assertOk();
+
+        $step = collect($response->json('steps'))->firstWhere('key', 'bookable_links');
+        $this->assertNull($step);
     }
 
     public function test_go_live_status_without_catalog_id_uses_latest(): void

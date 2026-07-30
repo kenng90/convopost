@@ -95,7 +95,8 @@ class CatalogItemPayloadService
             $payload['quantityAvailable'] = null;
 
             if ($statusField !== 'stockStatus') {
-                $statusValue = $input[$statusField] ?? $metadata[$statusField] ?? $existing[$statusField] ?? 'Available';
+                $defaultStatus = (string) (($presentation['status_options'][0] ?? null) ?: 'Available');
+                $statusValue = $input[$statusField] ?? $metadata[$statusField] ?? $existing[$statusField] ?? $defaultStatus;
                 $metadata[$statusField] = (string) $statusValue;
             }
         }
@@ -154,6 +155,10 @@ class CatalogItemPayloadService
                     } else {
                         $rules[$key] = 'nullable|string|max:255';
                     }
+                } elseif ($type === 'textarea') {
+                    $rules[$key] = 'nullable|string|max:2000';
+                } elseif ($type === 'email') {
+                    $rules[$key] = 'nullable|email|max:255';
                 } else {
                     $rules[$key] = 'nullable|string|max:255';
                 }
