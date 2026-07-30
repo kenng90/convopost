@@ -75,4 +75,32 @@ class CatalogTemplateRegistryTest extends TestCase
         $this->assertSame('Book', $registry->presentationForCatalog($service)['book_cta_label']);
         $this->assertSame('Inquire on WhatsApp', $registry->presentationForCatalog($service)['inquire_cta_label']);
     }
+
+    public function test_presentation_for_jobs_catalog_disables_booking_and_sets_apply_labels(): void
+    {
+        $company = Company::factory()->create();
+
+        $catalog = ListCatalog::withoutGlobalScope(CompanyScope::class)->create([
+            'company_id' => $company->id,
+            'name' => 'Careers',
+            'slug' => 'careers',
+            'catalog_mode' => CatalogMode::LISTING,
+            'vertical' => 'jobs',
+            'version' => 1,
+            'items' => [],
+            'columns' => [],
+            'source' => 'manual',
+        ]);
+
+        $presentation = app(CatalogTemplateRegistry::class)->presentationForCatalog($catalog);
+
+        $this->assertSame('jobs', $presentation['vertical']);
+        $this->assertFalse($presentation['supports_booking']);
+        $this->assertTrue($presentation['supports_email_apply']);
+        $this->assertSame('Apply on WhatsApp', $presentation['apply_cta_label']);
+        $this->assertSame('Apply via email', $presentation['email_apply_cta_label']);
+        $this->assertSame('listing_status', $presentation['status_field']);
+        $this->assertSame(['Open', 'Closed', 'Filled'], $presentation['status_options']);
+        $this->assertContains('company', $presentation['card_highlights']);
+    }
 }

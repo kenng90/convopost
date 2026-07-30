@@ -46,16 +46,39 @@
         }
     }
 
-    $hardDisabledStatuses = ['Sold', 'Leased', 'Reserved', 'Fully Booked'];
+    $supportsBooking = (bool) ($presentation['supports_booking'] ?? true);
+    $supportsEmailApply = (bool) ($presentation['supports_email_apply'] ?? false);
+    $applyCtaLabel = $presentation['apply_cta_label'] ?? ($presentation['book_cta_label'] ?? ($presentation['cta_label'] ?? 'Apply'));
+    $emailApplyCtaLabel = $presentation['email_apply_cta_label'] ?? 'Apply via email';
+    $applyEmail = $fieldValue($item, 'apply_email');
+
+    $hardDisabledStatuses = $vertical === 'jobs'
+        ? ['Closed', 'Filled']
+        : ['Sold', 'Leased', 'Reserved', 'Fully Booked'];
     $isHardDisabled = in_array($statusValue, $hardDisabledStatuses, true);
-    $isUnderOffer = $statusValue === 'Under Offer';
-    $bookDisabled = $isHardDisabled || $isUnderOffer;
-    $inquireDisabled = false;
+    $isUnderOffer = $vertical !== 'jobs' && $statusValue === 'Under Offer';
+    $applyDisabled = $isHardDisabled || $isUnderOffer;
+    $bookDisabled = $applyDisabled;
+    $inquireDisabled = $applyDisabled;
+    $mailtoApplyUrl = null;
+    if ($supportsEmailApply && $applyEmail && ! $applyDisabled) {
+        $applicationSubject = 'Application: '.$displayTitle;
+        $applicationBody = "Hi,\n\nI would like to apply for the {$displayTitle} position";
+        if (! empty($item['id'])) {
+            $applicationBody .= ' (Ref: '.$item['id'].')';
+        }
+        $applicationBody .= ".\n\nPlease find my CV attached.\n\nBest regards,\n";
+        $mailtoApplyUrl = 'mailto:'.rawurlencode($applyEmail)
+            .'?subject='.rawurlencode($applicationSubject)
+            .'&body='.rawurlencode($applicationBody);
+    }
     $inquireCtaLabel = $presentation['inquire_cta_label'] ?? 'Inquire';
-    $bookCtaLabel = $presentation['book_cta_label'] ?? ($presentation['cta_label'] ?? 'Book');
-    $cardCtaLabel = $bookDisabled
+    $bookCtaLabel = $supportsBooking
+        ? ($presentation['book_cta_label'] ?? ($presentation['cta_label'] ?? 'Book'))
+        : $applyCtaLabel;
+    $cardCtaLabel = $applyDisabled
         ? (string) $statusValue
-        : $bookCtaLabel;
+        : ($supportsBooking ? $bookCtaLabel : $applyCtaLabel);
 
     $skipHighlightKeys = [$statusField];
     if ($vertical === 'automotive') {
@@ -64,6 +87,8 @@
         $skipHighlightKeys = array_merge($skipHighlightKeys, ['bedrooms', 'bathrooms', 'area_sqm']);
     } elseif ($vertical === 'general_service' || $mode === 'service') {
         $skipHighlightKeys = array_merge($skipHighlightKeys, ['duration', 'availability']);
+    } elseif ($vertical === 'jobs') {
+        $skipHighlightKeys = array_merge($skipHighlightKeys, ['company', 'employment_type', 'location', 'salary', 'deadline']);
     }
 
     $cardId = 'listing-card-' . preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($item['id'] ?? uniqid()));
@@ -82,6 +107,13 @@
         'inquireCtaLabel' => $inquireCtaLabel,
         'statusLabel' => (string) $statusValue,
         'highlights' => [],
+        'supportsBooking' => $supportsBooking,
+        'supportsEmailApply' => $supportsEmailApply,
+        'applyCtaLabel' => $applyCtaLabel,
+        'emailApplyCtaLabel' => $emailApplyCtaLabel,
+        'applyEmail' => $applyEmail,
+        'mailtoApplyUrl' => $mailtoApplyUrl,
+        'detailFields' => [],
     ];
 
     if ($vertical === 'automotive') {
@@ -131,6 +163,40 @@
         $availability = $fieldValue($item, 'availability');
         if ($availability !== null) {
             $drawerPayload['highlights'][] = (string) $availability;
+        }
+    } elseif ($vertical === 'jobs') {
+        $company = $fieldValue($item, 'company');
+        if ($company !== null) {
+            $drawerPayload['highlights'][] = (string) $company;
+        }
+        $employmentType = $fieldValue($item, 'employment_type');
+        if ($employmentType !== null) {
+            $drawerPayload['highlights'][] = (string) $employmentType;
+        }
+        $location = $fieldValue($item, 'location');
+        if ($location !== null) {
+            $drawerPayload['highlights'][] = (string) $location;
+        }
+        $salary = $fieldValue($item, 'salary');
+        if ($salary !== null) {
+            $drawerPayload['highlights'][] = (string) $salary;
+        }
+        $deadline = $fieldValue($item, 'deadline');
+        if ($deadline !== null) {
+            $drawerPayload['highlights'][] = 'Deadline: '.(string) $deadline;
+        }
+
+        foreach (['experience', 'education', 'skills', 'benefits'] as $detailKey) {
+            $value = $fieldValue($item, $detailKey);
+            if ($value === null) {
+                continue;
+            }
+            $label = collect($presentation['item_fields'] ?? [])->firstWhere('key', $detailKey)['label']
+                ?? ucfirst(str_replace('_', ' ', $detailKey));
+            $drawerPayload['detailFields'][] = [
+                'label' => $label,
+                'value' => (string) $value,
+            ];
         }
     }
 
@@ -273,6 +339,37 @@
                         @endif
                     @endforeach
                 </div>
+            @elseif($vertical === 'jobs')
+                @php
+                    $company = $fieldValue($item, 'company');
+                    $employmentType = $fieldValue($item, 'employment_type');
+                    $jobLocation = $fieldValue($item, 'location');
+                    $salary = $fieldValue($item, 'salary');
+                    $deadline = $fieldValue($item, 'deadline');
+                    $jobParts = array_filter([
+                        $company,
+                        $employmentType,
+                        $jobLocation,
+                        $salary,
+                    ], static fn ($part) => $part !== null && $part !== '');
+                @endphp
+                @if($jobParts !== [])
+                    <div class="listing-highlight mb-2">{{ implode(' · ', $jobParts) }}</div>
+                @endif
+                <div class="product-tags mb-2">
+                    @if($deadline !== null)
+                        <span class="tag-badge"><i class="far fa-calendar mr-1"></i>{{ $deadline }}</span>
+                    @endif
+                    @foreach($highlights as $fieldKey)
+                        @if(in_array($fieldKey, $skipHighlightKeys, true))
+                            @continue
+                        @endif
+                        @php $value = $fieldValue($item, $fieldKey); @endphp
+                        @if($value !== null)
+                            <span class="tag-badge">{{ $value }}</span>
+                        @endif
+                    @endforeach
+                </div>
             @elseif(!empty($highlights))
                 <div class="product-tags mb-2">
                     @foreach($highlights as $fieldKey)
@@ -304,6 +401,29 @@
                 View details
             </button>
 
+            @if(! $supportsBooking)
+                <button
+                    type="button"
+                    class="add-to-cart-btn{{ $isUnderOffer ? ' cta-soft-disabled' : '' }}"
+                    style="background-color: #25D366;"
+                    onclick="startWhatsAppInquiry(@js($item['id']), this)"
+                    @if($applyDisabled) disabled @endif
+                >
+                    @if($applyDisabled)
+                        <i class="fas fa-ban mr-2"></i>{{ $cardCtaLabel }}
+                    @else
+                        <i class="fab fa-whatsapp mr-2"></i>{{ $cardCtaLabel }}
+                    @endif
+                </button>
+                @if($mailtoApplyUrl)
+                    <a
+                        href="{{ $mailtoApplyUrl }}"
+                        class="btn btn-outline-secondary btn-sm mt-2 d-block text-center"
+                    >
+                        <i class="fas fa-envelope mr-1"></i>{{ $emailApplyCtaLabel }}
+                    </a>
+                @endif
+            @else
             <button
                 type="button"
                 class="add-to-cart-btn{{ $isUnderOffer ? ' cta-soft-disabled' : '' }}"
@@ -317,6 +437,7 @@
                     <i class="fas fa-calendar-check mr-2"></i>{{ $cardCtaLabel }}
                 @endif
             </button>
+            @endif
         </div>
     </div>
 </div>

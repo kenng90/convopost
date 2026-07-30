@@ -36,7 +36,9 @@ class CatalogGoLiveService
         $hasPublishedFlow = collect($flows)->contains(fn ($flow) => ! empty($flow['is_active']) || ! empty($flow['id']));
 
         $mode = $catalog?->resolvedCatalogMode() ?? 'commerce';
-        $isBookableMode = in_array($mode, [CatalogMode::LISTING, CatalogMode::SERVICE], true);
+        $isBookableMode = $catalog
+            ? (bool) app(CatalogTemplateRegistry::class)->presentationForCatalog($catalog)['supports_booking']
+            : in_array($mode, [CatalogMode::LISTING, CatalogMode::SERVICE], true);
         $linkedBookableCount = 0;
         if ($catalog && $isBookableMode) {
             foreach ($catalog->items ?? [] as $item) {

@@ -104,10 +104,11 @@ class ListCatalogController extends Controller
                 'headers' => $parseResult['headers'],
             ];
 
-            $shouldBuildPlan = $request->boolean('include_bookable_plan')
-                || $this->catalogBookableImportService->supportsMode($catalogMode);
+            $shouldBuildPlan = ($request->boolean('include_bookable_plan')
+                || $this->catalogBookableImportService->supportsBookableImport($catalogMode, $vertical))
+                && $this->catalogBookableImportService->supportsBookableImport($catalogMode, $vertical);
 
-            if ($shouldBuildPlan && $this->catalogBookableImportService->supportsMode($catalogMode)) {
+            if ($shouldBuildPlan) {
                 $company = $this->getCompany() ?? abort(403);
                 $allItems = $this->excelService->transformItems(
                     $parseResult['items'],
@@ -164,12 +165,16 @@ class ListCatalogController extends Controller
                 $vertical
             );
 
+            if (! $this->catalogBookableImportService->supportsBookableImport($catalogMode, $vertical)) {
+                $transformedItems = $this->catalogBookableImportService->stripBookingMetadataFromItems($transformedItems);
+            }
+
             $this->excelService->validateItems($transformedItems);
 
             $company = $this->getCompany() ?? abort(403);
             $bookingStats = null;
 
-            if ($this->catalogBookableImportService->supportsMode($catalogMode) && $this->hasBookingPlanPayload($request)) {
+            if ($this->catalogBookableImportService->supportsBookableImport($catalogMode, $vertical) && $this->hasBookingPlanPayload($request)) {
                 $applied = $this->catalogBookableImportService->applyPlan(
                     $company,
                     $transformedItems,
@@ -956,14 +961,20 @@ class ListCatalogController extends Controller
                 $columnMapping,
                 $catalog->resolvedVertical()
             );
+
+            $catalogMode = $catalog->resolvedCatalogMode();
+
+            if (! $this->catalogBookableImportService->supportsBookableImport($catalogMode, $catalog->resolvedVertical())) {
+                $importedItems = $this->catalogBookableImportService->stripBookingMetadataFromItems($importedItems);
+            }
+
             $this->excelService->validateItems($importedItems);
 
             $existingItems = $this->catalogItemRepository->getItemsArray($catalog);
-            $catalogMode = $catalog->resolvedCatalogMode();
             $bookingStats = null;
 
             if (
-                $this->catalogBookableImportService->supportsMode($catalogMode)
+                $this->catalogBookableImportService->supportsBookableImport($catalogMode, $catalog->resolvedVertical())
                 && ! $request->boolean('preview_only')
                 && $this->hasBookingPlanPayload($request)
             ) {
@@ -994,7 +1005,7 @@ class ListCatalogController extends Controller
                     'import_count' => count($importedItems),
                 ];
 
-                if ($this->catalogBookableImportService->supportsMode($catalogMode)) {
+                if ($this->catalogBookableImportService->supportsBookableImport($catalogMode, $catalog->resolvedVertical())) {
                     $response['bookable_plan'] = $this->catalogBookableImportService->buildPlan(
                         $company,
                         $importedItems,
@@ -1003,6 +1014,7 @@ class ListCatalogController extends Controller
                         $catalog->resolvedVertical()
                     );
                     $response['catalog_mode'] = $catalogMode;
+                    $response['catalog_vertical'] = $catalog->resolvedVertical();
                 }
 
                 return response()->json($response);

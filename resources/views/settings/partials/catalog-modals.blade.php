@@ -11,7 +11,7 @@
                     <label>{{ __('What are you showcasing?') }}</label>
                     <select id="emptyCatalogMode" class="form-control" onchange="updateCatalogVerticalOptions()">
                         <option value="commerce">{{ __('Sell products') }}</option>
-                        <option value="listing">{{ __('Show listings (property, vehicles, etc.)') }}</option>
+                        <option value="listing">{{ __('Show listings (property, vehicles, jobs, etc.)') }}</option>
                         <option value="service">{{ __('Offer services') }}</option>
                     </select>
                     <small class="form-text text-muted" id="emptyCatalogModeHelp">{{ __('WhatsApp shop with cart and checkout.') }}</small>
@@ -62,12 +62,12 @@
                         </div>
                         <div class="form-group" id="importCatalogVerticalGroup" style="display:none;">
                             <label>{{ __('Template') }}</label>
-                            <select id="importCatalogVertical" class="form-control" onchange="updateImportTemplateHelp()"></select>
+                            <select id="importCatalogVertical" class="form-control" onchange="updateImportTemplateHelp(); updateImportPrimaryButtonLabel();"></select>
                         </div>
                         <div class="form-group">
                             <label>{{ __('Excel template') }}</label>
                             <p class="text-sm text-muted mb-2" id="importTemplateHelp">
-                                {{ __('Select a catalog type and template above. The download includes the correct headers plus 5 sample items.') }}
+                                {{ __('Select a catalog type and template above. The download includes the correct headers plus 10 sample items.') }}
                             </p>
                             <a href="{{ route('catalogs.import-template', ['catalog_mode' => 'commerce', 'vertical' => 'retail']) }}" id="importTemplateDownload" class="btn btn-sm btn-outline-primary" download="catalog-import-commerce-retail.xlsx">
                                 <i class="ni ni-cloud-download-95 mr-1"></i>{{ __('Download template') }}
@@ -198,6 +198,7 @@
             <div class="modal-body">
                 <input type="hidden" id="reimportCatalogId">
                 <input type="hidden" id="reimportCatalogMode" value="commerce">
+                <input type="hidden" id="reimportCatalogVertical" value="">
 
                 <div id="reimportStepDetails">
                     <p class="text-muted small">{{ __('Items are matched by Item ID. Existing rows are updated; new rows are added.') }}</p>

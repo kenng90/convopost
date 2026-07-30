@@ -214,6 +214,67 @@ class CatalogBookableImportWizardTest extends TestCase
         $this->assertNotNull($sourceIds[0]);
     }
 
+    public function test_jobs_preview_excel_omits_bookable_plan(): void
+    {
+        [$owner, $company] = $this->actingOwner();
+
+        $file = $this->makeJobsSpreadsheet([
+            ['JOB1', 'Sales Rep', 'Retail sales role', '', 'Sales', '', '', 'Acme Ltd', 'Full-time', 'KES 45000', '2 years', 'Diploma', 'Sales, CRM', 'Nairobi', '2026-08-01', 'Medical cover', 'careers@acme.example', 'Open'],
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->withSession(['company_id' => $company->id])
+            ->post(route('catalogs.preview-excel'), [
+                'file' => $file,
+                'catalog_mode' => CatalogMode::LISTING,
+                'vertical' => 'jobs',
+                'include_bookable_plan' => 1,
+            ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+        $response->assertJsonMissingPath('bookable_plan');
+    }
+
+    public function test_jobs_import_does_not_create_bookable_sources(): void
+    {
+        [$owner, $company] = $this->actingOwner();
+
+        $file = $this->makeJobsSpreadsheet([
+            ['JOB1', 'Sales Rep', 'Retail sales role', '', 'Sales', '', '', 'Acme Ltd', 'Full-time', 'KES 45000', '2 years', 'Diploma', 'Sales, CRM', 'Nairobi', '2026-08-01', 'Medical cover', 'careers@acme.example', 'Open'],
+            ['JOB2', 'Driver', 'Delivery driver', '', 'Ops', '', '', 'QuickDrop', 'Contract', 'Commission', 'License', '', 'Driving', 'Nairobi', '2026-08-15', '', '', 'Open'],
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->withSession(['company_id' => $company->id])
+            ->post(route('catalogs.import-excel'), [
+                'file' => $file,
+                'catalogName' => 'Careers Board',
+                'catalog_mode' => CatalogMode::LISTING,
+                'vertical' => 'jobs',
+            ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('booking_stats', null);
+
+        $this->assertSame(
+            0,
+            Source::withoutGlobalScopes()->where('company_id', $company->id)->count()
+        );
+
+        $catalog = ListCatalog::withoutGlobalScope(CompanyScope::class)
+            ->where('company_id', $company->id)
+            ->where('name', 'Careers Board')
+            ->first();
+
+        $this->assertNotNull($catalog);
+        foreach ($catalog->items as $item) {
+            $metadata = is_array($item['metadata'] ?? null) ? $item['metadata'] : [];
+            $this->assertEmpty($metadata['booking_source_id'] ?? null);
+        }
+    }
+
     public function test_reimport_applies_bookable_plan_for_service_catalog(): void
     {
         [$owner, $company] = $this->actingOwner();
@@ -320,6 +381,36 @@ class CatalogBookableImportWizardTest extends TestCase
         ];
 
         return $this->makeSpreadsheet($headers, $rows, 'listings.xlsx');
+    }
+
+    /**
+     * @param  list<list<string>>  $rows
+     */
+    private function makeJobsSpreadsheet(array $rows): UploadedFile
+    {
+        $headers = [
+            'Item ID',
+            'Title',
+            'Description',
+            'Price',
+            'Category',
+            'Image URL',
+            'Image URLs',
+            'Tags',
+            'Company',
+            'Employment type',
+            'Salary',
+            'Experience',
+            'Education',
+            'Skills',
+            'Location',
+            'Application deadline',
+            'Benefits',
+            'Apply to email',
+            'Status',
+        ];
+
+        return $this->makeSpreadsheet($headers, $rows, 'jobs.xlsx');
     }
 
     /**

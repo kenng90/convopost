@@ -140,7 +140,7 @@
                         </div>
                         <div class="row">
                             @include('settings.partials.catalog-item-extra-fields', ['presentation' => $presentation, 'prefix' => 'new'])
-                            @if(!($presentation['supports_inventory'] ?? true) && !empty($bookingServices))
+                            @if(($presentation['supports_booking'] ?? false) && !empty($bookingServices))
                                 <div class="col-md-4 col-lg-3">
                                     <div class="form-group">
                                         <label for="newItemBookingSource">{{ __('Bookable service (Reminders)') }}</label>
@@ -346,7 +346,7 @@
                     <div class="col-12">
                         <div class="row" id="editVerticalFields">
                             @include('settings.partials.catalog-item-extra-fields', ['presentation' => $presentation, 'prefix' => 'edit'])
-                            @if(!empty($bookingServices))
+                            @if(($presentation['supports_booking'] ?? false) && !empty($bookingServices))
                                 <div class="col-md-4 col-lg-3">
                                     <div class="form-group">
                                         <label for="editItemBookingSource">{{ __('Bookable service (Reminders)') }}</label>

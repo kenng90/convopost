@@ -16,6 +16,40 @@ class CatalogBookableImportService
         return in_array($mode, [CatalogMode::LISTING, CatalogMode::SERVICE], true);
     }
 
+    public function supportsBookableImport(?string $mode, ?string $vertical = null): bool
+    {
+        if (! $this->supportsMode($mode)) {
+            return false;
+        }
+
+        if (! is_string($vertical) || $vertical === '') {
+            return true;
+        }
+
+        $config = config('catalog-templates.verticals.'.$vertical, []);
+        if (array_key_exists('supports_booking', $config)) {
+            return (bool) $config['supports_booking'];
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $items
+     * @return list<array<string, mixed>>
+     */
+    public function stripBookingMetadataFromItems(array $items): array
+    {
+        return array_map(function (array $item): array {
+            $metadata = is_array($item['metadata'] ?? null) ? $item['metadata'] : [];
+            unset($metadata['booking_source_id'], $metadata['booking_source_name']);
+            $item['metadata'] = $metadata;
+            unset($item['booking_source_id'], $item['booking_source_name']);
+
+            return $item;
+        }, $items);
+    }
+
     /**
      * @param  list<array<string, mixed>>  $transformedItems
      * @param  list<array<string, mixed>>  $existingItems

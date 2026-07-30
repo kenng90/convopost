@@ -1187,6 +1187,9 @@
             <button type="button" class="checkout-btn item-detail-book-btn" id="itemDetailBookCta" style="background-color: #25D366;">
                 <i class="fas fa-calendar-check mr-2"></i>{{ $presentation['book_cta_label'] ?? ($presentation['cta_label'] ?? 'Book') }}
             </button>
+            <a class="checkout-btn item-detail-email-btn" id="itemDetailEmailApplyCta" style="display: none; text-align: center;">
+                <i class="fas fa-envelope mr-2"></i>{{ $presentation['email_apply_cta_label'] ?? 'Apply via email' }}
+            </a>
         </div>
     </div>
     <div class="overlay" id="itemDetailOverlay" onclick="closeItemDetailDrawer()"></div>
@@ -1772,6 +1775,10 @@
         const requirePreferredDateTime = !!flowNodeSettings.requirePreferredDateTime;
         const catalogBookCtaLabel = @json($presentation['book_cta_label'] ?? ($presentation['cta_label'] ?? 'Book'));
         const catalogInquireCtaLabel = @json($presentation['inquire_cta_label'] ?? 'Inquire on WhatsApp');
+        const catalogApplyCtaLabel = @json($presentation['apply_cta_label'] ?? ($presentation['book_cta_label'] ?? 'Apply'));
+        const catalogEmailApplyCtaLabel = @json($presentation['email_apply_cta_label'] ?? 'Apply via email');
+        const catalogSupportsBooking = @json((bool) ($presentation['supports_booking'] ?? true));
+        const catalogSupportsEmailApply = @json((bool) ($presentation['supports_email_apply'] ?? false));
         let inquiryOpening = false;
 
         function isInquiryFlow() {
@@ -2506,6 +2513,7 @@
             const body = document.getElementById('itemDetailBody');
             const inquireCta = document.getElementById('itemDetailInquireCta');
             const bookCta = document.getElementById('itemDetailBookCta');
+            const emailApplyCta = document.getElementById('itemDetailEmailApplyCta');
             if (!body || !item) {
                 return;
             }
@@ -2529,6 +2537,16 @@
                 ? `<div class="product-tags mb-3">${highlights.map((value) => `<span class="tag-badge">${escapeHtml(value)}</span>`).join('')}</div>`
                 : '';
 
+            const detailFields = Array.isArray(item.detailFields) ? item.detailFields : [];
+            const detailFieldsHtml = detailFields.length
+                ? `<div class="item-detail-fields mb-3">${detailFields.map((field) => `
+                    <div class="mb-2">
+                        <div class="text-muted small">${escapeHtml(field.label || '')}</div>
+                        <div>${escapeHtml(field.value || '')}</div>
+                    </div>
+                `).join('')}</div>`
+                : '';
+
             const priceHtml = item.price && Number(item.price) > 0
                 ? `<div class="product-price mb-3">${escapeHtml(formatPrice(item.price))}</div>`
                 : '';
@@ -2543,14 +2561,20 @@
                 ${priceHtml}
                 ${highlightsHtml}
                 <div class="item-detail-description">${escapeHtml(item.description || 'No description provided.')}</div>
+                ${detailFieldsHtml}
             `;
 
-            const inquireLabel = item.inquireCtaLabel || catalogInquireCtaLabel;
+            const supportsBooking = item.supportsBooking !== undefined ? !!item.supportsBooking : catalogSupportsBooking;
+            const applyLabel = item.applyCtaLabel || catalogApplyCtaLabel;
+            const inquireLabel = supportsBooking
+                ? (item.inquireCtaLabel || catalogInquireCtaLabel)
+                : applyLabel;
             const bookLabel = item.bookDisabled
                 ? (item.statusLabel || item.status || 'Unavailable')
                 : (item.bookCtaLabel || catalogBookCtaLabel);
 
             if (inquireCta) {
+                inquireCta.style.display = '';
                 inquireCta.disabled = !!item.inquireDisabled;
                 inquireCta.innerHTML = `<i class="fab fa-whatsapp mr-2"></i>${escapeHtml(inquireLabel)}`;
                 inquireCta.onclick = () => {
@@ -2562,18 +2586,35 @@
             }
 
             if (bookCta) {
-                bookCta.disabled = !!item.bookDisabled;
-                bookCta.classList.toggle('cta-soft-disabled', !!item.bookDisabled && String(item.status || '') === 'Under Offer');
-                bookCta.innerHTML = item.bookDisabled
-                    ? `<i class="fas fa-ban mr-2"></i>${escapeHtml(bookLabel)}`
-                    : `<i class="fas fa-calendar-check mr-2"></i>${escapeHtml(bookLabel)}`;
-                bookCta.onclick = () => {
-                    if (item.bookDisabled) {
-                        return;
-                    }
-                    closeItemDetailDrawer();
-                    openBookingPanel(item.id, item.title || 'Listing', bookCta, { intent: 'book' });
-                };
+                if (supportsBooking) {
+                    bookCta.style.display = '';
+                    bookCta.disabled = !!item.bookDisabled;
+                    bookCta.classList.toggle('cta-soft-disabled', !!item.bookDisabled && String(item.status || '') === 'Under Offer');
+                    bookCta.innerHTML = item.bookDisabled
+                        ? `<i class="fas fa-ban mr-2"></i>${escapeHtml(bookLabel)}`
+                        : `<i class="fas fa-calendar-check mr-2"></i>${escapeHtml(bookLabel)}`;
+                    bookCta.onclick = () => {
+                        if (item.bookDisabled) {
+                            return;
+                        }
+                        closeItemDetailDrawer();
+                        openBookingPanel(item.id, item.title || 'Listing', bookCta, { intent: 'book' });
+                    };
+                } else {
+                    bookCta.style.display = 'none';
+                    bookCta.onclick = null;
+                }
+            }
+
+            if (emailApplyCta) {
+                const mailtoUrl = item.mailtoApplyUrl || null;
+                const showEmailApply = catalogSupportsEmailApply
+                    && !!mailtoUrl
+                    && !item.inquireDisabled;
+
+                emailApplyCta.style.display = showEmailApply ? '' : 'none';
+                emailApplyCta.href = showEmailApply ? mailtoUrl : '#';
+                emailApplyCta.innerHTML = `<i class="fas fa-envelope mr-2"></i>${escapeHtml(item.emailApplyCtaLabel || catalogEmailApplyCtaLabel)}`;
             }
 
             document.getElementById('itemDetailDrawer').classList.add('open');

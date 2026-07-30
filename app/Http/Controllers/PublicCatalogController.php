@@ -366,7 +366,7 @@ class PublicCatalogController extends Controller
             $this->catalogAnalyticsService->record(
                 $catalog->company_id,
                 $catalog->id,
-                'listing_inquiry',
+                $catalog->resolvedVertical() === 'jobs' ? 'job_application' : 'listing_inquiry',
                 ['item_id' => $validated['item_id']]
             );
 

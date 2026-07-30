@@ -19,6 +19,11 @@ class CatalogListingInquiryService
     public function buildMessage(ListCatalog $catalog, array $item, ?string $customerName = null, ?string $notes = null): string
     {
         $presentation = $this->catalogTemplateRegistry->presentationForCatalog($catalog);
+
+        if (($presentation['vertical'] ?? '') === 'jobs') {
+            return $this->buildJobApplicationMessage($catalog, $item, $customerName, $notes);
+        }
+
         $lines = [];
 
         $lines[] = '🔔 *Inquiry from '.$catalog->name.'*';
@@ -58,6 +63,80 @@ class CatalogListingInquiryService
         $lines[] = 'Sent via '.$catalog->name;
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     */
+    private function buildJobApplicationMessage(ListCatalog $catalog, array $item, ?string $customerName = null, ?string $notes = null): string
+    {
+        $presentation = $this->catalogTemplateRegistry->presentationForCatalog($catalog);
+        $lines = [];
+
+        $lines[] = '📋 *Job application — '.$catalog->name.'*';
+        $lines[] = '';
+        $lines[] = '💼 *'.$this->lineValue($item['title'] ?? 'Role').'*';
+
+        if (! empty($item['id'])) {
+            $lines[] = 'Ref: '.$item['id'];
+        }
+
+        foreach (['company', 'employment_type', 'location', 'salary', 'experience', 'education', 'deadline'] as $fieldKey) {
+            $value = $this->fieldValue($item, $fieldKey);
+            if ($value !== null && $value !== '') {
+                $label = $this->fieldLabel($presentation, $fieldKey);
+                $lines[] = '• '.$label.': '.$value;
+            }
+        }
+
+        $skills = $this->fieldValue($item, 'skills');
+        if ($skills !== null && $skills !== '') {
+            $lines[] = '';
+            $lines[] = '🛠 *Skills*';
+            $lines[] = $skills;
+        }
+
+        $lines[] = '';
+        $lines[] = 'Hi, I would like to apply for this role.';
+
+        if ($customerName) {
+            $lines[] = '';
+            $lines[] = '👤 '.$customerName;
+        }
+
+        if ($notes) {
+            $lines[] = '';
+            $lines[] = '📝 '.$notes;
+        }
+
+        $lines[] = '';
+        $lines[] = 'Sent via '.$catalog->name;
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     */
+    public function buildMailtoApplyUrl(array $item): ?string
+    {
+        $email = $this->fieldValue($item, 'apply_email');
+        if ($email === null || $email === '') {
+            return null;
+        }
+
+        $jobTitle = trim((string) ($item['title'] ?? 'Role'));
+        $ref = trim((string) ($item['id'] ?? ''));
+        $subject = 'Application: '.$jobTitle;
+        $body = "Hi,\n\nI would like to apply for the {$jobTitle} position";
+        if ($ref !== '') {
+            $body .= " (Ref: {$ref})";
+        }
+        $body .= ".\n\nPlease find my CV attached.\n\nBest regards,\n";
+
+        return 'mailto:'.rawurlencode($email)
+            .'?subject='.rawurlencode($subject)
+            .'&body='.rawurlencode($body);
     }
 
     /**

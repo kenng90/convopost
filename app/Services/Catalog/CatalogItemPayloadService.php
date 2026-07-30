@@ -95,7 +95,8 @@ class CatalogItemPayloadService
             $payload['quantityAvailable'] = null;
 
             if ($statusField !== 'stockStatus') {
-                $statusValue = $input[$statusField] ?? $metadata[$statusField] ?? $existing[$statusField] ?? 'Available';
+                $defaultStatus = (string) (($presentation['status_options'][0] ?? null) ?: 'Available');
+                $statusValue = $input[$statusField] ?? $metadata[$statusField] ?? $existing[$statusField] ?? $defaultStatus;
                 $metadata[$statusField] = (string) $statusValue;
             }
         }
@@ -146,7 +147,7 @@ class CatalogItemPayloadService
 
                 $type = (string) ($field['type'] ?? 'text');
                 if ($type === 'number') {
-                    $rules[$key] = 'nullable|numeric|min:0';
+                    $rules[$key] = $this->numberFieldRule($key);
                 } elseif ($type === 'select') {
                     $options = $field['options'] ?? [];
                     if ($options !== []) {
@@ -154,6 +155,10 @@ class CatalogItemPayloadService
                     } else {
                         $rules[$key] = 'nullable|string|max:255';
                     }
+                } elseif ($type === 'textarea') {
+                    $rules[$key] = 'nullable|string|max:2000';
+                } elseif ($type === 'email') {
+                    $rules[$key] = 'nullable|email|max:255';
                 } else {
                     $rules[$key] = 'nullable|string|max:255';
                 }
@@ -161,5 +166,14 @@ class CatalogItemPayloadService
         }
 
         return $rules;
+    }
+
+    private function numberFieldRule(string $key): string
+    {
+        return match ($key) {
+            'latitude' => 'nullable|numeric|min:-90|max:90',
+            'longitude' => 'nullable|numeric|min:-180|max:180',
+            default => 'nullable|numeric|min:0',
+        };
     }
 }

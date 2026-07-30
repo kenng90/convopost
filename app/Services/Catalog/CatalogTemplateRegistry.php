@@ -146,14 +146,28 @@ class CatalogTemplateRegistry
             'item_noun_plural' => $modeConfig['item_noun_plural'] ?? 'items',
             'public_title_suffix' => $modeConfig['public_title_suffix'] ?? 'Catalog',
             'search_placeholder' => $modeConfig['search_placeholder'] ?? 'Search...',
-            'inquire_cta_label' => $modeConfig['inquire_cta_label'] ?? 'Inquire on WhatsApp',
+            'inquire_cta_label' => $verticalConfig['inquire_cta_label']
+                ?? $modeConfig['inquire_cta_label']
+                ?? 'Inquire on WhatsApp',
             'book_cta_label' => $verticalConfig['book_cta_label']
                 ?? $modeConfig['cta_label']
                 ?? 'Book',
+            'apply_cta_label' => $verticalConfig['apply_cta_label']
+                ?? $verticalConfig['book_cta_label']
+                ?? $modeConfig['cta_label']
+                ?? 'Apply',
+            'email_apply_cta_label' => $verticalConfig['email_apply_cta_label'] ?? 'Apply via email',
+            'supports_booking' => array_key_exists('supports_booking', $verticalConfig)
+                ? (bool) $verticalConfig['supports_booking']
+                : (bool) ($modeConfig['supports_booking'] ?? false),
+            'supports_email_apply' => (bool) ($verticalConfig['supports_email_apply'] ?? false),
             // Primary card CTA for listing/service is Book; commerce keeps Add to Cart.
             'cta_label' => ($modeConfig['supports_cart'] ?? false)
                 ? ($modeConfig['cta_label'] ?? 'Add to Cart')
-                : ($verticalConfig['book_cta_label'] ?? $modeConfig['cta_label'] ?? 'Book'),
+                : ($verticalConfig['apply_cta_label']
+                    ?? $verticalConfig['book_cta_label']
+                    ?? $modeConfig['cta_label']
+                    ?? 'Book'),
             'status_field' => $verticalConfig['status_field'] ?? 'stockStatus',
             'status_options' => $verticalConfig['status_options'] ?? [],
             'card_highlights' => $verticalConfig['card_highlights'] ?? [],
@@ -267,6 +281,15 @@ class CatalogTemplateRegistry
             'availability' => ['availability', 'available'],
             'booking_source_name' => ['bookableservice', 'bookingservice', 'remindersservice', 'bookingsourcename', 'bookingsource'],
             'booking_source_id' => ['bookableserviceid', 'bookingsourceid', 'reminderssourceid', 'serviceid'],
+            'company' => ['company', 'employer', 'organization', 'organisation'],
+            'employment_type' => ['employmenttype', 'employment', 'jobtype', 'worktype'],
+            'salary' => ['salary', 'pay', 'compensation', 'wage', 'remuneration'],
+            'experience' => ['experience', 'exp', 'years'],
+            'education' => ['education', 'qualification', 'qualifications'],
+            'skills' => ['skills', 'skill', 'requirements'],
+            'deadline' => ['deadline', 'applicationdeadline', 'closingdate', 'applyby'],
+            'benefits' => ['benefits', 'perks'],
+            'apply_email' => ['applyemail', 'applytoemail', 'applicationemail', 'hr_email', 'hremail'],
         ];
 
         if ($vertical === null || ! $this->verticalExists($vertical)) {
