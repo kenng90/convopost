@@ -14,8 +14,10 @@ class WhatsappFlow extends MyModel
 
     protected $casts = [
         'flow_json' => 'array',
+        'meta_flow_json' => 'array',
         'meta_error' => 'array',
         'published_at' => 'datetime',
+        'meta_synced_at' => 'datetime',
     ];
 
     /**
@@ -56,7 +58,9 @@ class WhatsappFlow extends MyModel
             'whatsapp_flows.name',
             'whatsapp_flows.description',
             'whatsapp_flows.status',
+            'whatsapp_flows.flow_source',
             'whatsapp_flows.meta_flow_id',
+            'whatsapp_flows.meta_synced_at',
             'whatsapp_flows.updated_at',
             'whatsapp_flows.created_at',
         ])->selectRaw(

@@ -21,18 +21,23 @@ class WhatsappFlowAbandonmentService
      */
     public function processAbandonedResponses(): array
     {
-        $cutoff = now()->subHours($this->timeoutHours);
         $marked = 0;
         $resumed = 0;
 
         WhatsappFlowResponse::query()
             ->where('status', 'pending')
             ->whereNotNull('sent_at')
-            ->where('sent_at', '<', $cutoff)
             ->orderBy('id')
             ->chunkById(100, function ($responses) use (&$marked, &$resumed) {
                 foreach ($responses as $flowResponse) {
-                    $flowResponse->markAbandoned('Timed out after '.$this->timeoutHours.' hours without completion');
+                    $timeoutHours = $flowResponse->abandonment_hours ?? $this->timeoutHours;
+                    $cutoff = now()->subHours($timeoutHours);
+
+                    if ($flowResponse->sent_at && $flowResponse->sent_at->greaterThan($cutoff)) {
+                        continue;
+                    }
+
+                    $flowResponse->markAbandoned('Timed out after '.$timeoutHours.' hours without completion');
                     $marked++;
 
                     if ($flowResponse->flow_id) {

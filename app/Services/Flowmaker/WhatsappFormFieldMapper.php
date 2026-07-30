@@ -17,6 +17,11 @@ class WhatsappFormFieldMapper
         'city' => ['city', 'town', 'location'],
         'amount' => ['amount', 'budget', 'price', 'deposit', 'total', 'payment'],
         'company' => ['company', 'business', 'organisation', 'organization'],
+        'service' => ['service', 'department', 'specialty', 'specialist', 'provider', 'doctor', 'treatment'],
+        'date' => ['date', 'preferred_date', 'appointment_date', 'visit_date', 'booking_date'],
+        'slot' => ['slot', 'time', 'time_slot', 'slot_id', 'preferred_time', 'appointment_time'],
+        'occurrence' => ['occurrence', 'occurrence_id', 'event', 'session', 'class'],
+        'party_size' => ['party_size', 'guests', 'attendees', 'seats', 'people', 'quantity'],
     ];
 
     public function __construct(
@@ -129,6 +134,51 @@ class WhatsappFormFieldMapper
             if (in_array($field['type'] ?? '', ['text', 'textarea'], true)) {
                 $normalized = $this->normalize($field['label']);
                 if (str_contains($normalized, 'amount') || str_contains($normalized, 'budget') || str_contains($normalized, 'price')) {
+                    return $field['key'];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{serviceField: ?string, dateField: ?string, slotField: ?string}
+     */
+    public function suggestBookingFieldMap(WhatsappFlow $form): array
+    {
+        $fields = $this->submissionService->getFieldOptionsForForm($form);
+
+        return [
+            'serviceField' => $this->findFieldKeyByAliases($fields, self::ALIASES['service']),
+            'dateField' => $this->findFieldKeyByAliases($fields, self::ALIASES['date']),
+            'slotField' => $this->findFieldKeyByAliases($fields, self::ALIASES['slot']),
+        ];
+    }
+
+    /**
+     * @return array{occurrenceField: ?string, partySizeField: ?string}
+     */
+    public function suggestEventFieldMap(WhatsappFlow $form): array
+    {
+        $fields = $this->submissionService->getFieldOptionsForForm($form);
+
+        return [
+            'occurrenceField' => $this->findFieldKeyByAliases($fields, self::ALIASES['occurrence']),
+            'partySizeField' => $this->findFieldKeyByAliases($fields, self::ALIASES['party_size']),
+        ];
+    }
+
+    /**
+     * @param  list<array{key: string, label: string, type: string}>  $fields
+     * @param  list<string>  $aliases
+     */
+    private function findFieldKeyByAliases(array $fields, array $aliases): ?string
+    {
+        foreach ($fields as $field) {
+            $normalized = $this->normalize($field['key'].' '.$field['label']);
+            foreach ($aliases as $alias) {
+                if (str_contains($normalized, $alias)) {
                     return $field['key'];
                 }
             }

@@ -64,6 +64,8 @@ class WhatsappFormAutomationFactory
         $fieldMappings = $mapper->suggestCrmMappings($form, $companyId);
         $leadConditions = $recipe === 'lead' ? $mapper->suggestLeadConditions($form) : [];
         $amountFieldKey = $recipe === 'checkout' ? $mapper->suggestAmountFieldKey($form) : null;
+        $bookingFieldMap = ($recipe === 'book' || $recipe === 'book_live') ? $mapper->suggestBookingFieldMap($form) : [];
+        $eventFieldMap = $recipe === 'event' ? $mapper->suggestEventFieldMap($form) : [];
 
         $nodes = [
             [
@@ -175,11 +177,11 @@ class WhatsappFormAutomationFactory
                             'body' => 'Choose a date and time.',
                             'buttonText' => 'Choose slot',
                             'success_message' => 'Thanks! Your appointment is confirmed.',
-                            'formFieldMap' => [
-                                'serviceField' => $recipe === 'book_live' ? 'service' : 'select_3',
-                                'dateField' => $recipe === 'book_live' ? 'preferred_date' : 'date_4',
-                                'slotField' => 'slot',
-                            ],
+                            'formFieldMap' => array_filter([
+                                'serviceField' => $bookingFieldMap['serviceField'] ?? null,
+                                'dateField' => $bookingFieldMap['dateField'] ?? null,
+                                'slotField' => $bookingFieldMap['slotField'] ?? null,
+                            ]),
                             'serviceOptionMap' => [],
                             'onComplete' => [
                                 'groupId' => 'none',
@@ -216,10 +218,10 @@ class WhatsappFormAutomationFactory
                             'intake_mode' => 'form',
                             'party_size' => '1',
                             'success_message' => 'You are registered for {{booking_event_title}} on {{booking_event_date}} at {{booking_event_time}}.',
-                            'formFieldMap' => [
-                                'occurrenceField' => 'occurrence_id',
-                                'partySizeField' => 'party_size',
-                            ],
+                            'formFieldMap' => array_filter([
+                                'occurrenceField' => $eventFieldMap['occurrenceField'] ?? null,
+                                'partySizeField' => $eventFieldMap['partySizeField'] ?? null,
+                            ]),
                             'onComplete' => [
                                 'groupId' => 'none',
                                 'journeyId' => 'none',

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Company;
 use App\Models\WhatsappFlow;
 use App\Models\WhatsappFlowResponse;
+use App\Support\WhatsappGraphApi;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
@@ -23,7 +24,10 @@ class WhatsappFlowSendService
         ?int $automationFlowId = null,
         ?string $flowNodeId = null,
         ?string $header = null,
-        ?string $footer = null
+        ?string $footer = null,
+        ?string $cta = null,
+        ?int $abandonmentHours = null,
+        ?string $variablePrefix = null
     ): array {
         if (empty($whatsappFlow->meta_flow_id)) {
             return [
@@ -44,8 +48,9 @@ class WhatsappFlowSendService
             return ['success' => false, 'message' => 'WhatsApp API credentials are not configured.'];
         }
 
-        $headerText = $header ?? 'Complete the form';
-        $footerText = $footer ?? 'Your responses help us serve you better';
+        $headerText = $header ?? $whatsappFlow->default_header ?? config('whatsapp-flows.default_header', 'Complete the form');
+        $footerText = $footer ?? $whatsappFlow->default_footer ?? config('whatsapp-flows.default_footer', 'Your responses help us serve you better');
+        $ctaText = $cta ?? $whatsappFlow->default_cta ?? config('whatsapp-flows.default_flow_cta', 'Open Form');
 
         if ($automationFlowId) {
             $headerText = $contact->changeVariables($headerText, $automationFlowId);
@@ -63,6 +68,8 @@ class WhatsappFlowSendService
                 'contact_name' => $contact->name,
                 'status' => 'pending',
                 'sent_at' => now(),
+                'abandonment_hours' => $abandonmentHours,
+                'variable_prefix' => $variablePrefix,
             ]);
 
             $flowToken = 'flow_'.$flowResponse->id.'_'.time();
@@ -86,10 +93,10 @@ class WhatsappFlowSendService
             }
 
             $parameters = [
-                'flow_message_version' => '3',
+                'flow_message_version' => config('whatsapp-flows.default_flow_message_version', '3'),
                 'flow_token' => $flowToken,
                 'flow_id' => $whatsappFlow->meta_flow_id,
-                'flow_cta' => 'Open Form',
+                'flow_cta' => $ctaText,
                 'flow_action' => $flowAction,
             ];
 
@@ -122,7 +129,7 @@ class WhatsappFlowSendService
                 'meta_flow_id' => $whatsappFlow->meta_flow_id,
             ]);
 
-            $url = 'https://graph.facebook.com/v19.0/'.$phoneId.'/messages';
+            $url = WhatsappGraphApi::url($phoneId.'/messages');
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer '.$accessToken,
                 'Content-Type' => 'application/json',
@@ -131,11 +138,25 @@ class WhatsappFlowSendService
             $responseBody = $response->json();
 
             if (! $response->successful()) {
+                $errorMessage = $responseBody['error']['message'] ?? 'Failed to send form via WhatsApp API.';
                 Log::error('WhatsApp Form send failed', ['error' => $responseBody]);
+
+                $flowResponse->update([
+                    'status' => 'failed',
+                    'send_error' => $errorMessage,
+                ]);
+
+                if ($automationFlowId) {
+                    $contact->setContactState($automationFlowId, 'whatsapp_flow_send_error', $errorMessage);
+                    if ($variablePrefix) {
+                        $contact->setContactState($automationFlowId, $variablePrefix.'_send_error', $errorMessage);
+                    }
+                }
 
                 return [
                     'success' => false,
-                    'message' => $responseBody['error']['message'] ?? 'Failed to send form via WhatsApp API.',
+                    'message' => $errorMessage,
+                    'flow_response_id' => $flowResponse->id,
                 ];
             }
 
@@ -240,6 +261,6 @@ class WhatsappFlowSendService
         $firstScreen = $json['screens'][0] ?? null;
         $rawId = is_array($firstScreen) ? ($firstScreen['id'] ?? '') : '';
 
-        return filled($rawId) ? (string) $rawId : 'WELCOME';
+        return filled($rawId) ? (string) $rawId : config('whatsapp-flows.default_first_screen_id', 'WELCOME');
     }
 }

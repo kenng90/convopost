@@ -8,6 +8,7 @@ use App\Services\WhatsappFlowSendService;
 use App\Services\WhatsappFlowSubmissionService;
 use App\Services\WhatsappFormTemplateService;
 use App\Services\WhatsappMetaFlowService;
+use App\Services\WhatsappMetaFlowSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -75,10 +76,15 @@ class FlowsController extends Controller
                         'name' => $flow->name,
                         'status' => $flow->status,
                         'meta_flow_id' => $flow->meta_flow_id,
+                        'flow_source' => $flow->flow_source ?? 'local',
                         'live' => filled($flow->meta_flow_id),
                         'lifecycle' => $flow->getLifecycleLabel(),
                         'screen_count' => count($flow->flow_json['screens'] ?? []),
                         'fields' => $submissionService->getFieldOptionsForForm($flow),
+                        'default_cta' => $flow->default_cta,
+                        'default_header' => $flow->default_header,
+                        'default_footer' => $flow->default_footer,
+                        'meta_synced_at' => optional($flow->meta_synced_at)->toIso8601String(),
                     ];
                 });
 
@@ -790,5 +796,122 @@ class FlowsController extends Controller
         return redirect()
             ->route('flowmaker.edit', $flow)
             ->with('success', __('Automation draft created. Review nodes, bind team/payment settings, then publish.'));
+    }
+
+    /**
+     * List flows available on Meta for import/linking.
+     */
+    public function listMetaFlows(): \Illuminate\Http\JsonResponse
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $company = \App\Models\Company::find($this->activeCompanyId());
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'Company not found.'], 404);
+        }
+
+        $result = app(WhatsappMetaFlowSyncService::class)->listMetaFlows($company);
+
+        return response()->json($result, ($result['success'] ?? false) ? 200 : 422);
+    }
+
+    /**
+     * Import or refresh a flow from Meta by meta_flow_id.
+     */
+    public function importFromMeta(Request $request): \Illuminate\Http\JsonResponse
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'meta_flow_id' => 'required|string|max:64',
+            'name' => 'nullable|string|max:255',
+        ]);
+
+        $company = \App\Models\Company::find($this->activeCompanyId());
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'Company not found.'], 404);
+        }
+
+        $result = app(WhatsappMetaFlowSyncService::class)->importOrRefreshFromMeta(
+            $company,
+            $validated['meta_flow_id'],
+            $validated['name'] ?? null,
+        );
+
+        if (! ($result['success'] ?? false)) {
+            return response()->json($result, 422);
+        }
+
+        /** @var WhatsappFlow $flow */
+        $flow = $result['flow'];
+
+        return response()->json([
+            'success' => true,
+            'flow' => [
+                'id' => $flow->id,
+                'name' => $flow->name,
+                'meta_flow_id' => $flow->meta_flow_id,
+                'flow_source' => $flow->flow_source ?? 'meta_linked',
+                'fields' => $result['fields'] ?? app(WhatsappFlowSubmissionService::class)->getFieldOptionsForForm($flow),
+            ],
+            'message' => $result['message'] ?? 'Imported from Meta.',
+        ]);
+    }
+
+    /**
+     * Refresh local schema from Meta for an existing flow.
+     */
+    public function refreshSchema(int $id): \Illuminate\Http\JsonResponse
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $companyId = $this->activeCompanyId();
+        $flow = WhatsappFlow::where('id', $id)->where('company_id', $companyId)->firstOrFail();
+        $result = app(WhatsappMetaFlowSyncService::class)->refreshSchema($flow);
+
+        return response()->json($result, ($result['success'] ?? false) ? 200 : 422);
+    }
+
+    /**
+     * Link a Meta flow ID for direct use in automations.
+     */
+    public function linkMetaFlow(Request $request): \Illuminate\Http\JsonResponse
+    {
+        if (! auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'meta_flow_id' => 'required|string|max:64',
+        ]);
+
+        $company = \App\Models\Company::find($this->activeCompanyId());
+        if (! $company) {
+            return response()->json(['success' => false, 'message' => 'Company not found.'], 404);
+        }
+
+        $result = app(WhatsappMetaFlowSyncService::class)->linkMetaFlow($company, $validated['meta_flow_id']);
+        if (! ($result['success'] ?? false)) {
+            return response()->json($result, 422);
+        }
+
+        /** @var WhatsappFlow $flow */
+        $flow = $result['flow'];
+
+        return response()->json([
+            'success' => true,
+            'flow' => [
+                'id' => $flow->id,
+                'name' => $flow->name,
+                'meta_flow_id' => $flow->meta_flow_id,
+                'fields' => $result['fields'] ?? [],
+            ],
+        ]);
     }
 }

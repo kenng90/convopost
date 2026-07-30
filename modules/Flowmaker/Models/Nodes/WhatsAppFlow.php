@@ -6,6 +6,8 @@ use App\Models\WhatsappFlow as WhatsappFlowModel;
 use App\Models\WhatsappFlowResponse;
 use App\Services\WhatsappFlowSendService;
 use App\Services\WhatsappFlowSubmissionService;
+use App\Services\WhatsappFlowVariableMapper;
+use App\Services\WhatsappMetaFlowSyncService;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppFlow extends Node
@@ -181,20 +183,20 @@ class WhatsAppFlow extends Node
 
         // Get settings
         $settings = $this->getDataAsArray()['settings'] ?? [];
-        $flowId = $settings['whatsappFlowId'] ?? null;
+        $variablePrefix = app(WhatsappFlowVariableMapper::class)->resolvePrefix($settings, (string) $this->id);
+        $customMappings = is_array($settings['variableMappings'] ?? null) ? $settings['variableMappings'] : [];
+        $keepLegacyVariables = array_key_exists('keepLegacyVariables', $settings)
+            ? (bool) $settings['keepLegacyVariables']
+            : null;
 
-        if (! $flowId) {
-            Log::error('WhatsApp Flow: no WhatsApp Flow configured');
-
-            return;
-        }
-
-        $whatsappFlow = WhatsappFlowModel::find($flowId);
+        $whatsappFlow = $this->resolveWhatsappFlow($settings);
         if (! $whatsappFlow) {
-            Log::error('WhatsApp Flow: flow not found', ['flowId' => $flowId]);
+            Log::error('WhatsApp Flow: flow not found', ['settings' => $settings]);
 
             return;
         }
+
+        $flowId = $whatsappFlow->id;
 
         // ── Locate the response record ────────────────────────────────────────────
         // Priority 1: contact state (most reliable — set when the flow was sent)
@@ -253,11 +255,22 @@ class WhatsAppFlow extends Node
                 $flowResponse,
                 $responseData,
                 $contact,
-                $this->flow_id
+                $this->flow_id,
+                $variablePrefix,
+                $customMappings,
+                $keepLegacyVariables,
             );
             $responseData = $flowResponse->fresh()->responses ?? $responseData;
         } else {
-            $submissionService->syncResponseToContactState($contact, $this->flow_id, $flowResponse->responses ?? [], $whatsappFlow);
+            $submissionService->syncResponseToContactState(
+                $contact,
+                $this->flow_id,
+                $flowResponse->responses ?? [],
+                $whatsappFlow,
+                $variablePrefix,
+                $customMappings,
+                $keepLegacyVariables,
+            );
         }
 
         $this->applyCrmMappings($contact, $responseData, $settings);
@@ -379,40 +392,110 @@ class WhatsAppFlow extends Node
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = \Modules\Flowmaker\Models\Contact::find($contactId);
         $settings = $this->getDataAsArray()['settings'] ?? [];
+        $variablePrefix = app(WhatsappFlowVariableMapper::class)->resolvePrefix($settings, (string) $this->id);
 
-        $flowId = $settings['whatsappFlowId'] ?? null;
-
-        if (! $flowId) {
+        $whatsappFlow = $this->resolveWhatsappFlow($settings);
+        if (! $whatsappFlow) {
             Log::error('WhatsApp Flow: no WhatsApp Flow configured in node settings');
 
-            return ['success' => false];
-        }
-
-        $whatsappFlow = WhatsappFlowModel::find($flowId);
-        if (! $whatsappFlow) {
-            Log::error('WhatsApp Flow: flow not found', ['flowId' => $flowId]);
-
-            return ['success' => false];
+            return $this->routeSendFailure($message, $data, 'No WhatsApp Form configured.');
         }
 
         $contact->setContactState($this->flow_id, 'whatsapp_flow_name', $whatsappFlow->name);
+
+        $sendOptions = is_array($settings['sendOptions'] ?? null) ? $settings['sendOptions'] : [];
+        $abandonmentHours = isset($settings['abandonmentHours']) && $settings['abandonmentHours'] !== ''
+            ? (int) $settings['abandonmentHours']
+            : null;
 
         $result = app(WhatsappFlowSendService::class)->sendToContact(
             $whatsappFlow,
             $contact,
             $this->flow_id,
             $this->id,
-            $settings['header'] ?? 'Complete the form',
-            $settings['footer'] ?? 'Your responses help us serve you better'
+            $settings['header'] ?? $sendOptions['header'] ?? null,
+            $settings['footer'] ?? $sendOptions['footer'] ?? null,
+            $settings['cta'] ?? $sendOptions['cta'] ?? null,
+            $abandonmentHours,
+            $variablePrefix,
         );
 
         if (! ($result['success'] ?? false)) {
             Log::error('WhatsApp Flow: failed to send flow', ['message' => $result['message'] ?? 'Unknown error']);
 
-            return ['success' => false];
+            return $this->routeSendFailure($message, $data, (string) ($result['message'] ?? 'Send failed'));
         }
 
         return ['success' => true];
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    protected function resolveWhatsappFlow(array $settings): ?WhatsappFlowModel
+    {
+        $flowSource = (string) ($settings['flowSource'] ?? 'local');
+
+        if ($flowSource === 'meta') {
+            $metaFlowId = trim((string) ($settings['metaFlowId'] ?? ''));
+            if ($metaFlowId === '') {
+                return null;
+            }
+
+            $existing = WhatsappFlowModel::query()
+                ->where('meta_flow_id', $metaFlowId)
+                ->when($this->flow_id, fn ($q) => $q->where('company_id', \Modules\Flowmaker\Models\Flow::find($this->flow_id)?->company_id))
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
+            $companyId = \Modules\Flowmaker\Models\Flow::find($this->flow_id)?->company_id;
+            $company = $companyId ? \App\Models\Company::find($companyId) : null;
+            if (! $company) {
+                return null;
+            }
+
+            $linked = app(WhatsappMetaFlowSyncService::class)->linkMetaFlow($company, $metaFlowId);
+            if ($linked['success'] ?? false) {
+                return $linked['flow'] ?? null;
+            }
+
+            return null;
+        }
+
+        $flowId = $settings['whatsappFlowId'] ?? null;
+        if (! $flowId) {
+            return null;
+        }
+
+        return WhatsappFlowModel::find($flowId);
+    }
+
+    /**
+     * @return array{success: bool}
+     */
+    protected function routeSendFailure($message, $data, string $errorMessage): array
+    {
+        $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
+        $contact = \Modules\Flowmaker\Models\Contact::find($contactId);
+        if ($contact) {
+            $settings = $this->getDataAsArray()['settings'] ?? [];
+            $prefix = app(WhatsappFlowVariableMapper::class)->resolvePrefix($settings, (string) $this->id);
+            $contact->setContactState($this->flow_id, 'whatsapp_flow_send_error', $errorMessage);
+            $contact->setContactState($this->flow_id, $prefix.'_send_error', $errorMessage);
+            $contact->clearContactState($this->flow_id, 'current_node');
+        }
+
+        $nextNode = $this->getNextNodeId('onSendFailed');
+        if ($nextNode) {
+            $nextNode->process($message, $data);
+
+            return ['success' => false, 'routed' => true];
+        }
+
+        return ['success' => false];
     }
 
     /**

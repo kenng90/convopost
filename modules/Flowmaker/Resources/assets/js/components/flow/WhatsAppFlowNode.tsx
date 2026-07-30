@@ -11,6 +11,16 @@ import {
 } from "@/components/ui/context-menu";
 import { useFlowActions } from "@/hooks/useFlowActions";
 
+interface VariableMapping {
+  id: string;
+  fieldKey: string;
+  workflowVar: string;
+}
+
+interface SendOptions {
+  cta: string;
+}
+
 interface WhatsAppFlowNodeProps {
   data: NodeData;
   id: string;
@@ -56,10 +66,23 @@ interface WhatsAppFlowOption {
   name: string;
   status: string;
   meta_flow_id?: string;
+  flow_source?: string;
   live?: boolean;
   lifecycle?: string;
   screen_count?: number;
   fields?: FormFieldOption[];
+  default_cta?: string;
+  default_header?: string;
+  default_footer?: string;
+  meta_synced_at?: string;
+}
+
+interface MetaFlowOption {
+  meta_flow_id: string;
+  name: string;
+  status: string;
+  local_flow_id?: number | null;
+  linked?: boolean;
 }
 
 interface CustomFieldOption {
@@ -81,7 +104,26 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
   const { deleteNode } = useFlowActions();
 
   const [selectedFlowId, setSelectedFlowId] = useState<string>(String(data.settings?.whatsappFlowId || ""));
+  const [flowSource, setFlowSource] = useState<string>(data.settings?.flowSource || 'local');
+  const [metaFlowId, setMetaFlowId] = useState<string>(String(data.settings?.metaFlowId || ""));
+  const [variablePrefix, setVariablePrefix] = useState<string>(data.settings?.variablePrefix || '');
+  const [keepLegacyVariables, setKeepLegacyVariables] = useState<boolean>(
+    data.settings?.keepLegacyVariables !== false
+  );
+  const [variableMappings, setVariableMappings] = useState<VariableMapping[]>(
+    (data.settings?.variableMappings || []).map((m: any) => ({
+      id: m.id || Math.random().toString(36).slice(2, 9),
+      fieldKey: String(m.fieldKey || ''),
+      workflowVar: String(m.workflowVar || ''),
+    }))
+  );
+  const [abandonmentHours, setAbandonmentHours] = useState<string>(
+    data.settings?.abandonmentHours != null ? String(data.settings.abandonmentHours) : ''
+  );
+  const [cta, setCta] = useState<string>(data.settings?.cta || data.settings?.sendOptions?.cta || '');
   const [flows, setFlows] = useState<WhatsAppFlowOption[]>([]);
+  const [metaFlows, setMetaFlows] = useState<MetaFlowOption[]>([]);
+  const [syncMessage, setSyncMessage] = useState<string>('');
   const [header, setHeader] = useState<string>(data.settings?.header || 'Complete the form');
   const [footer, setFooter] = useState<string>(data.settings?.footer || 'Your responses help us serve you better');
   const [conditions, setConditions] = useState<Condition[]>(data.settings?.conditions || []);
@@ -140,10 +182,46 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
     loadFlows();
   }, []);
 
+  const loadMetaFlows = async () => {
+    try {
+      const response = await fetch('/api/whatsapp-flows/meta', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'include',
+      });
+      const result = await response.json();
+      if (result.success && Array.isArray(result.flows)) {
+        setMetaFlows(result.flows);
+      }
+    } catch (error) {
+      console.error('WhatsAppFormNode: Error loading Meta forms:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (flowSource === 'meta') {
+      loadMetaFlows();
+    }
+  }, [flowSource]);
+
   useEffect(() => {
     if (data && data.settings) {
       const flow = flows.find((f) => f.id.toString() === selectedFlowId);
       data.settings.whatsappFlowId = selectedFlowId;
+      data.settings.flowSource = flowSource;
+      data.settings.metaFlowId = metaFlowId;
+      data.settings.variablePrefix = variablePrefix;
+      data.settings.keepLegacyVariables = keepLegacyVariables;
+      data.settings.variableMappings = variableMappings.map(({ fieldKey, workflowVar }) => ({
+        fieldKey,
+        workflowVar,
+      }));
+      data.settings.abandonmentHours = abandonmentHours === '' ? null : Number(abandonmentHours);
+      data.settings.cta = cta;
+      data.settings.sendOptions = { cta };
       data.settings.header = header;
       data.settings.footer = footer;
       data.settings.conditions = conditions;
@@ -161,14 +239,81 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
       data.settings.onComplete = onComplete;
       data.settings.formFields = flow?.fields || data.settings.formFields || [];
     }
-  }, [selectedFlowId, header, footer, conditions, scoreRules, scoreThreshold, fieldMappings, onComplete, data, flows]);
+  }, [selectedFlowId, flowSource, metaFlowId, variablePrefix, keepLegacyVariables, variableMappings, abandonmentHours, cta, header, footer, conditions, scoreRules, scoreThreshold, fieldMappings, onComplete, data, flows]);
 
   const handleFlowSelect = (value: string) => {
     setSelectedFlowId(value);
     const flow = flows.find((f) => f.id.toString() === value);
     if (data?.settings) {
       data.settings.formFields = flow?.fields || [];
+      if (!cta && flow?.default_cta) {
+        setCta(flow.default_cta);
+      }
     }
+  };
+
+  const handleImportMetaFlow = async (metaId: string) => {
+    setSyncMessage('');
+    try {
+      const response = await fetch('/api/whatsapp-flows/import-meta', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ meta_flow_id: metaId }),
+      });
+      const result = await response.json();
+      if (result.success && result.flow) {
+        setSelectedFlowId(String(result.flow.id));
+        setMetaFlowId(metaId);
+        if (data?.settings) {
+          data.settings.formFields = result.flow.fields || [];
+        }
+        await loadFlows();
+        setSyncMessage('Imported from Meta.');
+      } else {
+        setSyncMessage(result.message || 'Import failed.');
+      }
+    } catch {
+      setSyncMessage('Import failed.');
+    }
+  };
+
+  const handleRefreshSchema = async () => {
+    if (!selectedFlowId) return;
+    setSyncMessage('');
+    try {
+      const response = await fetch(`/api/whatsapp-flows/${selectedFlowId}/refresh-schema`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'include',
+      });
+      const result = await response.json();
+      if (result.success) {
+        if (data?.settings) {
+          data.settings.formFields = result.fields || [];
+        }
+        await loadFlows();
+        setSyncMessage('Schema refreshed from Meta.');
+      } else {
+        setSyncMessage(result.message || 'Refresh failed.');
+      }
+    } catch {
+      setSyncMessage('Refresh failed.');
+    }
+  };
+
+  const addVariableMapping = () => {
+    setVariableMappings([
+      ...variableMappings,
+      { id: Math.random().toString(36).slice(2, 9), fieldKey: '', workflowVar: '' },
+    ]);
   };
 
   const addCondition = () => {
@@ -251,9 +396,10 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
   };
 
   const selectedFlow = flows.find((f) => f.id.toString() === selectedFlowId);
+  const effectivePrefix = variablePrefix.trim() || id.replace(/[^a-zA-Z0-9_]/g, '_');
   const fieldOptions: FormFieldOption[] = useMemo(
-    () => selectedFlow?.fields ?? [],
-    [selectedFlow]
+    () => selectedFlow?.fields ?? data.settings?.formFields ?? [],
+    [selectedFlow, data.settings?.formFields]
   );
   const customFields: CustomFieldOption[] = window.data?.customFields || [];
   const groups = window.data?.groups || [];
@@ -291,6 +437,51 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="flow-source">Form source</Label>
+                <select
+                  id="flow-source"
+                  value={flowSource}
+                  onChange={(e) => setFlowSource(e.target.value)}
+                  className="w-full px-2 py-2 text-xs border rounded bg-white"
+                >
+                  <option value="local">Local form library</option>
+                  <option value="meta">Meta flow ID (auto-link)</option>
+                </select>
+              </div>
+
+              {flowSource === 'meta' ? (
+                <div className="space-y-2">
+                  <Label htmlFor="meta-flow-id">Meta flow ID</Label>
+                  <input
+                    id="meta-flow-id"
+                    type="text"
+                    value={metaFlowId}
+                    onChange={(e) => setMetaFlowId(e.target.value)}
+                    placeholder="Meta flow ID"
+                    className="w-full px-2 py-2 text-xs border rounded"
+                  />
+                  {metaFlows.length > 0 && (
+                    <select
+                      value={metaFlowId}
+                      onChange={(e) => {
+                        setMetaFlowId(e.target.value);
+                        if (e.target.value) {
+                          handleImportMetaFlow(e.target.value);
+                        }
+                      }}
+                      className="w-full px-2 py-2 text-xs border rounded bg-white"
+                    >
+                      <option value="">Or pick from Meta account</option>
+                      {metaFlows.map((flow) => (
+                        <option key={flow.meta_flow_id} value={flow.meta_flow_id}>
+                          {flow.name} ({flow.status}){flow.linked ? ' — linked' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              ) : (
+              <div className="space-y-2">
                 <Label htmlFor="flow-select">Select form</Label>
                 {flows.length === 0 ? (
                   <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded border border-gray-200">
@@ -312,6 +503,66 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
                   </select>
                 )}
               </div>
+              )}
+
+              {selectedFlow && flowSource === 'local' && selectedFlow.meta_flow_id && (
+                <button
+                  type="button"
+                  onClick={handleRefreshSchema}
+                  className="text-xs text-blue-600 font-medium"
+                >
+                  Refresh schema from Meta
+                </button>
+              )}
+
+              {syncMessage && (
+                <p className="text-xs text-gray-600">{syncMessage}</p>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="variable-prefix">Variable prefix</Label>
+                <input
+                  id="variable-prefix"
+                  type="text"
+                  value={variablePrefix}
+                  onChange={(e) => setVariablePrefix(e.target.value)}
+                  placeholder={effectivePrefix}
+                  className="w-full px-2 py-1 text-xs border rounded"
+                />
+                <label className="flex items-center gap-2 text-xs text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={keepLegacyVariables}
+                    onChange={(e) => setKeepLegacyVariables(e.target.checked)}
+                  />
+                  Also write legacy form_* variables
+                </label>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cta">Button label (CTA)</Label>
+                <input
+                  id="cta"
+                  type="text"
+                  value={cta}
+                  onChange={(e) => setCta(e.target.value)}
+                  placeholder="Open Form"
+                  className="w-full px-2 py-1 text-xs border rounded"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="abandonment-hours">Abandonment timeout (hours)</Label>
+                <input
+                  id="abandonment-hours"
+                  type="number"
+                  min={1}
+                  value={abandonmentHours}
+                  onChange={(e) => setAbandonmentHours(e.target.value)}
+                  placeholder="24 (default)"
+                  className="w-full px-2 py-1 text-xs border rounded"
+                />
+              </div>
 
               {selectedFlow && (
                 <div className={`border p-2 rounded text-xs space-y-2 ${(selectedFlow.live || selectedFlow.meta_flow_id) ? 'bg-sky-50 border-sky-200' : 'bg-amber-50 border-amber-200'}`}>
@@ -325,21 +576,24 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
                       Use in HTTP, Message, or Payment nodes connected to <strong>On completion</strong>:
                     </p>
                     <code className="block bg-white/80 border border-sky-200 rounded px-2 py-1 text-[11px] text-sky-900">
-                      {'{{whatsapp_flow_responses}}'}
+                      {`{{${effectivePrefix}_responses}}`}
                     </code>
                     <p className="text-gray-500">All answers as JSON. Or per field:</p>
                     {fieldOptions.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {fieldOptions.map((f) => (
                           <code key={f.key} className="bg-white/80 border border-sky-100 rounded px-1.5 py-0.5 text-[10px] text-sky-800">
-                            {`{{form_${f.key}}}`}
+                            {`{{${effectivePrefix}_${f.key}}}`}
                           </code>
                         ))}
                       </div>
                     ) : (
                       <code className="block bg-white/80 border border-sky-100 rounded px-2 py-1 text-[10px] text-sky-800">
-                        {'{{form_<field_key>}}'}
+                        {`{{${effectivePrefix}_<field_key>}}`}
                       </code>
+                    )}
+                    {keepLegacyVariables && (
+                      <p className="text-[10px] text-gray-500">Legacy: {'{{whatsapp_flow_responses}}'}, {'{{form_*}}'}</p>
                     )}
                   </div>
                 </div>
@@ -354,6 +608,50 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
                   rows={2}
                   className="w-full px-2 py-1 text-xs border rounded"
                 />
+              </div>
+
+              <div className="border-t pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="font-bold text-xs">Custom variable aliases</Label>
+                  <button onClick={addVariableMapping} className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                    <Plus className="h-3 w-3" /> Alias
+                  </button>
+                </div>
+                {variableMappings.map((mapping) => (
+                  <div key={mapping.id} className="flex gap-1 items-center">
+                    <select
+                      value={mapping.fieldKey}
+                      onChange={(e) =>
+                        setVariableMappings(variableMappings.map((m) =>
+                          m.id === mapping.id ? { ...m, fieldKey: e.target.value } : m
+                        ))
+                      }
+                      className="flex-1 px-1 py-1 border rounded text-xs"
+                    >
+                      <option value="">Form field</option>
+                      {fieldOptions.map((f) => (
+                        <option key={f.key} value={f.key}>{f.label}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={mapping.workflowVar}
+                      onChange={(e) =>
+                        setVariableMappings(variableMappings.map((m) =>
+                          m.id === mapping.id ? { ...m, workflowVar: e.target.value } : m
+                        ))
+                      }
+                      placeholder="workflow_var"
+                      className="flex-1 px-1 py-1 border rounded text-xs"
+                    />
+                    <button
+                      onClick={() => setVariableMappings(variableMappings.filter((m) => m.id !== mapping.id))}
+                      className="text-red-500"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
 
               <div className="border-t pt-3 space-y-2">
@@ -675,11 +973,23 @@ const WhatsAppFlowNode = ({ data, id }: WhatsAppFlowNodeProps) => {
           </div>
 
           <div className="flex items-center justify-center px-4 py-2 border-t border-gray-100 bg-white">
+            <span className="text-xs text-gray-500 mr-2">Send failed</span>
+            <Handle
+              type="source"
+              position={Position.Bottom}
+              id="onSendFailed"
+              style={{ bottom: '-4px', left: '25%', background: '#ef4444' }}
+              className="!bg-red-500 !w-3 !h-3 !border-2 !border-white"
+            />
+          </div>
+
+          <div className="flex items-center justify-center px-4 py-2 border-t border-gray-100 bg-white">
             <span className="text-xs text-gray-500 mr-2">Abandoned / timeout</span>
             <Handle
               type="source"
               position={Position.Bottom}
               id="onAbandoned"
+              style={{ bottom: '-4px', left: '75%', background: '#f59e0b' }}
               className="!bg-amber-500 !w-3 !h-3 !border-2 !border-white"
             />
           </div>

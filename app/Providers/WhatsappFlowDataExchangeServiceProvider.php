@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\WhatsappFlows\ConfigurableDataExchangeHandler;
 use App\Services\WhatsappFlows\DynamicOptionsDataExchangeHandler;
 use App\Services\WhatsappFlows\WhatsappFlowDataExchangeRegistry;
 use Illuminate\Support\ServiceProvider;
@@ -20,5 +21,6 @@ class WhatsappFlowDataExchangeServiceProvider extends ServiceProvider
 
         $registry->register($this->app->make(DynamicOptionsDataExchangeHandler::class));
         $registry->register($this->app->make(BookingFlowDataExchangeHandler::class));
+        $registry->register($this->app->make(ConfigurableDataExchangeHandler::class));
     }
 }

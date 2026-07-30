@@ -5,6 +5,8 @@ namespace App\Livewire;
 use App\Models\WhatsappFlow;
 use App\Services\WhatsappFlowSendService;
 use App\Services\WhatsappMetaFlowService;
+use App\Services\WhatsappMetaFlowSyncService;
+use App\Support\WhatsappGraphApi;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -38,6 +40,17 @@ class WhatsappFlowsList extends Component
     public bool $testSendLoading = false;
 
     public ?string $testSendMessage = null;
+
+    public bool $showMetaImport = false;
+
+    /** @var list<array<string, mixed>> */
+    public array $metaFlows = [];
+
+    public bool $metaFlowsLoading = false;
+
+    public ?string $metaFlowsError = null;
+
+    public ?string $importingMetaFlowId = null;
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -121,6 +134,93 @@ class WhatsappFlowsList extends Component
         $this->dispatch('showNotification', type: $type, message: $result['message']);
     }
 
+    public function openMetaImport(): void
+    {
+        $this->showMetaImport = true;
+        $this->metaFlows = [];
+        $this->metaFlowsError = null;
+        $this->loadMetaFlows();
+    }
+
+    public function closeMetaImport(): void
+    {
+        $this->showMetaImport = false;
+        $this->metaFlows = [];
+        $this->metaFlowsError = null;
+        $this->importingMetaFlowId = null;
+    }
+
+    public function loadMetaFlows(): void
+    {
+        $company = auth()->user()?->currentCompany();
+
+        if (! $company) {
+            $this->metaFlowsError = 'Company not found.';
+
+            return;
+        }
+
+        $this->metaFlowsLoading = true;
+        $this->metaFlowsError = null;
+
+        $result = app(WhatsappMetaFlowSyncService::class)->listMetaFlows($company);
+
+        $this->metaFlowsLoading = false;
+
+        if (! ($result['success'] ?? false)) {
+            $this->metaFlowsError = $result['message'] ?? 'Could not load flows from Meta.';
+
+            return;
+        }
+
+        $this->metaFlows = $result['flows'] ?? [];
+    }
+
+    public function importFromMeta(string $metaFlowId): void
+    {
+        $company = auth()->user()?->currentCompany();
+
+        if (! $company || $metaFlowId === '') {
+            $this->dispatch('showNotification', type: 'error', message: 'Company not found or invalid Meta flow ID.');
+
+            return;
+        }
+
+        $this->importingMetaFlowId = $metaFlowId;
+
+        $result = app(WhatsappMetaFlowSyncService::class)->importOrRefreshFromMeta($company, $metaFlowId);
+
+        $this->importingMetaFlowId = null;
+
+        if (! ($result['success'] ?? false)) {
+            $this->dispatch('showNotification', type: 'error', message: $result['message'] ?? 'Import failed.');
+
+            return;
+        }
+
+        $flowName = $result['flow']->name ?? 'Flow';
+        $this->dispatch('showNotification', type: 'success', message: "\"{$flowName}\" imported from Meta.");
+        $this->loadMetaFlows();
+        $this->resetPage();
+    }
+
+    public function refreshFlowSchema(int $flowId): void
+    {
+        $flow = WhatsappFlow::where('id', $flowId)
+            ->where('company_id', auth()->user()->activeCompanyId())
+            ->first();
+
+        if (! $flow || empty($flow->meta_flow_id)) {
+            $this->dispatch('showNotification', type: 'error', message: 'Form is not linked to Meta.');
+
+            return;
+        }
+
+        $result = app(WhatsappMetaFlowSyncService::class)->refreshSchema($flow);
+        $type = ($result['success'] ?? false) ? 'success' : 'error';
+        $this->dispatch('showNotification', type: $type, message: $result['message'] ?? 'Schema refresh completed.');
+    }
+
     public function openPreview(int $id): void
     {
         $flow = WhatsappFlow::where('id', $id)
@@ -159,8 +259,8 @@ class WhatsappFlowsList extends Component
                 return;
             }
 
-            $apiVersion = 'v19.0';
-            $url = "https://graph.facebook.com/{$apiVersion}/{$flow->meta_flow_id}";
+            $apiVersion = WhatsappGraphApi::version();
+            $url = WhatsappGraphApi::baseUrl()."/{$apiVersion}/{$flow->meta_flow_id}";
 
             $response = \Illuminate\Support\Facades\Http::withToken($accessToken)
                 ->timeout(15)

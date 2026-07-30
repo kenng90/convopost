@@ -58,10 +58,15 @@ export function useFlowVariables() {
       if (node.type === 'whatsapp_flow') {
         const formLabel = nodeData.label || 'WhatsApp Form';
         const fields = settings.formFields || [];
+        const prefix = (settings.variablePrefix || node.id || 'form').replace(/[^a-zA-Z0-9_]/g, '_');
 
         dynamicVariables.push({
           label: `${formLabel} — all responses (JSON)`,
-          value: 'whatsapp_flow_responses',
+          value: `${prefix}_responses`,
+          category: 'WhatsApp Form',
+        }, {
+          label: `${formLabel} — send error`,
+          value: `${prefix}_send_error`,
           category: 'WhatsApp Form',
         });
 
@@ -70,9 +75,28 @@ export function useFlowVariables() {
             if (!field?.key) return;
             dynamicVariables.push({
               label: `${formLabel} — ${field.label || field.key}`,
-              value: `form_${field.key}`,
+              value: `${prefix}_${field.key}`,
               category: 'WhatsApp Form',
             });
+          });
+        }
+
+        if (Array.isArray(settings.variableMappings)) {
+          settings.variableMappings.forEach((mapping: { workflowVar?: string; fieldKey?: string }) => {
+            if (!mapping?.workflowVar) return;
+            dynamicVariables.push({
+              label: `${formLabel} — alias ${mapping.workflowVar}`,
+              value: mapping.workflowVar,
+              category: 'WhatsApp Form',
+            });
+          });
+        }
+
+        if (settings.keepLegacyVariables !== false) {
+          dynamicVariables.push({
+            label: `${formLabel} — all responses (legacy)`,
+            value: 'whatsapp_flow_responses',
+            category: 'WhatsApp Form',
           });
         }
       }
