@@ -227,7 +227,7 @@ return [
 
     'real_estate_inquiry' => [
         'name' => 'Property Inquiry',
-        'description' => 'Capture buyer/renter details and budget.',
+        'description' => 'Capture buyer, renter, and commercial property details.',
         'category' => 'LEAD_GENERATION',
         'industry' => 'real_estate',
         'automation_bundle' => 'real_estate_agency_bot',
@@ -237,18 +237,138 @@ return [
                 'title' => 'Property Inquiry',
                 'fields' => [
                     ['id' => 1, 'type' => 'heading', 'label' => 'Tell us what you are looking for'],
-                    ['id' => 2, 'type' => 'text', 'label' => 'Full Name', 'required' => true, 'input_type' => 'text'],
-                    ['id' => 3, 'type' => 'radio', 'label' => 'Looking to', 'required' => true, 'options' => [
+                    ['id' => 2, 'type' => 'text', 'label' => 'Full Name', 'required' => true, 'input_type' => 'text', 'name' => 'full_name', 'meta_name' => 'full_name'],
+                    ['id' => 3, 'type' => 'radio', 'label' => 'Looking to', 'required' => true, 'name' => 'intent', 'meta_name' => 'intent', 'options' => [
                         ['id' => 'buy', 'title' => 'Buy'],
                         ['id' => 'rent', 'title' => 'Rent'],
                     ]],
-                    ['id' => 4, 'type' => 'text', 'label' => 'Budget range', 'required' => true, 'input_type' => 'text'],
-                    ['id' => 5, 'type' => 'select', 'label' => 'Preferred area', 'required' => true, 'options' => [
+                    ['id' => 4, 'type' => 'text', 'label' => 'Budget range', 'required' => true, 'input_type' => 'text', 'name' => 'budget_range', 'meta_name' => 'budget_range'],
+                    ['id' => 5, 'type' => 'select', 'label' => 'Preferred area', 'required' => true, 'name' => 'preferred_area', 'meta_name' => 'preferred_area', 'options' => [
                         ['id' => 'area_1', 'title' => 'City centre'],
                         ['id' => 'area_2', 'title' => 'Suburbs'],
                         ['id' => 'area_3', 'title' => 'Flexible'],
                     ]],
-                    ['id' => 6, 'type' => 'footer', 'label' => 'Send inquiry', 'action' => 'complete'],
+                    ['id' => 6, 'type' => 'select', 'label' => 'Bedrooms', 'required' => false, 'name' => 'bedrooms', 'meta_name' => 'bedrooms', 'options' => [
+                        ['id' => 'studio', 'title' => 'Studio'],
+                        ['id' => '1', 'title' => '1'],
+                        ['id' => '2', 'title' => '2'],
+                        ['id' => '3plus', 'title' => '3+'],
+                    ]],
+                    ['id' => 7, 'type' => 'footer', 'label' => 'Send inquiry', 'action' => 'complete'],
+                ],
+            ],
+            [
+                'id' => 'COMMERCIAL_INQUIRY',
+                'title' => 'Commercial Property',
+                'fields' => [
+                    ['id' => 10, 'type' => 'heading', 'label' => 'Commercial property inquiry'],
+                    ['id' => 11, 'type' => 'text', 'label' => 'Company name', 'required' => true, 'input_type' => 'text', 'name' => 'company_name', 'meta_name' => 'company_name'],
+                    ['id' => 12, 'type' => 'select', 'label' => 'Property type', 'required' => true, 'name' => 'property_type', 'meta_name' => 'property_type', 'options' => [
+                        ['id' => 'office', 'title' => 'Office'],
+                        ['id' => 'retail', 'title' => 'Retail'],
+                        ['id' => 'warehouse', 'title' => 'Warehouse'],
+                        ['id' => 'mixed', 'title' => 'Mixed use'],
+                    ]],
+                    ['id' => 13, 'type' => 'text', 'label' => 'Budget range', 'required' => true, 'input_type' => 'text', 'name' => 'budget_range', 'meta_name' => 'budget_range'],
+                    ['id' => 14, 'type' => 'select', 'label' => 'Lease duration', 'required' => true, 'name' => 'lease_duration', 'meta_name' => 'lease_duration', 'options' => [
+                        ['id' => '1y', 'title' => '1 year'],
+                        ['id' => '2y', 'title' => '2 years'],
+                        ['id' => '3y', 'title' => '3+ years'],
+                        ['id' => 'buy', 'title' => 'Purchase'],
+                    ]],
+                    ['id' => 15, 'type' => 'select', 'label' => 'Company size', 'required' => true, 'name' => 'company_size', 'meta_name' => 'company_size', 'options' => [
+                        ['id' => '1-10', 'title' => '1-10 staff'],
+                        ['id' => '11-50', 'title' => '11-50 staff'],
+                        ['id' => '51-200', 'title' => '51-200 staff'],
+                        ['id' => '200plus', 'title' => '200+ staff'],
+                    ]],
+                    ['id' => 16, 'type' => 'footer', 'label' => 'Submit inquiry', 'action' => 'complete'],
+                ],
+            ],
+        ],
+    ],
+
+    'real_estate_seller_inquiry' => [
+        'name' => 'Sell My Property',
+        'description' => 'Capture seller details for listing a property.',
+        'category' => 'LEAD_GENERATION',
+        'industry' => 'real_estate',
+        'automation_bundle' => 'real_estate_agency_bot',
+        'screens' => [
+            [
+                'id' => 'SELLER_INQUIRY',
+                'title' => 'Sell My Property',
+                'fields' => [
+                    ['id' => 1, 'type' => 'heading', 'label' => 'List your property with us'],
+                    ['id' => 2, 'type' => 'text', 'label' => 'Full Name', 'required' => true, 'input_type' => 'text', 'name' => 'full_name', 'meta_name' => 'full_name'],
+                    ['id' => 3, 'type' => 'text', 'label' => 'Property address', 'required' => true, 'input_type' => 'text', 'name' => 'property_address', 'meta_name' => 'property_address'],
+                    ['id' => 4, 'type' => 'select', 'label' => 'Property type', 'required' => true, 'name' => 'property_type', 'meta_name' => 'property_type', 'options' => [
+                        ['id' => 'apartment', 'title' => 'Apartment'],
+                        ['id' => 'house', 'title' => 'House'],
+                        ['id' => 'land', 'title' => 'Land'],
+                        ['id' => 'commercial', 'title' => 'Commercial'],
+                    ]],
+                    ['id' => 5, 'type' => 'text', 'label' => 'Expected price', 'required' => true, 'input_type' => 'text', 'name' => 'expected_price', 'meta_name' => 'expected_price'],
+                    ['id' => 6, 'type' => 'textarea', 'label' => 'Additional details', 'required' => false, 'name' => 'notes', 'meta_name' => 'notes'],
+                    ['id' => 7, 'type' => 'footer', 'label' => 'Submit listing request', 'action' => 'complete'],
+                ],
+            ],
+        ],
+    ],
+
+    'automotive_trade_in' => [
+        'name' => 'Vehicle Trade-In',
+        'description' => 'Capture trade-in vehicle details for valuation.',
+        'category' => 'LEAD_GENERATION',
+        'industry' => 'automotive',
+        'automation_bundle' => 'automotive_dealer_bot',
+        'screens' => [
+            [
+                'id' => 'TRADE_IN',
+                'title' => 'Trade-In Valuation',
+                'fields' => [
+                    ['id' => 1, 'type' => 'heading', 'label' => 'Tell us about your vehicle'],
+                    ['id' => 2, 'type' => 'text', 'label' => 'Full Name', 'required' => true, 'input_type' => 'text', 'name' => 'full_name', 'meta_name' => 'full_name'],
+                    ['id' => 3, 'type' => 'text', 'label' => 'Make', 'required' => true, 'input_type' => 'text', 'name' => 'vehicle_make', 'meta_name' => 'vehicle_make'],
+                    ['id' => 4, 'type' => 'text', 'label' => 'Model', 'required' => true, 'input_type' => 'text', 'name' => 'vehicle_model', 'meta_name' => 'vehicle_model'],
+                    ['id' => 5, 'type' => 'text', 'label' => 'Year', 'required' => true, 'input_type' => 'text', 'name' => 'vehicle_year', 'meta_name' => 'vehicle_year'],
+                    ['id' => 6, 'type' => 'text', 'label' => 'Mileage (km)', 'required' => true, 'input_type' => 'text', 'name' => 'vehicle_mileage', 'meta_name' => 'vehicle_mileage'],
+                    ['id' => 7, 'type' => 'select', 'label' => 'Condition', 'required' => true, 'name' => 'vehicle_condition', 'meta_name' => 'vehicle_condition', 'options' => [
+                        ['id' => 'excellent', 'title' => 'Excellent'],
+                        ['id' => 'good', 'title' => 'Good'],
+                        ['id' => 'fair', 'title' => 'Fair'],
+                        ['id' => 'needs_work', 'title' => 'Needs work'],
+                    ]],
+                    ['id' => 8, 'type' => 'footer', 'label' => 'Request valuation', 'action' => 'complete'],
+                ],
+            ],
+        ],
+    ],
+
+    'automotive_finance_preapproval' => [
+        'name' => 'Finance Pre-Approval',
+        'description' => 'Capture finance details for vehicle loan pre-approval.',
+        'category' => 'LEAD_GENERATION',
+        'industry' => 'automotive',
+        'automation_bundle' => 'automotive_dealer_bot',
+        'screens' => [
+            [
+                'id' => 'FINANCE_PREAPPROVAL',
+                'title' => 'Finance Pre-Approval',
+                'fields' => [
+                    ['id' => 1, 'type' => 'heading', 'label' => 'Quick finance check'],
+                    ['id' => 2, 'type' => 'text', 'label' => 'Full Name', 'required' => true, 'input_type' => 'text', 'name' => 'full_name', 'meta_name' => 'full_name'],
+                    ['id' => 3, 'type' => 'text', 'label' => 'Monthly income', 'required' => true, 'input_type' => 'text', 'name' => 'monthly_income', 'meta_name' => 'monthly_income'],
+                    ['id' => 4, 'type' => 'text', 'label' => 'Deposit amount', 'required' => true, 'input_type' => 'text', 'name' => 'deposit_amount', 'meta_name' => 'deposit_amount'],
+                    ['id' => 5, 'type' => 'select', 'label' => 'Preferred loan term', 'required' => true, 'name' => 'loan_term', 'meta_name' => 'loan_term', 'options' => [
+                        ['id' => '12', 'title' => '12 months'],
+                        ['id' => '24', 'title' => '24 months'],
+                        ['id' => '36', 'title' => '36 months'],
+                        ['id' => '48', 'title' => '48 months'],
+                        ['id' => '60', 'title' => '60 months'],
+                    ]],
+                    ['id' => 6, 'type' => 'textarea', 'label' => 'Notes', 'required' => false, 'name' => 'notes', 'meta_name' => 'notes'],
+                    ['id' => 7, 'type' => 'footer', 'label' => 'Submit application', 'action' => 'complete'],
                 ],
             ],
         ],

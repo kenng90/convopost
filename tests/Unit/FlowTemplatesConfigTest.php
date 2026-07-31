@@ -54,6 +54,7 @@ class FlowTemplatesConfigTest extends TestCase
             'support_ai_escalation',
             'healthcare_clinic_bot',
             'real_estate_agency_bot',
+            'automotive_dealer_bot',
             'microfinance_banking_bot',
             'hotel_tour_concierge_bot',
             'ai_faq_minimal',
@@ -74,6 +75,7 @@ class FlowTemplatesConfigTest extends TestCase
             'support_ai_escalation',
             'healthcare_clinic_bot',
             'real_estate_agency_bot',
+            'automotive_dealer_bot',
             'microfinance_banking_bot',
             'hotel_tour_concierge_bot',
         ];
@@ -101,6 +103,7 @@ class FlowTemplatesConfigTest extends TestCase
             'support_ai_escalation',
             'healthcare_clinic_bot',
             'real_estate_agency_bot',
+            'automotive_dealer_bot',
             'microfinance_banking_bot',
             'hotel_tour_concierge_bot',
         ];
@@ -399,6 +402,7 @@ class FlowTemplatesConfigTest extends TestCase
             'services_listing_booking' => 'listing_inquiry-1',
             'catalog_listings_showcase' => 'listing_inquiry-1',
             'real_estate_agency_bot' => 'listing_inquiry-1',
+            'automotive_dealer_bot' => 'listing_inquiry-1',
             'hotel_tour_concierge_bot' => 'listing_inquiry-2',
         ] as $key => $nodeId) {
             $node = collect(config("flow-templates.{$key}.flow_data.nodes"))->firstWhere('id', $nodeId);
@@ -411,5 +415,46 @@ class FlowTemplatesConfigTest extends TestCase
     public function test_catalog_listings_showcase_requires_setup_wizard(): void
     {
         $this->assertTrue((bool) config('flow-templates.catalog_listings_showcase.requires_setup_wizard'));
+    }
+
+    public function test_real_estate_template_matches_spa_level_booking_and_faq_coverage(): void
+    {
+        $flowData = config('flow-templates.real_estate_agency_bot.flow_data');
+        $nodes = collect($flowData['nodes']);
+        $edges = collect($flowData['edges']);
+
+        $this->assertTrue((bool) config('flow-templates.real_estate_agency_bot.requires_setup_wizard'));
+        $this->assertTrue((bool) config('flow-templates.real_estate_agency_bot.exclusive_on_match'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'property-faq-openai'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['type'] ?? '') === 'send_booking_link'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'manage_booking-reschedule'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'whatsapp_flow-sell'));
+
+        foreach (['success', 'unavailable', 'error'] as $handle) {
+            $this->assertTrue(
+                $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'book_appointment-1'
+                    && ($edge['sourceHandle'] ?? '') === $handle),
+                "Real estate viewing booking is missing [{$handle}] output."
+            );
+        }
+    }
+
+    public function test_automotive_template_includes_test_drive_and_vehicle_faq_paths(): void
+    {
+        $flowData = config('flow-templates.automotive_dealer_bot.flow_data');
+        $nodes = collect($flowData['nodes']);
+        $edges = collect($flowData['edges']);
+
+        $this->assertTrue((bool) config('flow-templates.automotive_dealer_bot.requires_setup_wizard'));
+        $this->assertSame('automotive_trade_in', config('flow-templates.automotive_dealer_bot.form_bundle'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'vehicle-faq-openai'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'whatsapp_flow-trade-in'));
+        $this->assertTrue($nodes->contains(fn (array $node) => ($node['id'] ?? '') === 'whatsapp_flow-finance'));
+
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'keyword_trigger-1'
+                && ($edge['target'] ?? '') === 'manage_booking-reschedule'
+                && str_contains((string) ($edge['sourceHandle'] ?? ''), 'keyword-kw'))
+        );
     }
 }

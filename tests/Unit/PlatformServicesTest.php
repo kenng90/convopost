@@ -39,6 +39,7 @@ class PlatformServicesTest extends TestCase
         $this->assertArrayHasKey('support_ai_escalation', $templates);
         $this->assertArrayHasKey('healthcare_clinic_bot', $templates);
         $this->assertArrayHasKey('real_estate_agency_bot', $templates);
+        $this->assertArrayHasKey('automotive_dealer_bot', $templates);
         $this->assertArrayHasKey('microfinance_banking_bot', $templates);
         $this->assertArrayHasKey('hotel_tour_concierge_bot', $templates);
     }

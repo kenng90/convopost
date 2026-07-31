@@ -15,6 +15,7 @@ class FlowTemplatesHealthTest extends TestCase
         'support_ai_escalation',
         'healthcare_clinic_bot',
         'real_estate_agency_bot',
+        'automotive_dealer_bot',
         'microfinance_banking_bot',
         'hotel_tour_concierge_bot',
         'ai_faq_minimal',
