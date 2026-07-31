@@ -5,13 +5,13 @@ namespace App\Services;
 use App\Jobs\DispatchWhatsappFlowSubmissionWebhook;
 use App\Models\WhatsappFlow;
 use App\Models\WhatsappFlowResponse;
-use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
 
 class WhatsappFlowSubmissionService
 {
     public function __construct(
-        private WhatsappFlowResponseService $responseService
+        private WhatsappFlowResponseService $responseService,
+        private WhatsappFlowVariableMapper $variableMapper,
     ) {
     }
 
@@ -24,7 +24,10 @@ class WhatsappFlowSubmissionService
         WhatsappFlowResponse $flowResponse,
         array $responseData,
         ?Contact $contact = null,
-        ?int $automationFlowId = null
+        ?int $automationFlowId = null,
+        ?string $variablePrefix = null,
+        array $customMappings = [],
+        ?bool $keepLegacyVariables = null,
     ): void {
         $cleanData = $this->responseService->cleanResponses($responseData);
 
@@ -35,7 +38,17 @@ class WhatsappFlowSubmissionService
         $whatsappFlow = $flowResponse->whatsappFlow ?? WhatsappFlow::find($flowResponse->whatsapp_flow_id);
 
         if ($contact && $automationFlowId) {
-            $this->syncResponseToContactState($contact, $automationFlowId, $cleanData, $whatsappFlow);
+            $prefix = $variablePrefix ?: ($flowResponse->variable_prefix ?: 'form');
+            $keepLegacy = $keepLegacyVariables ?? (bool) config('whatsapp-flows.keep_legacy_variables', true);
+            $this->syncResponseToContactState(
+                $contact,
+                $automationFlowId,
+                $cleanData,
+                $whatsappFlow,
+                $prefix,
+                $customMappings,
+                $keepLegacy
+            );
             \App\Services\Flowmaker\FlowRunLogger::log(
                 (int) $automationFlowId,
                 (int) $contact->id,
@@ -71,30 +84,23 @@ class WhatsappFlowSubmissionService
         Contact $contact,
         int $automationFlowId,
         array $responseData,
-        ?WhatsappFlow $whatsappFlow = null
+        ?WhatsappFlow $whatsappFlow = null,
+        ?string $variablePrefix = null,
+        array $customMappings = [],
+        ?bool $keepLegacyVariables = null,
     ): void {
-        $contact->setContactState($automationFlowId, 'whatsapp_flow_responses', json_encode($responseData));
+        $prefix = $variablePrefix ?: 'form';
+        $keepLegacy = $keepLegacyVariables ?? (bool) config('whatsapp-flows.keep_legacy_variables', true);
 
-        $definitions = $this->responseService->getInputFieldDefinitions($whatsappFlow);
-        $definitionMap = collect($definitions)->keyBy('key');
-
-        foreach ($responseData as $fieldKey => $value) {
-            $contact->setContactState($automationFlowId, 'form_'.$fieldKey, is_array($value) ? json_encode($value) : (string) $value);
-
-            $definition = $definitionMap->get($fieldKey);
-            if ($definition && ! empty($definition['label'])) {
-                $slugKey = $this->slugifyFieldLabel($definition['label']);
-                if ($slugKey !== '') {
-                    $contact->setContactState($automationFlowId, 'form_'.$slugKey, is_array($value) ? json_encode($value) : (string) $value);
-                }
-            }
-        }
-
-        Log::info('WhatsApp Form: flattened field variables to contact state', [
-            'contact_id' => $contact->id,
-            'flow_id' => $automationFlowId,
-            'field_count' => count($responseData),
-        ]);
+        $this->variableMapper->syncToContactState(
+            $contact,
+            $automationFlowId,
+            $responseData,
+            $whatsappFlow,
+            $prefix,
+            $customMappings,
+            $keepLegacy
+        );
     }
 
     /**
@@ -108,12 +114,5 @@ class WhatsappFlowSubmissionService
             'type' => $def['type'],
             'screen_title' => $def['screen_title'],
         ], $this->responseService->getInputFieldDefinitions($flow));
-    }
-
-    private function slugifyFieldLabel(string $label): string
-    {
-        $slug = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '_', $label) ?? '', '_'));
-
-        return trim($slug, '_');
     }
 }

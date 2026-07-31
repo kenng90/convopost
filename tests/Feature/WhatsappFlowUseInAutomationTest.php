@@ -52,6 +52,39 @@ class WhatsappFlowUseInAutomationTest extends TestCase
         $response->assertRedirect(route('flowmaker.edit', $flow));
     }
 
+    public function test_use_in_automation_defaults_to_collect_recipe(): void
+    {
+        $form = WhatsappFlow::create([
+            'company_id' => $this->company->id,
+            'name' => 'Generic Form',
+            'flow_json' => ['screens' => [['fields' => [['type' => 'text', 'name' => 'note', 'label' => 'Note']]]]],
+            'status' => 'published',
+            'meta_flow_id' => 'META-GENERIC-1',
+        ]);
+
+        $response = $this->actingAs($this->owner)
+            ->withSession(['company_id' => $this->company->id])
+            ->get(route('whatsapp-flows.use-in-automation', $form->id));
+
+        $flow = Flow::withoutGlobalScopes()->where('company_id', $this->company->id)->latest('id')->first();
+        $this->assertNotNull($flow);
+        $this->assertSame('whatsapp_form_collect', $flow->source_template);
+        $this->assertSame('Generic Form — Collect automation', $flow->name);
+
+        $data = json_decode($flow->draft_flow_data, true);
+        $formNode = collect($data['nodes'])->firstWhere('type', 'whatsapp_flow');
+        $this->assertSame([], $formNode['data']['settings']['conditions']);
+        $this->assertSame([], $formNode['data']['settings']['fieldMappings']);
+        $this->assertTrue(
+            collect($data['edges'])->contains(fn ($e) => ($e['sourceHandle'] ?? '') === 'onFlowCompleted' && ($e['target'] ?? '') === 'message-thanks')
+        );
+        $this->assertFalse(
+            collect($data['nodes'])->contains(fn ($n) => ($n['id'] ?? '') === 'message-no-match')
+        );
+
+        $response->assertRedirect(route('flowmaker.edit', $flow));
+    }
+
     public function test_use_in_automation_redirects_draft_to_builder(): void
     {
         $form = WhatsappFlow::create([

@@ -129,6 +129,46 @@ class WhatsappFormRecommendationsTest extends TestCase
         $this->assertSame('{{form_amount}}', $pay['data']['settings']['payment']['amount']);
     }
 
+    public function test_factory_collect_recipe_is_minimal_and_form_agnostic(): void
+    {
+        $company = Company::factory()->create();
+        Field::create(['company_id' => $company->id, 'name' => 'Email', 'type' => 'text']);
+
+        $form = WhatsappFlow::create([
+            'company_id' => $company->id,
+            'name' => 'Survey',
+            'status' => 'published',
+            'meta_flow_id' => 'META-3',
+            'flow_json' => [
+                'screens' => [[
+                    'fields' => [
+                        ['id' => 1, 'type' => 'text', 'name' => 'email', 'label' => 'Email'],
+                        [
+                            'id' => 2,
+                            'type' => 'radio',
+                            'name' => 'rating',
+                            'label' => 'Rating',
+                            'options' => [
+                                ['id' => 'good', 'title' => 'Good'],
+                                ['id' => 'bad', 'title' => 'Bad'],
+                            ],
+                        ],
+                    ],
+                ]],
+            ],
+        ]);
+
+        $flow = app(WhatsappFormAutomationFactory::class)->createFromForm($form, 'collect', $company->id);
+        $data = json_decode($flow->draft_flow_data, true);
+        $node = collect($data['nodes'])->firstWhere('type', 'whatsapp_flow');
+
+        $this->assertSame('whatsapp_form_collect', $flow->source_template);
+        $this->assertSame([], $node['data']['settings']['fieldMappings']);
+        $this->assertSame([], $node['data']['settings']['conditions']);
+        $this->assertFalse(collect($data['nodes'])->contains(fn ($n) => ($n['type'] ?? '') === 'assign_group'));
+        $this->assertTrue(collect($data['nodes'])->contains(fn ($n) => ($n['id'] ?? '') === 'message-thanks'));
+    }
+
     public function test_score_rules_route_to_score_pass_handle(): void
     {
         $node = new WhatsAppFlowNode(

@@ -686,6 +686,60 @@
                                     </div>
                                 </template>
 
+                                {{-- Calendar --}}
+                                <template x-if="field.type === 'calendar'">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
+                                        <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                                           x-text="(field.calendar_mode || 'single') === 'range' ? (field.label_start || field.label || 'Start date') : field.label"></p>
+                                        <div class="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                                            <div class="grid grid-cols-7 gap-px bg-gray-200 dark:bg-gray-600 p-1">
+                                                <template x-for="day in 14" :key="'cal-' + field.id + '-' + day">
+                                                    <div :class="day === 5 ? 'bg-blue-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400'"
+                                                         class="aspect-square flex items-center justify-center text-[9px] rounded-sm"
+                                                         x-text="day"></div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <template x-if="(field.calendar_mode || 'single') === 'range'">
+                                            <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5" x-text="'→ ' + (field.label_end || 'End date')"></p>
+                                        </template>
+                                        <p x-show="field.helper_text" class="text-[10px] text-gray-400 mt-1" x-text="field.helper_text"></p>
+                                    </div>
+                                </template>
+
+                                {{-- Photo picker --}}
+                                <template x-if="field.type === 'photo_picker'">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
+                                        <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5" x-text="field.label"></p>
+                                        <div class="flex flex-col items-center justify-center gap-1.5 py-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                            <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            </svg>
+                                            <span class="text-[10px] text-gray-500 dark:text-gray-400">Tap to upload photo</span>
+                                            <span class="text-[9px] text-gray-400"
+                                                  x-text="`${field.min_uploaded ?? 0}–${field.max_uploaded ?? 1} photo(s)`"></span>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                {{-- Document picker --}}
+                                <template x-if="field.type === 'document_picker'">
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-3">
+                                        <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5" x-text="field.label"></p>
+                                        <div class="flex items-center gap-2 px-2.5 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                            <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                            </svg>
+                                            <div class="min-w-0">
+                                                <p class="text-[10px] text-gray-600 dark:text-gray-300 truncate">Tap to upload document</p>
+                                                <p class="text-[9px] text-gray-400"
+                                                   x-text="`${field.min_uploaded ?? 0}–${field.max_uploaded ?? 1} file(s)`"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
                                 {{-- OptIn --}}
                                 <template x-if="field.type === 'optin'">
                                     <div class="bg-white dark:bg-gray-800 rounded-lg p-3 flex items-center gap-2">
@@ -1648,6 +1702,7 @@ function flowBuilder(initialFlowId) {
 
         hydrateImportedFieldMetadata() {
             for (const screen of this.screens) {
+                this.hydrateImportedScreenFields(screen);
                 for (const field of screen.fields || []) {
                     if (!field.meta_name && field.data_source_key) {
                         field.meta_name = field.data_source_key;
@@ -1668,6 +1723,9 @@ function flowBuilder(initialFlowId) {
             const screenData = screen._imported_meta_data || {};
             const walk = (fields) => {
                 (fields || []).forEach(field => {
+                    if (field.type === 'dropdown') {
+                        field.type = 'select';
+                    }
                     if (['radio', 'checkbox', 'select', 'chips'].includes(field.type)) {
                         if (field.dynamic_data_source && field.data_source_key && !(field.options || []).length) {
                             const entry = (screen.dynamic_data || []).find(e => e.key === field.data_source_key);

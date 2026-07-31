@@ -11,6 +11,13 @@
         </div>
         <div class="col-md-4 text-right d-flex justify-content-end align-items-center" style="gap: 0.5rem;">
             <button
+                wire:click="openMetaImport"
+                class="btn btn-outline-primary btn-sm"
+                title="Browse and import flows from your Meta WhatsApp account"
+            >
+                <i class="ni ni-cloud-download-95 mr-1"></i> Import from Meta
+            </button>
+            <button
                 wire:click="syncStatuses"
                 wire:loading.attr="disabled"
                 class="btn btn-outline-secondary btn-sm"
@@ -91,6 +98,7 @@
                             <thead class="thead-light">
                                 <tr>
                                     <th>Form</th>
+                                    <th>Source</th>
                                     <th>Status</th>
                                     <th>Screens</th>
                                     <th>Submissions</th>
@@ -107,6 +115,16 @@
                                             @if ($flow->description)
                                                 <br>
                                                 <small class="text-muted">{{ Str::limit($flow->description, 50) }}</small>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if (($flow->flow_source ?? 'local') === 'meta_linked')
+                                                <span class="badge badge-info">Meta import</span>
+                                                @if ($flow->meta_synced_at)
+                                                    <small class="text-muted d-block">Synced {{ $flow->meta_synced_at->diffForHumans() }}</small>
+                                                @endif
+                                            @else
+                                                <span class="badge badge-light border">Built here</span>
                                             @endif
                                         </td>
                                         <td>
@@ -158,6 +176,13 @@
                                                         <i class="ni ni-settings"></i> Automate
                                                     </button>
                                                     <div class="dropdown-menu dropdown-menu-right">
+                                                        <h6 class="dropdown-header">Works with any form</h6>
+                                                        <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'collect']) }}">
+                                                            <strong>Collect responses</strong>
+                                                            <div class="small text-muted">Send form → thank you → end</div>
+                                                        </a>
+                                                        <div class="dropdown-divider"></div>
+                                                        <h6 class="dropdown-header">Advanced</h6>
                                                         <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'lead']) }}">Lead capture</a>
                                                         <a class="dropdown-item" href="{{ route('whatsapp-flows.use-in-automation', ['id' => $flow->id, 'recipe' => 'book_live']) }}">
                                                             <strong>Live slot booking</strong>
@@ -198,6 +223,22 @@
                                             >
                                                 <i class="ni ni-pencil-bold"></i> Edit
                                             </a>
+
+                                            @if ($flow->meta_flow_id)
+                                                <button
+                                                    wire:click="refreshFlowSchema({{ $flow->id }})"
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="refreshFlowSchema({{ $flow->id }})"
+                                                    title="Refresh field schema from Meta"
+                                                    class="btn btn-outline-info btn-sm"
+                                                    style="margin-right: 3px;"
+                                                >
+                                                    <span wire:loading.remove wire:target="refreshFlowSchema({{ $flow->id }})">
+                                                        <i class="ni ni-refresh-02"></i>
+                                                    </span>
+                                                    <span wire:loading wire:target="refreshFlowSchema({{ $flow->id }})">...</span>
+                                                </button>
+                                            @endif
 
                                             {{-- Delete --}}
                                             <button
@@ -324,6 +365,124 @@
                            class="btn btn-primary btn-sm">
                             Open in Builder
                         </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Import from Meta Modal --}}
+    @if ($showMetaImport)
+        <div class="modal d-block" style="background: rgba(0,0,0,0.5);" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h5 class="modal-title mb-0">Import from Meta</h5>
+                            <small class="text-muted">Flows published in your WhatsApp Business Account</small>
+                        </div>
+                        <button type="button" class="close" wire:click="closeMetaImport">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <p class="text-muted small mb-0">
+                                Import a flow to use it in automations, refresh its schema, and manage it alongside forms built in ConvoCon.
+                            </p>
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                wire:click="loadMetaFlows"
+                                wire:loading.attr="disabled"
+                            >
+                                <span wire:loading.remove wire:target="loadMetaFlows">
+                                    <i class="ni ni-refresh-02"></i> Refresh list
+                                </span>
+                                <span wire:loading wire:target="loadMetaFlows">Loading...</span>
+                            </button>
+                        </div>
+
+                        @if ($metaFlowsError)
+                            <div class="alert alert-danger small mb-3">{{ $metaFlowsError }}</div>
+                        @endif
+
+                        @if ($metaFlowsLoading)
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary mb-3" role="status"></div>
+                                <p class="text-muted small mb-0">Loading flows from Meta...</p>
+                            </div>
+                        @elseif (empty($metaFlows))
+                            <div class="text-center py-5">
+                                <i class="ni ni-cloud-download-95 text-muted" style="font-size: 42px;"></i>
+                                <p class="text-muted mt-3 mb-0">No flows found in your Meta account.</p>
+                                <p class="text-muted small">Create flows in Meta's Flow Builder or publish forms from here first.</p>
+                            </div>
+                        @else
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Meta ID</th>
+                                            <th>Status</th>
+                                            <th>Local link</th>
+                                            <th class="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($metaFlows as $metaFlow)
+                                            <tr wire:key="meta-flow-{{ $metaFlow['meta_flow_id'] }}">
+                                                <td><strong>{{ $metaFlow['name'] }}</strong></td>
+                                                <td><small class="text-muted">{{ $metaFlow['meta_flow_id'] }}</small></td>
+                                                <td>
+                                                    <span class="badge badge-{{ ($metaFlow['status'] ?? '') === 'PUBLISHED' ? 'success' : 'warning' }}">
+                                                        {{ $metaFlow['status'] ?? 'UNKNOWN' }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    @if (! empty($metaFlow['linked']))
+                                                        <a href="{{ route('whatsapp-flows.edit', $metaFlow['local_flow_id']) }}" class="badge badge-info">
+                                                            Linked (#{{ $metaFlow['local_flow_id'] }})
+                                                        </a>
+                                                    @else
+                                                        <span class="text-muted small">Not imported</span>
+                                                    @endif
+                                                </td>
+                                                <td class="text-right">
+                                                    @if (! empty($metaFlow['linked']))
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-outline-info btn-sm"
+                                                            wire:click="importFromMeta('{{ $metaFlow['meta_flow_id'] }}')"
+                                                            wire:loading.attr="disabled"
+                                                            wire:target="importFromMeta('{{ $metaFlow['meta_flow_id'] }}')"
+                                                        >
+                                                            <span wire:loading.remove wire:target="importFromMeta('{{ $metaFlow['meta_flow_id'] }}')">Re-sync</span>
+                                                            <span wire:loading wire:target="importFromMeta('{{ $metaFlow['meta_flow_id'] }}')">Syncing...</span>
+                                                        </button>
+                                                    @else
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-primary btn-sm"
+                                                            wire:click="importFromMeta('{{ $metaFlow['meta_flow_id'] }}')"
+                                                            wire:loading.attr="disabled"
+                                                            wire:target="importFromMeta('{{ $metaFlow['meta_flow_id'] }}')"
+                                                        >
+                                                            <span wire:loading.remove wire:target="importFromMeta('{{ $metaFlow['meta_flow_id'] }}')">Import</span>
+                                                            <span wire:loading wire:target="importFromMeta('{{ $metaFlow['meta_flow_id'] }}')">Importing...</span>
+                                                        </button>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" wire:click="closeMetaImport">Close</button>
                     </div>
                 </div>
             </div>

@@ -8,18 +8,18 @@ use Modules\Flowmaker\Models\Flow;
 
 class WhatsappFormAutomationFactory
 {
-    public const RECIPES = ['lead', 'book', 'book_live', 'checkout', 'event'];
+    public const RECIPES = ['collect', 'lead', 'book', 'book_live', 'checkout', 'event'];
 
     /**
      * Create a draft Flowmaker automation bound to a Live WhatsApp Form.
      *
      * @throws InvalidArgumentException
      */
-    public function createFromForm(WhatsappFlow $form, string $recipe = 'lead', ?int $companyId = null): Flow
+    public function createFromForm(WhatsappFlow $form, string $recipe = 'collect', ?int $companyId = null): Flow
     {
         $recipe = strtolower($recipe);
         if (! in_array($recipe, self::RECIPES, true)) {
-            throw new InvalidArgumentException('Invalid recipe. Use lead, book, book_live, checkout, or event.');
+            throw new InvalidArgumentException('Invalid recipe. Use collect, lead, book, book_live, checkout, or event.');
         }
 
         if (empty($form->meta_flow_id)) {
@@ -61,9 +61,11 @@ class WhatsappFormAutomationFactory
 
         $mapper = app(WhatsappFormFieldMapper::class);
         $companyId = (int) $form->company_id;
-        $fieldMappings = $mapper->suggestCrmMappings($form, $companyId);
+        $fieldMappings = $recipe === 'collect' ? [] : $mapper->suggestCrmMappings($form, $companyId);
         $leadConditions = $recipe === 'lead' ? $mapper->suggestLeadConditions($form) : [];
         $amountFieldKey = $recipe === 'checkout' ? $mapper->suggestAmountFieldKey($form) : null;
+        $bookingFieldMap = ($recipe === 'book' || $recipe === 'book_live') ? $mapper->suggestBookingFieldMap($form) : [];
+        $eventFieldMap = $recipe === 'event' ? $mapper->suggestEventFieldMap($form) : [];
 
         $nodes = [
             [
@@ -113,7 +115,7 @@ class WhatsappFormAutomationFactory
                     ],
                 ],
             ],
-            [
+            ...($recipe === 'collect' ? [] : [[
                 'id' => 'message-no-match',
                 'type' => 'message',
                 'position' => ['x' => 760, 'y' => 560],
@@ -124,7 +126,7 @@ class WhatsappFormAutomationFactory
                         'message' => 'Thanks — an agent will review your answers shortly.',
                     ],
                 ],
-            ],
+            ]]),
             [
                 'id' => 'assign_agent-1',
                 'type' => 'assign_agent',
@@ -152,8 +154,10 @@ class WhatsappFormAutomationFactory
         $edges = [
             ['id' => 'e-kw', 'source' => 'keyword_trigger-1', 'target' => 'whatsapp_flow-1', 'sourceHandle' => 'keyword-kw1'],
             ['id' => 'e-abandon', 'source' => 'whatsapp_flow-1', 'target' => 'message-abandon', 'sourceHandle' => 'onAbandoned'],
-            ['id' => 'e-else', 'source' => 'whatsapp_flow-1', 'target' => 'message-no-match', 'sourceHandle' => 'else'],
-            ['id' => 'e-no-match-agent', 'source' => 'message-no-match', 'target' => 'assign_agent-1'],
+            ...($recipe === 'collect' ? [] : [
+                ['id' => 'e-else', 'source' => 'whatsapp_flow-1', 'target' => 'message-no-match', 'sourceHandle' => 'else'],
+                ['id' => 'e-no-match-agent', 'source' => 'message-no-match', 'target' => 'assign_agent-1'],
+            ]),
             ['id' => 'e-abandon-agent', 'source' => 'message-abandon', 'target' => 'assign_agent-1'],
             ['id' => 'e-agent-end', 'source' => 'assign_agent-1', 'target' => 'end-abandon'],
         ];
@@ -175,11 +179,11 @@ class WhatsappFormAutomationFactory
                             'body' => 'Choose a date and time.',
                             'buttonText' => 'Choose slot',
                             'success_message' => 'Thanks! Your appointment is confirmed.',
-                            'formFieldMap' => [
-                                'serviceField' => $recipe === 'book_live' ? 'service' : 'select_3',
-                                'dateField' => $recipe === 'book_live' ? 'preferred_date' : 'date_4',
-                                'slotField' => 'slot',
-                            ],
+                            'formFieldMap' => array_filter([
+                                'serviceField' => $bookingFieldMap['serviceField'] ?? null,
+                                'dateField' => $bookingFieldMap['dateField'] ?? null,
+                                'slotField' => $bookingFieldMap['slotField'] ?? null,
+                            ]),
                             'serviceOptionMap' => [],
                             'onComplete' => [
                                 'groupId' => 'none',
@@ -216,10 +220,10 @@ class WhatsappFormAutomationFactory
                             'intake_mode' => 'form',
                             'party_size' => '1',
                             'success_message' => 'You are registered for {{booking_event_title}} on {{booking_event_date}} at {{booking_event_time}}.',
-                            'formFieldMap' => [
-                                'occurrenceField' => 'occurrence_id',
-                                'partySizeField' => 'party_size',
-                            ],
+                            'formFieldMap' => array_filter([
+                                'occurrenceField' => $eventFieldMap['occurrenceField'] ?? null,
+                                'partySizeField' => $eventFieldMap['partySizeField'] ?? null,
+                            ]),
                             'onComplete' => [
                                 'groupId' => 'none',
                                 'journeyId' => 'none',
@@ -298,7 +302,25 @@ class WhatsappFormAutomationFactory
             $edges[] = ['id' => 'e-pay-fail', 'source' => 'request_payment-1', 'target' => 'message-abandon', 'sourceHandle' => 'failed'];
             $edges[] = ['id' => 'e-status-group', 'source' => 'order_status-1', 'target' => 'assign_group-1'];
             $edges[] = ['id' => 'e-group-end', 'source' => 'assign_group-1', 'target' => 'end-1'];
-        } else {
+        } elseif ($recipe === 'collect') {
+            $nodes = array_merge($nodes, [
+                [
+                    'id' => 'message-thanks',
+                    'type' => 'message',
+                    'position' => ['x' => 760, 'y' => 120],
+                    'data' => [
+                        'label' => 'Thanks',
+                        'type' => 'message',
+                        'settings' => [
+                            'message' => 'Thanks! We received your response.',
+                        ],
+                    ],
+                ],
+            ]);
+
+            $edges[] = ['id' => 'e-done-thanks', 'source' => 'whatsapp_flow-1', 'target' => 'message-thanks', 'sourceHandle' => 'onFlowCompleted'];
+            $edges[] = ['id' => 'e-thanks-end', 'source' => 'message-thanks', 'target' => 'end-1'];
+        } elseif ($recipe === 'lead') {
             $nodes = array_merge($nodes, [
                 [
                     'id' => 'assign_group-1',
@@ -366,6 +388,7 @@ class WhatsappFormAutomationFactory
     private function nameFor(WhatsappFlow $form, string $recipe): string
     {
         $suffix = match ($recipe) {
+            'collect' => 'Collect',
             'book', 'book_live' => 'Book',
             'checkout' => 'Checkout',
             'event' => 'Event',

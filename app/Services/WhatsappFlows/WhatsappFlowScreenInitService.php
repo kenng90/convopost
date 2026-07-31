@@ -45,6 +45,13 @@ class WhatsappFlowScreenInitService
 
         $initData = array_merge($initData, $this->resolveStoredPrefill($flowToken));
 
+        $metaSchemaInit = $this->initDataFromPublishedMetaSchema($flow, $screenId);
+        foreach ($metaSchemaInit as $key => $value) {
+            if (! array_key_exists($key, $initData)) {
+                $initData[$key] = $value;
+            }
+        }
+
         $dynamicEntries = $screen['dynamic_data'] ?? [];
         if ($dynamicEntries === []) {
             return $initData;
@@ -57,14 +64,61 @@ class WhatsappFlowScreenInitService
                 continue;
             }
 
-            if (($definition['type'] ?? null) === 'array') {
-                $initData[$key] = $definition['__example__'] ?? [];
-            } else {
-                $initData[$key] = $definition['__example__'] ?? '';
-            }
+            $initData[$key] = $this->exampleValueForMetaDefinition($definition);
         }
 
         return $initData;
+    }
+
+    /**
+     * Build INIT defaults from the published Meta JSON schema (authoritative for imported flows).
+     *
+     * @return array<string, mixed>
+     */
+    private function initDataFromPublishedMetaSchema(WhatsappFlow $flow, string $screenId): array
+    {
+        $metaJson = $flow->meta_flow_json;
+        if (! is_array($metaJson)) {
+            return [];
+        }
+
+        $screen = collect($metaJson['screens'] ?? [])->firstWhere('id', $screenId);
+        if (! is_array($screen)) {
+            return [];
+        }
+
+        $screenData = $screen['data'] ?? [];
+        if (! is_array($screenData)) {
+            return [];
+        }
+
+        $initData = [];
+
+        foreach ($screenData as $key => $definition) {
+            if (! is_string($key) || ! is_array($definition)) {
+                continue;
+            }
+
+            $initData[$key] = $this->exampleValueForMetaDefinition($definition);
+        }
+
+        return $initData;
+    }
+
+    /**
+     * @param  array<string, mixed>  $definition
+     */
+    private function exampleValueForMetaDefinition(array $definition): mixed
+    {
+        $type = $definition['type'] ?? 'string';
+        $example = $definition['__example__'] ?? null;
+
+        return match ($type) {
+            'array' => is_array($example) ? $example : [],
+            'boolean' => (bool) ($example ?? false),
+            'number' => is_numeric($example) ? (float) $example : 0,
+            default => is_scalar($example) ? (string) $example : '',
+        };
     }
 
     /**

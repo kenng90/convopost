@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\WhatsappFlow;
 use App\Models\WhatsappMetaCredentials;
+use App\Support\WhatsappGraphApi;
 use App\Traits\EnsuresOpenSsl;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -11,8 +12,6 @@ use Illuminate\Support\Facades\Log;
 class WhatsappMetaFlowService
 {
     use EnsuresOpenSsl;
-
-    protected const META_API_VERSION = 'v18.0';
 
     protected const META_API_BASE_URL = 'https://graph.facebook.com';
 
@@ -1362,7 +1361,7 @@ class WhatsappMetaFlowService
 
     protected function getApiBaseUrl(): string
     {
-        return self::META_API_BASE_URL.'/'.self::META_API_VERSION;
+        return WhatsappGraphApi::baseUrl().'/'.WhatsappGraphApi::version();
     }
 
     protected function buildFlowWebhookUrl(\App\Models\Company $company): string

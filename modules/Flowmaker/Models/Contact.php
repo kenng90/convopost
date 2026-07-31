@@ -56,6 +56,11 @@ class Contact extends ModelsContact
                     return (string) $this->flowStateCache[$variableName];
                 }
 
+                $resolved = $this->resolveNestedFlowVariable($variableName, $this->flowStateCache ?? []);
+                if ($resolved !== null) {
+                    return $resolved;
+                }
+
                 return $matches[0];
             }, $content);
         }
@@ -154,6 +159,64 @@ class Contact extends ModelsContact
         $this->setContactState($flowId, 'ai_summary', $newSummary);
 
         return $newSummary;
+    }
+
+    /**
+     * Resolve dotted variable paths against JSON-encoded flow state values.
+     *
+     * @param  array<string, mixed>  $flowState
+     */
+    protected function resolveNestedFlowVariable(string $variableName, array $flowState): ?string
+    {
+        if (! str_contains($variableName, '.')) {
+            return null;
+        }
+
+        [$rootKey, $path] = explode('.', $variableName, 2);
+        if ($rootKey === '' || $path === '') {
+            return null;
+        }
+
+        $rootValue = $flowState[$rootKey] ?? null;
+        if ($rootValue === null || $rootValue === '') {
+            foreach ($flowState as $key => $value) {
+                if (str_ends_with($key, '_'.$rootKey) || str_ends_with($key, '_responses')) {
+                    $decoded = $this->decodeJsonValue($value);
+                    if (is_array($decoded)) {
+                        $resolved = data_get($decoded, $path);
+                        if ($resolved !== null) {
+                            return is_scalar($resolved) ? (string) $resolved : json_encode($resolved);
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        $decoded = $this->decodeJsonValue($rootValue);
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        $resolved = data_get($decoded, $path);
+
+        if ($resolved === null) {
+            return null;
+        }
+
+        return is_scalar($resolved) ? (string) $resolved : json_encode($resolved);
+    }
+
+    protected function decodeJsonValue(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $decoded = json_decode($value, true);
+
+        return json_last_error() === JSON_ERROR_NONE ? $decoded : $value;
     }
 
     protected function invalidateFlowStateCache(int $flowId): void
