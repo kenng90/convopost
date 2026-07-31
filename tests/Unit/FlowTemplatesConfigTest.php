@@ -457,4 +457,27 @@ class FlowTemplatesConfigTest extends TestCase
                 && str_contains((string) ($edge['sourceHandle'] ?? ''), 'keyword-kw'))
         );
     }
+
+    public function test_voice_ai_template_powers_calls_not_chat_loop(): void
+    {
+        $flowData = config('flow-templates.whatsapp_voice_ai_agent.flow_data');
+        $nodes = collect($flowData['nodes']);
+        $edges = collect($flowData['edges']);
+
+        $this->assertFalse($nodes->contains(fn (array $node) => str_starts_with((string) ($node['id'] ?? ''), 'voice-faq-')));
+        $this->assertFalse($edges->contains(fn (array $edge) => ($edge['target'] ?? '') === 'voice-faq-counter'));
+
+        $instructions = $nodes->firstWhere('id', 'openai-voice-instructions');
+        $this->assertNotNull($instructions);
+        $this->assertFalse((bool) ($instructions['data']['settings']['llm']['autoSendMessage'] ?? true));
+
+        $this->assertTrue(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'incomingMessage-1'
+                && ($edge['target'] ?? '') === 'message-chat-notice')
+        );
+        $this->assertFalse(
+            $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'incomingMessage-1'
+                && str_contains((string) ($edge['target'] ?? ''), 'openai'))
+        );
+    }
 }
