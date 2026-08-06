@@ -14,12 +14,14 @@ class CreditBillingResolver
             return $explicitAction;
         }
 
-        if ($isBotAutoReply) {
-            return 'send_bot_auto_reply';
-        }
-
+        // In-session bot/flow replies use the free Meta service window, matching
+        // UserReply and other flow nodes that call sendMessage without isBotAutoReply.
         if ($this->isWithinServiceWindow($contact)) {
             return 'send_service_window_reply';
+        }
+
+        if ($isBotAutoReply) {
+            return 'send_bot_auto_reply';
         }
 
         return 'send_outside_window_reply';

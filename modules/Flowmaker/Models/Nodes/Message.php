@@ -10,28 +10,44 @@ class Message extends Node
     public function process($message, $data)
     {
         Log::info('Processing message in message node', ['message' => $message, 'data' => $data]);
-        // Get message from node data
+
         try {
             $message = $this->getDataAsArray()['settings']['message'];
             Log::info('Message', ['message' => $message]);
 
-            //Find the contact
             $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
             $contact = Contact::find($contactId);
             Log::info('Contact', ['contact' => $contact]);
 
-            //Transform the message
             $message = $contact->changeVariables($message, $this->flow_id);
             Log::info('Transformed message', ['message' => $message]);
 
-            //Send the message
-            $contact->sendMessage($message, false, false, 'TEXT', null, null, null, true);
+            $sent = $contact->sendMessage($message, false, false, 'TEXT', null, null, null, true);
 
+            if ((int) $sent->status === 2) {
+                Log::error('Flow message node failed to send outbound message', [
+                    'flow_id' => $this->flow_id,
+                    'node_id' => $this->id,
+                    'contact_id' => $contact->id,
+                    'message_id' => $sent->id,
+                    'error' => $sent->error,
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => $sent->error,
+                ];
+            }
         } catch (\Exception $e) {
             Log::error('Error getting message from node data', ['error' => $e->getMessage()]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
         }
 
-        // Continue flow to next node if one exists
+        // Continue flow to next node only after a successful send
         $nextNode = $this->getNextNodeId();
         if ($nextNode) {
             $nextNode->process($message, $data);

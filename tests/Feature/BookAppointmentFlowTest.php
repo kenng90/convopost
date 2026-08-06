@@ -136,6 +136,9 @@ class BookAppointmentFlowTest extends TestCase
 
         $this->node->process('', $messageData);
 
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/api/wpbox/sendmessage')
+            && str_contains((string) data_get($request->data(), 'message', ''), 'fetching available dates'));
+
         Http::assertSent(fn ($request) => str_contains($request->url(), '/api/wpbox/sendlistmessage'));
 
         $this->node->isStartNode = true;

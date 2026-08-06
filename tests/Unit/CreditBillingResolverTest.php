@@ -43,10 +43,22 @@ class CreditBillingResolverTest extends TestCase
         );
     }
 
-    public function test_resolves_bot_auto_reply_action(): void
+    public function test_bot_auto_reply_inside_service_window_is_free(): void
     {
         $contact = new Contact([
             'last_client_reply_at' => now(),
+        ]);
+
+        $this->assertSame(
+            'send_service_window_reply',
+            $this->resolver->resolveInboxOutboundAction($contact, isBotAutoReply: true),
+        );
+    }
+
+    public function test_bot_auto_reply_outside_service_window_uses_bot_action(): void
+    {
+        $contact = new Contact([
+            'last_client_reply_at' => now()->subHours(30),
         ]);
 
         $this->assertSame(
