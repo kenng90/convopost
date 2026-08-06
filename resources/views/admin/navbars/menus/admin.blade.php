@@ -43,7 +43,7 @@
     <!-- if enable credits -->
     @if (config('settings.enable_credits'))
         <li class="nav-item">
-            <a class="nav-link @if (Route::currentRouteName() == 'credits.index') active @endif" href="{{ route('credits.index') }}">
+            <a class="nav-link @if (in_array(Route::currentRouteName(), ['credits.index', 'credits.create', 'credits.store'], true)) active @endif" href="{{ route('credits.index') }}">
                 <i class="ni ni-credit-card text-blue"></i> {{ __('Credits') }}
             </a>
         </li>

@@ -21,6 +21,11 @@
                             <div class="col-8">
                                 <h3 class="mb-0">{{ __('Costs per action') }}</h3>
                             </div>
+                            <div class="col-4 text-right">
+                                <a href="{{ route('credits.create') }}" class="btn btn-sm btn-success">
+                                    {{ __('Grant credits') }}
+                                </a>
+                            </div>
                         </div>
                     </div>
                     <div class="card-body">

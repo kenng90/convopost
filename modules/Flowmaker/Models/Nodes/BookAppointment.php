@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Jobs\ResumeFlowFromMpesa;
 use Modules\Flowmaker\Models\Contact;
+use Modules\Flowmaker\Traits\SendsAvailabilityWaitMessage;
 use Modules\Reminders\Models\Reservation;
 use Modules\Reminders\Models\Source;
 use Modules\Reminders\Services\AvailabilityService;
@@ -22,6 +23,8 @@ use Modules\Reminders\Support\BookingPaymentConfig;
 
 class BookAppointment extends Node
 {
+    use SendsAvailabilityWaitMessage;
+
     private const LIST_LIMIT = 10;
 
     private const PAGINATED_LIST_SIZE = self::LIST_LIMIT - 1;
@@ -144,6 +147,7 @@ class BookAppointment extends Node
      */
     private function tryFormIntake(Contact $contact, Company $company, $message, $data, array $settings): array
     {
+        $this->notifyLookingUpAvailability($contact, 'availability');
         $result = app(BookingFormBridgeService::class)->resolve($contact, $company, $this->flow_id, $settings);
 
         if ($result['status'] === 'error') {
@@ -254,7 +258,7 @@ class BookAppointment extends Node
         }
 
         if (! $this->getState($contact, 'slot_id')) {
-            return $this->promptSlotSelection($contact, $source);
+            return $this->promptSlotSelection($contact, $source, $message, $data);
         }
 
         return $this->finalizeBooking($contact, $company, $source, $message, $data);
@@ -480,6 +484,8 @@ class BookAppointment extends Node
 
     private function promptDateSelection(Contact $contact, Source $source, $message = '', $data = null): array
     {
+        $this->notifyLookingUpAvailability($contact, 'dates');
+
         $duration = (int) $this->getState($contact, 'duration_minutes');
         $from = now($source->timezone ?: 'UTC')->startOfDay();
         $to = $from->copy()->addDays((int) $source->max_advance_days);
@@ -521,8 +527,10 @@ class BookAppointment extends Node
         );
     }
 
-    private function promptSlotSelection(Contact $contact, Source $source): array
+    private function promptSlotSelection(Contact $contact, Source $source, $message = '', $data = null): array
     {
+        $this->notifyLookingUpAvailability($contact, 'times');
+
         $duration = (int) $this->getState($contact, 'duration_minutes');
         $date = $this->getState($contact, 'selected_date');
         $slots = app(AvailabilityService::class)->slotsForDate($source, $date, $duration);

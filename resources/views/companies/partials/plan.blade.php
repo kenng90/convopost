@@ -16,3 +16,19 @@
         </form>
     </div>
 </div>
+
+@if (config('settings.enable_credits') || config('managed-ai.enabled', true))
+    <div class="card card-profile bg-secondary shadow mt-4">
+        <div class="card-header">
+            <h5 class="h3 mb-0">{{ __('Grant credits') }}</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">
+                {{ __('Add messaging or AI credits for this organization’s owner without waiting for plan renewal.') }}
+            </p>
+            <a href="{{ route('credits.create', ['company_id' => $company->id]) }}" class="btn btn-primary">
+                {{ __('Open credit grant') }}
+            </a>
+        </div>
+    </div>
+@endif

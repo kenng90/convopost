@@ -9,12 +9,15 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
+use Modules\Flowmaker\Traits\SendsAvailabilityWaitMessage;
 use Modules\Reminders\Models\Reservation;
 use Modules\Reminders\Services\AvailabilityService;
 use Modules\Reminders\Services\ReservationBookingService;
 
 class ManageBooking extends Node
 {
+    use SendsAvailabilityWaitMessage;
+
     private const LIST_LIMIT = 10;
 
     private const PAGINATED_LIST_SIZE = self::LIST_LIMIT - 1;
@@ -374,6 +377,8 @@ class ManageBooking extends Node
             return;
         }
 
+        $this->notifyLookingUpAvailability($contact, 'times');
+
         $date = $this->getState($contact, 'reschedule_date');
         $duration = (int) ($reservation->duration_minutes ?: $source->default_duration_minutes ?: 30);
         $slots = app(AvailabilityService::class)->slotsForDate($source, $date, $duration);
@@ -427,6 +432,8 @@ class ManageBooking extends Node
 
             return;
         }
+
+        $this->notifyLookingUpAvailability($contact, 'dates');
 
         $duration = (int) ($reservation->duration_minutes ?: $source->default_duration_minutes ?: 30);
         $from = now($source->timezone ?: 'UTC')->startOfDay();

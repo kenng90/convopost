@@ -23,6 +23,11 @@ class ManagedAiService
 
     public function monthlyAllowance(Company $company): int
     {
+        return $this->planAllowance($company) + $this->bonusCredits($this->resolveOwner($company));
+    }
+
+    public function planAllowance(Company $company): int
+    {
         $plan = $this->resolvePlan($company);
         if (! $plan) {
             return (int) config('managed-ai.default_monthly_credits', 0);
@@ -34,6 +39,23 @@ class ManagedAiService
         }
 
         return (int) config('managed-ai.default_monthly_credits', 0);
+    }
+
+    public function bonusCredits(User $owner): int
+    {
+        return max(0, (int) $owner->getConfig('managed_ai_bonus_credits', '0'));
+    }
+
+    public function grantBonusCredits(User $owner, int $amount): int
+    {
+        if ($amount <= 0) {
+            return $this->bonusCredits($owner);
+        }
+
+        $total = $this->bonusCredits($owner) + $amount;
+        $owner->setConfig('managed_ai_bonus_credits', (string) $total);
+
+        return $total;
     }
 
     public function remainingCredits(Company $company): int
@@ -132,7 +154,7 @@ class ManagedAiService
             return;
         }
 
-        if ($this->monthlyAllowance($company) <= 0) {
+        if ($this->planAllowance($company) <= 0 && $this->bonusCredits($this->resolveOwner($company)) <= 0) {
             return;
         }
 
@@ -164,9 +186,11 @@ class ManagedAiService
         $stored = $owner->getConfig('managed_ai_period', '');
 
         if ($stored !== $period) {
+            // Mid-cycle AI top-ups apply only to the current billing period.
             $owner->setMultipleConfig([
                 'managed_ai_period' => $period,
                 'managed_ai_credits_used' => '0',
+                'managed_ai_bonus_credits' => '0',
             ]);
         }
     }
@@ -184,13 +208,15 @@ class ManagedAiService
         return [
             'enabled' => (bool) config('managed-ai.enabled', true),
             'monthly_allowance' => $allowance,
+            'plan_allowance' => $this->planAllowance($company),
+            'bonus_credits' => $this->bonusCredits($owner),
             'remaining' => $remaining,
             'used' => min($used, $allowance),
             'has_own_key' => $this->hasByokOpenRouter($company),
             'uses_platform_key' => $keyInfo['source'] === 'platform',
             'generate_cost' => $generateCost,
             'can_generate' => $this->canPerformAction($company, 'ai_flow_generate'),
-            'period_key' => $this->resolveBillingPeriodKey($this->resolveOwner($company), $this->resolvePlan($company)),
+            'period_key' => $this->resolveBillingPeriodKey($owner, $this->resolvePlan($company)),
         ];
     }
 

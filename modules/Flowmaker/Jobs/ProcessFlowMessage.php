@@ -30,6 +30,12 @@ class ProcessFlowMessage implements ShouldQueue
         $message = Message::withoutGlobalScopes()->with('contact')->find($this->messageId);
 
         if ($flow && $message) {
+            if ($message->contact?->company_id) {
+                session([
+                    'company_id' => $message->contact->company_id,
+                ]);
+            }
+
             $flow->processMessage($message);
         }
     }

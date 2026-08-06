@@ -337,6 +337,15 @@ class Contact extends ModelsContact
                 $messageToBeSend->error = $charger->insufficientCreditsMessage($resolvedCreditAction);
                 $messageToBeSend->save();
 
+                Log::warning('Outbound message blocked by insufficient credits', [
+                    'message_id' => $messageToBeSend->id,
+                    'contact_id' => $this->id,
+                    'company_id' => $this->company_id,
+                    'credit_action' => $resolvedCreditAction,
+                    'is_bot_auto_reply' => $isBotAutoReply,
+                    'error' => $messageToBeSend->error,
+                ]);
+
                 return $messageToBeSend;
             }
         }

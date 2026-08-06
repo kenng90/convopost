@@ -21,10 +21,15 @@ class AvailabilityService
     }
 
     /**
+     * @param  array<int, array<int, array{start: Carbon, end: Carbon}>>|null  $prefetchedBusyByUserId
      * @return array<int, array{id: string, title: string, start: string, end: string, appointment_staff_id: int|null, staff_user_id: int|null, staff_name: string|null, duration_minutes: int}>
      */
-    public function slotsForDate(Source $source, string $date, ?int $durationMinutes = null): array
-    {
+    public function slotsForDate(
+        Source $source,
+        string $date,
+        ?int $durationMinutes = null,
+        ?array $prefetchedBusyByUserId = null
+    ): array {
         $source->loadMissing('department');
 
         $durationMinutes = $this->resolveDuration($source, $durationMinutes);
@@ -43,7 +48,13 @@ class AvailabilityService
         $slots = collect();
 
         foreach ($staffMembers as $staff) {
-            $staffSlots = $this->slotsForStaff($source, $staff, $day, $durationMinutes);
+            $staffSlots = $this->slotsForStaff(
+                $source,
+                $staff,
+                $day,
+                $durationMinutes,
+                $prefetchedBusyByUserId
+            );
             $slots = $slots->merge($staffSlots);
         }
 
@@ -61,11 +72,27 @@ class AvailabilityService
      */
     public function availableDates(Source $source, Carbon $from, Carbon $to, ?int $durationMinutes = null): array
     {
+        $source->loadMissing('department');
+
+        $durationMinutes = $this->resolveDuration($source, $durationMinutes);
+        $staffMembers = $this->activeStaffForSource($source);
+        if ($staffMembers->isEmpty()) {
+            return [];
+        }
+
+        $timezone = $source->timezone ?: 'UTC';
+        $prefetchedBusyByUserId = $this->prefetchBusyBlocksForRange(
+            $staffMembers,
+            $from->copy()->startOfDay(),
+            $to->copy()->endOfDay(),
+            $timezone
+        );
+
         $dates = [];
         $period = CarbonPeriod::create($from->copy()->startOfDay(), $to->copy()->startOfDay());
 
         foreach ($period as $day) {
-            if ($this->slotsForDate($source, $day->toDateString(), $durationMinutes)) {
+            if ($this->slotsForDate($source, $day->toDateString(), $durationMinutes, $prefetchedBusyByUserId)) {
                 $dates[] = $day->toDateString();
             }
         }
@@ -150,10 +177,47 @@ class AvailabilityService
     }
 
     /**
+     * Prefetch Google freeBusy once per calendar user for the whole range.
+     *
+     * @param  Collection<int, SourceStaff>  $staffMembers
+     * @return array<int, array<int, array{start: Carbon, end: Carbon}>>
+     */
+    private function prefetchBusyBlocksForRange(
+        Collection $staffMembers,
+        Carbon $rangeStart,
+        Carbon $rangeEnd,
+        string $timezone
+    ): array {
+        $busyByUserId = [];
+
+        foreach ($staffMembers as $staff) {
+            $calendarUser = $staff->appointmentStaff?->calendarUser();
+            if (! $calendarUser || isset($busyByUserId[$calendarUser->id])) {
+                continue;
+            }
+
+            $busyByUserId[$calendarUser->id] = $this->googleCalendarService->busyBlocks(
+                $calendarUser,
+                $rangeStart->copy()->timezone($timezone),
+                $rangeEnd->copy()->timezone($timezone),
+                $timezone
+            );
+        }
+
+        return $busyByUserId;
+    }
+
+    /**
+     * @param  array<int, array<int, array{start: Carbon, end: Carbon}>>|null  $prefetchedBusyByUserId
      * @return array<int, array{id: string, title: string, start: string, end: string, appointment_staff_id: int, staff_user_id: int|null, staff_name: string, duration_minutes: int}>
      */
-    private function slotsForStaff(Source $source, SourceStaff $staff, Carbon $day, int $durationMinutes): array
-    {
+    private function slotsForStaff(
+        Source $source,
+        SourceStaff $staff,
+        Carbon $day,
+        int $durationMinutes,
+        ?array $prefetchedBusyByUserId = null
+    ): array {
         $timezone = $source->timezone ?: 'UTC';
         $hours = $this->workingHoursForStaff($source, $staff, $day);
 
@@ -172,14 +236,19 @@ class AvailabilityService
         $slots = [];
 
         $calendarUser = $member->calendarUser();
-        $googleBusy = $calendarUser
-            ? $this->googleCalendarService->busyBlocks(
-                $calendarUser,
-                $slotStart->copy()->timezone($timezone),
-                $dayEnd->copy()->timezone($timezone),
-                $timezone
-            )
-            : [];
+        $googleBusy = [];
+        if ($calendarUser) {
+            if ($prefetchedBusyByUserId !== null && array_key_exists($calendarUser->id, $prefetchedBusyByUserId)) {
+                $googleBusy = $prefetchedBusyByUserId[$calendarUser->id];
+            } else {
+                $googleBusy = $this->googleCalendarService->busyBlocks(
+                    $calendarUser,
+                    $slotStart->copy()->timezone($timezone),
+                    $dayEnd->copy()->timezone($timezone),
+                    $timezone
+                );
+            }
+        }
 
         while ($slotStart->copy()->addMinutes($durationMinutes)->lte($dayEnd)) {
             $slotEnd = $slotStart->copy()->addMinutes($durationMinutes);
