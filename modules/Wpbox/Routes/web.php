@@ -157,6 +157,19 @@ Route::group([
             //Mobile App
             Route::post('getConversations/{lastmessagetime}', 'APIController@getConversations');
             Route::post('getMessages', 'APIController@getMessages');
+            Route::post('markChatRead', 'APIController@markChatRead');
+            Route::post('resolveChat', 'APIController@resolveChat');
+            Route::post('reopenChat', 'APIController@reopenChatApi');
+            Route::post('assignChat', 'APIController@assignChat');
+            Route::post('sendNote', 'APIController@sendNote');
+            Route::post('getNotes', 'APIController@getNotesApi');
+            Route::post('getAgents', 'APIController@getAgents');
+            Route::post('getQuickReplies', 'APIController@getQuickReplies');
+            Route::post('getTemplatesMobile', 'APIController@getTemplates');
+            Route::post('updateAIBot', 'APIController@updateAIBot');
+            Route::post('updateContact', 'APIController@updateContact');
+            Route::post('suggestCopilot', 'APIController@suggestCopilot');
+            Route::post('me', 'APIController@me');
         });
     });
 
