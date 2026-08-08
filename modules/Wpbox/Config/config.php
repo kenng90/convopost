@@ -33,5 +33,7 @@ return [
     'campaign_dispatch_token' => env('CAMPAIGN_DISPATCH_TOKEN', ''),
     'mobile_app_ios_url' => env('MOBILE_APP_IOS_URL', '#'),
     'mobile_app_android_url' => env('MOBILE_APP_ANDROID_URL', '#'),
+    'mobile_app_install_token' => env('MOBILE_APP_INSTALL_TOKEN', ''),
+    'mobile_app_version' => env('MOBILE_APP_VERSION', '4.2.0'),
     'chat_page_size' => env('CHAT_PAGE_SIZE', 6),
 ];

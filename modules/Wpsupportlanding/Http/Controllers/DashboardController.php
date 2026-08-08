@@ -124,6 +124,35 @@ class DashboardController extends Controller
         return $this->renderLegalPage('terms.md', 'wpsupportlanding::landing.terms');
     }
 
+    /**
+     * Private agent-app install page.
+     * When MOBILE_APP_INSTALL_TOKEN is set, require ?token= matching value.
+     */
+    public function appInstall(\Illuminate\Http\Request $request)
+    {
+        $requiredToken = (string) config('wpbox.mobile_app_install_token', '');
+        $provided = (string) $request->query('token', '');
+
+        if ($requiredToken !== '' && ! hash_equals($requiredToken, $provided)) {
+            abort(403, 'This install link is private. Ask your ConvoConnect admin for an invite link.');
+        }
+
+        $androidUrl = (string) config('wpbox.mobile_app_android_url', '');
+        $iosUrl = (string) config('wpbox.mobile_app_ios_url', '');
+        $hasAndroid = strlen($androidUrl) > 5 && $androidUrl !== '#';
+        $hasIos = strlen($iosUrl) > 5 && $iosUrl !== '#';
+
+        return view('wpsupportlanding::landing.app-install', [
+            'hasBlog' => Module::has('blog'),
+            'androidUrl' => $hasAndroid ? $androidUrl : null,
+            'iosUrl' => $hasIos ? $iosUrl : null,
+            'appVersion' => config('wpbox.mobile_app_version', '4.2.0'),
+            'appName' => config('app.name', 'ConvoConnect'),
+            'tokenRequired' => $requiredToken !== '',
+            'inviteToken' => $requiredToken !== '' ? $provided : null,
+        ]);
+    }
+
     private function renderLegalPage(string $markdownFile, string $view)
     {
         $markdownPath = resource_path('markdown/'.$markdownFile);
