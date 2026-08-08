@@ -553,6 +553,7 @@ class APIController extends Controller
 
             return response()->json([
                 'data' => $chatList,
+                'company_id' => $company->id,
                 'status' => true,
                 'errMsg' => '',
             ]);
@@ -563,11 +564,40 @@ class APIController extends Controller
     public function getMessages(Request $request)
     {
         return $this->authenticate($request, function ($request) {
-            //Company
-            $messages = Message::where('contact_id', $request->contact_id)->where('status', '>', 0)->orderBy('id', 'desc')->limit(100)->get();
+            $company = $this->getCompany();
+            $contact = Contact::where('id', $request->contact_id)
+                ->where('company_id', $company->id)
+                ->first();
+
+            if (! $contact) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Contact not found',
+                ], 404);
+            }
+
+            // Opening a chat clears the unread flag (parity with web chatmessages)
+            try {
+                $contact->is_last_message_by_contact = 0;
+                $contact->update();
+            } catch (\Exception $e) {
+                // ignore
+            }
+
+            $limit = min((int) $request->input('limit', 50), 100);
+            $beforeId = $request->input('before_id');
+
+            $messages = Message::where('contact_id', $contact->id)
+                ->where('company_id', $company->id)
+                ->where('status', '>', 0)
+                ->when($beforeId, fn ($query) => $query->where('id', '<', $beforeId))
+                ->orderBy('id', 'desc')
+                ->limit($limit)
+                ->get();
 
             return response()->json([
                 'data' => $messages,
+                'has_more' => $messages->count() === $limit,
                 'status' => true,
                 'errMsg' => '',
             ]);
@@ -1040,7 +1070,228 @@ class APIController extends Controller
     {
         //return response()->json(['status'=>'success']);
         return $this->authenticate($request, function ($request) {
-            return response()->json(['status' => 'success', 'user' => auth()->user()]);
+            $company = $this->getCompany();
+            $user = auth()->user();
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'user' => $user,
+                    'company_id' => $company?->id,
+                    'company_name' => $company?->name,
+                ],
+                'user' => $user,
+                'company_id' => $company?->id,
+            ]);
         });
+    }
+
+    /**
+     * Mobile agent inbox helpers (token auth via CheckAPIPlan).
+     */
+    public function markChatRead(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+            $contact = Contact::where('id', $request->contact_id)
+                ->where('company_id', $company->id)
+                ->first();
+
+            if (! $contact) {
+                return response()->json(['status' => 'error', 'message' => 'Contact not found'], 404);
+            }
+
+            $contact->is_last_message_by_contact = 0;
+            $contact->save();
+
+            return response()->json(['status' => true, 'data' => $contact]);
+        }, [
+            'token' => 'required',
+            'contact_id' => 'required',
+        ]);
+    }
+
+    public function resolveChat(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+            $contact = Contact::where('id', $request->contact_id)
+                ->where('company_id', $company->id)
+                ->first();
+
+            if (! $contact) {
+                return response()->json(['status' => 'error', 'message' => 'Contact not found'], 404);
+            }
+
+            $contact->resolved_chat = 1;
+            $contact->save();
+            event(new \Modules\Wpbox\Events\Chatlistchange($contact->id, $contact->company_id));
+
+            return response()->json(['status' => true, 'data' => $contact, 'message' => 'Chat resolved']);
+        }, [
+            'token' => 'required',
+            'contact_id' => 'required',
+        ]);
+    }
+
+    public function reopenChatApi(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+            $contact = Contact::where('id', $request->contact_id)
+                ->where('company_id', $company->id)
+                ->first();
+
+            if (! $contact) {
+                return response()->json(['status' => 'error', 'message' => 'Contact not found'], 404);
+            }
+
+            $contact->resolved_chat = 0;
+            $contact->save();
+            event(new \Modules\Wpbox\Events\Chatlistchange($contact->id, $contact->company_id));
+
+            return response()->json(['status' => true, 'data' => $contact, 'message' => 'Chat reopened']);
+        }, [
+            'token' => 'required',
+            'contact_id' => 'required',
+        ]);
+    }
+
+    public function assignChat(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+            $contact = Contact::where('id', $request->contact_id)
+                ->where('company_id', $company->id)
+                ->first();
+
+            if (! $contact) {
+                return response()->json(['status' => 'error', 'message' => 'Contact not found'], 404);
+            }
+
+            $ownerId = optional($company->user)->id;
+            $agent = User::where('id', $request->user_id)
+                ->where(function ($q) use ($company, $ownerId) {
+                    $q->where('company_id', $company->id);
+                    if ($ownerId) {
+                        $q->orWhere('id', $ownerId);
+                    }
+                })
+                ->first();
+
+            if (! $agent) {
+                return response()->json(['status' => 'error', 'message' => 'Agent not found'], 404);
+            }
+
+            $contact->user_id = $agent->id;
+            $contact->save();
+            event(new \Modules\Wpbox\Events\Chatlistchange($contact->id, $contact->company_id));
+
+            return response()->json(['status' => true, 'data' => $contact, 'message' => 'Assigned']);
+        }, [
+            'token' => 'required',
+            'contact_id' => 'required',
+            'user_id' => 'required',
+        ]);
+    }
+
+    public function sendNote(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+            $contact = Contact::where('id', $request->contact_id)
+                ->where('company_id', $company->id)
+                ->first();
+
+            if (! $contact) {
+                return response()->json(['status' => 'error', 'message' => 'Contact not found'], 404);
+            }
+
+            $note = $contact->addNote($request->note);
+
+            return response()->json(['status' => true, 'data' => $note]);
+        }, [
+            'token' => 'required',
+            'contact_id' => 'required',
+            'note' => 'required|string',
+        ]);
+    }
+
+    public function getAgents(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+            $ownerId = optional($company->user)->id;
+            $agents = User::query()
+                ->where(function ($q) use ($company, $ownerId) {
+                    $q->where('company_id', $company->id);
+                    if ($ownerId) {
+                        $q->orWhere('id', $ownerId);
+                    }
+                })
+                ->get(['id', 'name', 'email']);
+
+            return response()->json(['status' => true, 'data' => $agents]);
+        });
+    }
+
+    public function getQuickReplies(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+            $replies = Reply::where('company_id', $company->id)
+                ->where('type', 1)
+                ->whereNull('flow_id')
+                ->orderBy('name')
+                ->get(['id', 'name', 'text', 'trigger', 'type']);
+
+            return response()->json(['status' => true, 'data' => $replies]);
+        });
+    }
+
+    public function getNotesApi(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+            $contact = Contact::where('id', $request->contact_id)
+                ->where('company_id', $company->id)
+                ->first();
+
+            if (! $contact) {
+                return response()->json(['status' => 'error', 'message' => 'Contact not found'], 404);
+            }
+
+            $notes = $contact->notes()->orderBy('created_at', 'desc')->get();
+
+            return response()->json(['status' => true, 'data' => $notes]);
+        }, [
+            'token' => 'required',
+            'contact_id' => 'required',
+        ]);
+    }
+
+    public function suggestCopilot(Request $request)
+    {
+        return $this->authenticate($request, function ($request) {
+            $company = $this->getCompany();
+            $contact = Contact::where('id', $request->contact_id)
+                ->where('company_id', $company->id)
+                ->first();
+
+            if (! $contact) {
+                return response()->json(['status' => 'error', 'message' => 'Contact not found'], 404);
+            }
+
+            $draft = $request->input('draft');
+            $copilot = app(\App\Services\Platform\AgentCopilotService::class);
+
+            return response()->json([
+                'status' => true,
+                'data' => $copilot->suggest($company, $contact, $draft),
+            ]);
+        }, [
+            'token' => 'required',
+            'contact_id' => 'required',
+        ]);
     }
 }
