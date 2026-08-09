@@ -16,7 +16,7 @@
         <div v-if="conversationsShown">
             @include('wpbox::chat.conversations')
         </div>
-        <div v-if="contacts.length === 0" >
+        <div v-if="contacts.length === 0 && !(activeChat && activeChat.id)" >
             <div class="d-flex" >
                 @include('wpbox::chat.relayout.empty_conversations')
             </div>
@@ -24,7 +24,7 @@
 
         <div class="wpbox-inbox-chat-column h-100">
 
-        <div class="h-100 d-flex" v-cloak id="chatAndTools" v-if="activeChat&&activeChat.name  && contacts.length != 0">
+        <div class="h-100 d-flex" v-cloak id="chatAndTools" v-if="activeChat && activeChat.id && activeChat.name">
             <div class="h-100 flex-grow-1" :class="currentSideApp === null ? '' : ''" id="chatAndToolsContent" >
                 @include('wpbox::chat.chat')
 

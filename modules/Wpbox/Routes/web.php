@@ -133,6 +133,9 @@ Route::group([
         Route::get('flows/{token}', 'FlowsWebhookController@verify')->name('wpbox.flows.webhook.verify');
     });
 
+    Route::match(['get', 'post'], 'webhook/messaging/{channel}/receive/{token}', [\App\Http\Controllers\Messaging\ChannelWebhookController::class, 'receive'])
+        ->name('messaging.webhook.receive');
+
     Route::group([
         'middleware' => ['Modules\Wpbox\Http\Middleware\CheckAPIPlan'],
     ], function () {

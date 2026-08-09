@@ -309,8 +309,8 @@
             chatList.messages=chatMessages[contact_id];
             chatList.hasMoreMessages = !!response.data.has_more;
 
-            const index = chatList.contacts.findIndex(item => item.id === contact_id);
-            const allIndex = chatList.all.findIndex(item => item.id === contact_id);
+            const index = chatList.contacts.findIndex(item => item.id == contact_id);
+            const allIndex = chatList.all.findIndex(item => item.id == contact_id);
             if (index !== -1) {
                 chatList.contacts[index].is_last_message_by_contact=0;
             }
@@ -328,6 +328,9 @@
         var incremental=options.incremental===true;
         var cursor=incremental ? lastmessagetime : 'none';
         var params={ filter: getChatListFilter() };
+        if (chatList && chatList.channelFilter && chatList.channelFilter !== 'all') {
+            params.channel = chatList.channelFilter;
+        }
 
         axios.get('/api/wpbox/chats/'+cursor+'/'+page+'/'+search_query, { params: params }).then(function (response) {
             applyChatListResponse(response, options);
@@ -418,6 +421,8 @@
             hasMoreMessages: false,
             loadingOlderMessages: false,
             dynamicProperties: {}, // Placeholder object
+            enabledChannels: @json($enabledChannels ?? [['value' => 'all', 'label' => 'All channels']]),
+            channelFilter: @json($channelFilter ?? 'all'),
         },
         mounted() {
             var self = this;
@@ -435,7 +440,9 @@
             console.error('An error occurred:', err);
             console.error('Component in which error occurred:', component);
             console.error('Additional information:', info);
-            return false; // this ensures that we still get the default behavior
+            // Keep the inbox interactive even if a child panel throws
+            // (e.g. missing country on Messenger/Instagram contacts).
+            return false;
         },
        computed: {
             filteredReplies() {
@@ -505,6 +512,28 @@
             switchChatTab(tab){
                 this.chatTab=tab;
             },
+            setChannelFilter(value) {
+                this.channelFilter = value;
+                this.page = 1;
+                // Keep the open chat visible even if it belongs to another channel.
+                getChatsJS(1, this.searchQuery, { incremental: false, playSoundOnUpdate: false });
+            },
+            channelLabel(channel) {
+                const labels = {
+                    whatsapp: '{{ __('WhatsApp') }}',
+                    instagram: '{{ __('Instagram') }}',
+                    messenger: '{{ __('Messenger') }}',
+                };
+                return labels[channel] || channel;
+            },
+            channelBadgeClass(channel) {
+                const classes = {
+                    instagram: 'badge-danger',
+                    messenger: 'badge-primary',
+                    whatsapp: 'badge-success',
+                };
+                return classes[channel] || 'badge-secondary';
+            },
             mineMessages:function(){
                 this.tab="mine";
                 this.page=1;
@@ -529,9 +558,9 @@
                 this.contacts=this.all.slice();
 
                 if(this.activeChat && this.activeChat.id){
-                    const index = this.contacts.findIndex(item => item.id === this.activeChat.id);
+                    const index = this.contacts.findIndex(item => item.id == this.activeChat.id);
                     if (index !== -1) {
-                        this.contacts[index].isActive = true;
+                        this.$set(this.contacts[index], 'isActive', true);
                     }
                 }
             },
@@ -587,11 +616,27 @@
                 });
             },
             getReplyNotification(contact){
+                if(!contact || !contact.last_client_reply_at){
+                    if(contact && contact.channel && contact.channel !== 'whatsapp'){
+                        return {
+                            "class":"badge-warning",
+                            "text":"{{ __('Reply within the 24-hour messaging window')}}"
+                        };
+                    }
+
+                    return {
+                        "class":"badge-danger",
+                        "text":"{{ __('You can reply only with template')}}!"
+                    };
+                }
+
                 var timeSinceLastClientReply= moment.tz(contact.last_client_reply_at,serverTimezone).add(24, 'hours');
                 const minutesDifference = timeSinceLastClientReply.diff(moment.now(), 'minutes');
                 var statusOfReply={
                     "class":"badge-danger",
-                    "text":"{{ __('You can reply only with template')}}!"
+                    "text": contact.channel && contact.channel !== 'whatsapp'
+                        ? "{{ __('Messaging window expired')}}"
+                        : "{{ __('You can reply only with template')}}!"
                 };
                 if(minutesDifference>0){
                     if(minutesDifference>60){
@@ -611,29 +656,39 @@
                 if(this.mobileChat){
                     this.conversationsShown=false;
                 }
+
+                contact_id = parseInt(contact_id, 10);
+                if(!contact_id){
+                    return;
+                }
                 
                 getChatJS(contact_id);
 
                 console.log("Remove previous active chat");
-                const indexRemove = this.all.findIndex(item => item.id === this.activeChat.id);
+                const indexRemove = this.all.findIndex(item => item.id == this.activeChat.id);
                 console.log(indexRemove);
                 if (indexRemove !== -1 && this.all[indexRemove]) {
                     // Make sure the object exists before modifying it
                     if (this.all[indexRemove].name) {
                         this.all[indexRemove].name = this.all[indexRemove].name + " ";
                     }
-                    this.all[indexRemove].isActive = false;
+                    this.$set(this.all[indexRemove], 'isActive', false);
                 }
                 
                 console.log("Set new active chat");
-                const index = this.all.findIndex(item => item.id === contact_id);
+                const index = this.all.findIndex(item => item.id == contact_id);
                 console.log(index);
                 if (index !== -1 && this.all[index]) {
                     console.log("Set new active chat for index "+index);
                     console.log(this.all[index]);
-                    this.all[index].name = this.all[index].name+" ";
-                    this.all[index].isActive = true;
+                    if (this.all[index].name) {
+                        this.all[index].name = this.all[index].name+" ";
+                    } else {
+                        this.all[index].name = this.channelLabel(this.all[index].channel || 'messenger');
+                    }
+                    this.$set(this.all[index], 'isActive', true);
                     this.activeChat = this.all[index];
+                    this.filterContacts();
                     console.log("Active chat set to "+index);
                     console.log(this.all[index].name);
 
@@ -658,7 +713,6 @@
                 }, 1000);
                
                
-
 
 
 

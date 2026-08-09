@@ -46,6 +46,7 @@ return [
                 'inbox',
                 'contacts',
                 'flows',
+                'inbox_instagram',
             ],
         ],
 
@@ -83,6 +84,7 @@ return [
                 'campaigns',
                 'catalog',
                 'integrations',
+                'inbox_instagram',
             ],
         ],
 
@@ -134,6 +136,8 @@ return [
                 'knowledge',
                 'api_access',
                 'ai_flow_assistant',
+                'inbox_instagram',
+                'inbox_messenger',
             ],
         ],
 
@@ -193,6 +197,8 @@ return [
         'knowledge' => 'Knowledge base',
         'api_access' => 'REST API access',
         'ai_flow_assistant' => 'AI Flow Assistant',
+        'inbox_instagram' => 'Instagram DMs inbox',
+        'inbox_messenger' => 'Facebook Messenger inbox',
     ],
 
 ];
