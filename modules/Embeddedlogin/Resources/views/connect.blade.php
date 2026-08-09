@@ -1,6 +1,6 @@
 <div class="card shadow max-height-vh-70 overflow-auto overflow-x-hidden">
     <div class="card-header shadow-lg">
-        <b>{{ __('Connect with WhatsApp') }}</b>
+        <b>{{ __('Connect with Meta') }}</b>
     </div>
 
     <div class="card-body overflow-auto overflow-x-hidden scrollable-div" ref="scrollableDiv">
@@ -12,6 +12,7 @@
                     <li>{{ __('A Facebook account that can manage your business') }}</li>
                     <li>{{ __('A Meta Business Portfolio (Business Manager), or permission to create one') }}</li>
                     <li>{{ __('A phone number that can receive an SMS or voice call for WhatsApp verification') }}</li>
+                    <li>{{ __('For Instagram/Messenger: a Facebook Page linked to an Instagram Professional account') }}</li>
                     <li>{{ __('About 5–10 minutes uninterrupted') }}</li>
                 </ul>
             </div>
@@ -20,11 +21,11 @@
             <ol class="pl-3 mb-4">
                 <li class="mb-2">
                     <strong>{{ __('Click “WhatsApp Setup” below') }}</strong>
-                    <div class="text-muted small">{{ __('A Facebook / Meta window will open.') }}</div>
+                    <div class="text-muted small">{{ __('Or use the omnichannel button if available. A Facebook / Meta window will open.') }}</div>
                 </li>
                 <li class="mb-2">
                     <strong>{{ __('Log in with Facebook') }}</strong>
-                    <div class="text-muted small">{{ __('Allow :app to manage WhatsApp for your business when prompted.', ['app' => config('app.name')]) }}</div>
+                    <div class="text-muted small">{{ __('Allow :app to manage WhatsApp (and Pages/Instagram when connecting omnichannel) for your business when prompted.', ['app' => config('app.name')]) }}</div>
                 </li>
                 <li class="mb-2">
                     <strong>{{ __('Create or select your WhatsApp Business account') }}</strong>
@@ -45,16 +46,22 @@
             </p>
         @endif
 
-        @if (config('embeddedlogin.config_id',"")!=""&&!$setupDone)
-            @include('embeddedlogin::whatsappembeded')
+        @if (config('embeddedlogin.config_id', '') != '')
+            @include('embeddedlogin::whatsappembeded', [
+                'setupDone' => $setupDone ?? false,
+                'signupOptions' => $signupOptions ?? [],
+            ])
+        @else
+            <div class="alert alert-warning mb-0">
+                {{ __('Embedded Signup is not configured. Set EMBEDDED_FB_CONFIG_ID in site settings.') }}
+            </div>
         @endif
 
         @if($setupDone)
-            <div class="alert alert-success mb-4" role="alert">
+            <div class="alert alert-success mt-3 mb-0" role="alert">
                 <strong>{{ __('Connected') }}</strong>
-                {{ __('Your WhatsApp Business number is linked via Embedded Signup. You can reconnect below if Meta asks you to re-authorize.') }}
+                {{ __('Your WhatsApp Business number is linked via Embedded Signup. Use the buttons above to re-connect or add Instagram and Messenger when omnichannel is configured.') }}
             </div>
-            @include('embeddedlogin::whatsappembeded')
         @endif
     </div>
 </div>

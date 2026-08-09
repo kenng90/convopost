@@ -2,18 +2,17 @@
 
 namespace Tests\Unit;
 
-use Modules\Embeddedlogin\Http\Controllers\Main;
+use Modules\Embeddedlogin\Services\EmbeddedSignupCompletionService;
+use Modules\Embeddedlogin\Services\EmbeddedSignupFlowResolver;
 use Tests\TestCase;
 
 class EmbeddedSignupWabidResolverTest extends TestCase
 {
     public function test_resolve_wabid_prefers_whatsapp_business_management_scope(): void
     {
-        $controller = new Main;
-        $method = new \ReflectionMethod(Main::class, 'resolveWabidFromDebugToken');
-        $method->setAccessible(true);
+        $service = app(EmbeddedSignupCompletionService::class);
 
-        $wabid = $method->invoke($controller, [
+        $wabid = $service->resolveWabidFromDebugToken([
             'data' => [
                 'granular_scopes' => [
                     [
@@ -33,11 +32,9 @@ class EmbeddedSignupWabidResolverTest extends TestCase
 
     public function test_resolve_wabid_returns_null_when_no_target_ids(): void
     {
-        $controller = new Main;
-        $method = new \ReflectionMethod(Main::class, 'resolveWabidFromDebugToken');
-        $method->setAccessible(true);
+        $service = app(EmbeddedSignupCompletionService::class);
 
-        $wabid = $method->invoke($controller, [
+        $wabid = $service->resolveWabidFromDebugToken([
             'data' => [
                 'granular_scopes' => [
                     ['scope' => 'whatsapp_business_messaging'],
@@ -47,5 +44,29 @@ class EmbeddedSignupWabidResolverTest extends TestCase
         ]);
 
         $this->assertNull($wabid);
+    }
+
+    public function test_flow_resolver_hides_omni_without_config_id(): void
+    {
+        config([
+            'embeddedlogin.config_id' => 'wa-config',
+            'embeddedlogin.omni_config_id' => '',
+        ]);
+
+        $options = app(EmbeddedSignupFlowResolver::class)->optionsForUser(null);
+
+        $this->assertFalse($options['omnichannel_available']);
+    }
+
+    public function test_flow_resolver_hides_omni_when_config_ids_are_identical(): void
+    {
+        config([
+            'embeddedlogin.config_id' => 'same-config',
+            'embeddedlogin.omni_config_id' => 'same-config',
+        ]);
+
+        $options = app(EmbeddedSignupFlowResolver::class)->optionsForUser(null);
+
+        $this->assertFalse($options['omnichannel_available']);
     }
 }

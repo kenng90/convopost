@@ -12,7 +12,9 @@
     <!-- Display the phone number as label -->
     <div class="form-group text-center mb-4">
         <a :href="'/contacts/contacts/'+activeChat.id+'/edit'"><h2 class="mb-0 text-primary">@{{activeChat.name}}</h2></a>
-        <p class="text-muted">@{{activeChat.country.name}}</p>
+        <p class="text-muted" v-if="activeChat.country && activeChat.country.name">@{{activeChat.country.name}}</p>
+        <p class="text-muted" v-else-if="activeChat.channel && activeChat.channel !== 'whatsapp'">@{{ channelLabel(activeChat.channel) }}</p>
+        <p class="text-muted" v-else-if="activeChat.phone">@{{ activeChat.phone }}</p>
 
         <div class="contactGroupLabels">
             <div v-for="group in activeChatGroups" :key="group.id" class="contactGroupLabel badge badge-primary rounded mr-2 mb-2">@{{ group.name }}</div>
@@ -43,7 +45,7 @@
         </div>
         <div class="d-flex justify-content-between">
             <div class="contactInfoLabel">{{ __('Country') }}</div>
-            <div class="contactInfoInput" > @{{ activeChat.country.name }}</div>
+            <div class="contactInfoInput">@{{ activeChat.country && activeChat.country.name ? activeChat.country.name : '—' }}</div>
         </div>
         <div class="d-flex justify-content-between">
             <div class="contactInfoLabel">{{ __('Suscribed') }}</div>

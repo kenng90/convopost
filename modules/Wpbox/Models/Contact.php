@@ -2,9 +2,16 @@
 
 namespace Modules\Wpbox\Models;
 
+use App\Enums\MessagingChannelType;
 use App\Models\Company;
+use App\Models\Messaging\ChannelIdentity;
+use App\Models\Messaging\Conversation;
 use App\Services\Billing\CreditBillingResolver;
 use App\Services\Billing\CreditCharger;
+use App\Services\Messaging\DTO\MessageContent;
+use App\Services\Messaging\InboundMessageProcessor;
+use App\Services\Messaging\OutboundMessageService;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Log;
 use Modules\Contacts\Models\Contact as ModelsContact;
 use Modules\Whatsappcall\Models\Call as WhatsappCallModel;
@@ -31,6 +38,26 @@ class Contact extends ModelsContact
         return $this->hasMany(
             Message::class
         )->where('is_note', true)->orderBy('created_at', 'DESC');
+    }
+
+    public function channelIdentities(): HasMany
+    {
+        return $this->hasMany(ChannelIdentity::class, 'contact_id');
+    }
+
+    public function conversations(): HasMany
+    {
+        return $this->hasMany(Conversation::class, 'contact_id');
+    }
+
+    public function messagingChannel(): MessagingChannelType
+    {
+        $identity = ChannelIdentity::withoutGlobalScopes()
+            ->where('contact_id', $this->id)
+            ->orderByDesc('id')
+            ->first();
+
+        return $identity?->channel ?? MessagingChannelType::Whatsapp;
     }
 
     public function trimString($str, $maxLength)
@@ -306,7 +333,10 @@ class Contact extends ModelsContact
             'components' => '',
             'fb_message_id' => $fb_message_id,
             'extra' => $extra ?? '',
+            'channel' => $this->messagingChannel()->value,
         ]);
+
+        app(InboundMessageProcessor::class)->attachConversationToMessage($messageToBeSend, $this);
 
         //Set the original message — queued to avoid blocking webhooks
         if ($messageType == 'TEXT' && $is_message_by_contact) {
@@ -402,10 +432,21 @@ class Contact extends ModelsContact
             } else {
                 $this->last_support_reply_at = now();
                 $this->is_last_message_by_contact = false;
-                $this->sendMessageToWhatsApp($messageToBeSend, $this);
+
+                $channel = $this->messagingChannel();
+                if ($channel === MessagingChannelType::Whatsapp) {
+                    $this->sendMessageToWhatsApp($messageToBeSend, $this);
+                } else {
+                    $messageContent = match ($messageType) {
+                        'IMAGE' => MessageContent::image($content),
+                        default => MessageContent::text($content),
+                    };
+                    app(OutboundMessageService::class)->send($this, $messageToBeSend, $messageContent);
+                }
+
                 event(new AgentReplies(auth()->user(), $messageToBeSend, $this));
 
-                if ($resolvedCreditAction !== null) {
+                if ($resolvedCreditAction !== null && (int) $messageToBeSend->status !== 5) {
                     $charger->charge($this->getCompany(), $resolvedCreditAction, $this->company_id);
                 }
             }

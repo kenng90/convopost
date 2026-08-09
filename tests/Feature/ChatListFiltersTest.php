@@ -259,6 +259,50 @@ class ChatListFiltersTest extends TestCase
         $this->assertEquals(0, (int) $contact->resolved_chat);
     }
 
+    public function test_chatlist_whatsapp_channel_includes_contacts_without_identities(): void
+    {
+        $whatsappLegacy = $this->makeContact([
+            'name' => 'WA Legacy',
+            'phone' => '254700000201',
+        ]);
+
+        $messenger = $this->makeContact([
+            'name' => 'Messenger User',
+            'phone' => '',
+        ]);
+
+        \App\Models\Messaging\ChannelIdentity::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id,
+            'contact_id' => $messenger->id,
+            'channel' => 'messenger',
+            'external_id' => 'fb-user-201',
+            'display_name' => 'Messenger User',
+        ]);
+
+        $whatsappFiltered = $this->actingAs($this->owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $this->company->id])
+            ->getJson('/api/wpbox/chats/none/1/?filter=open&channel=whatsapp');
+
+        $whatsappFiltered->assertOk()
+            ->assertJsonPath('status', true);
+
+        $whatsappIds = collect($whatsappFiltered->json('data'))->pluck('id')->all();
+        $this->assertContains($whatsappLegacy->id, $whatsappIds);
+        $this->assertNotContains($messenger->id, $whatsappIds);
+
+        $messengerFiltered = $this->actingAs($this->owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $this->company->id])
+            ->getJson('/api/wpbox/chats/none/1/?filter=open&channel=messenger');
+
+        $messengerFiltered->assertOk();
+        $messengerIds = collect($messengerFiltered->json('data'))->pluck('id')->all();
+        $this->assertContains($messenger->id, $messengerIds);
+        $this->assertNotContains($whatsappLegacy->id, $messengerIds);
+        $this->assertSame('messenger', $messengerFiltered->json('data.0.channel'));
+    }
+
     /**
      * @param  array<string, mixed>  $attributes
      */

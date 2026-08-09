@@ -15,14 +15,17 @@
                     <img v-cloak v-if="activeChat&&(activeChat.avatar!=''&&activeChat.avatar!=null)" alt="" :src="activeChat.avatar"
                         :data-src="activeChat.avatar" class="avatar" />
 
-                    <span id="userCountry" v-if="activeChat&&activeChat.country" :class="'fi-'+activeChat.country.iso2.toLowerCase()" class="fi fis flag-icon"></span>
-                    <b-tooltip target="userCountry">@{{ activeChat.country.name }}</b-tooltip>
+                    <template v-if="activeChat && activeChat.country && activeChat.country.iso2">
+                        <span id="userCountry" :class="'fi-'+activeChat.country.iso2.toLowerCase()" class="fi fis flag-icon"></span>
+                        <b-tooltip target="userCountry">@{{ activeChat.country.name }}</b-tooltip>
+                    </template>
                 </a>
                 <div class="d-flex flex-column" style="min-width: 0;">
                     <a class="d-flex align-items-center text-decoration-none" :href="'/contacts/contacts/'+activeChat.id+'/edit'">
                         <h3 class="mb-0 d-block text-truncate">@{{ activeChat.name }}</h3>
                     </a>
-                    <span class="text-xs wpbox-chat-header__phone">@{{ activeChat.phone }}</span>
+                    <span class="text-xs wpbox-chat-header__phone" v-if="activeChat.phone">@{{ activeChat.phone }}</span>
+                    <span class="text-xs wpbox-chat-header__phone" v-else-if="activeChat.channel && activeChat.channel !== 'whatsapp'">@{{ channelLabel(activeChat.channel) }}</span>
                 </div>
             </div>
 
