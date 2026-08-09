@@ -13,19 +13,49 @@
     "requires": [],
     "global_fields":[
         {
-            "separator":"Embedded Login setup",
-            "title": "Facebook Config ID",
+            "separator":"Embedded Login setup (v4)",
+            "title": "WhatsApp-only Config ID",
             "key":"EMBEDDED_FB_CONFIG_ID",
-            "help":"Info https://www.notion.so/mobidonia/WhatsApp-Embedded-SignUp-dbcb1473ecc14a55a37ce337468ee848",
+            "help":"Meta App Dashboard → Facebook Login for Business → Configurations. Select WhatsApp / Cloud API only.",
             "ftype": "input",
             "value": ""
         },
         {
-            "title": "Solution ID",
-            "key":"BS_PROVIDER_ID",
-            "help":"Optional. Only if you use business solution provider. Info https://developers.facebook.com/docs/whatsapp/solution-providers/multi-partner-solutions/",
+            "title": "Omnichannel Config ID (optional)",
+            "key":"EMBEDDED_FB_OMNI_CONFIG_ID",
+            "help":"Optional v4 configuration that includes WhatsApp, Instagram Direct, and Messenger. Leave empty to offer WhatsApp-only signup.",
             "ftype": "input",
             "value": ""
+        },
+        {
+            "title": "Session info version",
+            "key":"EMBEDDED_FB_SESSION_INFO_VERSION",
+            "help":"Use 3 for Embedded Signup v4 FINISH payloads (page_id, instagram_account_id).",
+            "ftype": "input",
+            "value": "3"
+        },
+        {
+            "title": "Default signup flow",
+            "key":"EMBEDDED_FB_DEFAULT_FLOW",
+            "ftype": "select",
+            "value": "whatsapp_only",
+            "data": {
+                "whatsapp_only": "WhatsApp only",
+                "omnichannel": "Omnichannel (when available)"
+            }
+        },
+        {
+            "title": "Solution ID",
+            "key":"BS_PROVIDER_ID",
+            "help":"Optional. Only if you use a Meta Business Solution Provider.",
+            "ftype": "input",
+            "value": ""
+        },
+        {
+            "title": "Graph API version",
+            "key":"EMBEDDED_FB_GRAPH_VERSION",
+            "ftype": "input",
+            "value": "v22.0"
         }
     ]
 }
