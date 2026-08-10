@@ -172,11 +172,8 @@ class Reservation extends Model
 
         $reminders = Remineder::where('company_id', $this->company_id)
             ->where('status', 1)
-            ->get();
-
-        $reminders = $reminders->reject(function ($reminder) {
-            return $reminder->source_id !== null && $reminder->source_id != $this->source_id;
-        });
+            ->get()
+            ->filter(fn (Remineder $reminder) => $reminder->appliesToReservation($this));
 
         foreach ($reminders as $reminder) {
             $reminder->makeMessages($this);

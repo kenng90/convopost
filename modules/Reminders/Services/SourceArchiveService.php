@@ -13,7 +13,7 @@ class SourceArchiveService
         DB::transaction(function () use ($source) {
             Remineder::query()
                 ->where('source_id', $source->id)
-                ->update(['status' => 2]);
+                ->delete();
 
             $source->update(['is_bookable' => false]);
             $source->delete();

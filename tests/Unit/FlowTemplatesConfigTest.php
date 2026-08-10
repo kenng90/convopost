@@ -63,6 +63,9 @@ class FlowTemplatesConfigTest extends TestCase
             'whatsapp_voice_ai_agent',
         ] as $key) {
             $this->assertArrayHasKey($key, $templates, "Missing template: {$key}");
+            $this->assertArrayHasKey($key.'_omni', $templates, "Missing omni template: {$key}_omni");
+            $this->assertSame('whatsapp', $templates[$key]['channel_mode'] ?? null);
+            $this->assertSame('omni', $templates[$key.'_omni']['channel_mode'] ?? null);
         }
     }
 
@@ -479,5 +482,56 @@ class FlowTemplatesConfigTest extends TestCase
             $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'incomingMessage-1'
                 && str_contains((string) ($edge['target'] ?? ''), 'openai'))
         );
+    }
+
+    public function test_omni_templates_exclude_whatsapp_rich_nodes(): void
+    {
+        $templates = config('flow-templates');
+        $replaceTypes = \App\Services\Flowmaker\FlowTemplateOmniConverter::REPLACE_TYPES;
+
+        foreach ($templates as $key => $template) {
+            if (($template['channel_mode'] ?? '') !== 'omni') {
+                continue;
+            }
+
+            $this->assertSame('Omni', $template['channel_badge'] ?? null, $key);
+            $this->assertContains('instagram', $template['supported_channels'] ?? []);
+            $this->assertContains('messenger', $template['supported_channels'] ?? []);
+
+            foreach ($template['flow_data']['nodes'] ?? [] as $node) {
+                $this->assertNotContains(
+                    $node['type'] ?? '',
+                    $replaceTypes,
+                    "Omni template {$key} still has WhatsApp-rich node [{$node['type']}]"
+                );
+            }
+        }
+    }
+
+    public function test_omni_spa_template_uses_online_booking_links(): void
+    {
+        $nodes = collect(config('flow-templates.spa_wellness_booking_omni.flow_data.nodes'));
+
+        $this->assertFalse($nodes->contains(fn (array $n) => ($n['type'] ?? '') === 'book_appointment'));
+        $this->assertFalse($nodes->contains(fn (array $n) => ($n['type'] ?? '') === 'manage_booking'));
+
+        $onlineBook = $nodes->firstWhere('id', 'book_appointment-1');
+        $this->assertNotNull($onlineBook);
+        $this->assertSame('send_booking_link', $onlineBook['type']);
+        $this->assertStringContainsString('{{booking_link}}', $onlineBook['data']['settings']['message'] ?? '');
+        $this->assertSame('appointments', $onlineBook['data']['settings']['link_type'] ?? null);
+
+        $manageCancel = $nodes->firstWhere('id', 'manage_booking-1');
+        $this->assertNotNull($manageCancel);
+        $this->assertSame('send_booking_link', $manageCancel['type']);
+        $this->assertSame('manage', $manageCancel['data']['settings']['link_type'] ?? null);
+
+        $manageReschedule = $nodes->firstWhere('id', 'manage_booking-reschedule');
+        $this->assertNotNull($manageReschedule);
+        $this->assertSame('send_booking_link', $manageReschedule['type']);
+        $this->assertSame('manage', $manageReschedule['data']['settings']['link_type'] ?? null);
+
+        $welcome = $nodes->firstWhere('id', 'message-1');
+        $this->assertStringContainsString('online', strtolower((string) ($welcome['data']['settings']['message'] ?? '')));
     }
 }

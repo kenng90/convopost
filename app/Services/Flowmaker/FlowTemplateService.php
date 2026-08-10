@@ -90,6 +90,7 @@ class FlowTemplateService
         }
 
         $flowData = $this->applyBindings($flowData, $bindings);
+        $flowData = $this->stampChannelMetadata($flowData, $template);
 
         $flow = Flow::create([
             'name' => $customName ?: $template['name'],
@@ -278,6 +279,29 @@ class FlowTemplateService
         }
 
         $flowData['nodes'] = $nodes;
+
+        return $flowData;
+    }
+
+    /**
+     * @param  array<string, mixed>  $flowData
+     * @param  array<string, mixed>  $template
+     * @return array<string, mixed>
+     */
+    private function stampChannelMetadata(array $flowData, array $template): array
+    {
+        $mode = (string) ($template['channel_mode'] ?? 'whatsapp');
+        $channels = $template['supported_channels']
+            ?? ($mode === 'omni'
+                ? FlowChannelCompatibility::SUPPORTED_FLOW_CHANNELS
+                : ['whatsapp']);
+
+        $flowData['supported_channels'] = $channels;
+        $flowData['meta'] = array_merge($flowData['meta'] ?? [], [
+            'channel_mode' => $mode,
+            'supported_channels' => $channels,
+            'source_template_channel_mode' => $mode,
+        ]);
 
         return $flowData;
     }

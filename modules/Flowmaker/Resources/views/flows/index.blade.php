@@ -123,7 +123,18 @@
         <div class="col-md-3 mb-3">
             <div class="card shadow-sm h-100">
                 <div class="card-body d-flex flex-column">
-                    <h5 class="mb-2">{{ $template['name'] }}</h5>
+                    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                        <h5 class="mb-0">{{ $template['name'] }}</h5>
+                        @php
+                            $channelMode = $template['channel_mode'] ?? 'whatsapp';
+                            $channelBadge = $template['channel_badge'] ?? ($channelMode === 'omni' ? 'Omni' : 'WhatsApp');
+                        @endphp
+                        <span class="badge {{ $channelMode === 'omni' ? 'badge-success' : 'badge-warning' }} text-uppercase"
+                              style="font-size: 0.65rem; letter-spacing: 0.03em; white-space: nowrap;"
+                              title="{{ $channelMode === 'omni' ? __('Runs on WhatsApp, Instagram, and Messenger') : __('Optimized for WhatsApp-native features') }}">
+                            {{ $channelBadge }}
+                        </span>
+                    </div>
                     <p class="text-muted small flex-grow-1">{{ $template['description'] }}</p>
                     @if(!empty($template['setup_hint']))
                         <p class="small text-info mb-2">{{ $template['setup_hint'] }}</p>

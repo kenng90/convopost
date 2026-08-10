@@ -60,6 +60,7 @@ class BookingsOverviewController extends Controller
             'eventsCatalogUrl' => $company && $eventsEnabled
                 ? route('reminders.booking.events', ['subdomain' => $company->subdomain])
                 : null,
+            'manageUrl' => $company ? route('reminders.booking.manage', ['subdomain' => $company->subdomain]) : null,
             'bookingSettingsUrl' => route('reminders.booking-settings.index'),
             'messagePack' => $messagePack,
             'clientNotificationsUrl' => route('reminders.reminders.index'),
