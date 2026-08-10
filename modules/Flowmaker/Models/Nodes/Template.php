@@ -3,11 +3,10 @@
 namespace Modules\Flowmaker\Models\Nodes;
 
 use App\Models\Company;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Modules\Wpbox\Models\Campaign;
 use Modules\Flowmaker\Models\Contact;
 use Modules\Wpbox\Models\Template as ModelsTemplate;
-use Illuminate\Support\Facades\Http;
 
 class Template extends Node
 {
@@ -31,7 +30,7 @@ class Template extends Node
                     foreach ($component['buttons'] as $index => $button) {
                         if (strtolower($button['text']) === strtolower($message)) {
                             Log::info('Button match found', ['button' => $button, 'message' => $message, 'index' => $index]);
-                            $nextNode = $this->getNextNodeId("quick-reply-".$index);
+                            $nextNode = $this->getNextNodeId('quick-reply-'.$index);
                             $buttonMatched = true;
                         }
                     }
@@ -40,26 +39,27 @@ class Template extends Node
         }
 
         // Get the else node
-        $elseNode = $this->getNextNodeId("else");
+        $elseNode = $this->getNextNodeId('else');
 
         // If no button text matched and no extra data, the user sent a plain text message
         // Keep the current_node state so we continue waiting for a template button click
-        if (!$buttonMatched && $elseNode === null) {
+        if (! $buttonMatched && $elseNode === null) {
             Log::info('No template button matched - keeping current_node state to wait for button click');
+
             return;
         }
 
         // A button was matched (or else path exists) - clear the waiting state
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
-        Log::info("Clearing current node from contact state for contact ".$contact->id." and flow ".$this->flow_id);
+        Log::info('Clearing current node from contact state for contact '.$contact->id.' and flow '.$this->flow_id);
         $contact->clearContactState($this->flow_id, 'current_node');
-        Log::info("Current node cleared");
+        Log::info('Current node cleared');
 
         if ($nextNode != null) {
             Log::info('Next node found, process it');
             $nextNode->process($message, $data);
-        } else if ($elseNode != null) {
+        } elseif ($elseNode != null) {
             Log::info('No next node found, go with else case');
             $elseNode->process($message, $data);
         } else {
@@ -74,71 +74,80 @@ class Template extends Node
         if ($this->isStartNode) {
             // In this case we need to listen for a reply
             $this->listenForReply($message, $data);
+
             return [
-                'success' => true
+                'success' => true,
             ];
+        }
+
+        if ($skip = $this->skipIfNotWhatsappChannel(
+            $message,
+            $data,
+            __('This step is available on WhatsApp only. Please continue the conversation there, or ask for help.'),
+        )) {
+            return $skip;
         }
 
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
 
         //Template
-        $settings=$this->getDataAsArray()['settings'];
-        $templateID=$settings['selectedTemplateId'];
+        $settings = $this->getDataAsArray()['settings'];
+        $templateID = $settings['selectedTemplateId'];
         $template = ModelsTemplate::find($templateID);
 
         //Make an api call to our api to send the template message
         $components = [];
 
-        Log::info('Template, settings,message,data,flow_id', ['template' => $template,'settings' => $settings,'message' => $message,'data' => $data,'flow_id' => $this->flow_id]);
-        
+        Log::info('Template, settings,message,data,flow_id', ['template' => $template, 'settings' => $settings, 'message' => $message, 'data' => $data, 'flow_id' => $this->flow_id]);
+
         // Process parameters for the API call
         if (isset($settings['parameters'])) {
             $bodyParameters = [];
             $headerParameters = [];
-            
+
             foreach ($settings['parameters'] as $key => $value) {
                 $parts = explode('_', $key);
                 $type = strtolower($parts[0]);
-                
+
                 if ($type === 'header') {
                     $headerParameters[] = [
                         'type' => 'text',
-                        'text' => $contact->changeVariables($value, $this->flow_id)
+                        'text' => $contact->changeVariables($value, $this->flow_id),
                     ];
-                } else if ($type === 'body') {
+                } elseif ($type === 'body') {
                     $bodyParameters[] = [
                         'type' => 'text',
-                        'text' => $contact->changeVariables($value, $this->flow_id)
+                        'text' => $contact->changeVariables($value, $this->flow_id),
                     ];
                 } else {
                     // For the old format where we just have numbers as keys
                     $bodyParameters[] = [
                         'type' => 'text',
-                        'text' => $contact->changeVariables($value, $this->flow_id)
+                        'text' => $contact->changeVariables($value, $this->flow_id),
                     ];
                 }
             }
-            
+
             // Add header component if we have header parameters
-            if (!empty($headerParameters)) {
+            if (! empty($headerParameters)) {
                 $components[] = [
                     'type' => 'header',
-                    'parameters' => $headerParameters
+                    'parameters' => $headerParameters,
                 ];
             }
-            
+
             // Add body component if we have body parameters
-            if (!empty($bodyParameters)) {
+            if (! empty($bodyParameters)) {
                 $components[] = [
                     'type' => 'body',
-                    'parameters' => $bodyParameters
+                    'parameters' => $bodyParameters,
                 ];
             }
         }
 
         //When there is a component of type HEADER and the format is IMAGE, we need to assign the fileUrl from settings
-        $templateComponents=json_decode($template->components,true);
+        $templateComponents = json_decode($template->components, true);
         if ($templateComponents) {
             foreach ($templateComponents as $component) {
                 if ($component['type'] === 'HEADER' && $component['format'] === 'IMAGE' && isset($settings['fileUrl'])) {
@@ -148,10 +157,10 @@ class Template extends Node
                             [
                                 'type' => 'image',
                                 'image' => [
-                                    'link' => $settings['fileUrl']
-                                ]
-                            ]
-                        ]
+                                    'link' => $settings['fileUrl'],
+                                ],
+                            ],
+                        ],
                     ];
                 }
                 if ($component['type'] === 'HEADER' && $component['format'] === 'DOCUMENT' && isset($settings['fileUrl'])) {
@@ -161,10 +170,10 @@ class Template extends Node
                             [
                                 'type' => 'document',
                                 'document' => [
-                                    'link' => $settings['fileUrl']
-                                ]
-                            ]
-                        ]
+                                    'link' => $settings['fileUrl'],
+                                ],
+                            ],
+                        ],
                     ];
                 }
                 if ($component['type'] === 'HEADER' && $component['format'] === 'VIDEO' && isset($settings['videoUrl'])) {
@@ -172,20 +181,20 @@ class Template extends Node
                         'type' => 'header',
                         'parameters' => [
                             [
-                                'type' => 'video',  
+                                'type' => 'video',
                                 'video' => [
-                                    'link' => $settings['videoUrl']
-                                ]
-                            ]
-                        ]
+                                    'link' => $settings['videoUrl'],
+                                ],
+                            ],
+                        ],
                     ];
                 }
             }
         }
 
         //Get the token from the company
-        $company=Company::find($contact->company_id);
-        $token=$company->getConfig('plain_token','');
+        $company = Company::find($contact->company_id);
+        $token = $company->getConfig('plain_token', '');
 
         // Prepare the API request payload
         $payload = [
@@ -193,7 +202,7 @@ class Template extends Node
             'phone' => $contact->phone,
             'template_name' => $template->name,
             'template_language' => $template->language ?? 'en',
-            'components' => $components
+            'components' => $components,
         ];
         Log::info('Payload', ['payload' => $payload]);
 
@@ -201,32 +210,27 @@ class Template extends Node
         try {
             $response = Http::post(config('app.url').'/api/wpbox/sendtemplatemessage', $payload);
             Log::info('Template message API response', ['response' => $response->json()]);
-            
-            if (!$response->successful()) {
+
+            if (! $response->successful()) {
                 Log::error('Failed to send template message', ['error' => $response->body()]);
-            }else{
-               //Now set the user state
-               //Get the always node
-               $alwaysNode=$this->getNextNodeId('always');
-               if($alwaysNode!=null){
-                $alwaysNode->process($message, $data);
-               }else{
-                Log::info('No always node found, we will wait on reply to our buttons');
-                $contact->setContactState($this->flow_id, 'current_node', $this->id);
-               }
-               
-              
+            } else {
+                //Now set the user state
+                //Get the always node
+                $alwaysNode = $this->getNextNodeId('always');
+                if ($alwaysNode != null) {
+                    $alwaysNode->process($message, $data);
+                } else {
+                    Log::info('No always node found, we will wait on reply to our buttons');
+                    $contact->setContactState($this->flow_id, 'current_node', $this->id);
+                }
+
             }
         } catch (\Exception $e) {
             Log::error('Error sending template message', ['error' => $e->getMessage()]);
         }
 
-        
-
-
-
         return [
-            'success' => true
+            'success' => true,
         ];
     }
 
@@ -238,6 +242,7 @@ class Template extends Node
                 return $edge->getTarget();
             }
         }
+
         return null;
     }
 }

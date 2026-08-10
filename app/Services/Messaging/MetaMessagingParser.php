@@ -48,7 +48,7 @@ class MetaMessagingParser
                 }
 
                 // Some payloads nest the event under value.message / value directly.
-                $event = isset($value['sender']) || isset($value['message'])
+                $event = isset($value['sender']) || isset($value['message']) || isset($value['postback'])
                     ? $value
                     : null;
 
@@ -94,6 +94,40 @@ class MetaMessagingParser
             return null;
         }
 
+        $senderId = (string) ($event['sender']['id'] ?? '');
+
+        if ($senderId === '') {
+            Log::warning('messaging.parser.missing_sender', [
+                'channel' => $channel->value,
+                'source' => $source,
+            ]);
+
+            return null;
+        }
+
+        $receivedAt = Carbon::createFromTimestamp((int) floor(((int) ($event['timestamp'] ?? (time() * 1000))) / 1000));
+
+        if (isset($event['postback']) && is_array($event['postback'])) {
+            $postback = $event['postback'];
+            $title = (string) ($postback['title'] ?? $postback['payload'] ?? '');
+            $payload = (string) ($postback['payload'] ?? '');
+            $mid = (string) ($postback['mid'] ?? ($event['message']['mid'] ?? ''));
+
+            if ($payload === '' && $title === '') {
+                return null;
+            }
+
+            return new InboundMessage(
+                externalMessageId: $mid !== '' ? $mid : 'postback:'.md5($senderId.'|'.$payload.'|'.$receivedAt->timestamp),
+                externalParticipantId: $senderId,
+                participantName: null,
+                content: MessageContent::text($title !== '' ? $title : $payload, $payload),
+                receivedAt: $receivedAt,
+                raw: $event,
+                extra: $payload !== '' ? $payload : null,
+            );
+        }
+
         if (! isset($event['message'])) {
             Log::debug('messaging.parser.skip_non_message_event', [
                 'channel' => $channel->value,
@@ -118,16 +152,9 @@ class MetaMessagingParser
             return null;
         }
 
-        $senderId = (string) ($event['sender']['id'] ?? '');
-
-        if ($senderId === '') {
-            Log::warning('messaging.parser.missing_sender', [
-                'channel' => $channel->value,
-                'source' => $source,
-                'mid' => $message['mid'] ?? null,
-            ]);
-
-            return null;
+        $extra = $content->extra;
+        if (isset($message['quick_reply']['payload'])) {
+            $extra = (string) $message['quick_reply']['payload'];
         }
 
         return new InboundMessage(
@@ -135,15 +162,27 @@ class MetaMessagingParser
             externalParticipantId: $senderId,
             participantName: null,
             content: $content,
-            receivedAt: Carbon::createFromTimestamp((int) floor(((int) ($event['timestamp'] ?? (time() * 1000))) / 1000)),
+            receivedAt: $receivedAt,
             raw: $event,
+            extra: $extra,
         );
     }
 
     private function mapMessageContent(array $message): ?MessageContent
     {
         if (isset($message['text'])) {
-            return MessageContent::text((string) $message['text']);
+            $extra = isset($message['quick_reply']['payload'])
+                ? (string) $message['quick_reply']['payload']
+                : null;
+
+            return MessageContent::text((string) $message['text'], $extra);
+        }
+
+        // Quick-reply tap sometimes arrives without separate text in edge cases.
+        if (isset($message['quick_reply']['payload'])) {
+            $payload = (string) $message['quick_reply']['payload'];
+
+            return MessageContent::text($payload, $payload);
         }
 
         if (isset($message['attachments'][0])) {

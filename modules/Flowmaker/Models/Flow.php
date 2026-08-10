@@ -95,6 +95,25 @@ class Flow extends Model
             $contact->primeFlowStateCache($this->id);
             $startNode = $contact->getContactStateValue($this->id, 'current_node');
 
+            // Expire stuck waits after Meta messaging window (~24h).
+            if ($startNode) {
+                $waitingState = ContactState::query()
+                    ->where('contact_id', $contact->id)
+                    ->where('flow_id', $this->id)
+                    ->where('state', 'current_node')
+                    ->first();
+
+                if ($waitingState && $waitingState->updated_at && $waitingState->updated_at->lt(now()->subHours(24))) {
+                    Log::info('Flow wait expired after 24h', [
+                        'flow_id' => $this->id,
+                        'contact_id' => $contact->id,
+                        'node_id' => $startNode,
+                    ]);
+                    $contact->clearContactState($this->id, 'current_node');
+                    $startNode = null;
+                }
+            }
+
             $pendingService = app(CatalogCheckoutPendingService::class);
             $extra = is_object($data) ? ($data->extra ?? '') : ($data['extra'] ?? '');
             $skipKeywordRestart = $pendingService->isOrderConfirmationMessage($contact, $this->id, $message)

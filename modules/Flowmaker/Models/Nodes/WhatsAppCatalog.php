@@ -121,12 +121,28 @@ class WhatsAppCatalog extends Node
                 Log::info('WhatsApp Catalog: resuming after selection or checkout', ['extraData' => $extraData]);
                 $this->listenForReply($message, $data);
             } else {
+                if ($skip = $this->skipIfNotWhatsappChannel(
+                    $message,
+                    $data,
+                    __('Catalog browsing is available on WhatsApp only.'),
+                )) {
+                    return $skip;
+                }
+
                 Log::info('WhatsApp Catalog: sending catalog for first time');
 
                 return $this->sendCatalog($message, $data);
             }
 
             return ['success' => true];
+        }
+
+        if ($skip = $this->skipIfNotWhatsappChannel(
+            $message,
+            $data,
+            __('Catalog browsing is available on WhatsApp only.'),
+        )) {
+            return $skip;
         }
 
         return $this->sendCatalog($message, $data);

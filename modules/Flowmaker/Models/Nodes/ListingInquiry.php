@@ -110,7 +110,23 @@ class ListingInquiry extends Node
                 return ['success' => true];
             }
 
+            if ($skip = $this->skipIfNotWhatsappChannel(
+                $message,
+                $data,
+                __('Listing inquiry is available on WhatsApp only.'),
+            )) {
+                return $skip;
+            }
+
             return $this->sendListingCatalog($message, $data);
+        }
+
+        if ($skip = $this->skipIfNotWhatsappChannel(
+            $message,
+            $data,
+            __('Listing inquiry is available on WhatsApp only.'),
+        )) {
+            return $skip;
         }
 
         return $this->sendListingCatalog($message, $data);

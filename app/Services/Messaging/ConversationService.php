@@ -200,7 +200,7 @@ class ConversationService
             'avatar' => $avatarUrl ?: '',
             'company_id' => $companyId,
             'has_chat' => true,
-            'enabled_ai_bot' => $channel === MessagingChannelType::Whatsapp,
+            'enabled_ai_bot' => true,
             'subscribed' => 1,
             'last_reply_at' => now(),
             'last_client_reply_at' => now(),

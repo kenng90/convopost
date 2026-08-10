@@ -87,6 +87,16 @@ abstract class AbstractMetaMessagingChannel implements MessagingChannel
 
         if ($content->type === 'TEXT') {
             $payload['message'] = ['text' => $content->body];
+
+            if (! empty($content->quickReplies)) {
+                $payload['message']['quick_replies'] = array_values(array_map(function (array $reply) {
+                    return [
+                        'content_type' => $reply['content_type'] ?? 'text',
+                        'title' => mb_substr((string) ($reply['title'] ?? ''), 0, 20),
+                        'payload' => (string) ($reply['payload'] ?? ''),
+                    ];
+                }, $content->quickReplies));
+            }
         } elseif ($content->type === 'IMAGE' && $content->mediaUrl) {
             $payload['message'] = [
                 'attachment' => [
@@ -197,7 +207,7 @@ abstract class AbstractMetaMessagingChannel implements MessagingChannel
             media: true,
             templates: false,
             campaigns: false,
-            flows: false,
+            flows: true,
             requiresServiceWindow: true,
             serviceWindowHours: 24,
         );

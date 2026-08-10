@@ -16,11 +16,22 @@ class FlowDispatchService
      * @param  Collection<int, Flow>|\Illuminate\Database\Eloquent\Collection<int, Flow>  $flows
      * @return Collection<int, Flow>
      */
-    public function selectFlowsForMessage(Company $company, $flows, Contact $contact, string $messageBody): Collection
-    {
+    public function selectFlowsForMessage(
+        Company $company,
+        $flows,
+        Contact $contact,
+        string $messageBody,
+        ?string $channel = null,
+    ): Collection {
         $candidates = $this->filterFlowsForChat($company, $flows)
             ->filter(fn (Flow $flow) => (bool) ($flow->is_active ?? true))
             ->values();
+
+        if ($channel) {
+            $candidates = $candidates
+                ->filter(fn (Flow $flow) => $this->flowSupportsChannel($flow, $channel))
+                ->values();
+        }
 
         if ($candidates->isEmpty()) {
             return collect();
@@ -109,5 +120,17 @@ class FlowDispatchService
         }
 
         return $withoutVoice;
+    }
+
+    private function flowSupportsChannel(Flow $flow, string $channel): bool
+    {
+        $data = json_decode((string) ($flow->flow_data ?? '{}'), true) ?: [];
+        $supported = $data['supported_channels'] ?? $data['meta']['supported_channels'] ?? null;
+
+        if (! is_array($supported) || $supported === []) {
+            return true;
+        }
+
+        return in_array($channel, $supported, true);
     }
 }

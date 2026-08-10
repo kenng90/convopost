@@ -2,8 +2,7 @@
 
 namespace Modules\Flowmaker\Models\Nodes;
 
-use App\Models\Company;
-use Illuminate\Support\Facades\Http;
+use App\Services\Flowmaker\FlowOutboundService;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Models\Contact;
 
@@ -13,71 +12,42 @@ class ListMessage extends Node
     {
         Log::info('Listening for reply in list message node');
 
-        // Get extra data
-        $extraData = $data->extra;
+        $extraData = $data->extra ?? '';
         $node = null;
         $elseNode = $this->getNextNodeId('else');
+        $settings = $this->getDataAsArray()['settings'] ?? [];
+        $sections = $settings['sections'] ?? [];
 
-        $itemMatched = false;
+        if ($extraData === null || $extraData === '') {
+            $extraData = $this->matchChoiceFromText((string) $message, $sections);
+        }
 
         if ($extraData != null && $extraData != '') {
-            Log::info('Extra data found', ['extraData' => $extraData]);
-
-            $settings = $this->getDataAsArray()['settings'];
-            $sections = $settings['sections'] ?? [];
-
-            // Check if the extra data matches any of the list options
             foreach ($sections as $section) {
                 $rows = $section['rows'] ?? [];
                 foreach ($rows as $row) {
                     $listItemId = "{$section['id']}-{$row['id']}_id{$this->id}_flow{$this->flow_id}";
                     if ($listItemId == $extraData) {
-                        Log::info('List item ID found', ['listItemId' => $listItemId]);
-                        $itemMatched = true;
-
-                        // Get the handle ID for the connection
                         $handleId = "{$section['id']}-{$row['id']}";
-                        Log::info('Handle ID', ['handleId' => $handleId]);
-
-                        // Get node with handle
-                        $node = $this->getNextNodeId($handleId);
-                        if ($node != null) {
-                            Log::info('Next node found', ['node' => $node]);
-                        } else {
-                            Log::info('Node not found, go with else case');
-                            $node = $elseNode;
-                        }
-                        break 2; // Break out of both loops
+                        $node = $this->getNextNodeId($handleId) ?? $elseNode;
+                        break 2;
                     }
                 }
             }
         } else {
-            Log::info('No extra data found - keeping current_node state to wait for list selection');
-        }
-
-        // If no extra data, the user sent a plain text message (not a list selection)
-        // Keep the current_node state so we continue waiting for a list selection
-        if ($extraData == null || $extraData == '') {
             Log::info('No list selection detected (no extra data) - keeping current_node state');
 
             return;
         }
 
-        // A list item was selected - clear the waiting state and route accordingly
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
-        Log::info('Clearing current node from contact state for contact '.$contact->id.' and flow '.$this->flow_id);
         $contact->clearContactState($this->flow_id, 'current_node');
-        Log::info('Current node cleared');
 
         if ($node != null) {
-            Log::info('Node found, process it');
             $node->process($message, $data);
         } elseif ($elseNode != null) {
-            Log::info('Node not found, go with else case');
             $elseNode->process($message, $data);
-        } else {
-            Log::info('Node not found, Else node not found');
         }
     }
 
@@ -86,7 +56,6 @@ class ListMessage extends Node
         Log::info('Processing message in list message node', ['message' => $message, 'data' => $data]);
 
         if ($this->isStartNode) {
-            // In this case we need to listen for a reply
             $this->listenForReply($message, $data);
 
             return [
@@ -97,70 +66,39 @@ class ListMessage extends Node
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
 
-        // Get settings
         $settings = $this->getDataAsArray()['settings'];
-
-        // Process the message content with variables
         $header = $contact->changeVariables($settings['header'] ?? '');
         $body = $contact->changeVariables($settings['body'] ?? '');
         $footer = $contact->changeVariables($settings['footer'] ?? '');
         $buttonText = $contact->changeVariables($settings['buttonText'] ?? 'Choose an option');
 
-        // Get the token from the company
-        $company = Company::find($contact->company_id);
-        $token = $company->getConfig('plain_token', '');
-
-        // Prepare the sections and rows
-        $sections = [];
-        $settingSections = $settings['sections'] ?? [];
-
-        foreach ($settingSections as $section) {
-            $rows = [];
-            $sectionRows = $section['rows'] ?? [];
-
-            foreach ($sectionRows as $row) {
-                $rows[] = [
+        $choices = [];
+        foreach ($settings['sections'] ?? [] as $section) {
+            foreach ($section['rows'] ?? [] as $row) {
+                $choices[] = [
                     'id' => "{$section['id']}-{$row['id']}_id{$this->id}_flow{$this->flow_id}",
                     'title' => $contact->changeVariables($row['title'] ?? ''),
                     'description' => $contact->changeVariables($row['description'] ?? ''),
                 ];
             }
-
-            $sections[] = [
-                'title' => $contact->changeVariables($section['title'] ?? ''),
-                'rows' => $rows,
-            ];
         }
 
-        // Prepare the payload
-        $payload = [
-            'token' => $token,
-            'phone' => $contact->phone,
-            'message' => $body,
-            'header' => $header,
-            'footer' => $footer,
-            'action' => [
-                'button' => $buttonText,
-                'sections' => $sections,
-            ],
-        ];
-
-        Log::info('List message payload', ['payload' => $payload]);
-
-        // Save the contact state before making the API call so we always wait for a reply
         $contact->setContactState($this->flow_id, 'current_node', $this->id);
-        Log::info('Contact state saved, waiting for reply', ['nodeId' => $this->id, 'flowId' => $this->flow_id]);
 
-        // Make the API call
-        try {
-            $response = Http::post(config('app.url').'/api/wpbox/sendlistmessage', $payload);
-            Log::info('List message API response', ['response' => $response->json()]);
+        $sent = app(FlowOutboundService::class)->sendChoices(
+            $contact,
+            $body,
+            $choices,
+            $header !== '' ? $header : null,
+            $footer !== '' ? $footer : null,
+            $buttonText,
+        );
 
-            if (! $response->successful()) {
-                Log::error('Failed to send list message', ['error' => $response->body()]);
+        if ($sent && (int) $sent->status === 5) {
+            $error = strtolower((string) ($sent->error ?? ''));
+            if (str_contains($error, 'window')) {
+                $contact->clearContactState($this->flow_id, 'current_node');
             }
-        } catch (\Exception $e) {
-            Log::error('Error sending list message', ['error' => $e->getMessage()]);
         }
 
         return [
@@ -170,7 +108,6 @@ class ListMessage extends Node
 
     protected function getNextNodeId($handleId = null)
     {
-        // Find the edge that connects from this node based on the handle ID
         foreach ($this->outgoingEdges as $edge) {
             if (str_contains($edge->getSourceHandle(), $handleId)) {
                 return $edge->getTarget();
@@ -178,5 +115,41 @@ class ListMessage extends Node
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $sections
+     */
+    private function matchChoiceFromText(string $message, array $sections): string
+    {
+        $trimmed = trim($message);
+        if ($trimmed === '') {
+            return '';
+        }
+
+        $flat = [];
+        foreach ($sections as $section) {
+            foreach ($section['rows'] ?? [] as $row) {
+                $flat[] = [
+                    'id' => "{$section['id']}-{$row['id']}_id{$this->id}_flow{$this->flow_id}",
+                    'title' => trim((string) ($row['title'] ?? '')),
+                ];
+            }
+        }
+
+        if (ctype_digit($trimmed)) {
+            $index = (int) $trimmed - 1;
+            if (isset($flat[$index])) {
+                return $flat[$index]['id'];
+            }
+        }
+
+        foreach ($flat as $item) {
+            if ($item['title'] !== '' && strcasecmp($item['title'], $trimmed) === 0) {
+                return $item['id'];
+            }
+        }
+
+        return '';
     }
 }

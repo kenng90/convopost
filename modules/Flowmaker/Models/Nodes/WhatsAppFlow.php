@@ -384,6 +384,14 @@ class WhatsAppFlow extends Node
                     return ['success' => true];
                 }
 
+                if ($skip = $this->skipIfNotWhatsappChannel(
+                    $message,
+                    $data,
+                    __('This form is available on WhatsApp only.'),
+                )) {
+                    return $skip;
+                }
+
                 // First time — send the flow
                 Log::info('WhatsApp Flow: sending flow for first time');
 
@@ -391,6 +399,14 @@ class WhatsAppFlow extends Node
             }
 
             return ['success' => true];
+        }
+
+        if ($skip = $this->skipIfNotWhatsappChannel(
+            $message,
+            $data,
+            __('This form is available on WhatsApp only.'),
+        )) {
+            return $skip;
         }
 
         return $this->sendFlow($message, $data);

@@ -65,6 +65,14 @@ class CatalogSearch extends Node
             return ['success' => true];
         }
 
+        if ($skip = $this->skipIfNotWhatsappChannel(
+            $message,
+            $data,
+            __('Catalog search is available on WhatsApp only.'),
+        )) {
+            return $skip;
+        }
+
         $contactId = is_object($data) ? $data->contact_id : $data['contact_id'];
         $contact = Contact::find($contactId);
         if (! $contact) {
