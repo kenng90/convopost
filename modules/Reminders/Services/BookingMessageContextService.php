@@ -92,7 +92,7 @@ class BookingMessageContextService
         return $this->buildContext(
             start: $start,
             end: $end,
-            externalId: $reservation->external_id,
+            externalId: $this->displayReference($reservation->external_id, $reservation->id),
             location: $reservation->source?->location,
             serviceName: $reservation->source?->name,
             staffName: $reservation->appointmentStaffMember?->name,
@@ -114,7 +114,7 @@ class BookingMessageContextService
         return $this->buildContext(
             start: $start,
             end: $end,
-            externalId: $registration->external_id,
+            externalId: $this->displayReference($registration->external_id, $registration->id),
             location: $registration->event?->location,
             serviceName: $registration->event?->title,
             staffName: $registration->event?->host?->name,
@@ -361,6 +361,17 @@ class BookingMessageContextService
             'months' => $time * 24 * 60 * 30,
             default => $time,
         };
+    }
+
+    private function displayReference(?string $externalId, int|string|null $id): string
+    {
+        $externalId = trim((string) $externalId);
+
+        if ($externalId !== '') {
+            return $externalId;
+        }
+
+        return '#'.(string) $id;
     }
 
     private function inTimezone(mixed $value, string $timezone): ?Carbon

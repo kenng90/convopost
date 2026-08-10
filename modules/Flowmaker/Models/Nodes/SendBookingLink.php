@@ -5,7 +5,10 @@ namespace Modules\Flowmaker\Models\Nodes;
 use App\Models\Company;
 use App\Services\Flowmaker\FlowRunLogger;
 use Modules\Flowmaker\Models\Contact;
+use Modules\Reminders\Models\EventRegistration;
+use Modules\Reminders\Models\Reservation;
 use Modules\Reminders\Models\Source;
+use Modules\Reminders\Services\BookingManageTokenService;
 use Modules\Reminders\Services\EventCatalogService;
 
 class SendBookingLink extends Node
@@ -27,10 +30,10 @@ class SendBookingLink extends Node
 
         $settings = $this->getDataAsArray()['settings'] ?? [];
         $linkType = (string) ($settings['link_type'] ?? 'appointments');
-        $url = $this->resolveUrl($company, $linkType, $settings);
+        $url = $this->resolveUrl($company, $contact, $linkType, $settings);
 
         if ($url === '') {
-            $contact->sendMessage(__('Booking page is not available right now.'), false, false, 'TEXT');
+            $contact->sendMessage(__('Booking page is not available right now.'), false, false, 'TEXT', null, null, null, true);
             $this->routeToHandle($contact, 'error', $message, $data);
 
             return ['success' => false];
@@ -46,13 +49,13 @@ class SendBookingLink extends Node
         $footer = trim((string) ($settings['footer'] ?? ''));
 
         if ($header !== '') {
-            $contact->sendMessage($contact->changeVariables($header, $this->flow_id), false, false, 'TEXT');
+            $contact->sendMessage($contact->changeVariables($header, $this->flow_id), false, false, 'TEXT', null, null, null, true);
         }
 
-        $contact->sendMessage($body, false, false, 'TEXT');
+        $contact->sendMessage($body, false, false, 'TEXT', null, null, null, true);
 
         if ($footer !== '') {
-            $contact->sendMessage($contact->changeVariables($footer, $this->flow_id), false, false, 'TEXT');
+            $contact->sendMessage($contact->changeVariables($footer, $this->flow_id), false, false, 'TEXT', null, null, null, true);
         }
 
         FlowRunLogger::log($this->flow_id, $contact->id, 'booking_link_sent', $this->id, $linkType);
@@ -65,17 +68,60 @@ class SendBookingLink extends Node
     /**
      * @param  array<string, mixed>  $settings
      */
-    private function resolveUrl(Company $company, string $linkType, array $settings): string
+    private function resolveUrl(Company $company, Contact $contact, string $linkType, array $settings): string
     {
         $subdomain = (string) $company->subdomain;
+        $tokens = app(BookingManageTokenService::class);
 
         return match ($linkType) {
             'events' => app(EventCatalogService::class)->eventsEnabled($company)
                 ? route('reminders.booking.events', ['subdomain' => $subdomain])
                 : '',
             'service' => $this->serviceUrl($company, $settings),
+            'manage' => $this->manageAppointmentUrl($company, $contact, $tokens),
+            'manage_events' => $this->manageEventUrl($company, $contact, $tokens),
             default => route('reminders.booking.catalog', ['subdomain' => $subdomain]),
         };
+    }
+
+    private function manageAppointmentUrl(Company $company, Contact $contact, BookingManageTokenService $tokens): string
+    {
+        $upcoming = Reservation::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->where('contact_id', $contact->id)
+            ->whereNull('cancelled_at')
+            ->where('status', 1)
+            ->where('start_date', '>', now())
+            ->orderBy('start_date')
+            ->first();
+
+        if ($upcoming) {
+            return $tokens->makeReservationUrl($company, $upcoming);
+        }
+
+        return $tokens->landingUrl($company, 'appointments');
+    }
+
+    private function manageEventUrl(Company $company, Contact $contact, BookingManageTokenService $tokens): string
+    {
+        if (! app(EventCatalogService::class)->eventsEnabled($company)) {
+            return '';
+        }
+
+        $upcoming = EventRegistration::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->where('contact_id', $contact->id)
+            ->where('status', EventRegistration::STATUS_CONFIRMED)
+            ->whereNull('cancelled_at')
+            ->whereHas('occurrence', fn ($q) => $q->where('starts_at', '>', now()))
+            ->orderByDesc('id')
+            ->first();
+
+        if ($upcoming) {
+            return $tokens->makeRegistrationUrl($company, $upcoming);
+        }
+
+        return $tokens->landingUrl($company, 'events');
     }
 
     /**
@@ -105,7 +151,7 @@ class SendBookingLink extends Node
 
         return route('reminders.booking.widget', [
             'subdomain' => $company->subdomain,
-            'source' => $source->slug ?: $source->id,
+            'source' => $source->name,
         ]);
     }
 

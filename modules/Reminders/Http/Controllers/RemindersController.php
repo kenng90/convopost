@@ -75,7 +75,7 @@ class RemindersController extends Controller
         $this->authChecker();
 
         $items = $this->provider::query()
-            ->with('source')
+            ->with(['source', 'event'])
             ->orderBy('id', 'desc');
 
         if (isset($_GET['name']) && strlen($_GET['name']) > 1) {
@@ -148,10 +148,16 @@ class RemindersController extends Controller
     {
         $this->authChecker();
 
-        if ($reminder->isServiceManaged() && $reminder->source_id) {
+        if ($reminder->isServiceManaged() && $reminder->source_id && ! $reminder->isOrphanedManagedRule()) {
             return redirect()
                 ->route('reminders.sources.edit', ['source' => $reminder->source_id])
                 ->withStatus(__('This rule is managed by the service. Update it under Client notifications on the service form.'));
+        }
+
+        if ($reminder->isServiceManaged() && $reminder->event_id && ! $reminder->isOrphanedManagedRule()) {
+            return redirect()
+                ->route('reminders.events.edit', ['event' => $reminder->event_id])
+                ->withStatus(__('This rule is managed by the event. Update it under Client notifications on the event form.'));
         }
 
         $fields = $this->getFields();
@@ -198,10 +204,18 @@ class RemindersController extends Controller
         $this->authChecker();
         $item = $this->provider::findOrFail($id);
 
-        if ($item->isServiceManaged() && $item->source_id) {
-            return redirect()
-                ->route('reminders.sources.edit', ['source' => $item->source_id])
-                ->withStatus(__('This rule is managed by the service. Clear the notification fields on the service form to remove it.'));
+        if ($item->isServiceManaged() && ! $item->canDeleteFromList()) {
+            if ($item->source_id) {
+                return redirect()
+                    ->route('reminders.sources.edit', ['source' => $item->source_id])
+                    ->withStatus(__('This rule is managed by the service. Clear the notification fields on the service form to remove it.'));
+            }
+
+            if ($item->event_id) {
+                return redirect()
+                    ->route('reminders.events.edit', ['event' => $item->event_id])
+                    ->withStatus(__('This rule is managed by the event. Clear the notification fields on the event form to remove it.'));
+            }
         }
 
         $item->delete();

@@ -9,14 +9,15 @@ use Modules\Reminders\Services\BookingMessageContextService as Fields;
  */
 return [
     'event_booking_confirmation' => [
-        'template_name' => 'event_booking_confirmation',
+        'template_name' => 'event_booking_confirmation_v2',
         'campaign_name' => 'Event booking confirmation',
         'category' => 'UTILITY',
         'language' => 'en',
-        'body' => "Hello {{1}},\n\nYour registration for *{{2}}* has been confirmed.\n\n📅 Date: {{3}}\n🕒 Time: {{4}}\n📍 Venue: {{5}}\n\nWe're excited to have you with us!\n\nIf you have any questions, reply to this message or contact our support team.\n\nSee you soon!",
+        'body' => "Hello {{1}},\n\nYour registration for *{{2}}* has been confirmed.\n\n🔖 Reference: {{3}}\n📅 Date: {{4}}\n🕒 Time: {{5}}\n📍 Venue: {{6}}\n\nKeep this reference to cancel or manage your registration online.\n\nIf you have any questions, reply to this message.\n\nSee you soon!",
         'example' => [
             'Jane Customer',
             'Annual Summit',
+            '#42',
             'Aug 1, 2026',
             '10:00 AM',
             'Main Hall',
@@ -25,21 +26,23 @@ return [
             'body' => [
                 '1' => '-1',
                 '2' => (string) Fields::FIELD_EVENT_TITLE,
-                '3' => (string) Fields::FIELD_START_DATE,
-                '4' => (string) Fields::FIELD_START_TIME,
-                '5' => (string) Fields::FIELD_LOCATION,
+                '3' => (string) Fields::FIELD_EXTERNAL_ID,
+                '4' => (string) Fields::FIELD_START_DATE,
+                '5' => (string) Fields::FIELD_START_TIME,
+                '6' => (string) Fields::FIELD_LOCATION,
             ],
         ],
         'role' => 'confirmation',
     ],
     'appointment_booking_confirmation' => [
-        'template_name' => 'appointment_booking_confirmation',
+        'template_name' => 'appointment_booking_confirmation_v2',
         'campaign_name' => 'Appointment booking confirmation',
         'category' => 'UTILITY',
         'language' => 'en',
-        'body' => "Hello {{1}},\n\nYour appointment has been successfully booked.\n\n📅 Date: {{2}}\n🕒 Time: {{3}}\n📍 Location: {{4}}\n\nIf you need to reschedule or cancel, please contact us in advance.\n\nThank you, and we look forward to seeing you.",
+        'body' => "Hello {{1}},\n\nYour appointment has been successfully booked.\n\n🔖 Reference: {{2}}\n📅 Date: {{3}}\n🕒 Time: {{4}}\n📍 Location: {{5}}\n\nKeep this reference to cancel or reschedule online, or contact us in advance.\n\nThank you, and we look forward to seeing you.",
         'example' => [
             'Jane Customer',
+            '#42',
             'Aug 1, 2026',
             '10:00 AM',
             'Clinic A',
@@ -47,9 +50,10 @@ return [
         'variables_match' => [
             'body' => [
                 '1' => '-1',
-                '2' => (string) Fields::FIELD_START_DATE,
-                '3' => (string) Fields::FIELD_START_TIME,
-                '4' => (string) Fields::FIELD_LOCATION,
+                '2' => (string) Fields::FIELD_EXTERNAL_ID,
+                '3' => (string) Fields::FIELD_START_DATE,
+                '4' => (string) Fields::FIELD_START_TIME,
+                '5' => (string) Fields::FIELD_LOCATION,
             ],
         ],
         'role' => 'confirmation',

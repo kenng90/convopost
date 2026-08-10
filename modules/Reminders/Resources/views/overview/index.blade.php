@@ -105,6 +105,11 @@
                     <p class="mb-1"><strong>{{ __('Events') }}</strong></p>
                     <code class="d-block p-2 bg-light rounded small mb-3 user-select-all">{{ $eventsCatalogUrl }}</code>
                 @endif
+                @if ($manageUrl ?? null)
+                    <p class="mb-1"><strong>{{ __('Manage booking') }}</strong></p>
+                    <p class="text-muted small mb-1">{{ __('Customers can cancel or reschedule with their booking reference.') }}</p>
+                    <code class="d-block p-2 bg-light rounded small mb-3 user-select-all">{{ $manageUrl }}</code>
+                @endif
                 <a href="{{ $bookingSettingsUrl }}" class="btn btn-sm btn-outline-primary">{{ __('Booking settings') }}</a>
             </div>
         </div>

@@ -73,6 +73,25 @@ class BookingMessageTemplatePackTest extends TestCase
         ]);
     }
 
+    public function test_confirmation_templates_include_booking_reference_mapping(): void
+    {
+        $definitions = config('booking-message-templates');
+
+        $appointment = $definitions['appointment_booking_confirmation'];
+        $this->assertStringContainsString('Reference: {{2}}', $appointment['body']);
+        $this->assertSame(
+            (string) BookingMessageContextService::FIELD_EXTERNAL_ID,
+            $appointment['variables_match']['body']['2']
+        );
+
+        $event = $definitions['event_booking_confirmation'];
+        $this->assertStringContainsString('Reference: {{3}}', $event['body']);
+        $this->assertSame(
+            (string) BookingMessageContextService::FIELD_EXTERNAL_ID,
+            $event['variables_match']['body']['3']
+        );
+    }
+
     public function test_install_creates_six_templates_and_reminder_campaigns(): void
     {
         $this->fakeMetaTemplateApi();
@@ -141,9 +160,10 @@ class BookingMessageTemplatePackTest extends TestCase
 
         $this->assertSame('-1', $match['body']['1']);
         $this->assertSame((string) BookingMessageContextService::FIELD_EVENT_TITLE, $match['body']['2']);
-        $this->assertSame((string) BookingMessageContextService::FIELD_START_DATE, $match['body']['3']);
-        $this->assertSame((string) BookingMessageContextService::FIELD_START_TIME, $match['body']['4']);
-        $this->assertSame((string) BookingMessageContextService::FIELD_LOCATION, $match['body']['5']);
+        $this->assertSame((string) BookingMessageContextService::FIELD_EXTERNAL_ID, $match['body']['3']);
+        $this->assertSame((string) BookingMessageContextService::FIELD_START_DATE, $match['body']['4']);
+        $this->assertSame((string) BookingMessageContextService::FIELD_START_TIME, $match['body']['5']);
+        $this->assertSame((string) BookingMessageContextService::FIELD_LOCATION, $match['body']['6']);
     }
 
     public function test_install_requires_whatsapp_credentials(): void
@@ -191,7 +211,7 @@ class BookingMessageTemplatePackTest extends TestCase
 
         Template::withoutGlobalScopes()
             ->where('company_id', $this->company->id)
-            ->where('name', 'event_booking_confirmation')
+            ->where('name', config('booking-message-templates.event_booking_confirmation.template_name'))
             ->delete();
 
         $response = $this->actingAs($this->owner)
@@ -230,7 +250,10 @@ class BookingMessageTemplatePackTest extends TestCase
 
         Template::withoutGlobalScopes()
             ->where('company_id', $this->company->id)
-            ->whereIn('name', ['event_booking_confirmation', 'appointment_reminder'])
+            ->whereIn('name', [
+                config('booking-message-templates.event_booking_confirmation.template_name'),
+                'appointment_reminder',
+            ])
             ->delete();
 
         $result = $service->installForCompany($this->company->fresh());
@@ -254,7 +277,7 @@ class BookingMessageTemplatePackTest extends TestCase
 
         $template = Template::withoutGlobalScopes()
             ->where('company_id', $this->company->id)
-            ->where('name', 'event_booking_confirmation')
+            ->where('name', config('booking-message-templates.event_booking_confirmation.template_name'))
             ->first();
 
         $this->assertNotNull($template);
@@ -269,7 +292,7 @@ class BookingMessageTemplatePackTest extends TestCase
         $this->assertNotNull(
             Template::withoutGlobalScopes()
                 ->where('company_id', $this->company->id)
-                ->where('name', 'event_booking_confirmation')
+                ->where('name', config('booking-message-templates.event_booking_confirmation.template_name'))
                 ->first()
         );
     }

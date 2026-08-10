@@ -36,6 +36,21 @@ Route::group([
     Route::post('api/reminders/booking/mpesa/callback', 'BookingMpesaController@stkCallback')
         ->name('reminders.booking.mpesa.callback');
 
+    Route::get('book/{subdomain}/manage', 'BookingManageController@index')
+        ->name('reminders.booking.manage');
+    Route::post('book/{subdomain}/manage/lookup', 'BookingManageController@lookup')
+        ->name('reminders.booking.manage.lookup');
+    Route::get('book/{subdomain}/manage/r/{token}', 'BookingManageController@showReservation')
+        ->name('reminders.booking.manage.reservation');
+    Route::post('book/{subdomain}/manage/r/{token}/cancel', 'BookingManageController@cancelReservation')
+        ->name('reminders.booking.manage.reservation.cancel');
+    Route::post('book/{subdomain}/manage/r/{token}/reschedule', 'BookingManageController@rescheduleReservation')
+        ->name('reminders.booking.manage.reservation.reschedule');
+    Route::get('book/{subdomain}/manage/e/{token}', 'BookingManageController@showRegistration')
+        ->name('reminders.booking.manage.registration');
+    Route::post('book/{subdomain}/manage/e/{token}/cancel', 'BookingManageController@cancelRegistration')
+        ->name('reminders.booking.manage.registration.cancel');
+
     Route::get('book/{subdomain}', 'BookingSettingsController@widgetCatalog')
         ->name('reminders.booking.catalog');
     Route::get('book/{subdomain}/events', 'BookingSettingsController@eventsCatalog')

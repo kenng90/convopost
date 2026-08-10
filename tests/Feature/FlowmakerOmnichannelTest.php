@@ -6,9 +6,9 @@ use App\Enums\MessagingChannelType;
 use App\Models\Company;
 use App\Models\Messaging\ChannelConnection;
 use App\Models\Messaging\ChannelIdentity;
+use App\Models\Messaging\Conversation;
 use App\Models\User;
 use App\Scopes\CompanyScope;
-use App\Services\Flowmaker\FlowChannelCompatibility;
 use App\Services\Flowmaker\FlowHealthValidator;
 use App\Services\Flowmaker\FlowOutboundService;
 use App\Services\Messaging\DTO\MessageContent;
@@ -20,6 +20,9 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Modules\Flowmaker\Jobs\ProcessFlowMessage;
 use Modules\Flowmaker\Models\Flow;
+use Modules\Flowmaker\Models\Nodes\Edge;
+use Modules\Flowmaker\Models\Nodes\End;
+use Modules\Flowmaker\Models\Nodes\Message as MessageNode;
 use Modules\Wpbox\Events\ContactReplies;
 use Modules\Wpbox\Models\Contact;
 use Modules\Wpbox\Models\Message;
@@ -385,5 +388,97 @@ class FlowmakerOmnichannelTest extends TestCase
     {
         $this->assertTrue((new FlowChannelCompatibility)->isWhatsappOnlyType('whatsapp_flow'));
         $this->assertFalse((new FlowChannelCompatibility)->isWhatsappOnlyType('message'));
+    }
+
+    public function test_messenger_successful_send_continues_flow_when_status_is_sent(): void
+    {
+        config(['settings.enable_credits' => false]);
+
+        Http::fake([
+            'graph.facebook.com/*' => Http::response(['message_id' => 'mid.MSG_OK'], 200),
+        ]);
+
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+
+        $contact = Contact::withoutGlobalScopes()->create([
+            'name' => 'Messenger User',
+            'phone' => '',
+            'company_id' => $company->id,
+            'has_chat' => true,
+            'enabled_ai_bot' => true,
+        ]);
+
+        $connection = ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Messenger->value,
+            'external_account_id' => 'page-ms',
+            'display_name' => 'Messenger',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'page-token',
+                'page_id' => 'page-ms',
+            ],
+        ]);
+
+        Conversation::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'contact_id' => $contact->id,
+            'channel_connection_id' => $connection->id,
+            'channel' => MessagingChannelType::Messenger->value,
+            'external_participant_id' => 'ms-user-1',
+            'last_client_reply_at' => now(),
+        ]);
+
+        ChannelIdentity::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'contact_id' => $contact->id,
+            'channel' => MessagingChannelType::Messenger->value,
+            'external_id' => 'ms-user-1',
+        ]);
+
+        $endNode = new End([
+            'id' => 'end-1',
+            'type' => 'end',
+            'data' => [],
+        ], []);
+        $endNode->flow_id = 99;
+
+        $messageNode = new MessageNode([
+            'id' => 'message-1',
+            'type' => 'message',
+            'data' => [
+                'settings' => [
+                    'message' => 'Welcome to our spa!',
+                ],
+            ],
+        ], []);
+        $messageNode->flow_id = 99;
+
+        // Stub continuation by attaching a simple end edge that marks success path.
+        $edge = new Edge([
+            'id' => 'e1',
+            'source' => 'message-1',
+            'target' => 'end-1',
+        ]);
+        $edge->setSource($messageNode);
+        $edge->setTarget($endNode);
+        $messageNode->addOutgoingEdge($edge);
+
+        $result = $messageNode->process('book', (object) ['contact_id' => $contact->id]);
+
+        $this->assertTrue($result['success'], 'Messenger status=2 success must not abort the flow');
+
+        $outbound = Message::withoutGlobalScopes()
+            ->where('contact_id', $contact->id)
+            ->where('is_message_by_contact', false)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($outbound);
+        $this->assertSame(2, (int) $outbound->status);
+        $this->assertSame('mid.MSG_OK', $outbound->fb_message_id);
+        $this->assertTrue(blank($outbound->error));
     }
 }

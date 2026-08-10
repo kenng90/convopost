@@ -23,7 +23,7 @@ interface BookingService {
 }
 
 interface NodeSettings {
-  link_type?: 'appointments' | 'events' | 'service';
+  link_type?: 'appointments' | 'events' | 'service' | 'manage' | 'manage_events';
   source_id?: string;
   source_name?: string;
   header?: string;
@@ -97,6 +97,8 @@ const SendBookingLinkNode = ({ id, data }: SendBookingLinkNodeProps) => {
                 <option value="appointments">Appointments catalog</option>
                 <option value="events">Events catalog</option>
                 <option value="service">Specific service</option>
+                <option value="manage">Manage appointment (cancel / reschedule)</option>
+                <option value="manage_events">Manage event registration</option>
               </select>
             </div>
 

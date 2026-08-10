@@ -113,17 +113,7 @@ class EventRegistration extends Model
             ->where('company_id', $this->company_id)
             ->where('status', 1)
             ->get()
-            ->reject(function (Remineder $reminder) {
-                if ($reminder->event_id !== null) {
-                    return (int) $reminder->event_id !== (int) $this->event_id;
-                }
-
-                if ($reminder->source_id !== null) {
-                    return true;
-                }
-
-                return false;
-            });
+            ->filter(fn (Remineder $reminder) => $reminder->appliesToEventRegistration($this));
 
         foreach ($reminders as $reminder) {
             $reminder->makeEventRegistrationMessages($this);

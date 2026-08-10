@@ -33,6 +33,7 @@ class FlowChannelCompatibility
         'assign_agent',
         'assign_group',
         'assign_journey_stage',
+        'send_booking_link',
         'end',
     ];
 

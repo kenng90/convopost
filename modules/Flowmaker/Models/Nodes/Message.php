@@ -24,18 +24,19 @@ class Message extends Node
 
             $sent = $contact->sendMessage($message, false, false, 'TEXT', null, null, null, true);
 
-            if ((int) $sent->status === 2) {
+            if ($this->outboundSendFailed($sent)) {
                 Log::error('Flow message node failed to send outbound message', [
                     'flow_id' => $this->flow_id,
                     'node_id' => $this->id,
                     'contact_id' => $contact->id,
-                    'message_id' => $sent->id,
-                    'error' => $sent->error,
+                    'message_id' => $sent->id ?? null,
+                    'status' => $sent->status ?? null,
+                    'error' => $sent->error ?? null,
                 ]);
 
                 return [
                     'success' => false,
-                    'error' => $sent->error,
+                    'error' => $sent->error ?? __('Send failed'),
                 ];
             }
         } catch (\Exception $e) {
@@ -56,6 +57,25 @@ class Message extends Node
         return [
             'success' => true,
         ];
+    }
+
+    /**
+     * WhatsApp keeps status=1 until delivery webhooks; Meta sets status=2 on success.
+     * Credit blocks historically use status=2 with an error string. Hard failures use status=5.
+     */
+    private function outboundSendFailed($sent): bool
+    {
+        if (! $sent) {
+            return true;
+        }
+
+        $status = (int) $sent->status;
+
+        if ($status === 5) {
+            return true;
+        }
+
+        return $status === 2 && filled($sent->error);
     }
 
     protected function getNextNodeId($data = null)

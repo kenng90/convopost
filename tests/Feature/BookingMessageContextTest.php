@@ -122,6 +122,40 @@ class BookingMessageContextTest extends TestCase
         $this->assertNotEmpty($context['start_time']);
     }
 
+    public function test_reservation_context_falls_back_to_hash_id_reference(): void
+    {
+        $source = Source::create([
+            'company_id' => $this->company->id,
+            'name' => 'Dental',
+            'timezone' => config('app.timezone', 'UTC'),
+            'location' => 'Clinic A',
+            'is_bookable' => true,
+        ]);
+
+        $contact = Contact::create([
+            'company_id' => $this->company->id,
+            'name' => 'Jane',
+            'phone' => '+254700000199',
+            'subscribed' => 1,
+        ]);
+
+        $start = Carbon::parse('2026-08-01 10:00:00', $source->timezone);
+
+        $reservation = Reservation::create([
+            'company_id' => $this->company->id,
+            'contact_id' => $contact->id,
+            'source_id' => $source->id,
+            'start_date' => $start,
+            'end_date' => $start->copy()->addHour(),
+            'status' => 1,
+            'external_id' => null,
+        ]);
+
+        $context = $this->context->forReservation($reservation->fresh(['source']));
+
+        $this->assertSame('#'.$reservation->id, $context['external_id']);
+    }
+
     public function test_before_reminder_keeps_appointment_date_not_send_time(): void
     {
         $template = $this->makeTemplate();

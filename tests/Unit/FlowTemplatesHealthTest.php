@@ -22,6 +22,19 @@ class FlowTemplatesHealthTest extends TestCase
         'services_listing_booking',
         'catalog_listings_showcase',
         'whatsapp_voice_ai_agent',
+        'spa_wellness_booking_omni',
+        'whatsapp_shop_checkout_omni',
+        'lead_intake_routing_omni',
+        'support_ai_escalation_omni',
+        'healthcare_clinic_bot_omni',
+        'real_estate_agency_bot_omni',
+        'automotive_dealer_bot_omni',
+        'microfinance_banking_bot_omni',
+        'hotel_tour_concierge_bot_omni',
+        'ai_faq_minimal_omni',
+        'services_listing_booking_omni',
+        'catalog_listings_showcase_omni',
+        'whatsapp_voice_ai_agent_omni',
     ];
 
     public function test_all_templates_pass_health_validator_without_errors(): void

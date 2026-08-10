@@ -1392,8 +1392,10 @@ $flowTemplates = [
 
 ];
 
-return \App\Services\Flowmaker\FlowTemplateEnricher::enrich(array_merge(
-    $flowTemplates,
-    require __DIR__.'/flow-templates-industry.php',
-    require __DIR__.'/flow-templates-starter.php'
-));
+return \App\Services\Flowmaker\FlowTemplateOmniConverter::appendOmniVariants(
+    \App\Services\Flowmaker\FlowTemplateEnricher::enrich(array_merge(
+        $flowTemplates,
+        require __DIR__.'/flow-templates-industry.php',
+        require __DIR__.'/flow-templates-starter.php'
+    ))
+);

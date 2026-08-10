@@ -34,6 +34,8 @@ class BookingsOverviewTest extends TestCase
         $response->assertSee(__('One-to-one appointments'));
         $response->assertSee(__('Shared setup'));
         $response->assertSee(route('reminders.booking.catalog', ['subdomain' => 'demo-bookings']), false);
+        $response->assertSee(route('reminders.booking.manage', ['subdomain' => 'demo-bookings']), false);
+        $response->assertSee(__('Manage booking'));
     }
 
     public function test_overview_hides_events_section_when_disabled(): void
