@@ -3,8 +3,10 @@
 namespace Modules\Contacts\Models;
 
 use App\Models\Company;
+use App\Models\Messaging\ChannelIdentity;
 use App\Scopes\CompanyScope;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Contact extends Model
@@ -47,6 +49,11 @@ class Contact extends Model
         );
     }
 
+    public function channelIdentities(): HasMany
+    {
+        return $this->hasMany(ChannelIdentity::class, 'contact_id');
+    }
+
     protected static function booted()
     {
         static::addGlobalScope(new CompanyScope);
@@ -59,18 +66,23 @@ class Contact extends Model
         });
 
         static::created(function ($model) {
-            //Determine the country
+            if (! filled($model->phone)) {
+                return;
+            }
+
             $country_id = $model->getCountryByPhoneNumber($model->phone);
             if ($country_id) {
                 $model->country_id = $country_id;
                 $model->update();
             }
-
         });
     }
 
     private function getCountryByPhoneNumber($phoneNumber)
     {
+        if (! filled($phoneNumber)) {
+            return null;
+        }
 
         if (strpos($phoneNumber, '+') !== 0) {
             $phoneNumber = '+'.$phoneNumber;

@@ -35,15 +35,25 @@ class ContactsImport implements ToModel, WithChunkReading, WithEvents, WithGroup
     public function model(array $row)
     {
         $phone = $this->normalizePhone($this->resolveCellValue($row['phone'] ?? null));
+        $channel = strtolower(trim((string) $this->resolveCellValue($row['channel'] ?? null)));
+        $externalId = trim((string) $this->resolveCellValue($row['external_id'] ?? null));
 
+        $name = $this->resolveCellValue($row['name'] ?? null);
+
+        // Social-channel rows can be imported without a phone when channel + external_id are present.
         if ($phone === null) {
+            if (
+                $externalId !== ''
+                && in_array($channel, ['instagram', 'messenger'], true)
+            ) {
+                return $this->upsertByChannelIdentity($channel, $externalId, $name, $row);
+            }
+
             $this->trackStat('skipped_count');
             $this->trackProgress();
 
             return null;
         }
-
-        $name = $this->resolveCellValue($row['name'] ?? null);
 
         $keys = array_keys($row);
         $keysForFields = [];
@@ -82,11 +92,81 @@ class ContactsImport implements ToModel, WithChunkReading, WithEvents, WithGroup
             }
         }
 
+        if ($externalId !== '' && in_array($channel, ['whatsapp', 'instagram', 'messenger'], true)) {
+            $this->linkChannelIdentity($contact, $channel, $externalId, $name);
+        }
+
         $contact->update();
 
         $this->trackProgress();
 
         return $contact;
+    }
+
+    private function upsertByChannelIdentity(string $channel, string $externalId, mixed $name, array $row): ?Contact
+    {
+        $companyId = (int) (session('company_id') ?: 0);
+        if ($companyId === 0) {
+            $this->trackStat('skipped_count');
+            $this->trackProgress();
+
+            return null;
+        }
+
+        $identity = \App\Models\Messaging\ChannelIdentity::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->where('channel', $channel)
+            ->where('external_id', $externalId)
+            ->first();
+
+        if ($identity) {
+            $contact = Contact::withoutGlobalScopes()->find($identity->contact_id);
+            if (! $contact) {
+                $this->trackStat('skipped_count');
+                $this->trackProgress();
+
+                return null;
+            }
+            if ($name !== null && trim((string) $name) !== '') {
+                $contact->name = trim((string) $name);
+                $contact->save();
+            }
+            $this->trackStat('updated_count');
+        } else {
+            $contact = new Contact([
+                'name' => $this->resolveName($name),
+                'phone' => '',
+                'company_id' => $companyId,
+                'subscribed' => 1,
+            ]);
+            $contact->save();
+            $this->linkChannelIdentity($contact, $channel, $externalId, $name);
+            $this->trackStat('created_count');
+        }
+
+        if ($avatar = $this->resolveCellValue($row['avatar'] ?? null)) {
+            $contact->avatar = $avatar;
+            $contact->save();
+        }
+
+        $this->trackProgress();
+
+        return $contact;
+    }
+
+    private function linkChannelIdentity(Contact $contact, string $channel, string $externalId, mixed $name): void
+    {
+        \App\Models\Messaging\ChannelIdentity::withoutGlobalScopes()->updateOrCreate(
+            [
+                'company_id' => $contact->company_id,
+                'channel' => $channel,
+                'external_id' => $externalId,
+            ],
+            [
+                'contact_id' => $contact->id,
+                'display_name' => is_string($name) ? $name : ($contact->name ?? ''),
+            ],
+        );
     }
 
     public function beforeImport(BeforeImport $event): void
@@ -220,7 +300,7 @@ class ContactsImport implements ToModel, WithChunkReading, WithEvents, WithGroup
 
     private function getOrMakeField($field_name)
     {
-        if ($field_name == 'name' || $field_name == 'phone' || $field_name == 'avatar') {
+        if (in_array($field_name, ['name', 'phone', 'avatar', 'email', 'channel', 'external_id', 'channels', 'external_ids', 'id'], true)) {
             return 0;
         }
 

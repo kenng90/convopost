@@ -253,22 +253,24 @@ class Campaign extends Model
 
     public function makeMessages($request, ?ContactModel $contact = null)
     {
-        if ($this->segment_id != null && $contact == null) {
-            $company = $this->company ?? Company::find($this->company_id);
-            $resolver = app(\App\Services\Campaign\CampaignAudienceResolver::class);
-            $audience = $resolver->resolve($company, ['segment_id' => $this->segment_id]);
-            $contacts = $audience['contacts'];
-        } elseif ($this->group_id == null && $this->contact_id == null && $contact == null) {
-            $contacts = Contact::where('company_id', $this->company_id)->where('subscribed', 1)->get();
-        } elseif ($this->group_id != null) {
-            $contacts = Group::findOrFail($this->group_id)
-                ->contacts()
-                ->where('subscribed', 1)
-                ->get();
-        } elseif ($this->contact_id != null) {
-            $contacts = Contact::where('id', $this->contact_id)->get();
-        } else {
+        $company = $this->company ?? Company::find($this->company_id);
+        $channel = $this->channel ?? self::CHANNEL_WHATSAPP;
+        $resolver = app(\App\Services\Campaign\CampaignAudienceResolver::class);
+        $options = ['channel' => $channel];
+
+        if ($contact != null) {
             $contacts = collect([$contact]);
+        } elseif ($this->segment_id != null) {
+            $options['segment_id'] = $this->segment_id;
+            $contacts = $resolver->subscribedQuery($company, $options)->get();
+        } elseif ($this->group_id != null) {
+            $options['group_id'] = $this->group_id;
+            $contacts = $resolver->subscribedQuery($company, $options)->get();
+        } elseif ($this->contact_id != null) {
+            $options['contact_id'] = $this->contact_id;
+            $contacts = $resolver->subscribedQuery($company, $options)->get();
+        } else {
+            $contacts = $resolver->subscribedQuery($company, $options)->get();
         }
 
         $queued = $this->queueMessagesForContacts($request, $contacts);
@@ -351,6 +353,10 @@ class Campaign extends Model
 
         if ($channel === self::CHANNEL_EMAIL) {
             return $this->buildEmailMessageDataForContact($contact, $request, $variablesValuesOverride);
+        }
+
+        if (empty($contact->phone)) {
+            return null;
         }
 
         $template = $this->warmTemplateCache();
@@ -552,6 +558,10 @@ class Campaign extends Model
 
     public function buildSmsMessageDataForContact(ContactModel $contact, $request = null, ?array $variablesValuesOverride = null): ?array
     {
+        if (empty($contact->phone)) {
+            return null;
+        }
+
         $variablesValues = $variablesValuesOverride ?? json_decode($this->variables, true) ?? [];
         $body = $variablesValues['sms_body'] ?? '';
 

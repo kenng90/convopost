@@ -38,7 +38,10 @@ class CampaignSegmentsController extends Controller
 
         CampaignSegment::create([
             'name' => $request->name,
-            'filters' => $request->input('filters', []),
+            'filters' => collect($request->input('filters', []))
+                ->filter(fn ($filter) => filled($filter['value'] ?? null) || ($filter['field'] ?? '') === 'subscribed')
+                ->values()
+                ->all(),
         ]);
 
         return redirect()->route('campaigns.segments.index')->withStatus(__('Segment created.'));

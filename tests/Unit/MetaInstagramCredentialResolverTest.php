@@ -113,6 +113,55 @@ class MetaInstagramCredentialResolverTest extends TestCase
         $this->assertSame('convoconnect', $resolved['ig_username']);
     }
 
+    public function test_falls_back_to_me_accounts_when_page_node_requires_extra_permission(): void
+    {
+        Http::fake([
+            '*/debug_token*' => Http::response([
+                'data' => [
+                    'is_valid' => true,
+                    'type' => 'USER',
+                    'scopes' => ['pages_messaging', 'instagram_manage_messages', 'pages_show_list'],
+                ],
+            ]),
+            '*/452795984579637*' => Http::response([
+                'error' => [
+                    'message' => "(#100) Object does not exist, cannot be loaded due to missing permission or reviewable feature, or does not support this operation. This endpoint requires the 'pages_read_engagement' permission",
+                    'type' => 'OAuthException',
+                    'code' => 100,
+                ],
+            ], 400),
+            '*/me?*' => Http::response([
+                'error' => [
+                    'message' => '(#100) Tried accessing nonexisting field (accounts)',
+                    'code' => 100,
+                ],
+            ], 400),
+            '*/me/accounts*' => Http::response([
+                'data' => [
+                    [
+                        'id' => '452795984579637',
+                        'name' => 'ConvoConnect',
+                        'access_token' => 'EAA-page-token',
+                        'instagram_business_account' => [
+                            'id' => '17841413486594880',
+                            'username' => 'convoconnect',
+                        ],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $resolved = app(MetaInstagramCredentialResolver::class)->resolve(
+            '452795984579637',
+            '17841413486594880',
+            'EAAuser',
+        );
+
+        $this->assertSame('452795984579637', $resolved['page_id']);
+        $this->assertSame('EAA-page-token', $resolved['page_access_token']);
+        $this->assertSame('convoconnect', $resolved['ig_username']);
+    }
+
     public function test_rejects_mismatched_instagram_account_id(): void
     {
         Http::fake([

@@ -18,7 +18,17 @@ class OutboundMessageService
     public function send(Contact $contact, Message $message, MessageContent $content): SendResult
     {
         $channel = $contact->messagingChannel();
-        $conversation = $this->conversations->ensureForContact($contact, $channel);
+
+        try {
+            $conversation = $this->conversations->ensureForContact($contact, $channel);
+        } catch (\InvalidArgumentException $e) {
+            $error = $e->getMessage();
+            $message->status = 5;
+            $message->error = $error;
+            $message->save();
+
+            return new SendResult(false, null, $error);
+        }
 
         $connection = $conversation->channelConnection;
 

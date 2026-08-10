@@ -76,15 +76,16 @@
             <div class="col-12 mt-3">
                 <span id="selected-count"></span>
             </div>
-            
+
         </div>
     </div>
 </div>
-    
+
 @endsection
 @section('thead')
     <th><input type="checkbox" id="select-all"></th>
     <th>{{ __('Name') }}</th>
+    <th>{{ __('Channels') }}</th>
     <th>{{ __('Phone') }}</th>
     <th>{{ __('Email') }}</th>
     <th>{{ __('Status') }}</th>
@@ -104,13 +105,31 @@
                             <img alt="Avatar" src="https://www.gravatar.com/avatar/{{ md5(strtolower(trim($item->email))) }}?s=200&d=mp">
                         @endif
                     </a>
-                    </a>
                     <div class="media-body">
                         <span class="name mb-0 text-sm">{{ $item->name }}</span>
                     </div>
                 </div>
             </td>
-            <td>{{ $item->phone }}</td>
+            <td>
+                @php
+                    $channelValues = $item->relationLoaded('channelIdentities')
+                        ? $item->channelIdentities
+                            ->map(fn ($identity) => $identity->channel instanceof \BackedEnum ? $identity->channel->value : (string) $identity->channel)
+                            ->unique()
+                            ->values()
+                        : collect();
+                    if ($channelValues->isEmpty() && filled($item->phone)) {
+                        $channelValues = collect(['whatsapp']);
+                    }
+                @endphp
+                @forelse ($channelValues as $channelValue)
+                    @php $channelEnum = \App\Enums\MessagingChannelType::tryFromString($channelValue); @endphp
+                    <span class="badge {{ $channelEnum?->badgeClass() ?? 'badge-secondary' }}">{{ $channelEnum?->label() ?? $channelValue }}</span>
+                @empty
+                    <span class="text-muted">—</span>
+                @endforelse
+            </td>
+            <td>{{ $item->phone ?: '—' }}</td>
             <td>{{ $item->email }}</td>
             <td>
                 @if($item->subscribed == 1)
@@ -125,15 +144,21 @@
                 @endforeach
             </td>
             <td>
-                <!-- CHAT -->
                 @if(config('settings.app_code_name','') == 'wpbox')
-                    <a href="{{ route('campaigns.wizard', ['contact_id' => $item->id, 'broadcast_type' => 'group']) }}" class="btn btn-outline-success btn-sm">
-                        <span class="btn-inner--icon"><i class="ni ni-chat-round"></i></span>
-                        <span class="btn-inner--text">{{ __('Start chat')}}</span>
-                    </a>
+                    @if(filled($item->phone))
+                        <a href="{{ route('campaigns.wizard', ['contact_id' => $item->id, 'broadcast_type' => 'group']) }}" class="btn btn-outline-success btn-sm">
+                            <span class="btn-inner--icon"><i class="ni ni-send"></i></span>
+                            <span class="btn-inner--text">{{ __('WA template')}}</span>
+                        </a>
+                    @endif
+                    @if($item->has_chat)
+                        <a href="{{ route('chat.index', ['contact' => $item->id]) }}" class="btn btn-outline-primary btn-sm">
+                            <span class="btn-inner--icon"><i class="ni ni-chat-round"></i></span>
+                            <span class="btn-inner--text">{{ __('Inbox')}}</span>
+                        </a>
+                    @endif
                 @endif
 
-                <!-- Reservations -->
                 @if(config('settings.app_code_name','') == 'reservations')
                     <a href="{{ route('tablereservations.create',['contact_id'=>$item->id]) }}" class="btn btn-outline-success btn-sm">
                         <span class="btn-inner--icon"><i class="ni ni-bullet-list-67"></i></span>
@@ -141,17 +166,15 @@
                     </a>
                 @endif
 
-                <!-- EDIT -->
                 <a href="{{ route('contacts.edit',['contact'=>$item->id]) }}" class="btn btn-primary btn-sm">
                     <i class="ni ni-ruler-pencil"></i>
                 </a>
 
-                <!-- DELETE -->
                 <a href="{{ route('contacts.delete',['contact'=>$item->id]) }}" class="btn btn-danger btn-sm">
                     <i class="ni ni ni-fat-remove"></i>
                 </a>
             </td>
-        </tr> 
+        </tr>
     @endforeach
 @endsection
 @section('js')

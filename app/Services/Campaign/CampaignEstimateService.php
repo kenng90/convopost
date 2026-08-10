@@ -9,7 +9,6 @@ use App\Services\Billing\CreditCostService;
 use App\Services\Campaign\Templates\EmailTemplateProvider;
 use App\Services\Campaign\Templates\SmsTemplateProvider;
 use Modules\Wpbox\Models\Campaign;
-use Modules\Wpbox\Models\Contact;
 use Modules\Wpbox\Models\Template;
 
 class CampaignEstimateService
@@ -99,14 +98,8 @@ class CampaignEstimateService
             return (int) $options['quick_phone_count'];
         }
 
-        $audience = $this->audience->resolve($company, $options);
+        $options['channel'] = $channel;
 
-        if ($channel === Campaign::CHANNEL_EMAIL) {
-            return $this->audience->resolve($company, $options)['contacts']
-                ->filter(fn (Contact $contact) => ! empty($contact->email))
-                ->count();
-        }
-
-        return $audience['subscribed_count'];
+        return $this->audience->subscribedCount($company, $options);
     }
 }

@@ -5,6 +5,9 @@
                 <input type="hidden" wire:model="contactId">
                 <p class="text-muted">{{ __('Sending to a single contact from chat.') }}</p>
             @else
+                <div class="alert alert-info">
+                    {{ __('WhatsApp and SMS campaigns only include contacts with a phone number. Instagram/Messenger-only contacts are excluded automatically. Use segments with “Has messaging channel = WhatsApp” for tighter audiences.') }}
+                </div>
                 <div class="form-group">
                     <label>{{ __('Contact group') }}</label>
                     <select class="form-control" wire:model.live="groupId">

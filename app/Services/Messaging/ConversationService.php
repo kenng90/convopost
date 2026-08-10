@@ -22,6 +22,14 @@ class ConversationService
         $connection = $this->resolveConnection($company, $channel);
         $externalId = $this->resolveExternalParticipantId($contact, $channel);
 
+        if ($externalId === '') {
+            throw new \InvalidArgumentException(
+                __('Cannot open a :channel conversation without a stored channel identity (or phone for WhatsApp).', [
+                    'channel' => $channel->label(),
+                ])
+            );
+        }
+
         $identity = ChannelIdentity::withoutGlobalScopes()->firstOrCreate(
             [
                 'company_id' => $company->id,
@@ -153,14 +161,15 @@ class ConversationService
             ->first();
 
         if ($identity) {
-            return $identity->external_id;
+            return (string) $identity->external_id;
         }
 
-        return match ($channel) {
-            MessagingChannelType::Whatsapp => (string) $contact->phone,
-            MessagingChannelType::Instagram, MessagingChannelType::Messenger => 'meta:'.$contact->id,
-            default => (string) $contact->id,
-        };
+        if ($channel === MessagingChannelType::Whatsapp && filled($contact->phone)) {
+            return (string) $contact->phone;
+        }
+
+        // Never invent Meta PSIDs — Instagram/Messenger require a real ChannelIdentity.
+        return '';
     }
 
     private function findOrCreateContact(

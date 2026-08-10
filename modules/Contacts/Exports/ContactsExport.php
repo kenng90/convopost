@@ -12,18 +12,21 @@ class ContactsExport implements FromArray, WithHeadings
 
     public function headings(): array
     {
-        $headings= [
+        $headings = [
             'id',
             'name',
             'phone',
             'avatar',
-            'email'
+            'email',
+            'channels',
+            'external_ids',
         ];
-        $cs=Field::get();
+        $cs = Field::get();
         foreach ($cs as $key => $value) {
-           array_push($headings,$value->name);
+            array_push($headings, $value->name);
         }
-        return $headings;   
+
+        return $headings;
     }
 
     public function __construct(array $contacts)
