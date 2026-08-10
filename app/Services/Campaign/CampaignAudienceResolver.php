@@ -2,17 +2,18 @@
 
 namespace App\Services\Campaign;
 
+use App\Enums\MessagingChannelType;
 use App\Models\Company;
 use Illuminate\Database\Eloquent\Builder;
 use Modules\Contacts\Models\Field;
-use Modules\Contacts\Models\Group;
+use Modules\Wpbox\Models\Campaign;
 use Modules\Wpbox\Models\CampaignSegment;
 use Modules\Wpbox\Models\Contact;
 
 class CampaignAudienceResolver
 {
     /**
-     * @param  array<string, mixed>  $options  group_id, segment_id, contact_id, phones (array)
+     * @param  array<string, mixed>  $options  group_id, segment_id, contact_id, phones, channel, messaging_channel
      * @return array{total_count: int, subscribed_count: int, excluded_count: int, contacts: \Illuminate\Support\Collection}
      */
     public function resolve(Company $company, array $options = []): array
@@ -20,13 +21,17 @@ class CampaignAudienceResolver
         $query = $this->baseQuery($company, $options);
 
         $total = (clone $query)->count();
-        $subscribed = (clone $query)->where('subscribed', 1)->count();
+        $subscribedQuery = (clone $query)->where('subscribed', 1);
+        $this->applyDeliverabilityConstraints($subscribedQuery, $options);
+        $subscribed = (clone $subscribedQuery)->count();
 
         return [
             'total_count' => $total,
             'subscribed_count' => $subscribed,
             'excluded_count' => max(0, $total - $subscribed),
-            'contacts' => (clone $query)->where('subscribed', 1)->limit(max(1, (int) config('wpbox.campaign_audience_preview_limit', 500)))->get(),
+            'contacts' => (clone $subscribedQuery)
+                ->limit(max(1, (int) config('wpbox.campaign_audience_preview_limit', 500)))
+                ->get(),
         ];
     }
 
@@ -35,7 +40,10 @@ class CampaignAudienceResolver
      */
     public function subscribedQuery(Company $company, array $options = []): Builder
     {
-        return $this->baseQuery($company, $options)->where('subscribed', 1);
+        $query = $this->baseQuery($company, $options)->where('subscribed', 1);
+        $this->applyDeliverabilityConstraints($query, $options);
+
+        return $query;
     }
 
     /**
@@ -44,6 +52,31 @@ class CampaignAudienceResolver
     public function subscribedCount(Company $company, array $options = []): int
     {
         return $this->subscribedQuery($company, $options)->count();
+    }
+
+    /**
+     * Restrict to contacts that can actually receive the campaign channel.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    public function applyDeliverabilityConstraints(Builder $query, array $options = []): void
+    {
+        $channel = (string) ($options['channel'] ?? '');
+
+        if ($channel === '') {
+            return;
+        }
+
+        if ($channel === Campaign::CHANNEL_EMAIL) {
+            $query->whereNotNull('contacts.email')->where('contacts.email', '!=', '');
+
+            return;
+        }
+
+        if (in_array($channel, [Campaign::CHANNEL_WHATSAPP, Campaign::CHANNEL_SMS], true)) {
+            $query->whereNotNull('contacts.phone')
+                ->where('contacts.phone', '!=', '');
+        }
     }
 
     /**
@@ -74,7 +107,37 @@ class CampaignAudienceResolver
             $query->whereIn('phone', $options['phones']);
         }
 
+        if (! empty($options['messaging_channel'])) {
+            $this->applyMessagingChannelFilter($query, (string) $options['messaging_channel']);
+        }
+
         return $query;
+    }
+
+    public function applyMessagingChannelFilter(Builder $query, string $channel): void
+    {
+        if ($channel === 'whatsapp') {
+            $query->where(function (Builder $q) {
+                $q->whereHas('channelIdentities', function (Builder $identity) {
+                    $identity->where('channel', MessagingChannelType::Whatsapp->value);
+                })->orWhere(function (Builder $legacy) {
+                    $legacy->whereDoesntHave('channelIdentities')
+                        ->whereNotNull('phone')
+                        ->where('phone', '!=', '');
+                });
+            });
+
+            return;
+        }
+
+        if (in_array($channel, [
+            MessagingChannelType::Instagram->value,
+            MessagingChannelType::Messenger->value,
+        ], true)) {
+            $query->whereHas('channelIdentities', function (Builder $identity) use ($channel) {
+                $identity->where('channel', $channel);
+            });
+        }
     }
 
     /**
@@ -93,6 +156,30 @@ class CampaignAudienceResolver
 
             if ($field === 'subscribed') {
                 $query->where('subscribed', $value === '1' || $value === 'yes' ? 1 : 0);
+
+                continue;
+            }
+
+            if ($field === 'has_channel') {
+                if ($value === '' || $value === null) {
+                    continue;
+                }
+                $this->applyMessagingChannelFilter($query, (string) $value);
+
+                continue;
+            }
+
+            if ($field === 'phone_present') {
+                if ($value === '' || $value === null) {
+                    continue;
+                }
+                if ($value === '1' || $value === 'yes') {
+                    $query->whereNotNull('phone')->where('phone', '!=', '');
+                } else {
+                    $query->where(function (Builder $q) {
+                        $q->whereNull('phone')->orWhere('phone', '');
+                    });
+                }
 
                 continue;
             }

@@ -67,8 +67,8 @@ class Main extends Controller
         //Add name field
         $fields[1] = ['class' => $class, 'ftype' => 'input', 'name' => 'Name', 'id' => 'name', 'placeholder' => 'Enter name', 'required' => true];
 
-        //Add phone field
-        $fields[2] = ['class' => $class, 'ftype' => 'input', 'type' => 'phone', 'name' => 'Phone', 'id' => 'phone', 'placeholder' => 'Enter phone', 'required' => true];
+        //Add phone field — optional so Instagram/Messenger contacts can be managed in CRM
+        $fields[2] = ['class' => $class, 'ftype' => 'input', 'type' => 'phone', 'name' => 'Phone', 'id' => 'phone', 'placeholder' => 'Enter phone (required for WhatsApp/SMS)', 'required' => false];
 
         //Groups
         $fields[3] = ['class' => $class, 'multiple' => true, 'classselect' => 'select2init', 'ftype' => 'select', 'name' => 'Groups', 'id' => 'groups[]', 'placeholder' => 'Select group', 'data' => Group::get()->pluck('name', 'id'), 'required' => true];
@@ -124,6 +124,12 @@ class Main extends Controller
 
         $fields[6] = ['class' => 'col-md-3', 'ftype' => 'select', 'name' => 'Subscribed', 'id' => 'subscribed', 'placeholder' => 'Select status', 'data' => ['1' => 'Subscribed', '0' => 'Opted out'], 'required' => false];
 
+        $fields[7] = ['class' => 'col-md-3', 'ftype' => 'select', 'name' => 'Channel', 'id' => 'messaging_channel', 'placeholder' => 'All channels', 'data' => [
+            'whatsapp' => 'WhatsApp',
+            'instagram' => 'Instagram',
+            'messenger' => 'Messenger',
+        ], 'required' => false];
+
         //unset($fields[2]);
         return $fields;
     }
@@ -171,13 +177,18 @@ class Main extends Controller
             $items = $items->where('subscribed', $_GET['subscribed']);
         }
 
+        if (isset($_GET['messaging_channel']) && strlen($_GET['messaging_channel']) > 0) {
+            app(\App\Services\Campaign\CampaignAudienceResolver::class)
+                ->applyMessagingChannelFilter($items, $_GET['messaging_channel']);
+        }
+
         if (isset($_GET['report'])) {
             //dd($items->with(['fields','groups'])->get());
-            return $this->exportCSV($items->with(['fields', 'groups'])->get());
+            return $this->exportCSV($items->with(['fields', 'groups', 'channelIdentities'])->get());
 
         }
         $totalItems = $items->count();
-        $items = $items->paginate(config('settings.paginate'));
+        $items = $items->with(['groups', 'channelIdentities'])->paginate(config('settings.paginate'));
 
         return view($this->view_path.'index', ['setup' => [
             'usefilter' => true,
@@ -209,12 +220,27 @@ class Main extends Controller
         $items = [];
         $cf = Field::get();
         foreach ($contactsToDownload as $key => $contact) {
+            $channels = $contact->channelIdentities
+                ->map(fn ($identity) => $identity->channel instanceof \BackedEnum
+                    ? $identity->channel->value
+                    : (string) $identity->channel)
+                ->unique()
+                ->implode('|');
+
+            $externalIds = $contact->channelIdentities
+                ->map(fn ($identity) => ($identity->channel instanceof \BackedEnum
+                    ? $identity->channel->value
+                    : (string) $identity->channel).':'.$identity->external_id)
+                ->implode('|');
+
             $item = [
                 'id' => $contact->id,
                 'name' => $contact->name,
                 'phone' => $contact->phone,
                 'avatar' => $contact->avatar,
                 'email' => $contact->email,
+                'channels' => $channels,
+                'external_ids' => $externalIds,
             ];
 
             foreach ($cf as $keycf => $scf) {
@@ -264,7 +290,7 @@ class Main extends Controller
         //Create new contact
         $contact = $this->provider::create([
             'name' => $request->name,
-            'phone' => $request->phone,
+            'phone' => $request->phone ?? '',
             'email' => $request->email,
         ]);
         $contact->save();
@@ -338,7 +364,34 @@ class Main extends Controller
             'isupdate' => true,
             'action' => route($this->webroute_path.'update', $parameter),
         ],
-            'fields' => $fields, ]);
+            'fields' => $fields,
+            'contact' => $contact->load('channelIdentities'),
+            'mergeCandidates' => $this->provider::query()
+                ->where('id', '!=', $contact->id)
+                ->orderBy('name')
+                ->limit(200)
+                ->get(['id', 'name', 'phone']),
+        ]);
+    }
+
+    public function merge(Request $request, Contact $contact)
+    {
+        $this->authChecker();
+
+        $validated = $request->validate([
+            'secondary_contact_id' => 'required|integer|exists:contacts,id',
+        ]);
+
+        $secondary = $this->provider::findOrFail($validated['secondary_contact_id']);
+
+        app(\App\Services\Contacts\ContactMergeService::class)->merge(
+            \Modules\Wpbox\Models\Contact::withoutGlobalScopes()->findOrFail($contact->id),
+            \Modules\Wpbox\Models\Contact::withoutGlobalScopes()->findOrFail($secondary->id),
+        );
+
+        return redirect()
+            ->route($this->webroute_path.'edit', ['contact' => $contact->id])
+            ->withStatus(__('Contacts merged. Channel identities and conversations moved to this contact.'));
     }
 
     /**

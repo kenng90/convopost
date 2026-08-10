@@ -27,6 +27,7 @@ Route::group([
         Route::get('contacts/create', 'Main@create')->name('contacts.create');
         Route::post('contacts', 'Main@store')->name('contacts.store');
         Route::put('contacts/{contact}', 'Main@update')->name('contacts.update');
+        Route::post('contacts/{contact}/merge', 'Main@merge')->name('contacts.merge');
         Route::get('contacts/del/{contact}', 'Main@destroy')->name('contacts.delete');
         Route::get('contacts/bulkremove/{contacts}', 'Main@bulkremove')->name('contacts.bulkremove');
         Route::get('contacts/subscribe/{contacts}', 'Main@subscribe')->name('contacts.subscribe');

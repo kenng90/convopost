@@ -11,6 +11,17 @@
                 <div class="card-body">
                     @include('partials.flash')
 
+                    @if ($errors->any())
+                        <div class="alert alert-danger">
+                            <strong>{{ __('Could not save Instagram connection') }}</strong>
+                            <ul class="mb-0 pl-3 mt-2">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     @if($isConnected)
                         <div class="alert alert-success">{{ __('Instagram is connected for this workspace.') }}</div>
                     @endif
@@ -32,7 +43,7 @@
                         <p class="mb-2 mt-2">{{ __('Meta requires both of these. Saving will validate them:') }}</p>
                         <ol class="mb-0 pl-3">
                             <li>{{ __('Facebook Page must be linked to the Instagram Professional account that receives DMs (Business Suite → Instagram accounts / Page settings).') }}</li>
-                            <li>{{ __('Page token must include instagram_manage_messages and pages_messaging (not only WhatsApp / pages_messaging).') }}</li>
+                            <li>{{ __('Page token / User token must include pages_messaging, instagram_manage_messages, pages_show_list, and pages_read_engagement (or pages_manage_metadata).') }}</li>
                             <li>{{ __('In Graph API Explorer: User token with those scopes → GET /me/accounts?fields=id,name,access_token,instagram_business_account{id,username} → pick the Page whose instagram_business_account.id matches your webhook IG id → paste Page id + token and Save.') }}</li>
                         </ol>
                     </div>
@@ -54,19 +65,28 @@
 
                         <div class="form-group">
                             <label for="page_id">{{ __('Facebook Page ID') }}</label>
-                            <input id="page_id" name="page_id" type="text" class="form-control" required value="{{ $company->getConfig('instagram_page_id', '') }}">
+                            <input id="page_id" name="page_id" type="text" class="form-control {{ $errors->has('page_id') ? 'is-invalid' : '' }}" required value="{{ old('page_id', $company->getConfig('instagram_page_id', '')) }}">
+                            @error('page_id')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                             <small class="text-muted">{{ __('Used when sending replies (Messenger API for Instagram). Must be the Page linked to your Instagram Professional account.') }}</small>
                         </div>
 
                         <div class="form-group">
                             <label for="instagram_account_id">{{ __('Instagram account ID') }} <span class="text-danger">*</span></label>
-                            <input id="instagram_account_id" name="instagram_account_id" type="text" class="form-control" required value="{{ $company->getConfig('instagram_account_id', '') }}">
+                            <input id="instagram_account_id" name="instagram_account_id" type="text" class="form-control {{ $errors->has('instagram_account_id') ? 'is-invalid' : '' }}" required value="{{ old('instagram_account_id', $company->getConfig('instagram_account_id', '')) }}">
+                            @error('instagram_account_id')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                             <small class="text-muted">{{ __('Your Instagram Professional account id (for setup/verification). Replies still send via the Facebook Page ID + Page access token with instagram_manage_messages.') }}</small>
                         </div>
 
                         <div class="form-group">
                             <label for="page_access_token">{{ __('Page access token') }}</label>
-                            <input id="page_access_token" name="page_access_token" type="text" class="form-control" required value="{{ $company->getConfig('instagram_page_access_token', '') }}">
+                            <input id="page_access_token" name="page_access_token" type="text" class="form-control {{ $errors->has('page_access_token') ? 'is-invalid' : '' }}" required value="{{ old('page_access_token', $company->getConfig('instagram_page_access_token', '')) }}">
+                            @error('page_access_token')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                             <small class="text-muted">{{ __('Long-lived Page token that includes instagram_manage_messages and pages_messaging.') }}</small>
                         </div>
 
