@@ -2,8 +2,11 @@
 
 namespace Modules\Flowmaker\Models\Nodes;
 
+use App\Enums\MessagingChannelType;
+use App\Services\Flowmaker\FlowOutboundService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Modules\Flowmaker\Models\Contact;
 
 class Node
 {
@@ -102,5 +105,63 @@ class Node
             // Otherwise use Storage::url which adds /storage/ prefix
             return url(Storage::url($mediaUrl));
         }
+    }
+
+    /**
+     * Skip WhatsApp-native nodes on Instagram/Messenger with an optional text fallback,
+     * then continue via else / completed / first outgoing edge.
+     *
+     * @return array{success: bool}|null Null when the node should continue normally.
+     */
+    protected function skipIfNotWhatsappChannel($message, $data, string $fallbackText = ''): ?array
+    {
+        $contactId = is_object($data) ? ($data->contact_id ?? null) : ($data['contact_id'] ?? null);
+        if (! $contactId) {
+            return null;
+        }
+
+        $contact = Contact::find($contactId);
+        if (! $contact || $contact->messagingChannel() === MessagingChannelType::Whatsapp) {
+            return null;
+        }
+
+        Log::info('Skipping WhatsApp-only flow node on non-WhatsApp channel', [
+            'node_id' => $this->id,
+            'type' => $this->type,
+            'channel' => $contact->messagingChannel()->value,
+            'flow_id' => $this->flow_id,
+        ]);
+
+        if ($fallbackText !== '') {
+            app(FlowOutboundService::class)->sendText($contact, $fallbackText);
+        }
+
+        $contact->clearContactState($this->flow_id, 'current_node');
+
+        $next = null;
+        foreach (['else', 'onFlowCompleted', 'onAbandoned'] as $handle) {
+            try {
+                $next = $this->getNextNodeId($handle);
+            } catch (\Throwable $e) {
+                $next = null;
+            }
+            if ($next) {
+                break;
+            }
+        }
+
+        if (! $next) {
+            try {
+                $next = $this->getNextNodeId();
+            } catch (\Throwable $e) {
+                $next = null;
+            }
+        }
+
+        if ($next) {
+            $next->process($message, $data);
+        }
+
+        return ['success' => true];
     }
 }

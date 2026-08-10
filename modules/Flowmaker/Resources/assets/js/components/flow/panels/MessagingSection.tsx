@@ -11,6 +11,7 @@ const messagingActions = [
   {
     icon: MessageCircle,
     label: 'Send text message',
+    badge: 'Omni',
     bgColor: 'bg-blue-100',
     textColor: 'text-blue-600',
     onClick: (actions: ReturnType<typeof useFlowActions>) => {
@@ -28,6 +29,7 @@ const messagingActions = [
   {
     icon: Image,
     label: 'Send image',
+    badge: 'Omni',
     bgColor: 'bg-purple-100',
     textColor: 'text-purple-600',
     onClick: (actions: ReturnType<typeof useFlowActions>) => {
@@ -45,6 +47,7 @@ const messagingActions = [
   {
     icon: File,
     label: 'Send PDF',
+    badge: 'WA',
     bgColor: 'bg-red-100',
     textColor: 'text-red-600',
     onClick: (actions: ReturnType<typeof useFlowActions>) => {
@@ -62,6 +65,7 @@ const messagingActions = [
   {
     icon: FileVideo,
     label: 'Send video',
+    badge: 'WA',
     bgColor: 'bg-indigo-100',
     textColor: 'text-indigo-600',
     onClick: (actions: ReturnType<typeof useFlowActions>) => {
@@ -79,6 +83,7 @@ const messagingActions = [
   {
     icon: FileText,
     label: 'Send template',
+    badge: 'WA only',
     bgColor: 'bg-indigo-100',
     textColor: 'text-indigo-600',
     onClick: (actions: ReturnType<typeof useFlowActions>) => {
@@ -88,6 +93,7 @@ const messagingActions = [
   {
     icon: MessageSquare,
     label: 'Message with buttons',
+    badge: 'Omni',
     bgColor: 'bg-orange-100',
     textColor: 'text-orange-600',
     onClick: (actions: ReturnType<typeof useFlowActions>) => {
@@ -110,6 +116,7 @@ const messagingActions = [
   {
     icon: List,
     label: 'Send list message',
+    badge: 'Omni',
     bgColor: 'bg-green-100',
     textColor: 'text-green-600',
     onClick: (actions: ReturnType<typeof useFlowActions>) => {
@@ -174,7 +181,18 @@ export const MessagingSection = ({ searchQuery }: MessagingSectionProps) => {
           <div className={`${action.bgColor} p-2 rounded-lg mr-3`}>
             <action.icon className={`h-5 w-5 ${action.textColor}`} />
           </div>
-          {action.label}
+          <span className="flex-1 text-left">{action.label}</span>
+          {action.badge && (
+            <span
+              className={`ml-2 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${
+                action.badge.includes('WA')
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-emerald-100 text-emerald-800'
+              }`}
+            >
+              {action.badge}
+            </span>
+          )}
         </Button>
       ))}
     </div>

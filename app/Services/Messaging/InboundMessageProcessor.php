@@ -67,6 +67,7 @@ class InboundMessageProcessor
             'buttons' => '[]',
             'components' => '',
             'fb_message_id' => $inbound->externalMessageId,
+            'extra' => $inbound->extra ?? $inbound->content->extra ?? '',
         ]);
 
         // Ensure chat list shows this contact (some Message creates omit contact flags).

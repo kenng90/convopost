@@ -13,6 +13,7 @@ final class InboundMessage
         public readonly MessageContent $content,
         public readonly Carbon $receivedAt,
         public readonly array $raw = [],
+        public readonly ?string $extra = null,
     ) {
     }
 }

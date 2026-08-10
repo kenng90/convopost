@@ -254,10 +254,6 @@ class Main extends Controller
         ]);
     }
 
-    /**
-     * @param  array<string, mixed>  $payload
-     * @return array{valid: bool, errors: array<int, string>, warnings: array<int, string>}
-     */
     private function validateFlowHealth(array $payload, Flow $flow): array
     {
         $health = (new FlowHealthValidator)->validate($payload);

@@ -291,10 +291,16 @@ class FlowHealthValidator
             $warnings[] = 'Flow has no End node — conversations may not clear state.';
         }
 
+        $channelCompatibility = (new FlowChannelCompatibility)->analyze($flowData);
+        $warnings = array_merge($warnings, $channelCompatibility['warnings']);
+
         return [
             'valid' => empty($errors),
             'errors' => array_values(array_unique($errors)),
             'warnings' => array_values(array_unique($warnings)),
+            'channel_compatibility' => [
+                'whatsapp_only_nodes' => $channelCompatibility['whatsapp_only_nodes'],
+            ],
         ];
     }
 

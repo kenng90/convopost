@@ -17,7 +17,8 @@ class RespondOnMessage
             $contact = $event->message->contact;
             $message = $event->message;
 
-            if (($message->channel ?? 'whatsapp') !== 'whatsapp') {
+            $channel = $message->channel ?? 'whatsapp';
+            if (! in_array($channel, ['whatsapp', 'instagram', 'messenger'], true)) {
                 return;
             }
 
@@ -40,7 +41,8 @@ class RespondOnMessage
                     $company,
                     $flows,
                     $flowmakerContact,
-                    $messageBody
+                    $messageBody,
+                    $channel
                 );
 
                 foreach ($flowsForChat as $flow) {
