@@ -2,6 +2,7 @@
 
 namespace Modules\Wpbox\Http\Controllers;
 
+use App\Enums\MessagingChannelType;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Campaign\ApiCampaignService;
@@ -90,8 +91,11 @@ class APIController extends Controller
             //Company
             $company = $this->getCompany();
 
-            //Make or get the contact
-            $contact = $this->getOrMakeContact($request->phone, $company, $request->phone);
+            // Prefer contact_id so Instagram/Messenger (empty phone) work from mobile.
+            $contact = $this->resolveContactFromRequest($request, $company);
+            if (! $contact) {
+                return response()->json(['status' => 'error', 'message' => 'Contact not found'], 404);
+            }
 
             //If request has buttons
             if ($request->has('buttons') || $request->has('header') || $request->has('footer')) {
@@ -222,7 +226,8 @@ class APIController extends Controller
 
         }, [
             'token' => 'required',
-            'phone' => 'required',
+            'contact_id' => 'required_without:phone',
+            'phone' => 'required_without:contact_id',
             //'message' => 'required',
         ]);
     }
@@ -549,7 +554,21 @@ class APIController extends Controller
         return $this->authenticate($request, function ($request) {
             //Company
             $company = $this->getCompany();
-            $chatList = Contact::where('has_chat', 1)->where('company_id', $company->id)->orderBy('last_reply_at', 'DESC')->limit(150)->get();
+            session(['company_id' => $company->id]);
+            $chatList = Contact::where('has_chat', 1)
+                ->where('company_id', $company->id)
+                ->with(['channelIdentities' => function ($query) {
+                    $query->withoutGlobalScopes()->select('id', 'contact_id', 'channel', 'display_name');
+                }])
+                ->orderBy('last_reply_at', 'DESC')
+                ->limit(150)
+                ->get()
+                ->map(function (Contact $contact) {
+                    $contact->channel = $contact->channelIdentities->first()?->channel?->value
+                        ?? MessagingChannelType::Whatsapp->value;
+
+                    return $contact;
+                });
 
             return response()->json([
                 'data' => $chatList,
@@ -730,6 +749,25 @@ class APIController extends Controller
             'contact_id' => 'required_without:phone',
             'phone' => 'required_without:contact_id',
         ]);
+    }
+
+    /**
+     * Resolve an existing contact for mobile/API sends.
+     * contact_id is required for Instagram/Messenger (contacts often have empty phone).
+     */
+    private function resolveContactFromRequest(Request $request, $company): ?Contact
+    {
+        if ($request->filled('contact_id')) {
+            return Contact::where('id', $request->contact_id)
+                ->where('company_id', $company->id)
+                ->first();
+        }
+
+        if ($request->filled('phone')) {
+            return $this->getOrMakeContact($request->phone, $company, $request->phone);
+        }
+
+        return null;
     }
 
     private function authenticate(Request $request, Closure $next, $rules = ['token' => 'required'])
