@@ -60,6 +60,10 @@ class LandingPageTest extends TestCase
         $response->assertSee('Paystack', false);
         $response->assertSee('Forms ↔ Flow Builder bridge', false);
         $response->assertSee('38+ automation nodes', false);
+        $response->assertSee('WhatsApp, Instagram &amp; Messenger', false);
+        $response->assertSee('id="channels"', false);
+        $response->assertSee('id="campaigns"', false);
+        $response->assertSee('WhatsApp, SMS &amp; email campaigns', false);
         $response->assertSee('WhatsApp, SMS &amp; email channels', false);
         $response->assertSee('ConvoConnect SMS', false);
         $response->assertSee('Sender ID', false);
@@ -71,6 +75,24 @@ class LandingPageTest extends TestCase
         $response->assertSee('Skip to content', false);
         $response->assertSee('Google Calendar sync', false);
         $response->assertSee('managed AI credits', false);
+    }
+
+    public function test_landing_page_highlights_omnichannel_and_campaigns(): void
+    {
+        config(['settings.disable_landing_page' => false]);
+        config(['settings.landing_page' => 'Wpsupportlanding']);
+
+        $response = $this->get(route('landing'));
+
+        $response->assertOk();
+        $response->assertSee('We support', false);
+        $response->assertSee('Instagram', false);
+        $response->assertSee('Messenger', false);
+        $response->assertSee('SMS campaigns', false);
+        $response->assertSee('Email campaigns', false);
+        $response->assertSee('WhatsApp campaigns', false);
+        $response->assertSee('Messaging channels: WhatsApp, Instagram, Messenger', false);
+        $response->assertSee('Campaign channels: WhatsApp, SMS, email', false);
     }
 
     public function test_landing_page_hides_registration_ctas_when_disabled(): void
