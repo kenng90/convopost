@@ -321,12 +321,12 @@ tailwind.config = {
 </style>
 </head>
 
-<body class="bg-[#f7faf8] text-gray-900" x-data="{ mobileOpen: false, billing: 'monthly', faqOpen: null }">
+<body class="bg-[#f7faf8] text-gray-900" x-data="{ mobileOpen: false, productOpen: false, mobileProductOpen: false, billing: 'monthly', faqOpen: null }" @keydown.escape.window="productOpen = false; mobileOpen = false">
 
 <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:text-black focus:font-semibold" style="background:#25D366;">Skip to content</a>
 
 <!-- ===== NAVBAR ===== -->
-<nav class="navbar-blur fixed top-0 left-0 right-0 z-50" style="height:72px;">
+<nav class="navbar-blur fixed top-0 left-0 right-0 z-50" style="height:72px;" @click.outside="productOpen = false">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6 flex items-center justify-between h-full">
     <!-- Logo -->
     <a href="{{ route('landing') }}" class="flex items-center gap-2.5 flex-shrink-0">
@@ -336,23 +336,70 @@ tailwind.config = {
       <span class="font-display font-800 text-lg tracking-tight text-gray-900">{{ config('settings.site_name', config('app.name')) }}</span>
     </a>
 
-    <!-- Desktop Nav -->
-    <div class="hidden lg:flex items-center gap-7">
-      <a href="#features" class="text-[15px] text-gray-600 hover:text-gray-900 transition-colors">Features</a>
-      <a href="#channels" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Channels</a>
-      <a href="#campaigns" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Campaigns</a>
-      <a href="#how-it-works" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Platform</a>
-      <a href="#journeys" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Journeys</a>
-      <a href="#bookings" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Bookings</a>
-      <a href="#catalog" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Catalog</a>
-      <a href="#automation" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Automation</a>
-      <a href="#integrations" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Integrations</a>
-      <a href="#api" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">API</a>
-      <a href="#pricing" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
-      <a href="#faq" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">FAQ</a>
-      <!-- <a href="#book" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Book Demo</a> -->
+    <!-- Desktop Nav: keep 5 primary items; nest the rest under Product -->
+    <div class="hidden lg:flex items-center gap-6">
+      <div class="relative">
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 text-[15px] text-gray-600 hover:text-gray-900 transition-colors"
+          @click="productOpen = !productOpen"
+          :aria-expanded="productOpen.toString()"
+          aria-haspopup="true"
+          aria-controls="product-menu"
+        >
+          Product
+          <svg class="w-3.5 h-3.5 transition-transform" :class="productOpen ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div
+          id="product-menu"
+          x-show="productOpen"
+          x-cloak
+          x-transition.opacity.duration.150ms
+          class="absolute left-0 top-full mt-3 w-[22rem] rounded-2xl border border-gray-200 bg-white p-3 shadow-xl"
+          style="box-shadow:0 18px 50px rgba(7,94,84,0.12);"
+        >
+          <div class="grid grid-cols-2 gap-1">
+            <a href="#features" class="rounded-xl px-3 py-2.5 hover:bg-slate-50" @click="productOpen=false">
+              <p class="text-sm font-semibold text-gray-900">Features</p>
+              <p class="text-xs text-gray-500 mt-0.5">Inbox, bots, commerce</p>
+            </a>
+            <a href="#how-it-works" class="rounded-xl px-3 py-2.5 hover:bg-slate-50" @click="productOpen=false">
+              <p class="text-sm font-semibold text-gray-900">How it works</p>
+              <p class="text-xs text-gray-500 mt-0.5">Connect → engage</p>
+            </a>
+            <a href="#journeys" class="rounded-xl px-3 py-2.5 hover:bg-slate-50" @click="productOpen=false">
+              <p class="text-sm font-semibold text-gray-900">Journeys</p>
+              <p class="text-xs text-gray-500 mt-0.5">Kanban CRM pipelines</p>
+            </a>
+            <a href="#bookings" class="rounded-xl px-3 py-2.5 hover:bg-slate-50" @click="productOpen=false">
+              <p class="text-sm font-semibold text-gray-900">Bookings</p>
+              <p class="text-xs text-gray-500 mt-0.5">Appointments &amp; events</p>
+            </a>
+            <a href="#catalog" class="rounded-xl px-3 py-2.5 hover:bg-slate-50" @click="productOpen=false">
+              <p class="text-sm font-semibold text-gray-900">Catalog</p>
+              <p class="text-xs text-gray-500 mt-0.5">In-chat shop</p>
+            </a>
+            <a href="#automation" class="rounded-xl px-3 py-2.5 hover:bg-slate-50" @click="productOpen=false">
+              <p class="text-sm font-semibold text-gray-900">Automation</p>
+              <p class="text-xs text-gray-500 mt-0.5">38+ Flowmaker nodes</p>
+            </a>
+            <a href="#integrations" class="rounded-xl px-3 py-2.5 hover:bg-slate-50" @click="productOpen=false">
+              <p class="text-sm font-semibold text-gray-900">Integrations</p>
+              <p class="text-xs text-gray-500 mt-0.5">Meta, shops, payments</p>
+            </a>
+            <a href="#api" class="rounded-xl px-3 py-2.5 hover:bg-slate-50" @click="productOpen=false">
+              <p class="text-sm font-semibold text-gray-900">API</p>
+              <p class="text-xs text-gray-500 mt-0.5">Developer endpoints</p>
+            </a>
+          </div>
+        </div>
+      </div>
+      <a href="#channels" class="text-[15px] text-gray-600 hover:text-gray-900 transition-colors">Channels</a>
+      <a href="#campaigns" class="text-[15px] text-gray-600 hover:text-gray-900 transition-colors">Campaigns</a>
+      <a href="#pricing" class="text-[15px] text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
+      <a href="#faq" class="text-[15px] text-gray-600 hover:text-gray-900 transition-colors">FAQ</a>
       @if(isset($hasBlog) && $hasBlog)
-      <a href="/blog" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Blog</a>
+      <a href="/blog" class="text-[15px] text-gray-600 hover:text-gray-900 transition-colors">Blog</a>
       @endif
     </div>
 
@@ -365,27 +412,34 @@ tailwind.config = {
     </div>
 
     <!-- Mobile toggle -->
-    <button type="button" class="lg:hidden text-gray-600 hover:text-gray-900" @click="mobileOpen = !mobileOpen" :aria-expanded="mobileOpen.toString()" aria-controls="mobile-menu" aria-label="Toggle navigation menu">
+    <button type="button" class="lg:hidden text-gray-600 hover:text-gray-900" @click="mobileOpen = !mobileOpen; productOpen = false" :aria-expanded="mobileOpen.toString()" aria-controls="mobile-menu" aria-label="Toggle navigation menu">
       <svg x-show="!mobileOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-      <svg x-show="mobileOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      <svg x-show="mobileOpen" x-cloak class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
   </div>
 
   <!-- Mobile Menu -->
-  <div id="mobile-menu" x-show="mobileOpen" x-cloak class="lg:hidden border-t border-gray-200 px-4 py-4 space-y-1" style="background:rgba(255,255,255,0.98);">
-    <a href="#features" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Features</a>
+  <div id="mobile-menu" x-show="mobileOpen" x-cloak class="lg:hidden border-t border-gray-200 px-4 py-4 space-y-1 max-h-[calc(100svh-72px)] overflow-y-auto" style="background:rgba(255,255,255,0.98);">
+    <div class="rounded-xl border border-gray-100 overflow-hidden mb-1">
+      <button type="button" class="w-full flex items-center justify-between px-3 py-2.5 text-base text-gray-800 font-medium" @click="mobileProductOpen = !mobileProductOpen" :aria-expanded="mobileProductOpen.toString()">
+        Product
+        <svg class="w-4 h-4 text-gray-500 transition-transform" :class="mobileProductOpen ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <div x-show="mobileProductOpen" x-cloak class="border-t border-gray-100 bg-slate-50 px-2 py-2 space-y-0.5">
+        <a href="#features" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">Features</a>
+        <a href="#how-it-works" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">How it works</a>
+        <a href="#journeys" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">Journeys</a>
+        <a href="#bookings" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">Bookings</a>
+        <a href="#catalog" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">Catalog</a>
+        <a href="#automation" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">Automation</a>
+        <a href="#integrations" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">Integrations</a>
+        <a href="#api" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">API</a>
+      </div>
+    </div>
     <a href="#channels" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Channels</a>
     <a href="#campaigns" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Campaigns</a>
-    <a href="#how-it-works" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Platform</a>
-    <a href="#journeys" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Journeys</a>
-    <a href="#bookings" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Bookings</a>
-    <a href="#catalog" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Catalog</a>
-    <a href="#automation" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Automation</a>
-    <a href="#integrations" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Integrations</a>
-    <a href="#api" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">API</a>
     <a href="#pricing" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Pricing</a>
     <a href="#faq" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">FAQ</a>
-    
     @if(isset($hasBlog) && $hasBlog)
     <a href="/blog" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Blog</a>
     @endif
