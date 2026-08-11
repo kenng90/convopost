@@ -97,6 +97,10 @@ class LandingPageTest extends TestCase
         $response->assertSee('>WhatsApp</span>', false);
         $response->assertSee('>Instagram</span>', false);
         $response->assertSee('>Messenger</span>', false);
+        $response->assertSee('id="product-menu"', false);
+        $response->assertSee('Product', false);
+        $response->assertSee('Channels', false);
+        $response->assertSee('Campaigns', false);
     }
 
     public function test_landing_page_hides_registration_ctas_when_disabled(): void
