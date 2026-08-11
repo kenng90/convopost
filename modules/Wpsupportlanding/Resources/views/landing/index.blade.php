@@ -457,42 +457,84 @@ tailwind.config = {
         </p>
       </div>
 
-      {{-- Product visual — contained, not clipped --}}
+      {{-- Product visual — real omnichannel chats inbox --}}
       <div class="relative flex justify-center lg:justify-end">
         <div class="absolute -inset-8 rounded-full blur-3xl opacity-40 pointer-events-none" style="background:radial-gradient(circle,rgba(37,211,102,0.35),transparent 70%);"></div>
-        <div class="phone-frame hero-phone overflow-hidden float relative z-10">
-          <div class="phone-notch"></div>
-          <div class="flex items-center gap-2.5 px-3 py-2.5" style="background:#1f2c34;">
-            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style="background:linear-gradient(135deg,#25D366,#075E54);">CC</div>
-            <div class="flex-1 min-w-0">
-              <p class="text-xs font-semibold text-white">StyleHive Shop</p>
-              <p class="text-[11px]" style="color:#25D366;">● Online · selling now</p>
+        <div class="phone-frame hero-phone overflow-hidden float relative z-10" style="background:#f4f6f8;">
+          <div class="phone-notch" style="background:#0f3d36;"></div>
+          <div class="px-3 pt-2 pb-2.5" style="background:#128C7E;">
+            <div class="flex items-center gap-2 mb-2.5">
+              <svg class="w-4 h-4 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+              <p class="text-sm font-semibold text-white">Chats</p>
+            </div>
+            <div class="rounded-full bg-white px-3 py-1.5 text-[10px] text-gray-400">Search name, channel, message</div>
+          </div>
+          <div class="px-2.5 pt-2 pb-1 space-y-1.5" style="background:#f4f6f8;">
+            <div class="flex gap-1.5 overflow-hidden">
+              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white" style="background:#0f3d36;">All</span>
+              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">WhatsApp</span>
+              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Instagram</span>
+              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Messenger</span>
+            </div>
+            <div class="flex gap-1.5 overflow-hidden">
+              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white" style="background:#0f3d36;">Open</span>
+              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Unread</span>
+              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Mine</span>
+              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">AI</span>
+              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Handoff</span>
             </div>
           </div>
-          <div class="px-3 py-3 space-y-3 overflow-hidden" style="background:#0b1418; height:calc(100% - 90px);">
-            <div class="flex justify-start">
-              <div class="bubble-in px-3 py-2 max-w-[85%]">
-                <p class="text-xs text-white leading-relaxed">New arrivals just dropped. Want the catalog?</p>
-              </div>
-            </div>
-            <div class="flex justify-end">
-              <div class="bubble-out px-3 py-2 max-w-[85%]">
-                <p class="text-xs text-white leading-relaxed">Blue sneakers in 42?</p>
-              </div>
-            </div>
-            <div class="rounded-xl overflow-hidden border border-white/10 p-3" style="background:#1f2c34;">
-              <div class="flex items-center gap-2.5 mb-2">
-                <div class="w-9 h-9 rounded-lg flex items-center justify-center text-base" style="background:rgba(37,211,102,0.18);">👟</div>
-                <div class="min-w-0">
-                  <p class="text-xs font-semibold text-white">Blue Runner Sneakers</p>
-                  <p class="text-[11px]" style="color:#25D366;">KES 4,500 · Size 42</p>
+          <div class="bg-white" style="height:calc(100% - 148px); overflow:hidden;">
+            <div class="flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-100">
+              <div class="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="text-[11px] font-semibold text-gray-900 truncate">Amina Wanjiku</p>
+                  <span class="text-[9px] text-gray-400 flex-shrink-0">09:13</span>
+                </div>
+                <div class="flex items-center justify-between gap-2 mt-0.5">
+                  <p class="text-[10px] text-gray-500">Whatsapp</p>
+                  <span class="text-[8px] font-bold px-1.5 py-0.5 rounded" style="background:#cfe8ff;color:#1d4ed8;">AI</span>
                 </div>
               </div>
-              <div class="w-full py-2 rounded-lg text-center text-[11px] font-semibold text-black" style="background:#25D366;">Buy on WhatsApp →</div>
             </div>
-            <div class="flex justify-start">
-              <div class="bubble-in px-3 py-2 max-w-[90%]">
-                <p class="text-xs text-white leading-relaxed">✅ M-Pesa received · Order #1042 confirmed.</p>
+            <div class="flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-100">
+              <div class="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="text-[11px] font-semibold text-gray-900 truncate">+254 712 ··· 884</p>
+                  <span class="text-[9px] text-gray-400 flex-shrink-0">09:13</span>
+                </div>
+                <div class="flex items-center justify-between gap-2 mt-0.5">
+                  <p class="text-[10px] text-gray-500">Whatsapp</p>
+                  <span class="text-[8px] font-bold px-1.5 py-0.5 rounded" style="background:#cfe8ff;color:#1d4ed8;">AI</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-100">
+              <div class="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="text-[11px] font-semibold text-gray-900 truncate flex items-center gap-1">
+                    Messenger user
+                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[7px] font-bold text-white" style="background:#0084FF;">MS</span>
+                  </p>
+                  <span class="text-[9px] text-gray-400 flex-shrink-0">09:13</span>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-0.5">Messenger</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2.5 px-3 py-2.5">
+              <div class="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="text-[11px] font-semibold text-gray-900 truncate flex items-center gap-1">
+                    stylehive.ke
+                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[7px] font-bold text-white" style="background:linear-gradient(135deg,#F58529,#E1306C);">IG</span>
+                  </p>
+                  <span class="text-[9px] text-gray-400 flex-shrink-0">08:51</span>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-0.5">Instagram</p>
               </div>
             </div>
           </div>
@@ -539,9 +581,9 @@ tailwind.config = {
     <div class="mb-12 max-w-3xl">
       <p class="section-label mb-3">Messaging channels</p>
       <h2 class="font-display section-title font-800 mb-4">We support <span class="grad-text">WhatsApp, Instagram &amp; Messenger</span></h2>
-      <p class="text-gray-600 body-lg">One Customer 360 inbox for every Meta conversation. Reply, automate with Flowmaker, take bookings, and sell — whether customers message on WhatsApp, Instagram DM, or Facebook Messenger.</p>
+      <p class="text-gray-600 body-lg">One Customer 360 inbox for every Meta conversation. Reply, automate with Flowmaker, take bookings, and sell — whether customers message on WhatsApp, Instagram DM, or Facebook Messenger. Filter chats by channel just like in the app.</p>
     </div>
-    <div class="grid md:grid-cols-3 gap-5">
+    <div class="grid md:grid-cols-3 gap-5 mb-10">
       <div class="rounded-3xl border border-gray-200 p-7" style="background:linear-gradient(180deg,rgba(37,211,102,0.08),transparent);">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 text-black font-display font-800 text-sm" style="background:#25D366;">WA</div>
         <h3 class="font-display text-2xl font-800 text-gray-900 mb-2">WhatsApp</h3>
