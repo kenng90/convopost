@@ -61,7 +61,7 @@
         embeddedSignupSession.instagram_account_ids = data.data.instagram_account_ids || embeddedSignupSession.instagram_account_ids;
       }
     } catch (e) {
-      console.log('WA_EMBEDDED_SIGNUP raw message:', event.data);
+      // console.log('WA_EMBEDDED_SIGNUP raw message:', event.data);
     }
   });
 
@@ -137,12 +137,12 @@
       extras: buildSignupExtras(flow)
     };
 
-    console.log('Launching Embedded Signup', {
-      flow: flow,
-      config_id: loginOptions.config_id,
-      extras: loginOptions.extras,
-      appId: '{{ config("services.facebook.app_id","") }}'
-    });
+    // console.log('Launching Embedded Signup', {
+    //   flow: flow,
+    //   config_id: loginOptions.config_id,
+    //   extras: loginOptions.extras,
+    //   appId: '{{ config("services.facebook.app_id","") }}'
+    // });
 
     FB.login(function (response) {
       if (!response.authResponse) {

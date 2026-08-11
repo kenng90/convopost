@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         return;
                     }
 
-                    console.log('Initializing call direction chart with data:', directionData);
+                    // console.log('Initializing call direction chart with data:', directionData);
 
                     this.directionChart = new Chart(ctx, {
                         type: 'doughnut',
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         return;
                     }
 
-                    console.log('Initializing call status chart with data:', statusData);
+                    // console.log('Initializing call status chart with data:', statusData);
 
                     const colors = {
                         'answered': '#2dce89',

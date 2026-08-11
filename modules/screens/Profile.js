@@ -84,7 +84,7 @@ class Profile extends React.Component {
                         button={Language.ok} closeAction={()=>{this.setState({action:""})}}
                         action={()=>{
                           API.deactivateUser((responseJson)=>{
-                            console.log(JSON.stringify(responseJson));
+                            // console.log(JSON.stringify(responseJson));
                             this.setState({action:""})
                             signOut();
                           },()=>{

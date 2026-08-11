@@ -603,7 +603,7 @@
                     if(response.data.status){
                         chatList.activeChat.user_id=user_id;
                         const indexUpdate = chatList.all.findIndex(item => item.id == contact_id);
-                        console.log(indexUpdate);
+                        // console.log(indexUpdate);
                         if (indexUpdate !== -1) {
                             chatList.all[indexUpdate].user_id = user_id;
                         }
@@ -679,8 +679,8 @@
                 const index = this.all.findIndex(item => item.id == contact_id);
                 console.log(index);
                 if (index !== -1 && this.all[index]) {
-                    console.log("Set new active chat for index "+index);
-                    console.log(this.all[index]);
+                    // console.log("Set new active chat for index "+index);
+                    // console.log(this.all[index]);
                     if (this.all[index].name) {
                         this.all[index].name = this.all[index].name+" ";
                     } else {

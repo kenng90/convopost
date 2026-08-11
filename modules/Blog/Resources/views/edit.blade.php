@@ -220,9 +220,9 @@
         function syncContent(e) {
             e.preventDefault();
             const content = tinymce.get('content').getContent();
-            console.log(content);
+            // console.log(content);
             document.getElementById('content_hidden').value = content;
-            console.log(document.getElementById('content_hidden').value);
+            // console.log(document.getElementById('content_hidden').value);
             document.getElementById('blogForm').submit();
         }
 

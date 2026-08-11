@@ -19,7 +19,7 @@
                         axios.post('/api/woolist/getOrders', {
                             contact_id: newVal.id
                         }).then(response => {
-                            console.log(response.data);
+                            // console.log(response.data);
                             if(response.data && response.data.success) {
                                 chatList.updateProperty('contactWoolistOrders', response.data.data);
                                 chatList.updateProperty('woolist_error', '');

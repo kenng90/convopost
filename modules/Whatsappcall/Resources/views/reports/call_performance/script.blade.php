@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         return;
                     }
 
-                    console.log('Initializing call performance chart with data:', chartData);
+                    // console.log('Initializing call performance chart with data:', chartData);
 
                     this.performanceChart = new Chart(ctx, {
                         type: 'line',
