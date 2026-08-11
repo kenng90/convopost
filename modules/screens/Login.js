@@ -48,8 +48,6 @@ async function registerForPushNotificationsAsync() {
     token = await Notifications.getExpoPushTokenAsync({
       projectId: Constants.expoConfig.extra.eas.projectId,
     });
-    console.log("We get the token");
-    console.log(token);
   } else {
     alert('Must use physical device for Push Notifications');
   }
@@ -85,12 +83,10 @@ const Login = ({navigation}) => {
 
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       console.log("Notification received");
-      console.log(notification);
       setNotification(notification);
     });
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log(response);
     });
 
     return () => {

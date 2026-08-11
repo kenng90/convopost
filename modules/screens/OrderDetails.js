@@ -48,7 +48,7 @@ function openExternalAppByAddress(address) {
    * @param {String} phoneNumber 
    */
  function openPhoneApp(phoneNumber) {
-  console.log(phoneNumber)
+ 
   var number = "tel:" + phoneNumber
   Linking.canOpenURL(number).then(supported => {
     if (supported) {

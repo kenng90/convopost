@@ -22,7 +22,7 @@ export function log(level, message, data = undefined) {
     console.log(line);
     return;
   }
-  console.log(line, data);
+  // console.log(line, data);
 }
 
 export function logInfo(message, data) {

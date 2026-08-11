@@ -7,7 +7,7 @@ export class LaravelClient {
     this.waCallId = payload.wa_call_id || null;
     this.base = resolveCallbackBase(payload);
     this.secret = payload.callback_secret || config.workerSecret;
-    console.log(`[laravel] callbacks → ${this.base}/calls/${this.callId}`);
+    // console.log(`[laravel] callbacks → ${this.base}/calls/${this.callId}`);
   }
 
   headers() {

@@ -41,10 +41,10 @@ export default class Payment extends React.Component {
 
     const { navigation, route } = this.props;
     console.log("----params.deliveryMethod--")
-    console.log(route.params.deliveryMethod);
+    // console.log(route.params.deliveryMethod);
 
     console.log("----params--")
-    console.log(route.params.restaurant_id);
+    // console.log(route.params.restaurant_id);
 
 
 
@@ -113,7 +113,7 @@ export default class Payment extends React.Component {
       paymentOptions.push({ id: element.alias, title:element.name },)
     });
     console.log("--- paymentOptions ----");
-    console.log(paymentOptions);
+    // console.log(paymentOptions);
 
 
     this.setState({
@@ -167,7 +167,7 @@ export default class Payment extends React.Component {
         })
        
       }
-      console.log(response);
+      // console.log(response);
       
     })
   }

@@ -56,7 +56,7 @@ async function addCartContent(object,callback,errorCallback){
  * @param {Function} callback
  */
  async function updateQty(id,qty,callback){
-   console.log("updateQty:"+id);
+  //  console.log("updateQty:"+id);
     getCartContent(async function(data,error){
       if(error==false){
         var cart=data;

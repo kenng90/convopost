@@ -5,7 +5,7 @@ async function authAPI(method,path,data,callback,errorCallback){
    console.log("Calling the api, befores")
     var token = await AsyncStorage.getItem('token');
     var link=config.domain+'/api/v2/'+path+'?api_token='+token;
-    console.log(link);
+    // console.log(link);
  
     var sendParam={
         method: method,
@@ -42,7 +42,7 @@ async function authAPIPureSaaS(method,path,data,callback,errorCallback){
   console.log("Calling the api, authAPIPureSaaS")
    var token = await AsyncStorage.getItem('token');
    var link=config.domain+'/'+path;
-   console.log(link);
+  //  console.log(link);
 
    var sendParam={
        method: method,
@@ -55,7 +55,7 @@ async function authAPIPureSaaS(method,path,data,callback,errorCallback){
      };
      data.token=token;
      sendParam.body=JSON.stringify(data);
-     console.log(sendParam);
+    //  console.log(sendParam);
    
 
    fetch(link, sendParam).then((response) => response.json()).then((responseJson) => {
@@ -88,8 +88,8 @@ exports.authAPIPureSaaS=authAPIPureSaaS;
  */
 async function publicAPI(method,path,data,callback,errorCallback){
   var link=config.domain+'/api/v2/'+path;
-  console.log(link);
-  console.log(method);
+  // console.log(link);
+  // console.log(method);
 
   var sendParam={
       method: method,
@@ -101,8 +101,8 @@ async function publicAPI(method,path,data,callback,errorCallback){
   if(method=="POST"){
       sendParam.body=JSON.stringify(data);
   }
-  console.log(link);
-  console.log(sendParam);
+  // console.log(link);
+  // console.log(sendParam);
   fetch(link, sendParam).then((response) => response.json()).then((responseJson) => {
    if(responseJson.status){
     callback(responseJson.data?responseJson.data:responseJson);
@@ -114,8 +114,8 @@ async function publicAPI(method,path,data,callback,errorCallback){
       if(responseJson.errMsg!=undefined){
         message+=" "+responseJson.errMsg;
       }
-      console.log(message);
-      console.log(responseJson);
+      // console.log(message);
+      // console.log(responseJson);
       errorCallback(message);
    } 
  }).catch(error => {

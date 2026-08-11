@@ -86,7 +86,7 @@ const SelectAddress = ({route,navigation}) => {
     
 
     API.getRestaurantInfo(restaurant_id,(restaurantResponse)=>{
-      console.log("Restaurant data loaded "+restaurant_id);
+      // console.log("Restaurant data loaded "+restaurant_id);
       tsUF={};
       restaurantResponse.timeSlots.forEach(element => {
         tsUF[element.id]=element.title;

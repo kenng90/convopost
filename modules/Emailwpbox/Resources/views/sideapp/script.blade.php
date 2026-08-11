@@ -22,9 +22,9 @@
         chatList.addProperty('smtpIsSet', false);
 
         var mailHost = '{{ $company->getConfig('MAIL_HOST','') }}';
-        console.log(mailHost+"-----");
-        console.log(mailHost.length > 3);
-        console.log(mailHost.length);
+        // console.log(mailHost+"-----");
+        // console.log(mailHost.length > 3);
+        // console.log(mailHost.length);
         var smtpIsSet = mailHost.length > 3;
         chatList.updateProperty('smtpIsSet', smtpIsSet);
 
@@ -92,7 +92,7 @@
             //Get email templates via axios
             axios.get('/api/emailwpbox/templates').then(response => {
                 var templates = JSON.parse(JSON.stringify(response.data));
-                console.log(templates);
+                // console.log(templates);
                 chatList.updateProperty('emailTemplates', templates);
             });
         };
@@ -102,8 +102,8 @@
         chatList.sendEmailViaSMTP = function() {
             console.log('sendEmailViaSMTP');
             //Get the email subject and message
-            console.log(chatList.dynamicProperties.emailSubject);
-            console.log(chatList.dynamicProperties.emailMessage);
+            // console.log(chatList.dynamicProperties.emailSubject);
+            // console.log(chatList.dynamicProperties.emailMessage);
 
             //get the email from the active chat
             var email = chatList.activeChat.email;
@@ -116,7 +116,7 @@
                 message: chatList.dynamicProperties.emailMessage,
                 email: email
             }).then(response => {
-                console.log(response);
+                // console.log(response);
                 if(response.data.success){
                     chatList.updateProperty('emailSuccess', response.data.message);
                 }else{

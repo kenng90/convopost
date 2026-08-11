@@ -43,7 +43,6 @@ class Card extends React.Component {
 
   addToCard(){
     this.state.item = Object.assign({ totoalPrice: this.state.item.price*this.state.quantity,quantity:this.state.quantity }, this.state.item);
-    console.log(this.state.item)
   }
 
   showCartOptions(){

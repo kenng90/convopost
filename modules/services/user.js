@@ -17,7 +17,7 @@ async function getTheloggedInUser(callback) {
 exports.getTheloggedInUser=getTheloggedInUser;
 
 async function setLoggedInUser(user,callback){
-  console.log("passed token "+user.token);
+  // console.log("passed token "+user.token);
   await AsyncStorage.setItem('token',user.token);
   user.userToken=user.token;
   await AsyncStorage.setItem('user',JSON.stringify(user));

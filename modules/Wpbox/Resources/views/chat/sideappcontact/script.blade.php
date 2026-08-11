@@ -17,7 +17,7 @@
        //Make a request to update the contact
        axios.post('/api/wpbox/updateContact',newContactDetails)
         .then(response=>{
-            console.log(response);
+            // console.log(response);
        })
     }
 

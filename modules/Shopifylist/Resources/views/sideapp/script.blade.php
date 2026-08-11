@@ -18,7 +18,7 @@
                         axios.post('/api/shopifylist/getOrders', {
                             contact_id: newVal.id
                         }).then(response => {
-                            console.log(response.data);
+                            // console.log(response.data);
                             if(response.data && response.data.success) {
                                 chatList.updateProperty('contactOrders', response.data.data);
                                 chatList.updateProperty('shopify_error', '');

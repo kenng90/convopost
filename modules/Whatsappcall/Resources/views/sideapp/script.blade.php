@@ -574,9 +574,9 @@
         const form = new FormData();
         form.append('call_id', activeCall.id);
         form.append('sdp', answerSdp);
-        console.log("Prepare for pre accept");
-        console.log(preAcceptUrl+" <---  preAcceptUrl");
-        console.log(form);
+        // console.log("Prepare for pre accept");
+        // console.log(preAcceptUrl+" <---  preAcceptUrl");
+        // console.log(form);
         const res = await fetch(preAcceptUrl, {method:'POST', body: form, headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}, credentials: 'same-origin'});
         const json = await res.json();
         console.info('[UIC] Pre-accept response', { status: res.status, json });
@@ -658,7 +658,7 @@
           });
           
           const json = await res.json();
-          console.log("Permission status response:", json);
+          // console.log("Permission status response:", json);
           
           if (json.ok && json.permission) {
             permissionStatus = json.permission;
@@ -787,7 +787,7 @@
 
         // Final SDP offer with audio from your mic
         console.log("=== Your Microphone SDP Offer ===");
-        console.log(pc.localDescription.sdp);
+        // console.log(pc.localDescription.sdp);
         return pc.localDescription.sdp;
       }
 
@@ -844,7 +844,7 @@
       chatList.$watch('activeChat', function(newVal, oldVal) {
         if(newVal !== oldVal) {
           if(newVal.id){
-              console.log("activeChat changed", newVal.phone);
+              // console.log("activeChat changed", newVal.phone);
               activeChatID = newVal.id;
               
               // Check permission status when chat changes
