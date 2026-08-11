@@ -3,8 +3,8 @@
   <div class="flex flex-col lg:flex-row gap-8 items-center">
     <div class="lg:w-2/5">
       <p class="text-[11px] font-semibold uppercase tracking-[0.18em] mb-2" style="color:#25D366;">Channel orchestration</p>
-      <h3 class="font-display text-3xl font-800 text-gray-900 mb-3">WhatsApp, SMS &amp; email channels</h3>
-      <p class="text-base text-gray-600 leading-relaxed mb-4">One campaign engine fans out across three channels — same audiences, segments, scheduling, and delivery analytics.</p>
+      <h3 class="font-display text-3xl font-800 text-gray-900 mb-3">WhatsApp, SMS &amp; email campaigns</h3>
+      <p class="text-base text-gray-600 leading-relaxed mb-4">One campaign engine fans out across three outreach channels — same audiences, segments, scheduling, and delivery analytics.</p>
       <ul class="space-y-2 text-base text-gray-600">
         <li class="flex gap-2"><span style="color:#25D366;">→</span> File, group &amp; quick audiences</li>
         <li class="flex gap-2"><span style="color:#25D366;">→</span> ConvoConnect SMS with optional Sender ID</li>

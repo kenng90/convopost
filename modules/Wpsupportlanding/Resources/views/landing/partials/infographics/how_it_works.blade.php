@@ -5,8 +5,8 @@
       [
         'num' => '01',
         'title' => 'Connect',
-        'body' => 'Meta Embedded Signup links your WhatsApp Business number. Activation OS guides the first test message, contacts, and flow.',
-        'points' => ['Official Meta Cloud API', 'Guided path to first reply', '~15 min to go live'],
+        'body' => 'Meta Embedded Signup links WhatsApp, Instagram, and Messenger. Activation OS guides the first test message, contacts, and flow.',
+        'points' => ['WhatsApp · Instagram · Messenger', 'Guided path to first reply', '~15 min to go live'],
       ],
       [
         'num' => '02',
@@ -17,8 +17,8 @@
       [
         'num' => '03',
         'title' => 'Engage',
-        'body' => 'Broadcast across WhatsApp, SMS & email channels. Agents reply with Copilot suggestions and sidebar commerce tools.',
-        'points' => ['Shared team inbox', 'Multichannel campaigns', 'Catalog & bookings sidebars'],
+        'body' => 'Broadcast WhatsApp, SMS & email campaigns. Agents reply across Meta channels with Copilot and sidebar commerce tools.',
+        'points' => ['Omnichannel team inbox', 'WhatsApp · SMS · email campaigns', 'Catalog & bookings sidebars'],
       ],
       [
         'num' => '04',

@@ -7,10 +7,10 @@
         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] mb-2" style="color:#25D366;">Platform map</p>
         <h3 class="font-display text-3xl sm:text-4xl font-800 text-gray-900">One hub. Every commerce signal.</h3>
       </div>
-      <p class="text-base text-gray-600 max-w-sm">WhatsApp sits at the center — campaigns, journeys, bookings, catalog, and payments orbit the same Customer 360.</p>
+      <p class="text-base text-gray-600 max-w-sm">WhatsApp, Instagram &amp; Messenger sit at the center — campaigns, journeys, bookings, catalog, and payments orbit the same Customer 360.</p>
     </div>
 
-    <svg viewBox="0 0 920 420" class="w-full h-auto" role="img" aria-label="ConvoConnect platform ecosystem diagram showing WhatsApp hub connected to inbox, journeys, bookings, catalog, campaigns, payments, flows, and APIs">
+    <svg viewBox="0 0 920 420" class="w-full h-auto" role="img" aria-label="ConvoConnect platform ecosystem diagram showing Meta messaging hub connected to inbox, journeys, bookings, catalog, campaigns, payments, flows, and APIs">
       <defs>
         <linearGradient id="ecoLine" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stop-color="#25D366" stop-opacity="0.15"/>
@@ -45,14 +45,14 @@
       <g filter="url(#ecoGlow)">
         <circle cx="460" cy="210" r="58" fill="#ffffff" stroke="#25D366" stroke-width="2"/>
         <circle cx="460" cy="210" r="48" fill="rgba(37,211,102,0.12)" stroke="rgba(37,211,102,0.35)" stroke-width="1"/>
-        <text x="460" y="202" text-anchor="middle" fill="#25D366" font-size="11" font-weight="700" font-family="Syne,sans-serif">WHATSAPP</text>
-        <text x="460" y="220" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="700" font-family="Syne,sans-serif">HUB</text>
+        <text x="460" y="198" text-anchor="middle" fill="#25D366" font-size="10" font-weight="700" font-family="Syne,sans-serif">WA · IG · MS</text>
+        <text x="460" y="218" text-anchor="middle" fill="#0f172a" font-size="13" font-weight="700" font-family="Syne,sans-serif">INBOX HUB</text>
       </g>
 
       {{-- Satellite nodes --}}
       @php
         $nodes = [
-          [200, 90, 'Team Inbox', 'Customer 360'],
+          [200, 90, 'Team Inbox', 'WA · IG · Messenger'],
           [320, 70, 'Journeys', 'Kanban CRM'],
           [520, 55, 'Bookings', 'Calendar sync'],
           [700, 85, 'Catalog', 'In-chat shop'],

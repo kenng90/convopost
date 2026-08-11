@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 @php
   $siteName = config('settings.site_name', config('app.name'));
-  $metaTitle = $siteName.' — Social Commerce Platform for WhatsApp';
-  $metaDescription = 'Sell from chat, run journey pipelines, take bookings, and get paid on WhatsApp. '.$siteName.' is the social commerce platform with catalogs, kanban CRM, team inbox, and M-Pesa payments.';
+  $metaTitle = $siteName.' — Omnichannel Social Commerce for WhatsApp, Instagram & Messenger';
+  $metaDescription = 'Sell and support across WhatsApp, Instagram, and Messenger. Run WhatsApp, SMS, and email campaigns. Bookings, journeys, catalogs, and M-Pesa — one platform.';
   $registrationEnabled = !config('settings.disable_registration_page', false);
 @endphp
 <title>{{ $metaTitle }}</title>
@@ -339,6 +339,8 @@ tailwind.config = {
     <!-- Desktop Nav -->
     <div class="hidden lg:flex items-center gap-7">
       <a href="#features" class="text-[15px] text-gray-600 hover:text-gray-900 transition-colors">Features</a>
+      <a href="#channels" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Channels</a>
+      <a href="#campaigns" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Campaigns</a>
       <a href="#how-it-works" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Platform</a>
       <a href="#journeys" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Journeys</a>
       <a href="#bookings" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Bookings</a>
@@ -372,6 +374,8 @@ tailwind.config = {
   <!-- Mobile Menu -->
   <div id="mobile-menu" x-show="mobileOpen" x-cloak class="lg:hidden border-t border-gray-200 px-4 py-4 space-y-1" style="background:rgba(255,255,255,0.98);">
     <a href="#features" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Features</a>
+    <a href="#channels" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Channels</a>
+    <a href="#campaigns" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Campaigns</a>
     <a href="#how-it-works" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Platform</a>
     <a href="#journeys" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Journeys</a>
     <a href="#bookings" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Bookings</a>
@@ -411,12 +415,23 @@ tailwind.config = {
       <div class="max-w-2xl">
         <p class="font-display hero-brand font-800 text-gray-900 mb-4">{{ $siteName }}</p>
         <h1 class="font-display hero-title font-800 text-gray-900 mb-5">
-          The social commerce<br class="hidden sm:block" />
-          platform for <span class=" hero-title font-800  grad-text">WhatsApp</span>
+          Sell and support across<br class="hidden sm:block" />
+          <span class="hero-title font-800 grad-text">WhatsApp, Instagram &amp; Messenger</span>
         </h1>
-        <p class="body-lg text-gray-600 mb-8">
-          Sell from chat, move contacts through journey pipelines, take bookings, and get paid — product catalogs, kanban CRM, team inbox, and M-Pesa in one platform. Guided activation helps most teams send their first reply in about 15 minutes.
+        <p class="body-lg text-gray-600 mb-6">
+          One shared inbox, journeys, bookings, catalogs, and payments — plus WhatsApp, SMS, and email campaigns from the same platform.
         </p>
+        <div class="flex flex-wrap gap-2 mb-8" aria-label="Supported messaging channels">
+          <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
+            <span class="w-2 h-2 rounded-full" style="background:#25D366;"></span>WhatsApp
+          </span>
+          <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
+            <span class="w-2 h-2 rounded-full" style="background:#E1306C;"></span>Instagram
+          </span>
+          <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
+            <span class="w-2 h-2 rounded-full" style="background:#0084FF;"></span>Messenger
+          </span>
+        </div>
         <div class="flex flex-wrap gap-3">
           @if($registrationEnabled)
           <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-7 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90" style="background:#25D366;">
@@ -429,12 +444,12 @@ tailwind.config = {
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
           </a>
           @endif
-          <a href="#how-it-works" class="inline-flex items-center gap-2 px-7 py-4 text-base font-semibold text-gray-800 rounded-xl border border-gray-200 bg-white/70 hover:border-gray-300 transition-all hover:bg-white">
-            See how it works
+          <a href="#campaigns" class="inline-flex items-center gap-2 px-7 py-4 text-base font-semibold text-gray-800 rounded-xl border border-gray-200 bg-white/70 hover:border-gray-300 transition-all hover:bg-white">
+            See campaigns
           </a>
         </div>
         <p class="mt-6 text-sm text-gray-500">
-          Need help beyond WhatsApp?
+          Need help beyond chat?
           <a href="{{ route('services.automation') }}" class="group inline-flex items-center gap-1.5 ml-1 font-semibold text-gray-800 transition-colors hover:text-[#128C7E]">
             <span class="border-b border-dashed border-gray-400 group-hover:border-[#128C7E] transition-colors">I want to automate processes across my business</span>
             <svg class="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
@@ -493,14 +508,14 @@ tailwind.config = {
     <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-12">
       <div>
         <p class="section-label mb-3">Outcomes</p>
-        <h2 class="font-display section-title font-800 text-gray-900">Built to sell and support<br/>on WhatsApp — end to end.</h2>
+        <h2 class="font-display section-title font-800 text-gray-900">Built to sell and support<br/>across Meta channels — end to end.</h2>
       </div>
-      <p class="text-gray-600 max-w-md text-base leading-relaxed">Official Meta API. Multichannel campaigns. Guided activation. Visual automation with 38+ nodes.</p>
+      <p class="text-gray-600 max-w-md text-base leading-relaxed">WhatsApp, Instagram &amp; Messenger inbox. WhatsApp, SMS &amp; email campaigns. Guided activation. 38+ Flowmaker nodes.</p>
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
       <div class="stat-item px-2 lg:px-6">
-        <p class="font-display outcome-num font-800 grad-text mb-2">Meta</p>
-        <p class="text-base text-gray-600">Official WhatsApp Business API</p>
+        <p class="font-display outcome-num font-800 grad-text mb-2">3</p>
+        <p class="text-base text-gray-600">Messaging channels: WhatsApp, Instagram, Messenger</p>
       </div>
       <div class="stat-item px-2 lg:px-6">
         <p class="font-display outcome-num font-800 grad-text mb-2">3</p>
@@ -518,6 +533,96 @@ tailwind.config = {
   </div>
 </section>
 
+<!-- ===== MESSAGING CHANNELS ===== -->
+<section id="channels" class="py-24 border-b border-gray-200 bg-white">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
+    <div class="mb-12 max-w-3xl">
+      <p class="section-label mb-3">Messaging channels</p>
+      <h2 class="font-display section-title font-800 mb-4">We support <span class="grad-text">WhatsApp, Instagram &amp; Messenger</span></h2>
+      <p class="text-gray-600 body-lg">One Customer 360 inbox for every Meta conversation. Reply, automate with Flowmaker, take bookings, and sell — whether customers message on WhatsApp, Instagram DM, or Facebook Messenger.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <div class="rounded-3xl border border-gray-200 p-7" style="background:linear-gradient(180deg,rgba(37,211,102,0.08),transparent);">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 text-black font-display font-800 text-sm" style="background:#25D366;">WA</div>
+        <h3 class="font-display text-2xl font-800 text-gray-900 mb-2">WhatsApp</h3>
+        <p class="text-base text-gray-600 leading-relaxed mb-4">Official Meta Cloud API — catalogs, Flows, calling, utility templates, and commerce checkout in chat.</p>
+        <ul class="space-y-2 text-sm text-gray-700">
+          <li class="flex gap-2"><span style="color:#25D366;">✓</span> Embedded Signup onboarding</li>
+          <li class="flex gap-2"><span style="color:#25D366;">✓</span> Templates, lists, media &amp; payments</li>
+          <li class="flex gap-2"><span style="color:#25D366;">✓</span> Omni flow templates for bots</li>
+        </ul>
+      </div>
+      <div class="rounded-3xl border border-gray-200 p-7 bg-white">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 text-white font-display font-800 text-sm" style="background:linear-gradient(135deg,#F58529,#E1306C,#C13584);">IG</div>
+        <h3 class="font-display text-2xl font-800 text-gray-900 mb-2">Instagram</h3>
+        <p class="text-base text-gray-600 leading-relaxed mb-4">Instagram DMs in the same team inbox — automate replies, qualify leads, and hand off to agents.</p>
+        <ul class="space-y-2 text-sm text-gray-700">
+          <li class="flex gap-2"><span style="color:#E1306C;">✓</span> Shared inbox with WhatsApp chats</li>
+          <li class="flex gap-2"><span style="color:#E1306C;">✓</span> Flowmaker bots &amp; quick replies</li>
+          <li class="flex gap-2"><span style="color:#E1306C;">✓</span> Online booking &amp; manage links</li>
+        </ul>
+      </div>
+      <div class="rounded-3xl border border-gray-200 p-7 bg-white">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 text-white font-display font-800 text-sm" style="background:#0084FF;">MS</div>
+        <h3 class="font-display text-2xl font-800 text-gray-900 mb-2">Messenger</h3>
+        <p class="text-base text-gray-600 leading-relaxed mb-4">Facebook Messenger conversations alongside WhatsApp and Instagram — one CRM, one automation layer.</p>
+        <ul class="space-y-2 text-sm text-gray-700">
+          <li class="flex gap-2"><span style="color:#0084FF;">✓</span> Unified contact timeline</li>
+          <li class="flex gap-2"><span style="color:#0084FF;">✓</span> Omni sample flows that work on Messenger</li>
+          <li class="flex gap-2"><span style="color:#0084FF;">✓</span> Agent Copilot &amp; journey pipelines</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CAMPAIGNS ===== -->
+<section id="campaigns" class="py-24 relative overflow-hidden" style="background:#eef8f3;">
+  <div class="absolute inset-0 dots-bg opacity-40"></div>
+  <div class="relative z-10 max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
+    <div class="text-center mb-14">
+      <div class="badge inline-flex mb-4">Outreach</div>
+      <h2 class="font-display section-title font-800 mb-4">WhatsApp, SMS &amp; email<br/><span class="grad-text">campaigns</span></h2>
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Broadcast to the right audience on the right channel — same segments, scheduling, pause/resume, delivery analytics, and API-triggered sends.</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-5 mb-12">
+      <div class="rounded-3xl border border-gray-200 bg-white p-7 card-lift">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] mb-3" style="color:#25D366;">WhatsApp campaigns</p>
+        <h3 class="font-display text-2xl font-800 text-gray-900 mb-3">WhatsApp</h3>
+        <p class="text-base text-gray-600 leading-relaxed mb-5">Approved utility and marketing templates, media, and list messages — with delivery and read analytics.</p>
+        <ul class="space-y-2 text-sm text-gray-700">
+          <li class="flex gap-2"><span style="color:#25D366;">→</span> Template &amp; session messaging</li>
+          <li class="flex gap-2"><span style="color:#25D366;">→</span> File, group &amp; quick audiences</li>
+          <li class="flex gap-2"><span style="color:#25D366;">→</span> Stage-triggered journey sends</li>
+        </ul>
+      </div>
+      <div class="rounded-3xl border border-gray-200 bg-white p-7 card-lift">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] mb-3" style="color:#0f766e;">SMS campaigns</p>
+        <h3 class="font-display text-2xl font-800 text-gray-900 mb-3">SMS</h3>
+        <p class="text-base text-gray-600 leading-relaxed mb-5">ConvoConnect SMS with optional Sender ID — reach customers who prefer text, at transparent rates.</p>
+        <ul class="space-y-2 text-sm text-gray-700">
+          <li class="flex gap-2"><span style="color:#0f766e;">→</span> ConvoConnect SMS · Sender ID</li>
+          <li class="flex gap-2"><span style="color:#0f766e;">→</span> From KES 0.6 per SMS</li>
+          <li class="flex gap-2"><span style="color:#0f766e;">→</span> Same campaign engine &amp; audiences</li>
+        </ul>
+      </div>
+      <div class="rounded-3xl border border-gray-200 bg-white p-7 card-lift">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] mb-3" style="color:#1d4ed8;">Email campaigns</p>
+        <h3 class="font-display text-2xl font-800 text-gray-900 mb-3">Email</h3>
+        <p class="text-base text-gray-600 leading-relaxed mb-5">SMTP email campaigns and notices for digests, follow-ups, and customers outside chat windows.</p>
+        <ul class="space-y-2 text-sm text-gray-700">
+          <li class="flex gap-2"><span style="color:#1d4ed8;">→</span> SMTP email campaigns &amp; notices</li>
+          <li class="flex gap-2"><span style="color:#1d4ed8;">→</span> Shared segments &amp; scheduling</li>
+          <li class="flex gap-2"><span style="color:#1d4ed8;">→</span> Delivery analytics &amp; API triggers</li>
+        </ul>
+      </div>
+    </div>
+
+    @include('wpsupportlanding::landing.partials.infographics.channel_orchestration')
+  </div>
+</section>
+
 <!-- ===== HOW IT WORKS ===== -->
 <section id="how-it-works" class="py-24 relative overflow-hidden">
   <div class="absolute inset-0 dots-bg opacity-40"></div>
@@ -525,7 +630,7 @@ tailwind.config = {
     <div class="mb-14 max-w-2xl">
       <p class="section-label mb-3">How it works</p>
       <h2 class="font-display section-title font-800 mb-4">Connect. Orchestrate.<br/><span class="grad-text">Engage. Collect.</span></h2>
-      <p class="text-gray-600">{{ $siteName }} plugs into WhatsApp and runs your commerce workflows — so your team spends less time stitching tools and more time closing.</p>
+      <p class="text-gray-600">{{ $siteName }} connects WhatsApp, Instagram, and Messenger — then runs commerce, support, and campaigns so your team spends less time stitching tools and more time closing.</p>
     </div>
     @include('wpsupportlanding::landing.partials.infographics.how_it_works')
     <div class="mt-12">
@@ -540,7 +645,7 @@ tailwind.config = {
     <div class="mb-12 max-w-2xl">
       <p class="section-label mb-3">What we do</p>
       <h2 class="font-display section-title font-800 mb-4">Social commerce that<br/><span class="grad-text">runs the work.</span></h2>
-      <p class="text-gray-600">Traditional chat tools assist your team. {{ $siteName }} runs selling, support, and automation on WhatsApp.</p>
+      <p class="text-gray-600">Traditional chat tools assist your team. {{ $siteName }} runs selling, support, and automation across WhatsApp, Instagram, and Messenger.</p>
     </div>
     <div class="grid lg:grid-cols-3 gap-6">
       <div class="rounded-3xl border border-gray-200 p-8" style="background:linear-gradient(180deg,rgba(37,211,102,0.06),transparent);">
@@ -557,9 +662,9 @@ tailwind.config = {
       <div class="rounded-3xl border border-gray-200 p-8" style="background:#ffffff;">
         <p class="section-label mb-4">Support</p>
         <h3 class="font-display text-3xl font-800 text-gray-900 mb-3">Inbox</h3>
-        <p class="text-base text-gray-600 mb-6 leading-relaxed">Shared team inbox with Customer 360 — journeys, bookings, orders, and Copilot in one panel.</p>
+        <p class="text-base text-gray-600 mb-6 leading-relaxed">Shared team inbox for WhatsApp, Instagram &amp; Messenger — Customer 360, journeys, bookings, and Copilot.</p>
         <ul class="space-y-2.5 text-base text-gray-700">
-          <li class="flex gap-2"><span style="color:#25D366;">·</span> Shared Team Inbox</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Omnichannel Team Inbox</li>
           <li class="flex gap-2"><span style="color:#25D366;">·</span> Journey Pipelines</li>
           <li class="flex gap-2"><span style="color:#25D366;">·</span> WhatsApp Calling</li>
           <li class="flex gap-2"><span style="color:#25D366;">·</span> Agent Copilot</li>
@@ -568,11 +673,11 @@ tailwind.config = {
       <div class="rounded-3xl border border-gray-200 p-8" style="background:#ffffff;">
         <p class="section-label mb-4">Automate</p>
         <h3 class="font-display text-3xl font-800 text-gray-900 mb-3">Orchestration</h3>
-        <p class="text-base text-gray-600 mb-6 leading-relaxed">Campaigns across WhatsApp, SMS & email channels, native Forms, and 38+ Flowmaker nodes.</p>
+        <p class="text-base text-gray-600 mb-6 leading-relaxed">WhatsApp, SMS &amp; email campaigns, native Forms, and 38+ Flowmaker nodes that work across Meta channels.</p>
         <ul class="space-y-2.5 text-base text-gray-700">
-          <li class="flex gap-2"><span style="color:#25D366;">·</span> Campaigns & Broadcasts</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> WhatsApp · SMS · Email campaigns</li>
           <li class="flex gap-2"><span style="color:#25D366;">·</span> WhatsApp Flows</li>
-          <li class="flex gap-2"><span style="color:#25D366;">·</span> Flow Automation</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Omni Flow Automation</li>
           <li class="flex gap-2"><span style="color:#25D366;">·</span> Developer APIs</li>
         </ul>
       </div>
@@ -586,8 +691,8 @@ tailwind.config = {
   <div class="relative z-10 max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Commerce + operations</div>
-      <h2 class="font-display section-title font-800 mb-4">Everything to sell and<br/>support on WhatsApp</h2>
-      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Catalogs and checkout for social selling, plus journey pipelines, inbox, multichannel campaigns, bookings, WhatsApp Forms, and payments — one platform for your entire WhatsApp business.</p>
+      <h2 class="font-display section-title font-800 mb-4">Everything to sell and<br/>support across Meta channels</h2>
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">WhatsApp, Instagram, and Messenger inbox — plus catalogs, journeys, WhatsApp/SMS/email campaigns, bookings, Forms, and payments in one platform.</p>
     </div>
 
     <div class="mb-16">
@@ -599,19 +704,19 @@ tailwind.config = {
       <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">👥</div>
         <h3 class="font-display font-700 text-xl mb-2 text-gray-900">Shared Team Inbox</h3>
-        <p class="text-base text-gray-600 mb-4 leading-relaxed">Multi-agent inbox with Customer 360 — journeys, bookings, orders, and conversation context in one panel. Agent Copilot surfaces knowledge-base replies and quick replies agents can accept or edit.</p>
+        <p class="text-base text-gray-600 mb-4 leading-relaxed">Multi-agent inbox for WhatsApp, Instagram, and Messenger with Customer 360 — journeys, bookings, orders, and conversation context in one panel. Agent Copilot surfaces knowledge-base replies agents can accept or edit.</p>
         <ul class="space-y-2">
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>WhatsApp · Instagram · Messenger</li>
           <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Customer 360 unified sidebar</li>
           <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Knowledge-based Copilot suggestions</li>
-          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Chat assignment & agent handover</li>
-          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Bookings, catalog & store sidebars</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Chat assignment &amp; agent handover</li>
         </ul>
       </div>
       <!-- Card 2 -->
       <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">📢</div>
-        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">Campaigns & Broadcasts</h3>
-        <p class="text-base text-gray-600 mb-4 leading-relaxed">Multichannel campaigns across WhatsApp, SMS, and email — file upload, contact groups, or quick lists — with delivery analytics and timezone-aware scheduling.</p>
+        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">WhatsApp, SMS &amp; email campaigns</h3>
+        <p class="text-base text-gray-600 mb-4 leading-relaxed">One campaign engine for WhatsApp templates, ConvoConnect SMS, and SMTP email — file upload, contact groups, or quick lists — with delivery analytics and timezone-aware scheduling.</p>
         <ul class="space-y-2">
           <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>WhatsApp, SMS &amp; email channels</li>
           <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>ConvoConnect SMS · Sender ID · KES 0.6 / SMS</li>
@@ -1394,11 +1499,7 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Integrations</div>
       <h2 class="font-display section-title font-800 mb-4">Connects with<br/>your stack</h2>
-      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Connect the tools that power selling and outreach — Meta Embedded Signup, store sync, commerce payments, ConvoConnect SMS with Sender ID, email, and an embeddable WhatsApp widget.</p>
-    </div>
-
-    <div class="mb-12">
-      @include('wpsupportlanding::landing.partials.infographics.channel_orchestration')
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Connect the tools that power selling and outreach — Meta Embedded Signup for WhatsApp, Instagram &amp; Messenger, store sync, commerce payments, ConvoConnect SMS with Sender ID, email, and an embeddable WhatsApp widget.</p>
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
@@ -1432,7 +1533,7 @@ tailwind.config = {
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(24,119,242,0.1);" aria-hidden="true">🔵</div>
-        <div><p class="text-base font-semibold text-gray-900">Meta Embedded</p><p class="text-xs text-gray-500 mt-0.5">One-click WhatsApp onboarding</p></div>
+        <div><p class="text-base font-semibold text-gray-900">Meta Embedded</p><p class="text-xs text-gray-500 mt-0.5">WhatsApp · Instagram · Messenger</p></div>
       </div>
     </div>
 
