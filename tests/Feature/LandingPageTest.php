@@ -93,6 +93,10 @@ class LandingPageTest extends TestCase
         $response->assertSee('WhatsApp campaigns', false);
         $response->assertSee('Messaging channels: WhatsApp, Instagram, Messenger', false);
         $response->assertSee('Campaign channels: WhatsApp, SMS, email', false);
+        $response->assertSee('Search name, channel, message', false);
+        $response->assertSee('>WhatsApp</span>', false);
+        $response->assertSee('>Instagram</span>', false);
+        $response->assertSee('>Messenger</span>', false);
     }
 
     public function test_landing_page_hides_registration_ctas_when_disabled(): void
