@@ -43,7 +43,7 @@ abstract class AbstractMetaMessagingChannel implements MessagingChannel
 
     public function parseInbound(Request $request, ChannelConnection $connection): InboundBatch
     {
-        return $this->parser->parsePageMessaging($request, $this->channel());
+        return $this->parser->parsePageMessaging($request, $this->channel(), $connection);
     }
 
     public function send(ChannelConnection $connection, Conversation $conversation, Message $message, MessageContent $content): SendResult
