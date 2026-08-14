@@ -700,6 +700,61 @@ class UnifiedMessagingTest extends TestCase
         ]);
     }
 
+    public function test_instagram_standby_webhook_creates_inbox_message(): void
+    {
+        Event::fake();
+
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+
+        $webhookToken = 'ig-standby-token-123';
+        ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Instagram->value,
+            'external_account_id' => '17841401947499512',
+            'display_name' => 'Instagram',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'page-token',
+                'page_id' => '1072030281944265',
+                'instagram_account_id' => '17841401947499512',
+            ],
+            'webhook_token' => $webhookToken,
+        ]);
+
+        $payload = [
+            'object' => 'instagram',
+            'entry' => [
+                [
+                    'id' => '17841401947499512',
+                    'standby' => [
+                        [
+                            'sender' => ['id' => 'ig-user-suite'],
+                            'recipient' => ['id' => '17841401947499512'],
+                            'timestamp' => 1710000000000,
+                            'message' => [
+                                'mid' => 'mid.STANDBY_SUITE_001',
+                                'text' => 'Seen in Business Suite',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->postJson('/webhook/messaging/instagram/receive/'.$webhookToken, $payload)
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $this->assertDatabaseHas('messages', [
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Instagram->value,
+            'value' => 'Seen in Business Suite',
+            'fb_message_id' => 'mid.STANDBY_SUITE_001',
+        ]);
+    }
+
     private function plainSanctumToken(User $user): string
     {
         $token = $user->createToken('platform-webhook')->plainTextToken;

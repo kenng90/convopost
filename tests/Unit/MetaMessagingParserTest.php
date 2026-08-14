@@ -115,4 +115,29 @@ class MetaMessagingParserTest extends TestCase
         $this->assertSame('ig-customer-2', $batch->messages[0]->externalParticipantId);
         $this->assertSame('Hi there', $batch->messages[0]->content->body);
     }
+
+    public function test_keeps_customer_message_delivered_on_standby_channel(): void
+    {
+        $request = Request::create('/webhook', 'POST', [
+            'object' => 'instagram',
+            'entry' => [[
+                'id' => '17841401947499512',
+                'standby' => [[
+                    'sender' => ['id' => 'ig-customer-standby'],
+                    'recipient' => ['id' => '17841401947499512'],
+                    'timestamp' => 1710000000000,
+                    'message' => [
+                        'mid' => 'mid.STANDBY_001',
+                        'text' => 'Hello while Business Suite owns the thread',
+                    ],
+                ]],
+            ]],
+        ]);
+
+        $batch = app(MetaMessagingParser::class)->parsePageMessaging($request, MessagingChannelType::Instagram);
+
+        $this->assertCount(1, $batch->messages);
+        $this->assertSame('ig-customer-standby', $batch->messages[0]->externalParticipantId);
+        $this->assertSame('Hello while Business Suite owns the thread', $batch->messages[0]->content->body);
+    }
 }

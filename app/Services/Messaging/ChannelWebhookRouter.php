@@ -154,7 +154,10 @@ class ChannelWebhookRouter
     private function payloadPreview(Request $request): array
     {
         $entry = $request->input('entry.0', []);
-        $event = $entry['messaging'][0] ?? data_get($entry, 'changes.0.value', []);
+        $eventSource = isset($entry['messaging'][0])
+            ? 'messaging'
+            : (isset($entry['standby'][0]) ? 'standby' : 'changes');
+        $event = $entry['messaging'][0] ?? $entry['standby'][0] ?? data_get($entry, 'changes.0.value', []);
         if (! is_array($event)) {
             $event = [];
         }
@@ -165,12 +168,15 @@ class ChannelWebhookRouter
             'entry_id' => $entry['id'] ?? null,
             'has_messaging' => isset($entry['messaging']),
             'messaging_count' => count($entry['messaging'] ?? []),
+            'has_standby' => isset($entry['standby']),
+            'standby_count' => count($entry['standby'] ?? []),
             'has_changes' => isset($entry['changes']),
             'changes_count' => count($entry['changes'] ?? []),
             'change_fields' => array_values(array_filter(array_map(
                 fn ($change) => $change['field'] ?? null,
                 $entry['changes'] ?? [],
             ))),
+            'first_event_source' => $eventSource,
             'first_event' => [
                 'keys' => array_keys($event),
                 'sender' => data_get($event, 'sender.id') ?: data_get($event, 'from.id'),
@@ -182,6 +188,7 @@ class ChannelWebhookRouter
                 'message_keys' => is_array($message) ? array_keys($message) : [],
                 'is_echo' => is_array($message) ? ($message['is_echo'] ?? null) : null,
                 'is_self' => is_array($message) ? ($message['is_self'] ?? null) : null,
+                'app_id' => is_array($message) ? ($message['app_id'] ?? null) : null,
                 'has_text' => is_array($message) && isset($message['text']),
                 'text_preview' => is_array($message) && isset($message['text'])
                     ? mb_substr((string) $message['text'], 0, 80)

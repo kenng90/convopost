@@ -70,9 +70,11 @@ class MetaWebhookConnectionResolver
                 $ids[] = (string) $entry['id'];
             }
 
-            foreach ($entry['messaging'] ?? [] as $event) {
-                if (! empty($event['recipient']['id'])) {
-                    $ids[] = (string) $event['recipient']['id'];
+            foreach (['messaging', 'standby'] as $sourceKey) {
+                foreach ($entry[$sourceKey] ?? [] as $event) {
+                    if (! empty($event['recipient']['id'])) {
+                        $ids[] = (string) $event['recipient']['id'];
+                    }
                 }
             }
 

@@ -36,6 +36,25 @@ class MetaWebhookConnectionResolverTest extends TestCase
         $this->assertSame(['ig-biz-1'], $ids);
     }
 
+    public function test_extracts_asset_ids_from_standby_events(): void
+    {
+        $request = Request::create('/webhook', 'POST', [
+            'object' => 'instagram',
+            'entry' => [
+                [
+                    'id' => '17841401947499512',
+                    'standby' => [
+                        ['recipient' => ['id' => '17841401947499512']],
+                    ],
+                ],
+            ],
+        ]);
+
+        $ids = app(MetaWebhookConnectionResolver::class)->extractAssetIds($request);
+
+        $this->assertSame(['17841401947499512'], $ids);
+    }
+
     public function test_finds_instagram_connection_by_credential_account_id(): void
     {
         $company = Company::factory()->create();

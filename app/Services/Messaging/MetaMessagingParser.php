@@ -32,15 +32,26 @@ class MetaMessagingParser
                 $this->businessIdsFromEntry($entry),
             )));
 
-            foreach ($entry['messaging'] ?? [] as $eventIndex => $event) {
-                if (! is_array($event)) {
-                    continue;
-                }
+            // Messenger Platform delivers customer DMs on `messaging` when this app
+            // owns the thread, and on `standby` when Meta Business Suite / Page Inbox does.
+            foreach (['messaging', 'standby'] as $sourceKey) {
+                foreach ($entry[$sourceKey] ?? [] as $eventIndex => $event) {
+                    if (! is_array($event)) {
+                        continue;
+                    }
 
-                $parsed = $this->parseMessagingEvent($event, $channel, $entryIndex, $eventIndex, 'messaging', $businessIds);
+                    $parsed = $this->parseMessagingEvent(
+                        $event,
+                        $channel,
+                        $entryIndex,
+                        $eventIndex,
+                        $sourceKey,
+                        $businessIds,
+                    );
 
-                if ($parsed !== null) {
-                    $messages[] = $parsed;
+                    if ($parsed !== null) {
+                        $messages[] = $parsed;
+                    }
                 }
             }
 
