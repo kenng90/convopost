@@ -1,6 +1,6 @@
 {
     "alias": "platform",
-    "description": "Activation, health monitoring, revenue dashboard, Customer 360, and integration hub",
+    "description": "Activation, health monitoring, revenue dashboard, Customer 360, outcome playbooks, and integration hub",
     "keywords": [],
     "active": 1,
     "order": 0,
@@ -22,6 +22,13 @@
         }
     ],
     "ownermenus": [
+        {
+            "name": "Outcomes",
+            "icon": "ni ni-chart-bar-32 text-success",
+            "route": "outcomes.index",
+            "color": "#16a34a",
+            "priority": 80
+        },
         {
             "name": "Integrations",
             "icon": "ni ni-app text-info",

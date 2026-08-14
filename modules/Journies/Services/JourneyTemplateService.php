@@ -85,6 +85,40 @@ class JourneyTemplateService
                     __('Attended'),
                 ],
             ],
+            'cart_recovery' => [
+                'name' => __('Cart Recovery'),
+                'description' => __('Recover abandoned carts — nudge, checkout, recovered or lost.'),
+                'stages' => [
+                    __('Abandoned'),
+                    __('Nurturing'),
+                    __('Checkout'),
+                    __('Recovered'),
+                    __('Lost'),
+                ],
+            ],
+            'booking_convert' => [
+                'name' => __('Booking Convert'),
+                'description' => __('Appointments from booked through attendance, no-show recovery, and rebook.'),
+                'stages' => [
+                    __('Booked'),
+                    __('Reminded'),
+                    __('Attended'),
+                    __('No-show'),
+                    __('Rebooked'),
+                ],
+            ],
+            'lead_to_cash' => [
+                'name' => __('Lead-to-Cash'),
+                'description' => __('Capture leads, qualify, propose, invoice, and collect payment on WhatsApp.'),
+                'stages' => [
+                    __('New Lead'),
+                    __('Qualified'),
+                    __('Proposal'),
+                    __('Awaiting Payment'),
+                    __('Paid'),
+                    __('Lost'),
+                ],
+            ],
         ];
     }
 

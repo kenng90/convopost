@@ -7,12 +7,27 @@ use App\Http\Controllers\Controller;
 use App\Models\Messaging\ChannelConnection;
 use App\Services\Messaging\ChannelConnectionService;
 use App\Services\Messaging\MetaInstagramCredentialResolver;
+use App\Services\PlanEntitlementResolver;
+use App\Services\PlanUsageLimit;
 use Illuminate\Http\Request;
 
 class SetupController extends Controller
 {
-    public function index()
+    public function index(PlanUsageLimit $planUsageLimit, PlanEntitlementResolver $entitlements)
     {
+        $user = auth()->user();
+
+        if ($user->hasRole('admin') && ! session()->has('impersonate')) {
+            return redirect()->route('whatsapp.setup');
+        }
+
+        $plan = $planUsageLimit->resolvePlanForUser($user);
+        if (! $plan || ! $entitlements->hasCapability($plan, 'inbox_instagram')) {
+            return redirect()
+                ->route('plans.current')
+                ->withError(__('This feature is not included in your plan.'));
+        }
+
         $company = $this->getCompany();
         $connection = ChannelConnection::withoutGlobalScopes()
             ->where('company_id', $company->id)

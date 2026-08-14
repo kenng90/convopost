@@ -32,7 +32,61 @@ class Customer360Service
             'bookings' => $this->upcomingBookings($company, $contact),
             'orders' => $this->recentInvoices($company, $contact),
             'campaigns' => $this->campaignHistory($company, $contact),
+            'outcomes' => $this->outcomesSummary($company, $contact),
             'conversation_summary' => $this->summarizeRecentMessages($contact),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function outcomesSummary(Company $company, Contact $contact): array
+    {
+        $playbooks = config('outcome-playbooks.playbooks', []);
+        $summary = [];
+
+        foreach ($playbooks as $key => $playbook) {
+            if ($company->getConfig($playbook['config_installed_key'], 'no') !== 'yes') {
+                continue;
+            }
+
+            $journeyId = (int) $company->getConfig($playbook['config_journey_key'], 0);
+            if (! $journeyId) {
+                continue;
+            }
+
+            $stage = null;
+            if (class_exists(JourneyStage::class)) {
+                $stage = JourneyStage::query()
+                    ->where('journey_id', $journeyId)
+                    ->whereHas('contacts', fn ($q) => $q->where('contacts.id', $contact->id))
+                    ->first();
+            }
+
+            $summary[$key] = [
+                'name' => $playbook['name'],
+                'installed' => true,
+                'current_stage' => $stage?->name,
+                'in_playbook' => $stage !== null,
+            ];
+        }
+
+        $openCarts = 0;
+        if (class_exists(\App\Models\CatalogCartSession::class)) {
+            $openCarts = \App\Models\CatalogCartSession::withoutGlobalScopes()
+                ->where('company_id', $company->id)
+                ->where(function ($q) use ($contact) {
+                    $q->where('contact_id', $contact->id)
+                        ->orWhere('customer_phone', $contact->phone);
+                })
+                ->whereNotNull('abandoned_at')
+                ->whereNull('converted_at')
+                ->count();
+        }
+
+        return [
+            'playbooks' => $summary,
+            'open_abandoned_carts' => $openCarts,
         ];
     }
 

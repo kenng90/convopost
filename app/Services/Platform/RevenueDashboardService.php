@@ -22,8 +22,9 @@ class RevenueDashboardService
         $campaignRoi = $this->campaignRoi($company);
         $pipelineValue = $this->pipelineValue($company);
         $agentConversion = $this->agentConversion($company);
+        $outcomeWidgets = app(\App\Services\Outcomes\OutcomeMetricsService::class)->widgets($company);
 
-        return [
+        return array_merge([
             'revenue_total' => [
                 'title' => __('WhatsApp revenue'),
                 'icon' => 'ni-money-coins',
@@ -72,7 +73,7 @@ class RevenueDashboardService
                 'sub_title' => __('resolved chats'),
                 'href' => route('chat.index'),
             ],
-        ];
+        ], $outcomeWidgets);
     }
 
     private function paidRevenue(Company $company): float

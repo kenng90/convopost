@@ -14,6 +14,7 @@ use App\Http\Controllers\PlansController;
 use App\Http\Controllers\PublicCatalogController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\StoreCommerceWebhookController;
 use App\Http\Controllers\WhatsappFlowResponsesExportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -43,6 +44,11 @@ Route::get('/notify/{type}/{id}/{message}', [CompaniesController::class, 'notify
 Route::controller(CatalogWebhookController::class)->prefix('webhooks/catalog')->group(function () {
     Route::post('shopify/{token}', 'shopify')->name('catalog.webhooks.shopify');
     Route::post('woocommerce/{token}', 'woocommerce')->name('catalog.webhooks.woocommerce');
+});
+
+Route::controller(StoreCommerceWebhookController::class)->prefix('webhooks/commerce')->group(function () {
+    Route::post('shopify/{token}', 'shopify')->name('commerce.webhooks.shopify');
+    Route::post('woocommerce/{token}', 'woocommerce')->name('commerce.webhooks.woocommerce');
 });
 
 Route::controller(PublicCatalogController::class)->group(function () {
