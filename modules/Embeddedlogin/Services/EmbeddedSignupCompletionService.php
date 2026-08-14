@@ -103,14 +103,26 @@ class EmbeddedSignupCompletionService
 
         $connected = ['whatsapp' => true];
 
-        if ($session->isOmnichannel() && $session->pageId) {
+        if ($session->isOmnichannel()) {
             $webhookToken = $this->resolveWebhookToken($user, $company);
-            $connected = array_merge($connected, $this->provisionMetaMessagingChannels(
-                $company,
-                $session,
-                $accessToken,
-                $webhookToken,
-            ));
+            $pages = $this->resolvePagesForOmnichannel($accessToken, $session);
+
+            if ($pages === []) {
+                Log::warning('Embedded signup: omnichannel completed without a Facebook Page on the token', [
+                    'company_id' => $company->id,
+                    'session_page_id' => $session->pageId,
+                ]);
+            }
+
+            foreach ($pages as $page) {
+                $connected = array_merge($connected, $this->provisionPageMessagingChannels(
+                    $company,
+                    $page['id'],
+                    $page['instagram_account_id'],
+                    $accessToken,
+                    $webhookToken,
+                ));
+            }
         }
 
         return [
@@ -154,11 +166,58 @@ class EmbeddedSignupCompletionService
     }
 
     /**
+     * @return list<array{id: string, instagram_account_id: ?string}>
+     */
+    private function resolvePagesForOmnichannel(string $accessToken, EmbeddedSignupSession $session): array
+    {
+        $pages = [];
+
+        $accounts = Http::withToken($accessToken)->get($this->graphUrl().'/me/accounts', [
+            'fields' => 'id,name,access_token,instagram_business_account{id,username}',
+        ]);
+
+        if ($accounts->successful()) {
+            foreach ($accounts->json('data') ?? [] as $account) {
+                $pageId = (string) ($account['id'] ?? '');
+                if ($pageId === '') {
+                    continue;
+                }
+
+                $pages[$pageId] = [
+                    'id' => $pageId,
+                    'instagram_account_id' => data_get($account, 'instagram_business_account.id'),
+                ];
+            }
+        } else {
+            Log::warning('Embedded signup: /me/accounts failed', [
+                'status' => $accounts->status(),
+                'body' => $accounts->body(),
+            ]);
+        }
+
+        if ($session->pageId) {
+            $pages[$session->pageId] = [
+                'id' => $session->pageId,
+                'instagram_account_id' => $pages[$session->pageId]['instagram_account_id']
+                    ?? $session->instagramAccountId,
+            ];
+        }
+
+        // Prefer Pages that have a linked Instagram account when writing company config last.
+        uasort($pages, function (array $left, array $right) {
+            return (int) empty($left['instagram_account_id']) <=> (int) empty($right['instagram_account_id']);
+        });
+
+        return array_values($pages);
+    }
+
+    /**
      * @return array<string, bool>
      */
-    private function provisionMetaMessagingChannels(
+    private function provisionPageMessagingChannels(
         Company $company,
-        EmbeddedSignupSession $session,
+        string $pageId,
+        ?string $instagramAccountId,
         string $accessToken,
         string $webhookToken,
     ): array {
@@ -167,13 +226,11 @@ class EmbeddedSignupCompletionService
             'messenger' => false,
         ];
 
-        $pageId = $session->pageId;
-        if (! $pageId) {
+        if ($pageId === '') {
             return $connected;
         }
 
         $pageToken = $accessToken;
-        $instagramAccountId = $session->instagramAccountId;
 
         $pageNode = Http::withToken($accessToken)->get($this->graphUrl().'/'.$pageId, [
             'fields' => 'id,name,access_token,instagram_business_account{id,username}',
