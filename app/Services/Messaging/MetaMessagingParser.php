@@ -32,15 +32,26 @@ class MetaMessagingParser
                 $this->businessIdsFromEntry($entry),
             )));
 
-            foreach ($entry['messaging'] ?? [] as $eventIndex => $event) {
-                if (! is_array($event)) {
-                    continue;
-                }
+            // Messenger Platform delivers customer DMs on `messaging` when this app
+            // owns the thread, and on `standby` when Meta Business Suite / Page Inbox does.
+            foreach (['messaging', 'standby'] as $sourceKey) {
+                foreach ($entry[$sourceKey] ?? [] as $eventIndex => $event) {
+                    if (! is_array($event)) {
+                        continue;
+                    }
 
-                $parsed = $this->parseMessagingEvent($event, $channel, $entryIndex, $eventIndex, 'messaging', $businessIds);
+                    $parsed = $this->parseMessagingEvent(
+                        $event,
+                        $channel,
+                        $entryIndex,
+                        $eventIndex,
+                        $sourceKey,
+                        $businessIds,
+                    );
 
-                if ($parsed !== null) {
-                    $messages[] = $parsed;
+                    if ($parsed !== null) {
+                        $messages[] = $parsed;
+                    }
                 }
             }
 
@@ -111,14 +122,15 @@ class MetaMessagingParser
         $senderId = $this->eventPartyId($event, 'sender') ?: $this->eventPartyId($event, 'from');
         $recipientId = $this->eventPartyId($event, 'recipient') ?: $this->eventPartyId($event, 'to');
         $message = $event['message'] ?? null;
-        $isEcho = is_array($message) && $this->truthy($message['is_echo'] ?? $message['is_self'] ?? false);
+        $fromBusiness = $senderId !== '' && in_array($senderId, $businessIds, true);
 
-        if ($senderId !== '' && $isEcho && in_array($senderId, $businessIds, true)) {
+        if ($fromBusiness) {
             Log::info('messaging.parser.skip_echo', [
                 'channel' => $channel->value,
                 'source' => $source,
                 'sender' => $senderId,
                 'recipient' => $recipientId,
+                'is_echo' => is_array($message) ? ($message['is_echo'] ?? null) : null,
             ]);
 
             return null;

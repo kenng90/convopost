@@ -136,7 +136,7 @@ class MetaPageLinkService
     private function subscribePageWebhooks(string $accessToken, string $pageId): void
     {
         $response = Http::withToken($accessToken)->asForm()->post($this->graphUrl().'/'.$pageId.'/subscribed_apps', [
-            'subscribed_fields' => 'messages,messaging_postbacks',
+            'subscribed_fields' => 'messages,messaging_postbacks,standby,messaging_handover',
         ]);
 
         if (! $response->successful()) {

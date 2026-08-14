@@ -59,6 +59,41 @@ class MetaMessagingParserTest extends TestCase
         $this->assertCount(0, $batch->messages);
     }
 
+    public function test_skips_message_sent_by_page_even_without_echo_flag(): void
+    {
+        $request = Request::create('/webhook', 'POST', [
+            'object' => 'instagram',
+            'entry' => [[
+                'id' => '17841401947499512',
+                'messaging' => [[
+                    'sender' => ['id' => '1072030281944265'],
+                    'recipient' => ['id' => 'ig-customer-1'],
+                    'timestamp' => 1710000000000,
+                    'message' => [
+                        'mid' => 'mid.PAGE_001',
+                        'text' => 'From page',
+                    ],
+                ]],
+            ]],
+        ]);
+
+        $connection = new \App\Models\Messaging\ChannelConnection([
+            'external_account_id' => '1072030281944265',
+            'credentials' => [
+                'page_id' => '1072030281944265',
+                'instagram_account_id' => '17841401947499512',
+            ],
+        ]);
+
+        $batch = app(MetaMessagingParser::class)->parsePageMessaging(
+            $request,
+            MessagingChannelType::Instagram,
+            $connection,
+        );
+
+        $this->assertCount(0, $batch->messages);
+    }
+
     public function test_accepts_from_id_and_string_message(): void
     {
         $request = Request::create('/webhook', 'POST', [
@@ -79,5 +114,30 @@ class MetaMessagingParserTest extends TestCase
         $this->assertCount(1, $batch->messages);
         $this->assertSame('ig-customer-2', $batch->messages[0]->externalParticipantId);
         $this->assertSame('Hi there', $batch->messages[0]->content->body);
+    }
+
+    public function test_keeps_customer_message_delivered_on_standby_channel(): void
+    {
+        $request = Request::create('/webhook', 'POST', [
+            'object' => 'instagram',
+            'entry' => [[
+                'id' => '17841401947499512',
+                'standby' => [[
+                    'sender' => ['id' => 'ig-customer-standby'],
+                    'recipient' => ['id' => '17841401947499512'],
+                    'timestamp' => 1710000000000,
+                    'message' => [
+                        'mid' => 'mid.STANDBY_001',
+                        'text' => 'Hello while Business Suite owns the thread',
+                    ],
+                ]],
+            ]],
+        ]);
+
+        $batch = app(MetaMessagingParser::class)->parsePageMessaging($request, MessagingChannelType::Instagram);
+
+        $this->assertCount(1, $batch->messages);
+        $this->assertSame('ig-customer-standby', $batch->messages[0]->externalParticipantId);
+        $this->assertSame('Hello while Business Suite owns the thread', $batch->messages[0]->content->body);
     }
 }
