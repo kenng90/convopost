@@ -9,6 +9,13 @@ use Illuminate\Support\Facades\Log;
 
 class MetaPageLinkService
 {
+    public const PAGE_SUBSCRIBED_FIELDS = [
+        'messages',
+        'messaging_postbacks',
+        'standby',
+        'messaging_handovers',
+    ];
+
     public function __construct(
         private readonly ChannelConnectionService $connections,
     ) {
@@ -136,7 +143,7 @@ class MetaPageLinkService
     private function subscribePageWebhooks(string $accessToken, string $pageId): void
     {
         $response = Http::withToken($accessToken)->asForm()->post($this->graphUrl().'/'.$pageId.'/subscribed_apps', [
-            'subscribed_fields' => 'messages,messaging_postbacks,standby,messaging_handover',
+            'subscribed_fields' => implode(',', self::PAGE_SUBSCRIBED_FIELDS),
         ]);
 
         if (! $response->successful()) {

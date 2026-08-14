@@ -140,6 +140,109 @@ class EmbeddedSignupV4Test extends TestCase
         ]);
     }
 
+    public function test_omnichannel_uses_page_token_from_accounts_when_page_node_lacks_permission(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/oauth/access_token*' => Http::response(['access_token' => 'biz-token'], 200),
+            'graph.facebook.com/*/phone_numbers*' => Http::response([
+                'data' => [['id' => 'phone-1', 'display_phone_number' => '+15551234567']],
+            ], 200),
+            'graph.facebook.com/*/register' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/me/accounts*' => Http::response([
+                'data' => [[
+                    'id' => '100437969660636',
+                    'name' => 'Suite Page',
+                    'access_token' => 'page-token-from-accounts',
+                    'instagram_business_account' => [
+                        'id' => '17841458066073258',
+                    ],
+                ]],
+            ], 200),
+            'graph.facebook.com/*/100437969660636/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/100437969660636*' => Http::response([
+                'error' => [
+                    'message' => '(#100) Object does not exist, cannot be loaded due to missing permission',
+                    'code' => 100,
+                ],
+            ], 400),
+        ]);
+
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+        $owner->update(['company_id' => $company->id]);
+
+        $session = new EmbeddedSignupSession(
+            flow: 'omnichannel',
+            wabaId: 'waba-1',
+            phoneNumberId: 'phone-1',
+            pageId: '100437969660636',
+            instagramAccountId: null,
+        );
+
+        $result = app(EmbeddedSignupCompletionService::class)->complete($owner, 'auth-code', $session);
+
+        $this->assertSame('success', $result['status']);
+        $this->assertTrue($result['connected']['instagram']);
+        $this->assertSame('page-token-from-accounts', $company->fresh()->getConfig('instagram_page_access_token'));
+
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), '/100437969660636/subscribed_apps')) {
+                return false;
+            }
+
+            $fields = $request->data()['subscribed_fields'] ?? [];
+            if (is_string($fields)) {
+                $fields = explode(',', $fields);
+            }
+
+            return in_array('messaging_handovers', $fields, true)
+                && in_array('standby', $fields, true)
+                && ! in_array('messaging_handover', $fields, true);
+        });
+    }
+
+    public function test_omnichannel_skips_page_provision_without_page_token(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/oauth/access_token*' => Http::response(['access_token' => 'biz-token'], 200),
+            'graph.facebook.com/*/phone_numbers*' => Http::response([
+                'data' => [['id' => 'phone-1', 'display_phone_number' => '+15551234567']],
+            ], 200),
+            'graph.facebook.com/*/register' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/me/accounts*' => Http::response(['data' => []], 200),
+            'graph.facebook.com/*/100437969660636*' => Http::response([
+                'error' => ['message' => 'missing pages_read_engagement', 'code' => 100],
+            ], 400),
+        ]);
+
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+        $owner->update(['company_id' => $company->id]);
+
+        $session = new EmbeddedSignupSession(
+            flow: 'omnichannel',
+            wabaId: 'waba-1',
+            phoneNumberId: 'phone-1',
+            pageId: '100437969660636',
+            instagramAccountId: null,
+        );
+
+        $result = app(EmbeddedSignupCompletionService::class)->complete($owner, 'auth-code', $session);
+
+        $this->assertSame('success', $result['status']);
+        $this->assertTrue($result['connected']['whatsapp']);
+        $this->assertFalse($result['connected']['instagram'] ?? false);
+
+        $this->assertSame(0, ChannelConnection::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->where('channel', MessagingChannelType::Instagram->value)
+            ->count());
+    }
+
     public function test_whatsapp_only_completion_skips_meta_channel_provisioning(): void
     {
         Http::fake([
