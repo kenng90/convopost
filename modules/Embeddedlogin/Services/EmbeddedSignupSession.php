@@ -10,6 +10,7 @@ final class EmbeddedSignupSession
         public readonly ?string $phoneNumberId = null,
         public readonly ?string $pageId = null,
         public readonly ?string $instagramAccountId = null,
+        public readonly ?string $businessId = null,
     ) {
     }
 
@@ -35,6 +36,7 @@ final class EmbeddedSignupSession
             phoneNumberId: $input['phone_number_id'] ?? null,
             pageId: $pageId,
             instagramAccountId: $instagramAccountId,
+            businessId: $input['business_id'] ?? null,
         );
     }
 

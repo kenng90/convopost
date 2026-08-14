@@ -25,6 +25,7 @@
     phone_number_id: null,
     page_id: null,
     instagram_account_id: null,
+    business_id: null,
     page_ids: null,
     instagram_account_ids: null,
   };
@@ -57,6 +58,7 @@
         embeddedSignupSession.phone_number_id = data.data.phone_number_id || embeddedSignupSession.phone_number_id;
         embeddedSignupSession.page_id = data.data.page_id || embeddedSignupSession.page_id;
         embeddedSignupSession.instagram_account_id = data.data.instagram_account_id || embeddedSignupSession.instagram_account_id;
+        embeddedSignupSession.business_id = data.data.business_id || embeddedSignupSession.business_id;
         embeddedSignupSession.page_ids = data.data.page_ids || embeddedSignupSession.page_ids;
         embeddedSignupSession.instagram_account_ids = data.data.instagram_account_ids || embeddedSignupSession.instagram_account_ids;
       }
@@ -122,6 +124,7 @@
     embeddedSignupSession.phone_number_id = null;
     embeddedSignupSession.page_id = null;
     embeddedSignupSession.instagram_account_id = null;
+    embeddedSignupSession.business_id = null;
     embeddedSignupSession.page_ids = null;
     embeddedSignupSession.instagram_account_ids = null;
 
@@ -155,7 +158,7 @@
       var params = new URLSearchParams();
       params.set('flow', flow);
 
-      ['waba_id', 'phone_number_id', 'page_id', 'instagram_account_id'].forEach(function(key) {
+      ['waba_id', 'phone_number_id', 'page_id', 'instagram_account_id', 'business_id'].forEach(function(key) {
         if (embeddedSignupSession[key]) {
           params.set(key, embeddedSignupSession[key]);
         }
