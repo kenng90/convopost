@@ -81,6 +81,65 @@ class EmbeddedSignupV4Test extends TestCase
         ]);
     }
 
+    public function test_omnichannel_completion_discovers_page_from_token_when_session_omits_page_id(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/oauth/access_token*' => Http::response(['access_token' => 'biz-token'], 200),
+            'graph.facebook.com/*/phone_numbers*' => Http::response([
+                'data' => [['id' => 'phone-1', 'display_phone_number' => '+15551234567']],
+            ], 200),
+            'graph.facebook.com/*/register' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/subscribed_apps' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/me/accounts*' => Http::response([
+                'data' => [[
+                    'id' => '1072030281944265',
+                    'name' => 'Discovered Page',
+                    'access_token' => 'page-token',
+                    'instagram_business_account' => [
+                        'id' => '17841401947499512',
+                        'username' => 'clientig',
+                    ],
+                ]],
+            ], 200),
+            'graph.facebook.com/*/1072030281944265*' => Http::response([
+                'id' => '1072030281944265',
+                'name' => 'Discovered Page',
+                'access_token' => 'page-token',
+                'instagram_business_account' => [
+                    'id' => '17841401947499512',
+                    'username' => 'clientig',
+                ],
+            ], 200),
+        ]);
+
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+        $owner->update(['company_id' => $company->id]);
+
+        $session = new EmbeddedSignupSession(
+            flow: 'omnichannel',
+            wabaId: 'waba-1',
+            phoneNumberId: 'phone-1',
+            pageId: null,
+            instagramAccountId: null,
+        );
+
+        $result = app(EmbeddedSignupCompletionService::class)->complete($owner, 'auth-code', $session);
+
+        $this->assertSame('success', $result['status']);
+        $this->assertTrue($result['connected']['instagram']);
+        $this->assertTrue($result['connected']['messenger']);
+        $this->assertSame('1072030281944265', $company->fresh()->getConfig('instagram_page_id'));
+        $this->assertSame('17841401947499512', $company->fresh()->getConfig('instagram_account_id'));
+
+        $this->assertDatabaseHas('channel_connections', [
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Instagram->value,
+            'external_account_id' => '1072030281944265',
+        ]);
+    }
+
     public function test_whatsapp_only_completion_skips_meta_channel_provisioning(): void
     {
         Http::fake([
