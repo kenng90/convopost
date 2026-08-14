@@ -111,14 +111,15 @@ class MetaMessagingParser
         $senderId = $this->eventPartyId($event, 'sender') ?: $this->eventPartyId($event, 'from');
         $recipientId = $this->eventPartyId($event, 'recipient') ?: $this->eventPartyId($event, 'to');
         $message = $event['message'] ?? null;
-        $isEcho = is_array($message) && $this->truthy($message['is_echo'] ?? $message['is_self'] ?? false);
+        $fromBusiness = $senderId !== '' && in_array($senderId, $businessIds, true);
 
-        if ($senderId !== '' && $isEcho && in_array($senderId, $businessIds, true)) {
+        if ($fromBusiness) {
             Log::info('messaging.parser.skip_echo', [
                 'channel' => $channel->value,
                 'source' => $source,
                 'sender' => $senderId,
                 'recipient' => $recipientId,
+                'is_echo' => is_array($message) ? ($message['is_echo'] ?? null) : null,
             ]);
 
             return null;

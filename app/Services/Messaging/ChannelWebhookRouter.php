@@ -154,6 +154,11 @@ class ChannelWebhookRouter
     private function payloadPreview(Request $request): array
     {
         $entry = $request->input('entry.0', []);
+        $event = $entry['messaging'][0] ?? data_get($entry, 'changes.0.value', []);
+        if (! is_array($event)) {
+            $event = [];
+        }
+        $message = $event['message'] ?? null;
 
         return [
             'object' => $request->input('object'),
@@ -166,6 +171,22 @@ class ChannelWebhookRouter
                 fn ($change) => $change['field'] ?? null,
                 $entry['changes'] ?? [],
             ))),
+            'first_event' => [
+                'keys' => array_keys($event),
+                'sender' => data_get($event, 'sender.id') ?: data_get($event, 'from.id'),
+                'recipient' => data_get($event, 'recipient.id') ?: data_get($event, 'to.id'),
+                'has_read' => isset($event['read']),
+                'has_delivery' => isset($event['delivery']),
+                'has_reaction' => isset($event['reaction']),
+                'message_is_string' => is_string($message),
+                'message_keys' => is_array($message) ? array_keys($message) : [],
+                'is_echo' => is_array($message) ? ($message['is_echo'] ?? null) : null,
+                'is_self' => is_array($message) ? ($message['is_self'] ?? null) : null,
+                'has_text' => is_array($message) && isset($message['text']),
+                'text_preview' => is_array($message) && isset($message['text'])
+                    ? mb_substr((string) $message['text'], 0, 80)
+                    : (is_string($message) ? mb_substr($message, 0, 80) : null),
+            ],
         ];
     }
 

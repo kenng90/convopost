@@ -59,6 +59,41 @@ class MetaMessagingParserTest extends TestCase
         $this->assertCount(0, $batch->messages);
     }
 
+    public function test_skips_message_sent_by_page_even_without_echo_flag(): void
+    {
+        $request = Request::create('/webhook', 'POST', [
+            'object' => 'instagram',
+            'entry' => [[
+                'id' => '17841401947499512',
+                'messaging' => [[
+                    'sender' => ['id' => '1072030281944265'],
+                    'recipient' => ['id' => 'ig-customer-1'],
+                    'timestamp' => 1710000000000,
+                    'message' => [
+                        'mid' => 'mid.PAGE_001',
+                        'text' => 'From page',
+                    ],
+                ]],
+            ]],
+        ]);
+
+        $connection = new \App\Models\Messaging\ChannelConnection([
+            'external_account_id' => '1072030281944265',
+            'credentials' => [
+                'page_id' => '1072030281944265',
+                'instagram_account_id' => '17841401947499512',
+            ],
+        ]);
+
+        $batch = app(MetaMessagingParser::class)->parsePageMessaging(
+            $request,
+            MessagingChannelType::Instagram,
+            $connection,
+        );
+
+        $this->assertCount(0, $batch->messages);
+    }
+
     public function test_accepts_from_id_and_string_message(): void
     {
         $request = Request::create('/webhook', 'POST', [
