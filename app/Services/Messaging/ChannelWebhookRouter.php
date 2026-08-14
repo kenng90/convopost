@@ -55,6 +55,7 @@ class ChannelWebhookRouter
             Log::warning('messaging.webhook.unmatched_asset', [
                 'channel' => $channel->value,
                 'asset_ids' => $this->metaResolver->extractAssetIds($request),
+                'known_meta_accounts' => $this->knownMetaAccountSummary(),
                 'payload_preview' => $this->payloadPreview($request),
             ]);
 
@@ -166,5 +167,26 @@ class ChannelWebhookRouter
                 $entry['changes'] ?? [],
             ))),
         ];
+    }
+
+    /**
+     * @return list<array{company_id: int, channel: string, page_id: string, instagram_account_id: string}>
+     */
+    private function knownMetaAccountSummary(): array
+    {
+        return ChannelConnection::withoutGlobalScopes()
+            ->whereIn('channel', [
+                MessagingChannelType::Instagram->value,
+                MessagingChannelType::Messenger->value,
+            ])
+            ->get(['company_id', 'channel', 'external_account_id', 'credentials'])
+            ->map(fn (ChannelConnection $connection) => [
+                'company_id' => $connection->company_id,
+                'channel' => $connection->channel->value,
+                'page_id' => (string) $connection->credential('page_id', $connection->external_account_id),
+                'instagram_account_id' => (string) $connection->credential('instagram_account_id', ''),
+            ])
+            ->values()
+            ->all();
     }
 }
