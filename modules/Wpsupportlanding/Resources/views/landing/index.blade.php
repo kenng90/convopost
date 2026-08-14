@@ -1106,7 +1106,7 @@ tailwind.config = {
       <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">📋</div>
         <p class="font-display font-700 text-lg mb-2 text-gray-900">1. Pick a Playbook</p>
-        <p class="text-base text-gray-600 leading-relaxed">Start from seven templates — sales, support, marketing, onboarding, revenue, e-commerce, or event registrations — each with ordered stages ready to go.</p>
+        <p class="text-base text-gray-600 leading-relaxed">Start from sales, support, marketing, onboarding, revenue, e-commerce, events — plus Cart Recovery, Booking Convert, and Lead-to-Cash outcome playbooks.</p>
       </div>
       <div class="card-lift border rounded-2xl p-6 text-center" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.15);">🧭</div>

@@ -2,6 +2,7 @@
 
 namespace App\Services\Platform;
 
+use App\Services\Outcomes\OutcomeJourneyEnroller;
 use Illuminate\Support\Facades\Log;
 use Modules\Invoice\Models\Invoice;
 use Modules\Journies\Models\Journey;
@@ -55,7 +56,29 @@ class InvoicePaidSyncService
             return;
         }
 
-        $journeyId = $invoice->company->getConfig('JOURNEYS_DEFAULT_JOURNEY_ID', '');
+        $company = $invoice->company;
+        if (! $company) {
+            return;
+        }
+
+        // Prefer Lead-to-Cash playbook when installed
+        if ($company->getConfig('outcome_lead_to_cash_installed', 'no') === 'yes') {
+            $moved = app(OutcomeJourneyEnroller::class)->moveToPlaybookStage(
+                $company,
+                $contact,
+                'lead_to_cash',
+                'Paid',
+                'invoice_paid'
+            );
+
+            if ($moved) {
+                return;
+            }
+        }
+
+        $journeyId = $company->getConfig('outcome_lead_to_cash_journey_id', '')
+            ?: $company->getConfig('JOURNEYS_DEFAULT_JOURNEY_ID', '');
+
         if (! $journeyId) {
             return;
         }
@@ -63,7 +86,8 @@ class InvoicePaidSyncService
         $paidStage = JourneyStage::where('journey_id', $journeyId)
             ->where(function ($q) {
                 $q->where('name', 'like', '%Paid%')
-                    ->orWhere('name', 'like', '%Won%');
+                    ->orWhere('name', 'like', '%Won%')
+                    ->orWhere('name', 'like', '%Recovered%');
             })
             ->orderBy('order')
             ->first();

@@ -70,6 +70,15 @@ class ReservationBookingService
 
         $this->staffNotifications->notifyBooked($reservation);
 
+        try {
+            if ($company->getConfig('outcome_booking_convert_installed', 'no') === 'yes' && $reservation->contact) {
+                app(\App\Services\Outcomes\OutcomeJourneyEnroller::class)
+                    ->enrollBooking($company, $reservation->contact);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         return $reservation;
     }
 

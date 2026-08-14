@@ -48,19 +48,35 @@ class DashboardController extends Controller
 
     public function setupEmbedded()
     {
-        $token = PersonalAccessToken::where('tokenable_id', auth()->user()->id)->where('tokenable_type', 'App\Models\User')->first();
-        $planText = '';
-        if (! $token) {
-            $token = auth()->user()->createToken('Whatstapp');
-            $parts = explode('|', $token->plainTextToken);
-            $planText = $parts[1]; // Get the first part after the '|'
-            auth()->user()->setConfig('plain_token', $planText);
-        } else {
-            //Get old config
-            $planText = auth()->user()->getConfig('plain_token', '');
+        $planText = $this->resolvePlatformWebhookToken(auth()->user());
+        $baseUrl = rtrim((string) config('app.url'), '/');
+
+        return view('wpbox::setup.setup_admin', [
+            'token' => $planText,
+            'company' => auth()->user(),
+            'is_embedded' => true,
+            'whatsappWebhookUrl' => $baseUrl.'/webhook/wpbox/receive/'.$planText,
+            'messengerWebhookUrl' => $baseUrl.'/webhook/messaging/messenger/receive/'.$planText,
+            'instagramWebhookUrl' => $baseUrl.'/webhook/messaging/instagram/receive/'.$planText,
+        ]);
+    }
+
+    /**
+     * Platform Meta-app webhook token (same value WhatsApp, Messenger, and Instagram use).
+     */
+    private function resolvePlatformWebhookToken(\App\Models\User $user): string
+    {
+        $existing = (string) $user->getConfig('plain_token', '');
+        if ($existing !== '' && PersonalAccessToken::findToken($existing)) {
+            return $existing;
         }
 
-        return view('wpbox::setup.setup_admin', ['token' => $planText, 'company' => auth()->user(), 'is_embedded' => true]);
+        $token = $user->createToken('Whatstapp');
+        $parts = explode('|', $token->plainTextToken);
+        $plain = $parts[1] ?? $token->plainTextToken;
+        $user->setConfig('plain_token', $plain);
+
+        return $plain;
     }
 
     public function setup()

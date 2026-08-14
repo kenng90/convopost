@@ -5,6 +5,7 @@ namespace App\Services\Catalog;
 use App\Models\CatalogCartSession;
 use App\Models\ListCatalog;
 use App\Services\Campaign\CampaignTriggerService;
+use App\Services\Outcomes\OutcomeJourneyEnroller;
 use Illuminate\Support\Carbon;
 
 class CatalogCartSessionService
@@ -79,6 +80,12 @@ class CatalogCartSessionService
                     'item_count' => $session->itemCount(),
                 ]
             );
+
+            app(OutcomeJourneyEnroller::class)->enrollCartAbandoned(
+                $catalog->company,
+                $customerPhone,
+                $customerName
+            );
         }
 
         return $session->fresh();
@@ -86,6 +93,11 @@ class CatalogCartSessionService
 
     public function markConverted(ListCatalog $catalog, string $visitorKey): void
     {
+        $session = CatalogCartSession::withoutGlobalScopes()
+            ->where('catalog_id', $catalog->id)
+            ->where('visitor_key', $visitorKey)
+            ->first();
+
         CatalogCartSession::withoutGlobalScopes()
             ->where('catalog_id', $catalog->id)
             ->where('visitor_key', $visitorKey)
@@ -94,6 +106,14 @@ class CatalogCartSessionService
                 'abandoned_at' => null,
                 'items' => [],
             ]);
+
+        if ($session && $catalog->company && $session->customer_phone) {
+            $contact = \Modules\Wpbox\Models\Contact::firstOrCreate(
+                ['company_id' => $catalog->company_id, 'phone' => $session->customer_phone],
+                ['name' => $session->customer_name ?: $session->customer_phone, 'subscribed' => 1]
+            );
+            app(OutcomeJourneyEnroller::class)->markCartRecovered($catalog->company, $contact);
+        }
     }
 
     public function isStale(?Carbon $lastActivity, int $minutes = 30): bool

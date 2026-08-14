@@ -23,6 +23,8 @@ class VerifyCsrfToken extends Middleware
         'webhook/wpbox/flows',
         'webhook/wpbox/sendschuduledmessages',
         'webhook/wpbox/store-event',
+        'webhooks/catalog/*',
+        'webhooks/commerce/*',
         'webhook/messaging/*',
         'webhook/whatsappcall/calling/*',
         'webhook/whatsappcall/calling',

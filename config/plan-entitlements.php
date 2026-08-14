@@ -138,6 +138,10 @@ return [
                 'ai_flow_assistant',
                 'inbox_instagram',
                 'inbox_messenger',
+                'outcomes_cart_recovery',
+                'outcomes_booking_convert',
+                'outcomes_lead_to_cash',
+                'outcomes_suite',
             ],
         ],
 
@@ -199,6 +203,10 @@ return [
         'ai_flow_assistant' => 'AI Flow Assistant',
         'inbox_instagram' => 'Instagram DMs inbox',
         'inbox_messenger' => 'Facebook Messenger inbox',
+        'outcomes_cart_recovery' => 'Cart Recovery playbook',
+        'outcomes_booking_convert' => 'Booking Convert playbook',
+        'outcomes_lead_to_cash' => 'Lead-to-Cash playbook',
+        'outcomes_suite' => 'Commerce Ops Suite (all outcome playbooks)',
     ],
 
 ];

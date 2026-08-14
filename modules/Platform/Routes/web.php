@@ -18,10 +18,15 @@ Route::group([
         Route::get('api/customer360/{contact}', 'Customer360Controller@show')->name('customer360.show');
         Route::get('api/managed-ai/status', 'DashboardController@managedAiStatus')->name('managed-ai.status');
 
+        Route::get('outcomes', 'OutcomesController@index')->name('outcomes.index');
+
         Route::middleware('isOwnerOnPro')->group(function () {
             Route::get('integrations', 'IntegrationHubController@index')->name('integrations.index');
             Route::post('integrations/{provider}/connect', 'IntegrationHubController@connect')->name('integrations.connect');
             Route::delete('integrations/{provider}', 'IntegrationHubController@disconnect')->name('integrations.disconnect');
+
+            Route::post('outcomes/suite', 'OutcomesController@installSuite')->name('outcomes.install-suite');
+            Route::post('outcomes/{playbook}', 'OutcomesController@install')->name('outcomes.install');
         });
     });
 });

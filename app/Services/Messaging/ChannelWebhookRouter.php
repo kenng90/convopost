@@ -3,6 +3,7 @@
 namespace App\Services\Messaging;
 
 use App\Enums\MessagingChannelType;
+use App\Models\Messaging\ChannelConnection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
@@ -10,9 +11,9 @@ use Illuminate\Support\Facades\Log;
 class ChannelWebhookRouter
 {
     public function __construct(
-        private readonly ChannelConnectionService $connections,
         private readonly MessagingChannelRegistry $registry,
         private readonly InboundMessageProcessor $processor,
+        private readonly MetaWebhookConnectionResolver $metaResolver,
     ) {
     }
 
@@ -35,9 +36,11 @@ class ChannelWebhookRouter
             return response()->json(['error' => 'Unknown channel'], 404);
         }
 
-        $connection = $this->connections->findByWebhookToken($token, $channel);
+        if ($request->isMethod('GET')) {
+            return $this->verifySubscription($request, $channel, $token);
+        }
 
-        if (! $connection) {
+        if (! $this->metaResolver->isAuthorizedToken($token, $channel)) {
             Log::warning('messaging.webhook.invalid_token', [
                 'channel' => $channel->value,
                 'token_prefix' => substr($token, 0, 12),
@@ -46,26 +49,56 @@ class ChannelWebhookRouter
             return response()->json(['error' => 'Invalid token'], 403);
         }
 
-        $adapter = $this->registry->get($channel);
+        $connection = $this->metaResolver->resolve($request, $channel, $token);
 
-        if ($request->isMethod('GET')) {
-            $verification = $adapter->verifyWebhook($request, $connection);
-
-            Log::info('messaging.webhook.verify', [
+        if (! $connection) {
+            Log::warning('messaging.webhook.unmatched_asset', [
                 'channel' => $channel->value,
-                'connection_id' => $connection->id,
-                'ok' => $verification !== null,
-                'hub_mode' => $request->query('hub_mode'),
+                'asset_ids' => $this->metaResolver->extractAssetIds($request),
+                'payload_preview' => $this->payloadPreview($request),
             ]);
 
-            return $verification ?? response()->json([], 403);
+            // Acknowledge so Meta does not retry unknown Pages/IG accounts.
+            return response()->json(['ok' => true]);
         }
+
+        return $this->processInbound($request, $connection);
+    }
+
+    private function verifySubscription(Request $request, MessagingChannelType $channel, string $urlToken): Response|\Illuminate\Http\JsonResponse
+    {
+        $mode = $request->query('hub_mode');
+        $verifyToken = (string) $request->query('hub_verify_token', '');
+        $challenge = $request->query('hub_challenge');
+
+        $ok = $mode === 'subscribe'
+            && $challenge !== null
+            && $verifyToken !== ''
+            && $this->metaResolver->isAuthorizedToken($verifyToken, $channel);
+
+        Log::info('messaging.webhook.verify', [
+            'channel' => $channel->value,
+            'ok' => $ok,
+            'hub_mode' => $mode,
+            'url_token_prefix' => substr($urlToken, 0, 12),
+        ]);
+
+        if ($ok) {
+            return response($challenge, 200);
+        }
+
+        return response()->json([], 403);
+    }
+
+    private function processInbound(Request $request, ChannelConnection $connection): \Illuminate\Http\JsonResponse
+    {
+        $adapter = $this->registry->get($connection->channel);
 
         try {
             $batch = $adapter->parseInbound($request, $connection);
 
             Log::info('messaging.webhook.parsed', [
-                'channel' => $channel->value,
+                'channel' => $connection->channel->value,
                 'connection_id' => $connection->id,
                 'company_id' => $connection->company_id,
                 'message_count' => count($batch->messages),
@@ -79,7 +112,7 @@ class ChannelWebhookRouter
 
             if ($batch->messages === []) {
                 Log::info('messaging.webhook.no_messages', [
-                    'channel' => $channel->value,
+                    'channel' => $connection->channel->value,
                     'connection_id' => $connection->id,
                     'payload_preview' => $this->payloadPreview($request),
                 ]);
@@ -89,7 +122,7 @@ class ChannelWebhookRouter
                 $message = $this->processor->process($connection, $inbound);
 
                 Log::info('messaging.webhook.message_processed', [
-                    'channel' => $channel->value,
+                    'channel' => $connection->channel->value,
                     'connection_id' => $connection->id,
                     'external_message_id' => $inbound->externalMessageId,
                     'external_participant_id' => $inbound->externalParticipantId,
@@ -101,7 +134,7 @@ class ChannelWebhookRouter
             return response()->json(['ok' => true]);
         } catch (\Throwable $th) {
             Log::error('messaging.webhook.error', [
-                'channel' => $channel->value,
+                'channel' => $connection->channel->value,
                 'connection_id' => $connection->id,
                 'error' => $th->getMessage(),
                 'trace' => $th->getTraceAsString(),

@@ -526,4 +526,133 @@ class UnifiedMessagingTest extends TestCase
             'value' => 'csrf ok',
         ]);
     }
+
+    public function test_platform_token_verifies_messenger_webhook_without_matching_connection_token(): void
+    {
+        $admin = User::factory()->create();
+        $platformToken = $this->plainSanctumToken($admin);
+
+        $this->get('/webhook/messaging/messenger/receive/'.$platformToken.'?'.http_build_query([
+            'hub_mode' => 'subscribe',
+            'hub_verify_token' => $platformToken,
+            'hub_challenge' => 'meta-challenge-99',
+        ]))
+            ->assertOk()
+            ->assertSee('meta-challenge-99');
+    }
+
+    public function test_platform_token_routes_messenger_by_page_id(): void
+    {
+        Event::fake();
+
+        $admin = User::factory()->create();
+        $platformToken = $this->plainSanctumToken($admin);
+
+        $company = Company::factory()->create();
+        ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Messenger->value,
+            'external_account_id' => 'page-shared-111',
+            'display_name' => 'Messenger',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'page-token',
+                'page_id' => 'page-shared-111',
+            ],
+            'webhook_token' => 'company-specific-token',
+        ]);
+
+        $payload = [
+            'object' => 'page',
+            'entry' => [
+                [
+                    'id' => 'page-shared-111',
+                    'messaging' => [
+                        [
+                            'sender' => ['id' => 'fb-user-shared'],
+                            'recipient' => ['id' => 'page-shared-111'],
+                            'timestamp' => 1710000000000,
+                            'message' => [
+                                'mid' => 'mid.SHARED_MSG_001',
+                                'text' => 'Routed by page id',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->postJson('/webhook/messaging/messenger/receive/'.$platformToken, $payload)
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $this->assertDatabaseHas('messages', [
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Messenger->value,
+            'value' => 'Routed by page id',
+            'fb_message_id' => 'mid.SHARED_MSG_001',
+        ]);
+    }
+
+    public function test_platform_token_routes_instagram_by_instagram_account_id(): void
+    {
+        Event::fake();
+
+        $admin = User::factory()->create();
+        $platformToken = $this->plainSanctumToken($admin);
+
+        $company = Company::factory()->create();
+        ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Instagram->value,
+            'external_account_id' => 'page-ig-333',
+            'display_name' => 'Instagram',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'page-token',
+                'page_id' => 'page-ig-333',
+                'instagram_account_id' => 'ig-biz-444',
+            ],
+            'webhook_token' => 'ig-company-token',
+        ]);
+
+        $payload = [
+            'object' => 'instagram',
+            'entry' => [
+                [
+                    'id' => 'ig-biz-444',
+                    'messaging' => [
+                        [
+                            'sender' => ['id' => 'ig-user-shared'],
+                            'recipient' => ['id' => 'ig-biz-444'],
+                            'timestamp' => 1710000000000,
+                            'message' => [
+                                'mid' => 'mid.SHARED_IG_001',
+                                'text' => 'Routed by IG id',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->postJson('/webhook/messaging/instagram/receive/'.$platformToken, $payload)
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $this->assertDatabaseHas('messages', [
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Instagram->value,
+            'value' => 'Routed by IG id',
+            'fb_message_id' => 'mid.SHARED_IG_001',
+        ]);
+    }
+
+    private function plainSanctumToken(User $user): string
+    {
+        $token = $user->createToken('platform-webhook')->plainTextToken;
+        $parts = explode('|', $token);
+
+        return $parts[1] ?? $token;
+    }
 }

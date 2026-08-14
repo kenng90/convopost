@@ -84,4 +84,43 @@ class WhatsappSetupGuidanceTest extends TestCase
         $response->assertSee(__('Phone number ID & Business Account ID (Step 3)'));
         $response->assertSee(__('Complete Steps 1–3 on the left in order, then refresh this status.'));
     }
+
+    public function test_admin_cloud_api_setup_shows_whatsapp_messenger_and_instagram_webhooks(): void
+    {
+        Role::firstOrCreate(['name' => 'admin']);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $response = $this->actingAs($admin)->get(route('whatsapp.setup'));
+
+        $response->assertOk();
+        $response->assertSee(__('Meta Cloud API Setup'));
+        $response->assertSee(__('Verify token (all products)'));
+        $response->assertSee('/webhook/wpbox/receive/');
+        $response->assertSee('/webhook/messaging/messenger/receive/');
+        $response->assertSee('/webhook/messaging/instagram/receive/');
+        $response->assertSee(__('Messenger → Settings → Webhooks'));
+        $response->assertSee(__('Instagram → Webhooks'));
+
+        $token = $admin->fresh()->getConfig('plain_token', '');
+        $this->assertNotSame('', $token);
+        $response->assertSee($token);
+        $response->assertSee('/webhook/messaging/messenger/receive/'.$token);
+        $response->assertSee('/webhook/messaging/instagram/receive/'.$token);
+    }
+
+    public function test_admin_instagram_and_messenger_setup_redirect_to_platform_webhooks(): void
+    {
+        Role::firstOrCreate(['name' => 'admin']);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('instagram.setup'))
+            ->assertRedirect(route('whatsapp.setup'));
+
+        $this->actingAs($admin)
+            ->get(route('messenger.setup'))
+            ->assertRedirect(route('whatsapp.setup'));
+    }
 }
