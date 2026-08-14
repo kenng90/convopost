@@ -648,6 +648,58 @@ class UnifiedMessagingTest extends TestCase
         ]);
     }
 
+    public function test_instagram_webhook_with_page_and_ig_ids_creates_inbox_message(): void
+    {
+        Event::fake();
+
+        $admin = User::factory()->create();
+        $platformToken = $this->plainSanctumToken($admin);
+
+        $company = Company::factory()->create();
+        ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Messenger->value,
+            'external_account_id' => '1072030281944265',
+            'display_name' => 'Messenger',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'page-token',
+                'page_id' => '1072030281944265',
+            ],
+        ]);
+
+        $payload = [
+            'object' => 'instagram',
+            'entry' => [
+                [
+                    'id' => '17841401947499512',
+                    'messaging' => [
+                        [
+                            'sender' => ['id' => 'ig-user-prod'],
+                            'recipient' => ['id' => '1072030281944265'],
+                            'timestamp' => 1710000000000,
+                            'message' => [
+                                'mid' => 'mid.PROD_IG_001',
+                                'text' => 'Prod IG hello',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $this->postJson('/webhook/messaging/instagram/receive/'.$platformToken, $payload)
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $this->assertDatabaseHas('messages', [
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Instagram->value,
+            'value' => 'Prod IG hello',
+            'fb_message_id' => 'mid.PROD_IG_001',
+        ]);
+    }
+
     private function plainSanctumToken(User $user): string
     {
         $token = $user->createToken('platform-webhook')->plainTextToken;
