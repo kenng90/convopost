@@ -106,7 +106,7 @@ class EmbeddedSignupCompletionService
 
         if ($session->isOmnichannel()) {
             $webhookToken = $this->resolveWebhookToken($user, $company);
-            $pages = $this->resolvePagesForOmnichannel($accessToken, $session);
+            $pages = $this->resolvePagesForOmnichannel($accessToken, $session, (string) $wabaId);
 
             if ($pages === []) {
                 Log::warning('Embedded signup: omnichannel completed without a Facebook Page on the token', [
@@ -168,34 +168,30 @@ class EmbeddedSignupCompletionService
     }
 
     /**
+     * Embedded Signup returns a customer business token, not a user token.
+     * GET /{page-id} therefore fails with pages_read_engagement. Discover Pages
+     * from /me/accounts and the business portfolio instead.
+     *
      * @return list<array{id: string, instagram_account_id: ?string, access_token: ?string}>
      */
-    private function resolvePagesForOmnichannel(string $accessToken, EmbeddedSignupSession $session): array
-    {
+    private function resolvePagesForOmnichannel(
+        string $accessToken,
+        EmbeddedSignupSession $session,
+        string $wabaId,
+    ): array {
         $pages = [];
 
-        $accounts = Http::withToken($accessToken)->get($this->graphUrl().'/me/accounts', [
-            'fields' => 'id,name,access_token,instagram_business_account{id,username}',
-        ]);
+        $this->mergePagesFromGraph($pages, $accessToken, '/me/accounts', 'me_accounts');
 
-        if ($accounts->successful()) {
-            foreach ($accounts->json('data') ?? [] as $account) {
-                $pageId = (string) ($account['id'] ?? '');
-                if ($pageId === '') {
-                    continue;
-                }
+        $debug = $this->debugToken($accessToken);
+        $userId = (string) data_get($debug, 'data.user_id', '');
+        if ($userId !== '') {
+            $this->mergePagesFromGraph($pages, $accessToken, '/'.$userId.'/accounts', 'user_accounts');
+        }
 
-                $pages[$pageId] = [
-                    'id' => $pageId,
-                    'instagram_account_id' => data_get($account, 'instagram_business_account.id'),
-                    'access_token' => $account['access_token'] ?? null,
-                ];
-            }
-        } else {
-            Log::warning('Embedded signup: /me/accounts failed', [
-                'status' => $accounts->status(),
-                'body' => $accounts->body(),
-            ]);
+        foreach ($this->candidateBusinessIds($session, $accessToken, $wabaId) as $businessId) {
+            $this->mergePagesFromGraph($pages, $accessToken, '/'.$businessId.'/owned_pages', 'owned_pages');
+            $this->mergePagesFromGraph($pages, $accessToken, '/'.$businessId.'/client_pages', 'client_pages');
         }
 
         if ($session->pageId) {
@@ -206,14 +202,117 @@ class EmbeddedSignupCompletionService
                     ?? $session->instagramAccountId,
                 'access_token' => $existing['access_token'] ?? null,
             ];
+        } elseif ($session->instagramAccountId) {
+            foreach ($pages as $pageId => $page) {
+                if (empty($page['instagram_account_id'])) {
+                    $pages[$pageId]['instagram_account_id'] = $session->instagramAccountId;
+                }
+            }
         }
 
-        // Prefer Pages that have a linked Instagram account when writing company config last.
+        Log::info('Embedded signup: resolved Facebook Pages', [
+            'count' => count($pages),
+            'session_page_id' => $session->pageId,
+            'token_type' => data_get($debug, 'data.type'),
+            'pages' => array_values(array_map(fn (array $page) => [
+                'id' => $page['id'],
+                'has_token' => ! empty($page['access_token']),
+                'instagram_account_id' => $page['instagram_account_id'],
+            ], $pages)),
+        ]);
+
         uasort($pages, function (array $left, array $right) {
             return (int) empty($left['instagram_account_id']) <=> (int) empty($right['instagram_account_id']);
         });
 
         return array_values($pages);
+    }
+
+    /**
+     * @param  array<string, array{id: string, instagram_account_id: mixed, access_token: mixed}>  $pages
+     */
+    private function mergePagesFromGraph(array &$pages, string $accessToken, string $path, string $source): void
+    {
+        $response = Http::withToken($accessToken)->get($this->graphUrl().$path, [
+            'fields' => 'id,name,access_token,instagram_business_account{id,username}',
+        ]);
+
+        if (! $response->successful()) {
+            Log::info('Embedded signup: page discovery failed', [
+                'source' => $source,
+                'path' => $path,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return;
+        }
+
+        $rows = $response->json('data') ?? [];
+        if (! is_array($rows)) {
+            $rows = [];
+        }
+
+        foreach ($rows as $account) {
+            if (! is_array($account)) {
+                continue;
+            }
+
+            $pageId = (string) ($account['id'] ?? '');
+            if ($pageId === '') {
+                continue;
+            }
+
+            $token = $account['access_token'] ?? null;
+            $existing = $pages[$pageId] ?? null;
+
+            $pages[$pageId] = [
+                'id' => $pageId,
+                'instagram_account_id' => data_get($account, 'instagram_business_account.id')
+                    ?: ($existing['instagram_account_id'] ?? null),
+                'access_token' => (is_string($token) && $token !== '')
+                    ? $token
+                    : ($existing['access_token'] ?? null),
+            ];
+        }
+
+        Log::info('Embedded signup: page discovery', [
+            'source' => $source,
+            'count' => count($rows),
+            'page_ids' => array_values(array_filter(array_map(
+                fn ($row) => is_array($row) ? ($row['id'] ?? null) : null,
+                $rows,
+            ))),
+        ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function candidateBusinessIds(EmbeddedSignupSession $session, string $accessToken, string $wabaId): array
+    {
+        $ids = [];
+
+        if (is_string($session->businessId) && $session->businessId !== '') {
+            $ids[] = $session->businessId;
+        }
+
+        if ($wabaId !== '') {
+            $waba = Http::withToken($accessToken)->get($this->graphUrl().'/'.$wabaId, [
+                'fields' => 'owner_business_info,on_behalf_of_business_info',
+            ]);
+
+            if ($waba->successful()) {
+                foreach (['owner_business_info.id', 'on_behalf_of_business_info.id'] as $path) {
+                    $businessId = (string) data_get($waba->json(), $path, '');
+                    if ($businessId !== '') {
+                        $ids[] = $businessId;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($ids));
     }
 
     /**
@@ -238,36 +337,12 @@ class EmbeddedSignupCompletionService
 
         $pageToken = is_string($pageAccessToken) && $pageAccessToken !== '' ? $pageAccessToken : '';
 
-        if ($pageToken === '' || $instagramAccountId === null || $instagramAccountId === '') {
-            $pageNode = Http::withToken($accessToken)->get($this->graphUrl().'/'.$pageId, [
-                'fields' => 'id,name,access_token,instagram_business_account{id,username}',
-            ]);
-
-            if ($pageNode->successful()) {
-                $exchanged = (string) data_get($pageNode->json(), 'access_token', '');
-                if ($exchanged !== '') {
-                    $pageToken = $exchanged;
-                }
-
-                $linkedIg = (string) data_get($pageNode->json(), 'instagram_business_account.id', '');
-                if ($linkedIg !== '' && ($instagramAccountId === null || $instagramAccountId === '')) {
-                    $instagramAccountId = $linkedIg;
-                }
-            } else {
-                Log::warning('Embedded signup: could not load Page node for token exchange', [
-                    'page_id' => $pageId,
-                    'body' => $pageNode->body(),
-                ]);
-            }
-        }
-
         if ($pageToken === '') {
-            Log::warning('Embedded signup: skipping Page messaging provision without a Page access token', [
+            Log::warning('Embedded signup: no Page access token from Graph; using Embedded Signup token to subscribe Page webhooks', [
                 'page_id' => $pageId,
                 'company_id' => $company->id,
             ]);
-
-            return $connected;
+            $pageToken = $accessToken;
         }
 
         $this->subscribePageWebhooks($pageToken, $pageId);

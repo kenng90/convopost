@@ -39,14 +39,16 @@ class EmbeddedSignupV4Test extends TestCase
             ], 200),
             'graph.facebook.com/*/register' => Http::response(['success' => true], 200),
             'graph.facebook.com/*/subscribed_apps' => Http::response(['success' => true], 200),
-            'graph.facebook.com/*/page-99*' => Http::response([
-                'id' => 'page-99',
-                'name' => 'Test Page',
-                'access_token' => 'page-token',
-                'instagram_business_account' => [
-                    'id' => 'ig-88',
-                    'username' => 'testig',
-                ],
+            'graph.facebook.com/*/me/accounts*' => Http::response([
+                'data' => [[
+                    'id' => 'page-99',
+                    'name' => 'Test Page',
+                    'access_token' => 'page-token',
+                    'instagram_business_account' => [
+                        'id' => 'ig-88',
+                        'username' => 'testig',
+                    ],
+                ]],
             ], 200),
         ]);
 
@@ -203,7 +205,7 @@ class EmbeddedSignupV4Test extends TestCase
         });
     }
 
-    public function test_omnichannel_skips_page_provision_without_page_token(): void
+    public function test_omnichannel_falls_back_to_signup_token_when_page_token_missing(): void
     {
         Http::fake([
             'graph.facebook.com/*/oauth/access_token*' => Http::response(['access_token' => 'biz-token'], 200),
@@ -213,9 +215,7 @@ class EmbeddedSignupV4Test extends TestCase
             'graph.facebook.com/*/register' => Http::response(['success' => true], 200),
             'graph.facebook.com/*/subscribed_apps' => Http::response(['success' => true], 200),
             'graph.facebook.com/*/me/accounts*' => Http::response(['data' => []], 200),
-            'graph.facebook.com/*/100437969660636*' => Http::response([
-                'error' => ['message' => 'missing pages_read_engagement', 'code' => 100],
-            ], 400),
+            'graph.facebook.com/*/debug_token*' => Http::response(['data' => ['type' => 'SYSTEM']], 200),
         ]);
 
         $owner = User::factory()->create();
@@ -228,19 +228,67 @@ class EmbeddedSignupV4Test extends TestCase
             wabaId: 'waba-1',
             phoneNumberId: 'phone-1',
             pageId: '100437969660636',
-            instagramAccountId: null,
+            instagramAccountId: '17841458066073258',
         );
 
         $result = app(EmbeddedSignupCompletionService::class)->complete($owner, 'auth-code', $session);
 
         $this->assertSame('success', $result['status']);
         $this->assertTrue($result['connected']['whatsapp']);
-        $this->assertFalse($result['connected']['instagram'] ?? false);
+        $this->assertTrue($result['connected']['instagram']);
+        $this->assertSame('biz-token', $company->fresh()->getConfig('instagram_page_access_token'));
 
-        $this->assertSame(0, ChannelConnection::withoutGlobalScopes()
-            ->where('company_id', $company->id)
-            ->where('channel', MessagingChannelType::Instagram->value)
-            ->count());
+        $this->assertDatabaseHas('channel_connections', [
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Instagram->value,
+            'external_account_id' => '100437969660636',
+        ]);
+    }
+
+    public function test_omnichannel_discovers_page_token_from_business_owned_pages(): void
+    {
+        Http::fake([
+            'graph.facebook.com/*/oauth/access_token*' => Http::response(['access_token' => 'biz-token'], 200),
+            'graph.facebook.com/*/phone_numbers*' => Http::response([
+                'data' => [['id' => 'phone-1', 'display_phone_number' => '+15551234567']],
+            ], 200),
+            'graph.facebook.com/*/register' => Http::response(['success' => true], 200),
+            'graph.facebook.com/*/me/accounts*' => Http::response(['data' => []], 200),
+            'graph.facebook.com/*/debug_token*' => Http::response(['data' => ['type' => 'SYSTEM']], 200),
+            'graph.facebook.com/*/930670288249125/owned_pages*' => Http::response([
+                'data' => [[
+                    'id' => '1072030281944265',
+                    'name' => 'Live Page',
+                    'access_token' => 'owned-page-token',
+                    'instagram_business_account' => [
+                        'id' => '17841401947499512',
+                    ],
+                ]],
+            ], 200),
+            'graph.facebook.com/*/subscribed_apps' => Http::response(['success' => true], 200),
+        ]);
+
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+        $owner->update(['company_id' => $company->id]);
+
+        $session = new EmbeddedSignupSession(
+            flow: 'omnichannel',
+            wabaId: 'waba-1',
+            phoneNumberId: 'phone-1',
+            pageId: null,
+            instagramAccountId: null,
+            businessId: '930670288249125',
+        );
+
+        $result = app(EmbeddedSignupCompletionService::class)->complete($owner, 'auth-code', $session);
+
+        $this->assertSame('success', $result['status']);
+        $this->assertTrue($result['connected']['instagram']);
+        $this->assertSame('owned-page-token', $company->fresh()->getConfig('instagram_page_access_token'));
+        $this->assertSame('1072030281944265', $company->fresh()->getConfig('instagram_page_id'));
+        $this->assertSame('17841401947499512', $company->fresh()->getConfig('instagram_account_id'));
     }
 
     public function test_whatsapp_only_completion_skips_meta_channel_provisioning(): void
