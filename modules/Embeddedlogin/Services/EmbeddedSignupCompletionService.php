@@ -6,6 +6,7 @@ use App\Enums\MessagingChannelType;
 use App\Models\Company;
 use App\Models\User;
 use App\Services\Messaging\ChannelConnectionService;
+use App\Services\Messaging\MetaPageLinkService;
 use App\Services\WhatsApp\WebhookCompanyResolver;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -121,6 +122,7 @@ class EmbeddedSignupCompletionService
                     $page['instagram_account_id'],
                     $accessToken,
                     $webhookToken,
+                    $page['access_token'] ?? null,
                 ));
             }
         }
@@ -166,7 +168,7 @@ class EmbeddedSignupCompletionService
     }
 
     /**
-     * @return list<array{id: string, instagram_account_id: ?string}>
+     * @return list<array{id: string, instagram_account_id: ?string, access_token: ?string}>
      */
     private function resolvePagesForOmnichannel(string $accessToken, EmbeddedSignupSession $session): array
     {
@@ -186,6 +188,7 @@ class EmbeddedSignupCompletionService
                 $pages[$pageId] = [
                     'id' => $pageId,
                     'instagram_account_id' => data_get($account, 'instagram_business_account.id'),
+                    'access_token' => $account['access_token'] ?? null,
                 ];
             }
         } else {
@@ -196,10 +199,12 @@ class EmbeddedSignupCompletionService
         }
 
         if ($session->pageId) {
+            $existing = $pages[$session->pageId] ?? null;
             $pages[$session->pageId] = [
                 'id' => $session->pageId,
-                'instagram_account_id' => $pages[$session->pageId]['instagram_account_id']
+                'instagram_account_id' => $existing['instagram_account_id']
                     ?? $session->instagramAccountId,
+                'access_token' => $existing['access_token'] ?? null,
             ];
         }
 
@@ -220,6 +225,7 @@ class EmbeddedSignupCompletionService
         ?string $instagramAccountId,
         string $accessToken,
         string $webhookToken,
+        ?string $pageAccessToken = null,
     ): array {
         $connected = [
             'instagram' => false,
@@ -230,27 +236,38 @@ class EmbeddedSignupCompletionService
             return $connected;
         }
 
-        $pageToken = $accessToken;
+        $pageToken = is_string($pageAccessToken) && $pageAccessToken !== '' ? $pageAccessToken : '';
 
-        $pageNode = Http::withToken($accessToken)->get($this->graphUrl().'/'.$pageId, [
-            'fields' => 'id,name,access_token,instagram_business_account{id,username}',
-        ]);
-
-        if ($pageNode->successful()) {
-            $exchanged = (string) data_get($pageNode->json(), 'access_token', '');
-            if ($exchanged !== '') {
-                $pageToken = $exchanged;
-            }
-
-            $linkedIg = (string) data_get($pageNode->json(), 'instagram_business_account.id', '');
-            if ($linkedIg !== '' && ($instagramAccountId === null || $instagramAccountId === '')) {
-                $instagramAccountId = $linkedIg;
-            }
-        } else {
-            Log::warning('Embedded signup: could not load Page node for token exchange', [
-                'page_id' => $pageId,
-                'body' => $pageNode->body(),
+        if ($pageToken === '' || $instagramAccountId === null || $instagramAccountId === '') {
+            $pageNode = Http::withToken($accessToken)->get($this->graphUrl().'/'.$pageId, [
+                'fields' => 'id,name,access_token,instagram_business_account{id,username}',
             ]);
+
+            if ($pageNode->successful()) {
+                $exchanged = (string) data_get($pageNode->json(), 'access_token', '');
+                if ($exchanged !== '') {
+                    $pageToken = $exchanged;
+                }
+
+                $linkedIg = (string) data_get($pageNode->json(), 'instagram_business_account.id', '');
+                if ($linkedIg !== '' && ($instagramAccountId === null || $instagramAccountId === '')) {
+                    $instagramAccountId = $linkedIg;
+                }
+            } else {
+                Log::warning('Embedded signup: could not load Page node for token exchange', [
+                    'page_id' => $pageId,
+                    'body' => $pageNode->body(),
+                ]);
+            }
+        }
+
+        if ($pageToken === '') {
+            Log::warning('Embedded signup: skipping Page messaging provision without a Page access token', [
+                'page_id' => $pageId,
+                'company_id' => $company->id,
+            ]);
+
+            return $connected;
         }
 
         $this->subscribePageWebhooks($pageToken, $pageId);
@@ -358,12 +375,7 @@ class EmbeddedSignupCompletionService
     private function subscribePageWebhooks(string $accessToken, string $pageId): void
     {
         $response = Http::withToken($accessToken)->post($this->graphUrl().'/'.$pageId.'/subscribed_apps', [
-            'subscribed_fields' => [
-                'messages',
-                'messaging_postbacks',
-                'standby',
-                'messaging_handover',
-            ],
+            'subscribed_fields' => MetaPageLinkService::PAGE_SUBSCRIBED_FIELDS,
         ]);
 
         if (! $response->successful()) {
