@@ -49,7 +49,6 @@ abstract class AbstractMetaMessagingChannel implements MessagingChannel
     public function send(ChannelConnection $connection, Conversation $conversation, Message $message, MessageContent $content): SendResult
     {
         $actorId = $this->resolveGraphActorId($connection);
-        $token = $connection->accessToken();
         $recipientId = trim((string) $conversation->external_participant_id);
 
         if ($actorId === '') {
@@ -73,6 +72,12 @@ abstract class AbstractMetaMessagingChannel implements MessagingChannel
                 null,
                 __('Invalid recipient id (looks like your Page/Instagram business id). Ask the customer to message again so we can capture their user id.'),
             );
+        }
+
+        $token = $this->resolvePageAccessToken($connection);
+
+        if ($token === '') {
+            return new SendResult(false, null, __('Page access token is missing. Reconnect Messenger/Instagram with a Facebook Page token.'));
         }
 
         $payload = [
@@ -108,58 +113,128 @@ abstract class AbstractMetaMessagingChannel implements MessagingChannel
             return new SendResult(false, null, __('Unsupported message type for this channel.'));
         }
 
-        $url = "https://graph.facebook.com/{$this->graphVersion}/{$actorId}/messages";
+        $graph = "https://graph.facebook.com/{$this->graphVersion}";
+        $endpoints = array_values(array_unique([
+            $graph.'/me/messages',
+            $graph.'/'.$actorId.'/messages',
+        ]));
 
-        $response = Http::withToken($token)->asJson()->post($url, $payload);
+        $lastResponse = null;
 
-        // Some Page tokens behave more reliably against /me/messages than /{page-id}/messages.
-        if (
-            ! $response->successful()
-            && $this->channel() === MessagingChannelType::Instagram
-            && $actorId !== 'me'
-            && (int) data_get($response->json(), 'error.code') === 100
-        ) {
-            $fallback = Http::withToken($token)->asJson()->post(
-                "https://graph.facebook.com/{$this->graphVersion}/me/messages",
-                $payload,
-            );
+        foreach ($endpoints as $url) {
+            $response = Http::withToken($token)->asJson()->post($url, $payload);
 
-            if ($fallback->successful()) {
-                return new SendResult(true, (string) data_get($fallback->json(), 'message_id'));
+            if ($response->successful()) {
+                return new SendResult(true, (string) data_get($response->json(), 'message_id'));
             }
 
-            \Illuminate\Support\Facades\Log::warning('messaging.outbound.failed', [
-                'channel' => $this->channel()->value,
-                'actor_id' => 'me',
-                'recipient_id' => $recipientId,
-                'status' => $fallback->status(),
-                'error' => data_get($fallback->json(), 'error.message'),
-                'error_code' => data_get($fallback->json(), 'error.code'),
-                'error_subcode' => data_get($fallback->json(), 'error.error_subcode'),
-                'fallback' => true,
-            ]);
-
-            $response = $fallback;
-        }
-
-        if (! $response->successful()) {
-            $error = data_get($response->json(), 'error.message', $response->body());
-            $subcode = data_get($response->json(), 'error.error_subcode');
+            $lastResponse = $response;
 
             \Illuminate\Support\Facades\Log::warning('messaging.outbound.failed', [
                 'channel' => $this->channel()->value,
-                'actor_id' => $actorId,
+                'actor_id' => str_contains($url, '/me/messages') ? 'me' : $actorId,
                 'recipient_id' => $recipientId,
                 'status' => $response->status(),
-                'error' => $error,
+                'error' => data_get($response->json(), 'error.message'),
                 'error_code' => data_get($response->json(), 'error.code'),
-                'error_subcode' => $subcode,
+                'error_subcode' => data_get($response->json(), 'error.error_subcode'),
+                'fbtrace_id' => data_get($response->json(), 'error.fbtrace_id'),
+                'endpoint' => $url,
             ]);
-
-            return new SendResult(false, null, $this->humanizeGraphError((string) $error, $subcode));
         }
 
-        return new SendResult(true, (string) data_get($response->json(), 'message_id'));
+        $error = data_get($lastResponse?->json(), 'error.message', $lastResponse?->body() ?? '');
+        $subcode = data_get($lastResponse?->json(), 'error.error_subcode');
+        $code = data_get($lastResponse?->json(), 'error.code');
+
+        return new SendResult(false, null, $this->humanizeGraphError((string) $error, $subcode, $code));
+    }
+
+    /**
+     * Messenger/Instagram Send API requires a Page access token. Embedded Signup often
+     * stores a WhatsApp business token instead; exchange it via /me/accounts when possible.
+     */
+    protected function resolvePageAccessToken(ChannelConnection $connection): string
+    {
+        $token = $connection->accessToken();
+        $pageId = (string) $connection->credential('page_id', $connection->external_account_id);
+
+        if ($token === '' || $pageId === '') {
+            return $token;
+        }
+
+        if ($this->isMarkedAsPageToken($connection)) {
+            return $token;
+        }
+
+        $graph = "https://graph.facebook.com/{$this->graphVersion}";
+        $me = Http::withToken($token)->get($graph.'/me', ['fields' => 'id']);
+        $meId = (string) data_get($me->json(), 'id', '');
+
+        if ($me->successful() && $meId === $pageId) {
+            $this->persistPageToken($connection, $token);
+
+            return $token;
+        }
+
+        \Illuminate\Support\Facades\Log::info('messaging.outbound.token_not_page', [
+            'channel' => $this->channel()->value,
+            'page_id' => $pageId,
+            'me_id' => $meId !== '' ? $meId : null,
+            'status' => $me->status(),
+        ]);
+
+        $accounts = Http::withToken($token)->get($graph.'/me/accounts', [
+            'fields' => 'id,access_token',
+        ]);
+
+        foreach ($accounts->json('data') ?? [] as $account) {
+            if (! is_array($account)) {
+                continue;
+            }
+
+            if ((string) ($account['id'] ?? '') !== $pageId) {
+                continue;
+            }
+
+            $pageToken = (string) ($account['access_token'] ?? '');
+            if ($pageToken === '') {
+                continue;
+            }
+
+            $this->persistPageToken($connection, $pageToken);
+
+            \Illuminate\Support\Facades\Log::info('messaging.outbound.exchanged_page_token', [
+                'channel' => $this->channel()->value,
+                'page_id' => $pageId,
+            ]);
+
+            return $pageToken;
+        }
+
+        return $token;
+    }
+
+    protected function isMarkedAsPageToken(ChannelConnection $connection): bool
+    {
+        $flag = $connection->credential('token_is_page', false);
+
+        return $flag === true || $flag === 1 || $flag === '1';
+    }
+
+    protected function persistPageToken(ChannelConnection $connection, string $pageToken): void
+    {
+        $credentials = $connection->credentials ?? [];
+        $credentials['access_token'] = $pageToken;
+        $credentials['token_is_page'] = true;
+        $connection->credentials = $credentials;
+        $connection->update(['credentials' => $credentials]);
+
+        $company = $connection->company;
+        if ($company) {
+            $company->setConfig('instagram_page_access_token', $pageToken);
+            $company->setConfig('messenger_page_access_token', $pageToken);
+        }
     }
 
     /**
@@ -174,8 +249,12 @@ abstract class AbstractMetaMessagingChannel implements MessagingChannel
         return $pageId !== '' ? $pageId : 'me';
     }
 
-    protected function humanizeGraphError(string $error, mixed $subcode = null): string
+    protected function humanizeGraphError(string $error, mixed $subcode = null, mixed $code = null): string
     {
+        if ((int) $code === 1 || str_contains($error, 'An unknown error has occurred')) {
+            return __('Meta rejected the send (error 1). The stored token is usually a WhatsApp Embedded Signup token, not a Facebook Page access token, or pages_messaging is not approved. In Graph API Explorer choose User or Page → your Page, copy that Page token, paste it in Messenger/Instagram setup, then retry.');
+        }
+
         if ((int) $subcode === 2018001 || str_contains($error, 'No matching user found')) {
             return __('(#100) No matching user found. Usually the Facebook Page is not linked to the Instagram account that received the DM, or the Page token is missing instagram_manage_messages. Re-save Instagram setup after linking Page↔IG and regenerating the token.');
         }

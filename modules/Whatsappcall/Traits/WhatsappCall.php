@@ -138,6 +138,14 @@ trait WhatsappCall
             $phoneId = $this->getPhoneID($company);
             $accessToken = $this->getToken($company);
 
+            if ($userWaId === '') {
+                return [
+                    'ok' => false,
+                    'status' => 400,
+                    'error_message' => 'Missing WhatsApp user id',
+                ];
+            }
+
             if (! $accessToken || ! $phoneId) {
                 Log::warning('getCallPermissionStatus: missing token or phone id', [
                     'company_id' => $company->id,
