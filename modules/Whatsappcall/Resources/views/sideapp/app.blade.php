@@ -1,6 +1,6 @@
 
 
-<div class="contacInfo border-radius-lg border p-4 mb-4">
+<div class="contacInfo border-radius-lg border p-4 mb-4" v-if="!activeChat.channel || activeChat.channel === 'whatsapp'">
     <div class="">
         <label class="form-label">{{ __('Recipient Phone Number') }}</label>
         <div class="form-control-plaintext"><strong>@{{ activeChat.phone }}</strong></div>

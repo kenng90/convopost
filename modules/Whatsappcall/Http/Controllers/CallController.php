@@ -2,6 +2,7 @@
 
 namespace Modules\Whatsappcall\Http\Controllers;
 
+use App\Enums\MessagingChannelType;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +27,15 @@ class CallController extends Controller
         $contact = Contact::where('company_id', $company->id)->findOrFail($validated['contact_id']);
 
         // Remove + prefix if present for WhatsApp API
-        $userWaId = ltrim($contact->phone, '+');
+        $userWaId = ltrim((string) $contact->phone, '+');
+
+        if ($userWaId === '' || $this->contactIsNotWhatsappCallable($contact)) {
+            return response()->json([
+                'ok' => false,
+                'status' => 400,
+                'error_message' => 'Not a WhatsApp contact',
+            ]);
+        }
 
         $result = $this->getCallPermissionStatus($userWaId, $company);
 
@@ -298,5 +307,23 @@ class CallController extends Controller
         $call->update(['status' => 'terminate', 'ended_at' => now()]);
 
         return response()->json(['ok' => true, 'success' => true]);
+    }
+
+    /**
+     * WhatsApp Calling only applies to WhatsApp contacts. Messenger/Instagram
+     * identities must not hit Graph call_permissions (empty wa_id / PSIDs).
+     */
+    protected function contactIsNotWhatsappCallable(Contact $contact): bool
+    {
+        $channels = $contact->channelIdentities()
+            ->withoutGlobalScopes()
+            ->pluck('channel')
+            ->map(fn ($channel) => $channel instanceof \BackedEnum ? $channel->value : (string) $channel);
+
+        if ($channels->isEmpty()) {
+            return false;
+        }
+
+        return ! $channels->contains(MessagingChannelType::Whatsapp->value);
     }
 }

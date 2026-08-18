@@ -264,6 +264,7 @@ class UnifiedMessagingTest extends TestCase
                 'access_token' => 'page-token',
                 'page_id' => 'page-999',
                 'instagram_account_id' => 'ig-biz-777',
+                'token_is_page' => true,
             ],
         ]);
 
@@ -297,11 +298,76 @@ class UnifiedMessagingTest extends TestCase
 
         $this->assertSame('mid.sent.001', $message->fb_message_id);
         Http::assertSent(function ($request) {
-            return $request->url() === 'https://graph.facebook.com/v19.0/page-999/messages'
+            return $request->url() === 'https://graph.facebook.com/v19.0/me/messages'
                 && data_get($request->data(), 'recipient.id') === 'ig-user-555'
                 && data_get($request->data(), 'message.text') === 'Thanks for reaching out'
                 && ! array_key_exists('messaging_type', $request->data());
         });
+    }
+
+    public function test_instagram_outbound_exchanges_user_token_for_page_token(): void
+    {
+        config(['settings.enable_credits' => false]);
+
+        Http::fake([
+            'graph.facebook.com/*/me/accounts*' => Http::response([
+                'data' => [[
+                    'id' => 'page-999',
+                    'access_token' => 'real-page-token',
+                ]],
+            ], 200),
+            'graph.facebook.com/*/me/messages' => Http::response(['message_id' => 'mid.sent.002'], 200),
+            'graph.facebook.com/*/me*' => Http::response(['id' => 'user-not-page'], 200),
+        ]);
+
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+
+        $connection = ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Instagram->value,
+            'external_account_id' => 'page-999',
+            'display_name' => 'Instagram',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'user-or-waba-token',
+                'page_id' => 'page-999',
+            ],
+        ]);
+
+        $contact = Contact::withoutGlobalScope(CompanyScope::class)->create([
+            'name' => 'IG User',
+            'phone' => '',
+            'company_id' => $company->id,
+            'has_chat' => true,
+        ]);
+
+        Conversation::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'contact_id' => $contact->id,
+            'channel_connection_id' => $connection->id,
+            'channel' => MessagingChannelType::Instagram->value,
+            'external_participant_id' => 'ig-user-555',
+            'last_client_reply_at' => now()->subHour(),
+        ]);
+
+        \App\Models\Messaging\ChannelIdentity::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'contact_id' => $contact->id,
+            'channel' => MessagingChannelType::Instagram->value,
+            'external_id' => 'ig-user-555',
+        ]);
+
+        $this->actingAs($owner);
+        session(['company_id' => $company->id]);
+
+        $message = $contact->sendMessage('Exchanged token', false);
+
+        $this->assertSame('mid.sent.002', $message->fb_message_id);
+        $fresh = $connection->fresh();
+        $this->assertSame('real-page-token', $fresh->accessToken());
+        $this->assertTrue((bool) $fresh->credential('token_is_page'));
     }
 
     public function test_instagram_outbound_rejects_business_account_as_recipient(): void

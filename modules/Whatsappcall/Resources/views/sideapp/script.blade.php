@@ -641,8 +641,23 @@
 
 
       
+      function isWhatsappChat(chat){
+        return !chat || !chat.channel || chat.channel === 'whatsapp';
+      }
+
+      function clearCallPermissionUi(){
+        permissionStatus = null;
+        chatList.updateProperty('permissionStatus', null);
+        chatList.updateProperty('showRequestButton', false);
+        chatList.updateProperty('showCallButton', false);
+      }
+
       async function checkPermissionStatus(){
         if (!activeChatID) return;
+        if (!isWhatsappChat(chatList.activeChat)) {
+          clearCallPermissionUi();
+          return;
+        }
         
         try {
           isLoading = true;
@@ -852,10 +867,7 @@
           } else {
             // Reset state when no active chat
             activeChatID = null;
-            permissionStatus = null;
-            chatList.updateProperty('permissionStatus', null);
-            chatList.updateProperty('showRequestButton', false);
-            chatList.updateProperty('showCallButton', false);
+            clearCallPermissionUi();
           }
         }
       });
