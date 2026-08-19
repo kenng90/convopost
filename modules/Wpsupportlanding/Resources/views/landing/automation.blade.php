@@ -6,8 +6,8 @@
 @php
   $siteName = config('settings.site_name', config('app.name'));
   $practiceName = $siteName.' Automation';
-  $metaTitle = $practiceName.' — Process automation that runs the work';
-  $metaDescription = 'We audit, automate, and integrate business processes so your team saves time, cuts errors, and scales without drowning in manual work. Separate from '.$siteName.' WhatsApp SaaS.';
+  $metaTitle = $practiceName.' — AI workers that run the work';
+  $metaDescription = 'We audit processes, automate the handoffs that pay, and stand up AI workers that answer from your data, take calls, and trigger the next step. Cloud by default; on your network when required. Separate from '.$siteName.' WhatsApp SaaS.';
   $supportEmail = config('settings.contact_email', 'support@convoconnect.tech');
 @endphp
 <title>{{ $metaTitle }}</title>
@@ -162,7 +162,6 @@ tailwind.config = {
       <a href="#what-we-do" class="text-sm text-slate-600 hover:text-ink transition-colors">What we do</a>
       <a href="#how-it-works" class="text-sm text-slate-600 hover:text-ink transition-colors">How it works</a>
       <a href="#catalog" class="text-sm text-slate-600 hover:text-ink transition-colors">Catalog</a>
-      <a href="#integrations" class="text-sm text-slate-600 hover:text-ink transition-colors">Integrations</a>
       <a href="#packages" class="text-sm text-slate-600 hover:text-ink transition-colors">Packages</a>
       <a href="{{ route('landing') }}" class="text-sm text-slate-600 hover:text-ink transition-colors">WhatsApp SaaS</a>
     </div>
@@ -181,7 +180,6 @@ tailwind.config = {
     <a href="#what-we-do" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">What we do</a>
     <a href="#how-it-works" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">How it works</a>
     <a href="#catalog" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">Catalog</a>
-    <a href="#integrations" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">Integrations</a>
     <a href="#packages" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">Packages</a>
     <a href="{{ route('landing') }}" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">WhatsApp SaaS</a>
     <a href="mailto:{{ $supportEmail }}?subject=Automation%20consultation" class="block mt-3 text-center py-2.5 text-sm font-semibold text-white rounded-lg" style="background:#0d9488;">Book a consult</a>
@@ -202,7 +200,7 @@ tailwind.config = {
           <span style="color:#2dd4bf;">runs the work.</span>
         </h1>
         <p class="rise rise-delay-2 text-lg text-slate-300 max-w-xl mb-8 leading-relaxed">
-          Growing businesses drown in handoffs between chat, CRM, spreadsheets, and approvals. We find the waste, build the systems, and keep them running — so your team ships more and chases less.
+          Growing businesses drown in handoffs between chat, the phone, CRM, and spreadsheets. We find the waste, stand up AI workers on your data, and keep them running — so your team ships more and chases less.
         </p>
         <div class="rise rise-delay-3 flex flex-wrap gap-3">
           <a href="mailto:{{ $supportEmail }}?subject=Automation%20consultation" class="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold text-ink rounded-xl transition-transform hover:scale-[1.02]" style="background:#2dd4bf;">
@@ -213,7 +211,7 @@ tailwind.config = {
             See how it works
           </a>
         </div>
-        <p class="mt-6 text-sm text-slate-400">Separate from {{ $siteName }} WhatsApp SaaS — built for any automatable process.</p>
+        <p class="mt-6 text-sm text-slate-400">Separate from {{ $siteName }} WhatsApp SaaS — workers, workflows, and on-network when you need it.</p>
       </div>
       <div class="rise rise-delay-2">
         @include('wpsupportlanding::landing.partials.infographics.services.hero_system')
@@ -224,14 +222,14 @@ tailwind.config = {
 
 <!-- TRUST / TOOLS STRIP -->
 <section class="border-y border-slate-200 bg-white py-8 overflow-hidden">
-  <p class="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-5">Built on the stacks teams already trust</p>
+  <p class="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-5">Workers that sit on the channels and data you already have</p>
   <div class="relative">
     <div class="marquee-track gap-10 px-6 text-slate-500 font-display font-700 text-sm sm:text-base">
-      @foreach(['Zapier','Make','n8n','HubSpot','Airtable','Notion','Google Apps Script','OpenAI','Microsoft Power Automate','Salesforce','Slack','Stripe','Xero','QuickBooks','WhatsApp Business','Calendly'] as $tool)
+      @foreach(['WhatsApp','Voice calls','Your knowledge base','Human handoff','CRM','Payments','Bookings','Tickets','Cloud LLM','On-network option','Ollama','n8n'] as $tool)
         <span class="whitespace-nowrap">{{ $tool }}</span>
         <span class="text-signal/40">·</span>
       @endforeach
-      @foreach(['Zapier','Make','n8n','HubSpot','Airtable','Notion','Google Apps Script','OpenAI','Microsoft Power Automate','Salesforce','Slack','Stripe','Xero','QuickBooks','WhatsApp Business','Calendly'] as $tool)
+      @foreach(['WhatsApp','Voice calls','Your knowledge base','Human handoff','CRM','Payments','Bookings','Tickets','Cloud LLM','On-network option','Ollama','n8n'] as $tool)
         <span class="whitespace-nowrap" aria-hidden="true">{{ $tool }}</span>
         <span class="text-signal/40" aria-hidden="true">·</span>
       @endforeach
@@ -245,15 +243,15 @@ tailwind.config = {
     <div class="mb-12 max-w-2xl">
       <p class="section-label mb-3">What we do</p>
       <h2 class="font-display section-title font-800 mb-4">Introducing end-to-end<br/><span class="grad-text">process automation.</span></h2>
-      <p class="text-slate-600">Traditional freelancers install a few Zaps. We audit the business, automate the handoffs, integrate the stack, and stay for optimization.</p>
+      <p class="text-slate-600">Traditional freelancers install a few Zaps. We audit the business, automate the handoffs that pay, stand up workers that answer and act, and keep inference on your network when you need it.</p>
     </div>
 
     <div class="flex flex-wrap gap-2 mb-8">
       @foreach([
         'audit' => 'Audit',
         'automate' => 'Automate',
-        'integrate' => 'Integrate',
-        'ai' => 'AI & support',
+        'workers' => 'AI workers',
+        'network' => 'On-network',
       ] as $key => $label)
         <button type="button"
           @click="workTab = '{{ $key }}'"
@@ -266,7 +264,7 @@ tailwind.config = {
 
     <div class="grid lg:grid-cols-2 gap-8 items-start">
       <div>
-        <div x-show="workTab === 'audit'" x-cloak>
+        <div x-show="workTab === 'audit'">
           <h3 class="font-display text-3xl font-800 text-ink mb-3">Business process audit</h3>
           <p class="text-slate-600 mb-6">Everything required to see where time and money leak — before you build anything.</p>
           <ul class="space-y-3 text-slate-700">
@@ -278,7 +276,7 @@ tailwind.config = {
         </div>
         <div x-show="workTab === 'automate'" x-cloak>
           <h3 class="font-display text-3xl font-800 text-ink mb-3">Workflow automation</h3>
-          <p class="text-slate-600 mb-6">Automate the repetitive work: approvals, reminders, documents, and cross-tool updates.</p>
+          <p class="text-slate-600 mb-6">Wire the 2–3 handoffs that pay for the engagement: approvals, reminders, documents, and CRM updates.</p>
           <ul class="space-y-3 text-slate-700">
             <li class="flex gap-2"><span class="text-signal font-bold">·</span> Customer &amp; employee onboarding</li>
             <li class="flex gap-2"><span class="text-signal font-bold">·</span> Invoice &amp; expense approvals</li>
@@ -286,24 +284,24 @@ tailwind.config = {
             <li class="flex gap-2"><span class="text-signal font-bold">·</span> Proposal, quote &amp; contract generation</li>
           </ul>
         </div>
-        <div x-show="workTab === 'integrate'" x-cloak>
-          <h3 class="font-display text-3xl font-800 text-ink mb-3">CRM &amp; tool integrations</h3>
-          <p class="text-slate-600 mb-6">Connect lead capture, sales follow-up, finance, and ops without ripping out what works.</p>
+        <div x-show="workTab === 'workers'" x-cloak>
+          <h3 class="font-display text-3xl font-800 text-ink mb-3">AI workers that use your data</h3>
+          <p class="text-slate-600 mb-6">They answer FAQs, take calls, draft replies, and trigger the next step — payment, booking, ticket, or a human.</p>
           <ul class="space-y-3 text-slate-700">
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Lead capture &amp; assignment</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Follow-up sequences</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Record sync across systems</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Pipeline &amp; sales reminders</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Retrieve from your SOPs, catalogs, and chats — not a generic model</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Take calls and log a brief on the contact</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Trigger payments, bookings, and tickets</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Hand off to a person when asked or when unsure</li>
           </ul>
         </div>
-        <div x-show="workTab === 'ai'" x-cloak>
-          <h3 class="font-display text-3xl font-800 text-ink mb-3">AI customer support &amp; assistants</h3>
-          <p class="text-slate-600 mb-6">Chatbots, ticket routing, knowledge search, and employee AI assistants — with humans still in control.</p>
+        <div x-show="workTab === 'network'" x-cloak>
+          <h3 class="font-display text-3xl font-800 text-ink mb-3">Stay on your network when it matters</h3>
+          <p class="text-slate-600 mb-6">Cloud is the default. For clinics, schools, and anyone who cannot send customer data out, the same worker can run on a machine in your office.</p>
           <ul class="space-y-3 text-slate-700">
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Website FAQ chatbots</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Ticket routing &amp; email replies</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Meeting notes &amp; document summaries</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Knowledge-base search &amp; drafting</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Documents and chats stay inside your LAN</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Point the worker at a local model (Ollama / compatible)</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Same playbook, same handoff, private inference</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Enterprise option — not required for Starter</li>
           </ul>
         </div>
       </div>
@@ -314,11 +312,11 @@ tailwind.config = {
         <div x-show="workTab === 'automate'" x-cloak>
           @include('wpsupportlanding::landing.partials.infographics.services.workflow_engine')
         </div>
-        <div x-show="workTab === 'integrate'" x-cloak>
-          @include('wpsupportlanding::landing.partials.infographics.services.integrations_constellation')
+        <div x-show="workTab === 'workers'" x-cloak>
+          @include('wpsupportlanding::landing.partials.infographics.services.ai_workers')
         </div>
-        <div x-show="workTab === 'ai'" x-cloak>
-          @include('wpsupportlanding::landing.partials.infographics.services.savings_loop')
+        <div x-show="workTab === 'network'" x-cloak>
+          @include('wpsupportlanding::landing.partials.infographics.services.on_network')
         </div>
       </div>
     </div>
@@ -357,13 +355,10 @@ tailwind.config = {
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="mb-14 max-w-2xl">
       <p class="section-label mb-3">How it works</p>
-      <h2 class="font-display section-title font-800 mb-4">The {{ $siteName }}<br/><span class="grad-text">Automation Platform</span></h2>
-      <p class="text-slate-600">Four stages — from discovery to ongoing optimization — so automation compounds instead of rotting.</p>
+      <h2 class="font-display section-title font-800 mb-4">Four jobs.<br/><span class="grad-text">One engagement.</span></h2>
+      <p class="text-slate-600">Audit, automate, stand up workers, and keep inference on-network when customer data cannot leave the building.</p>
     </div>
     @include('wpsupportlanding::landing.partials.infographics.services.practice_pillars')
-    <div class="mt-12">
-      @include('wpsupportlanding::landing.partials.infographics.services.workflow_engine')
-    </div>
   </div>
 </section>
 
@@ -378,9 +373,9 @@ tailwind.config = {
 <section id="integrations" class="py-24 bg-white">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="mb-10 max-w-2xl">
-      <p class="section-label mb-3">Our solutions</p>
-      <h2 class="font-display section-title font-800 mb-4">Tool-agnostic<br/><span class="grad-text">by design.</span></h2>
-      <p class="text-slate-600">We plug into CRM, finance, chat, and productivity tools. Agents and workflows handle the work without locking you into one vendor.</p>
+      <p class="section-label mb-3">Your stack</p>
+      <h2 class="font-display section-title font-800 mb-4">The worker sits<br/><span class="grad-text">in the middle.</span></h2>
+      <p class="text-slate-600">Chat, voice, CRM, payments, and the docs you already have. Cloud by default — on-network when required. No rip-and-replace.</p>
     </div>
     @include('wpsupportlanding::landing.partials.infographics.services.integrations_constellation')
   </div>
@@ -398,8 +393,8 @@ tailwind.config = {
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6 grid lg:grid-cols-2 gap-10 items-center">
     <div>
       <p class="section-label mb-3">Training &amp; support</p>
-      <h2 class="font-display text-3xl sm:text-4xl font-800 text-ink mb-4">We don’t leave you with a black box.</h2>
-      <p class="text-slate-600 mb-6">Staff training, documentation, ongoing maintenance, process optimization, and monthly reviews keep automations healthy as your business changes.</p>
+      <h2 class="font-display text-3xl sm:text-4xl font-800 text-ink mb-4">Workers come with a playbook, not a black box.</h2>
+      <p class="text-slate-600 mb-6">Every worker has limits: what it can answer, what it can do, and when it must hand off. Staff training, documentation, and monthly reviews keep that honest as the business changes.</p>
       <ul class="grid sm:grid-cols-2 gap-3 text-sm text-slate-700">
         <li class="flex gap-2"><span class="text-signal">✓</span> Staff training sessions</li>
         <li class="flex gap-2"><span class="text-signal">✓</span> Living documentation</li>
@@ -410,7 +405,7 @@ tailwind.config = {
     <div class="rounded-3xl border border-slate-200 p-8" style="background:linear-gradient(160deg,#0a1628,#122438);">
       <p class="text-[11px] font-semibold uppercase tracking-[0.18em] mb-4" style="color:#2dd4bf;">Also available</p>
       <h3 class="font-display text-2xl font-800 text-white mb-3">Need WhatsApp commerce?</h3>
-      <p class="text-slate-300 mb-6">{{ $siteName }} SaaS runs selling, journeys, bookings, and payments on WhatsApp. Automation practice covers everything around — and beyond — chat.</p>
+      <p class="text-slate-300 mb-6">{{ $siteName }} SaaS runs selling, journeys, bookings, and payments on WhatsApp. This practice covers the workers and workflows around — and beyond — chat.</p>
       <a href="{{ route('landing') }}" class="inline-flex items-center gap-2 text-sm font-semibold" style="color:#2dd4bf;">
         Explore WhatsApp SaaS
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
@@ -425,7 +420,7 @@ tailwind.config = {
   <div class="relative z-10 max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 text-center">
     <p class="text-[12px] font-semibold uppercase tracking-[0.2em] mb-5" style="color:#2dd4bf;">Ready when you are</p>
     <h2 class="font-display section-title font-800 text-white mb-6">Move from doing the work<br/>to running the business.</h2>
-    <p class="text-lg text-slate-300 mb-10 max-w-xl mx-auto">Tell us where hours disappear. We’ll map the automations, estimate savings, and propose a Starter, Growth, or Enterprise path.</p>
+    <p class="text-lg text-slate-300 mb-10 max-w-xl mx-auto">Tell us where hours disappear. We’ll map the automations, decide where a worker earns its keep, and propose a Starter, Growth, or Enterprise path.</p>
     <a href="mailto:{{ $supportEmail }}?subject=Automation%20consultation" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-ink rounded-xl hover:scale-[1.02] transition-transform" style="background:#2dd4bf;">
       Book a consult
       <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
@@ -439,7 +434,7 @@ tailwind.config = {
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
     <div>
       <p class="font-display font-800 text-ink mb-1">{{ $practiceName }}</p>
-      <p class="text-sm text-slate-600 max-w-md">Process automation for growing businesses — audit, build, integrate, optimize.</p>
+      <p class="text-sm text-slate-600 max-w-md">Process automation for growing businesses — audit, automate, stand up AI workers, keep data on-network when required.</p>
     </div>
     <div class="flex flex-wrap gap-4 text-sm text-slate-600">
       <a href="{{ route('landing') }}" class="hover:text-ink">WhatsApp SaaS</a>

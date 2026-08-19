@@ -21,14 +21,14 @@
             'price' => '$1,000–3,000',
             'tone' => 'border-teal-400',
             'badge' => 'Most chosen',
-            'items' => ['Multiple workflows', 'CRM integration', 'Dashboard setup', 'AI chatbot', '90 days of support'],
+            'items' => ['AI worker on your knowledge', 'Chat and call answering', 'Actions: pay, book, ticket', 'CRM integration', '90 days of support'],
           ],
           [
             'name' => 'Enterprise',
             'price' => '$5,000+',
             'tone' => 'border-slate-200',
             'badge' => null,
-            'items' => ['Company-wide strategy', 'Custom integrations', 'AI assistants', 'Multi-department', 'Ongoing optimization'],
+            'items' => ['Company-wide workers', 'Custom integrations', 'On-network / local LLM option', 'Multi-department', 'Ongoing optimization'],
           ],
         ];
       @endphp
@@ -59,8 +59,8 @@
       <circle cx="440" cy="45" r="14" fill="#0d9488"/>
       <circle cx="740" cy="45" r="10" fill="#fb923c"/>
       <text x="140" y="78" text-anchor="middle" fill="#64748b" font-size="12" font-family="Figtree,sans-serif">Prove value</text>
-      <text x="440" y="78" text-anchor="middle" fill="#0f172a" font-size="12" font-weight="700" font-family="Figtree,sans-serif">Scale workflows</text>
-      <text x="740" y="78" text-anchor="middle" fill="#64748b" font-size="12" font-family="Figtree,sans-serif">Org-wide ops</text>
+      <text x="440" y="78" text-anchor="middle" fill="#0f172a" font-size="12" font-weight="700" font-family="Figtree,sans-serif">Stand up a worker</text>
+      <text x="740" y="78" text-anchor="middle" fill="#64748b" font-size="12" font-family="Figtree,sans-serif">On-network ops</text>
     </svg>
   </div>
 </div>

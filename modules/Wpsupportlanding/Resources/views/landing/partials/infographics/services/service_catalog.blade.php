@@ -2,20 +2,20 @@
 <div class="infographic-panel relative overflow-hidden rounded-3xl border border-slate-200 p-5 sm:p-8" style="background:linear-gradient(180deg,#f0f7f8 0%,#ffffff 100%);">
   <div class="mb-6">
     <p class="text-[11px] font-semibold uppercase tracking-[0.18em] mb-2" style="color:#0d9488;">Catalog</p>
-    <h3 class="font-display text-2xl sm:text-3xl font-800 text-slate-900">Any process your business can automate</h3>
+      <h3 class="font-display text-2xl sm:text-3xl font-800 text-slate-900">Jobs we put on workers — and the workflows around them</h3>
   </div>
 
   <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
     @php
       $catalog = [
-        ['CRM Automation', ['Capture leads', 'Assign owners', 'Follow-up emails', 'Pipeline reminders']],
-        ['AI Support', ['Website chatbots', 'FAQ automation', 'Ticket routing', 'Appointment booking']],
-        ['Marketing', ['Email sequences', 'Welcome campaigns', 'Lead nurturing', 'Newsletter runs']],
-        ['Sales', ['Proposals', 'Contracts', 'Quotes', 'Pipeline automation']],
-        ['Internal Ops', ['HR onboarding', 'Timesheets', 'Expenses', 'Procurement']],
-        ['Reporting', ['Weekly reports', 'Executive dashboards', 'KPI tracking', 'Financial summaries']],
-        ['Documents', ['Auto-generation', 'Approvals', 'Reminders', 'Templates']],
-        ['AI Solutions', ['Assistants', 'Summaries', 'Meeting notes', 'Email drafting']],
+        ['Customer queries', ['FAQs from your docs', 'WhatsApp and web', 'After-hours coverage', 'Answers with sources']],
+        ['Calls', ['Answer inbound', 'Take a brief', 'Log it on the contact', 'Handoff phrases']],
+        ['Next-step actions', ['Payment link', 'Booking', 'Ticket', 'CRM update']],
+        ['Knowledge', ['SOPs and catalogs', 'Past chats', 'Staff lookup', 'Your voice, not generic']],
+        ['Approvals', ['Invoices', 'Leave', 'Purchase orders', 'Reminders']],
+        ['Follow-ups', ['Lead chase', 'No-shows', 'Renewals', 'Task nudges']],
+        ['Human handoff', ['Customer asks for a person', 'Low confidence', 'Brief already written', 'Inbox ready']],
+        ['On-network', ['Docs stay on the LAN', 'Local model option', 'Same playbook', 'Enterprise']],
       ];
     @endphp
     @foreach($catalog as [$title, $items])

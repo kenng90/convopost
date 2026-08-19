@@ -1,29 +1,29 @@
-{{-- Four practice pillars — Nominal-style how it works --}}
+{{-- Four jobs — how the automation practice engages --}}
 @php
   $pillars = [
     [
       'num' => '01',
       'title' => 'Audit',
-      'body' => 'We map how work actually moves — tools, handoffs, bottlenecks — and score what to automate first.',
+      'body' => 'We map how work actually moves — chat, phone, CRM, spreadsheets — and score which hours to take back first.',
       'points' => ['Workflow interviews', 'Time & cost model', 'Prioritized backlog'],
     ],
     [
       'num' => '02',
       'title' => 'Automate',
-      'body' => 'We build reliable workflows: approvals, reminders, document generation, CRM updates, and AI replies.',
-      'points' => ['Zapier · Make · n8n', 'Power Automate', 'Custom scripts'],
+      'body' => 'We wire the 2–3 handoffs that pay for the engagement: approvals, reminders, documents, CRM updates.',
+      'points' => ['Approvals & reminders', 'CRM & payments', 'Staff playbooks'],
     ],
     [
       'num' => '03',
-      'title' => 'Integrate',
-      'body' => 'We connect the stack you already pay for — CRM, chat, finance, calendars — without rip-and-replace.',
-      'points' => ['HubSpot · Salesforce', 'Google · Microsoft 365', 'Stripe · Xero · Slack'],
+      'title' => 'AI workers',
+      'body' => 'We stand up workers on your knowledge. They answer FAQs, take calls, and trigger the next step — or a human.',
+      'points' => ['Retrieve from your data', 'Chat and voice', 'Actions with limits'],
     ],
     [
       'num' => '04',
-      'title' => 'Optimize',
-      'body' => 'Training, docs, monitoring, and monthly reviews so automations keep saving hours after go-live.',
-      'points' => ['Staff training', 'Playbooks', 'Ongoing support'],
+      'title' => 'On-network',
+      'body' => 'Cloud is the default. When customer data cannot leave the building, the same worker runs on a machine on your LAN.',
+      'points' => ['Docs stay inside', 'Local model option', 'Enterprise path'],
     ],
   ];
 @endphp

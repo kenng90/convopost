@@ -7,10 +7,10 @@
   <div class="relative">
     <div class="flex items-center justify-between gap-3 mb-6">
       <p class="text-[11px] font-semibold uppercase tracking-[0.2em]" style="color:#2dd4bf;">Live process map</p>
-      <span class="text-[11px] px-2.5 py-1 rounded-full border border-white/10 text-slate-300">Audit → Build → Run</span>
+      <span class="text-[11px] px-2.5 py-1 rounded-full border border-white/10 text-slate-300">Audit → Automate → Workers</span>
     </div>
 
-    <svg viewBox="0 0 880 420" class="w-full h-auto" role="img" aria-label="Diagram showing manual business processes flowing through Convocon automation into connected tools and outcomes">
+    <svg viewBox="0 0 880 420" class="w-full h-auto" role="img" aria-label="Diagram showing manual processes and unanswered calls flowing through Convocon AI workers into actions that can stay on the business network">
       <defs>
         <linearGradient id="svcHeroFlow" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stop-color="#fb923c" stop-opacity="0.2"/>
@@ -27,10 +27,10 @@
       <text x="70" y="36" fill="#94a3b8" font-size="11" font-weight="600" font-family="Sora,sans-serif" letter-spacing="1.5">BEFORE</text>
       @php
         $inputs = [
-          [70, 70, 'Lead follow-ups', 'Manual chasing'],
-          [70, 145, 'Approvals', 'Email threads'],
-          [70, 220, 'Onboarding', 'Copy-paste'],
-          [70, 295, 'Reports', 'Spreadsheet grind'],
+          [70, 70, 'Unanswered calls', 'Missed after hours'],
+          [70, 145, 'The same FAQs', 'Copied from docs'],
+          [70, 220, 'Approvals', 'Email threads'],
+          [70, 295, 'Data leaving', 'Sent to a public AI'],
         ];
       @endphp
       @foreach($inputs as [$x, $y, $t, $s])
@@ -63,18 +63,18 @@
         <rect x="390" y="145" width="200" height="130" rx="24" fill="#102033" stroke="#2dd4bf" stroke-width="2"/>
         <rect x="402" y="157" width="176" height="106" rx="18" fill="rgba(45,212,191,0.08)" stroke="rgba(45,212,191,0.25)"/>
         <text x="490" y="195" text-anchor="middle" fill="#2dd4bf" font-size="11" font-weight="700" font-family="Sora,sans-serif" letter-spacing="2">CONVOCON</text>
-        <text x="490" y="220" text-anchor="middle" fill="#f8fafc" font-size="18" font-weight="700" font-family="Sora,sans-serif">Automation</text>
-        <text x="490" y="242" text-anchor="middle" fill="#94a3b8" font-size="12" font-family="Figtree,sans-serif">Practice</text>
+        <text x="490" y="220" text-anchor="middle" fill="#f8fafc" font-size="18" font-weight="700" font-family="Sora,sans-serif">AI workers</text>
+        <text x="490" y="242" text-anchor="middle" fill="#94a3b8" font-size="12" font-family="Figtree,sans-serif">On your data</text>
       </g>
 
       {{-- Output column --}}
       <text x="660" y="36" fill="#94a3b8" font-size="11" font-weight="600" font-family="Sora,sans-serif" letter-spacing="1.5">AFTER</text>
       @php
         $outputs = [
-          [660, 70, 'CRM synced', 'Leads assigned'],
-          [660, 145, 'Workflows live', 'Approvals auto'],
-          [660, 220, 'AI replies', 'Tickets routed'],
-          [660, 295, 'Dashboards', 'Weekly reports'],
+          [660, 70, 'Calls answered', 'Brief in the chat'],
+          [660, 145, 'Answers from SOPs', 'Not generic chat'],
+          [660, 220, 'Next step fired', 'Pay · book · ticket'],
+          [660, 295, 'Stays on-network', 'When you require it'],
         ];
       @endphp
       @foreach($outputs as [$x, $y, $t, $s])
@@ -93,7 +93,7 @@
         <path d="M590 210 C630 210, 640 324, 660 324"/>
       </g>
 
-      <text x="440" y="400" fill="#64748b" font-size="12" font-family="Figtree,sans-serif">Tool-agnostic · Zapier · Make · n8n · Power Automate · Custom</text>
+      <text x="440" y="400" fill="#64748b" font-size="12" font-family="Figtree,sans-serif">Chat · Calls · Knowledge · Actions · On-network option</text>
     </svg>
   </div>
 </div>

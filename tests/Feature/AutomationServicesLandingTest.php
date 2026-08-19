@@ -24,15 +24,21 @@ class AutomationServicesLandingTest extends TestCase
         $response->assertSee('id="packages"', false);
         $response->assertSee('Business process audit', false);
         $response->assertSee('Workflow automation engine', false);
+        $response->assertSee('AI workers that use your data', false);
+        $response->assertSee('Stay on your network when it matters', false);
         $response->assertSee('Connect the tools you already use', false);
         $response->assertSee('Starter', false);
         $response->assertSee('Growth', false);
         $response->assertSee('Enterprise', false);
         $response->assertSee('$300–800', false);
+        $response->assertSee('AI worker on your knowledge', false);
+        $response->assertSee('On-network / local LLM option', false);
         $response->assertSee('Book a consult', false);
         $response->assertSee('Separate from', false);
         $response->assertSee('WhatsApp SaaS', false);
         $response->assertSee('Skip to content', false);
+        $response->assertDontSee('AI customer support &amp; assistants', false);
+        $response->assertDontSee('Meeting notes &amp; document summaries', false);
     }
 
     public function test_saas_landing_links_to_automation_services_from_hero(): void
@@ -44,7 +50,7 @@ class AutomationServicesLandingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee(route('services.automation', [], false), false);
-        $response->assertSee('Need help beyond WhatsApp?', false);
+        $response->assertSee('Need help beyond chat?', false);
         $response->assertSee('I want to automate processes across my business', false);
         $response->assertDontSee('>Services</a>', false);
     }

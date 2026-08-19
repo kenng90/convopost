@@ -469,7 +469,7 @@ tailwind.config = {
       <div class="max-w-2xl">
         <p class="font-display hero-brand font-800 text-gray-900 mb-4">{{ $siteName }}</p>
         <h1 class="font-display hero-title font-800 text-gray-900 mb-5">
-          Sell and support across<br class="hidden sm:block" />
+          Sell, support and grow across<br class="hidden sm:block" />
           <span class="hero-title font-800 grad-text">WhatsApp, Instagram &amp; Messenger</span>
         </h1>
         <p class="body-lg text-gray-600 mb-6">
