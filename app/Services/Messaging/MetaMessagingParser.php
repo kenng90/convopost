@@ -58,6 +58,23 @@ class MetaMessagingParser
             foreach ($entry['changes'] ?? [] as $changeIndex => $change) {
                 $field = $change['field'] ?? null;
 
+                if (in_array($field, ['feed', 'comments', 'live_comments'], true)) {
+                    $parsed = $this->parseCommentChange(
+                        is_array($change) ? $change : [],
+                        $channel,
+                        $entryIndex,
+                        $changeIndex,
+                        $businessIds,
+                        $entry,
+                    );
+
+                    if ($parsed !== null) {
+                        $messages[] = $parsed;
+                    }
+
+                    continue;
+                }
+
                 if (! in_array($field, ['messages', 'message_reactions', 'messaging'], true)) {
                     Log::info('messaging.parser.skip_change_field', [
                         'channel' => $channel->value,
@@ -166,6 +183,7 @@ class MetaMessagingParser
                 receivedAt: $receivedAt,
                 raw: $event,
                 extra: $payload !== '' ? $payload : null,
+                context: ['source' => 'message'],
             );
         }
 
@@ -177,6 +195,8 @@ class MetaMessagingParser
                 content: MessageContent::text($message),
                 receivedAt: $receivedAt,
                 raw: $event,
+                extra: null,
+                context: ['source' => 'message'],
             );
         }
 
@@ -220,7 +240,130 @@ class MetaMessagingParser
             receivedAt: $receivedAt,
             raw: $event,
             extra: $extra,
+            context: ['source' => 'message'],
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $change
+     * @param  list<string>  $businessIds
+     * @param  array<string, mixed>  $entry
+     */
+    private function parseCommentChange(
+        array $change,
+        MessagingChannelType $channel,
+        int $entryIndex,
+        int $changeIndex,
+        array $businessIds,
+        array $entry,
+    ): ?InboundMessage {
+        $field = (string) ($change['field'] ?? '');
+        $value = $change['value'] ?? null;
+
+        if (! is_array($value)) {
+            return null;
+        }
+
+        if ($field === 'feed') {
+            $item = (string) ($value['item'] ?? '');
+            $verb = (string) ($value['verb'] ?? 'add');
+
+            if ($item !== 'comment' || $verb !== 'add') {
+                Log::info('messaging.parser.skip_feed_item', [
+                    'channel' => $channel->value,
+                    'item' => $item,
+                    'verb' => $verb,
+                    'entry_index' => $entryIndex,
+                    'change_index' => $changeIndex,
+                ]);
+
+                return null;
+            }
+        }
+
+        if (! empty($value['hidden']) || ! empty($value['is_hidden'])) {
+            return null;
+        }
+
+        $senderId = $this->eventPartyId($value, 'from') ?: $this->eventPartyId($value, 'sender');
+
+        if ($senderId === '' || in_array($senderId, $businessIds, true)) {
+            Log::info('messaging.parser.skip_comment', [
+                'channel' => $channel->value,
+                'field' => $field,
+                'reason' => $senderId === '' ? 'missing_sender' : 'echo',
+                'sender' => $senderId,
+            ]);
+
+            return null;
+        }
+
+        $commentId = (string) ($value['comment_id'] ?? $value['id'] ?? '');
+        if ($commentId === '') {
+            Log::info('messaging.parser.skip_comment', [
+                'channel' => $channel->value,
+                'field' => $field,
+                'reason' => 'missing_comment_id',
+                'value_keys' => array_keys($value),
+            ]);
+
+            return null;
+        }
+
+        $text = trim((string) ($value['message'] ?? $value['text'] ?? ''));
+        if ($text === '') {
+            $text = __('Photo comment');
+        }
+
+        $postId = (string) ($value['post_id'] ?? data_get($value, 'post.id', ''));
+        $mediaId = (string) data_get($value, 'media.id', '');
+        $parentId = (string) ($value['parent_id'] ?? '');
+
+        if ($parentId !== '' && ($parentId === $postId || $parentId === $mediaId)) {
+            $parentId = '';
+        }
+
+        $participantName = data_get($value, 'from.name')
+            ?: data_get($value, 'from.username')
+            ?: null;
+
+        $receivedAt = $this->timestampToCarbon(
+            $value['created_time'] ?? $value['timestamp'] ?? $entry['time'] ?? time()
+        );
+
+        return new InboundMessage(
+            externalMessageId: 'comment:'.$commentId,
+            externalParticipantId: $senderId,
+            participantName: is_string($participantName) && $participantName !== '' ? $participantName : null,
+            content: MessageContent::text($text),
+            receivedAt: $receivedAt,
+            raw: $value,
+            extra: MetaCommentReply::EXTRA_INBOUND,
+            context: [
+                'source' => MetaCommentReply::SOURCE_COMMENT,
+                'comment_id' => $commentId,
+                'parent_comment_id' => $parentId !== '' ? $parentId : null,
+                'post_id' => $postId !== '' ? $postId : null,
+                'media_id' => $mediaId !== '' ? $mediaId : null,
+                'permalink' => (string) (data_get($value, 'post.permalink_url') ?: data_get($value, 'permalink_url') ?: ''),
+                'field' => $field,
+            ],
+        );
+    }
+
+    private function timestampToCarbon(mixed $timestamp): Carbon
+    {
+        $value = (int) $timestamp;
+
+        if ($value > 9999999999) {
+            $value = (int) floor($value / 1000);
+        }
+
+        if ($value <= 0) {
+            return now();
+        }
+
+        return Carbon::createFromTimestamp($value);
     }
 
     private function mapMessageContent(array $message): ?MessageContent

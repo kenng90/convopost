@@ -32,6 +32,26 @@
                             <span class="text-muted"> — @{{ s.source }}</span>
                         </div>
                     </div>
+                    <div v-if="activeChat.comment_reply" class="mb-2">
+                        <div class="btn-group btn-group-sm w-100" role="group">
+                            <button type="button" class="btn"
+                                :class="commentReplyMode === 'public' ? 'btn-primary' : 'btn-outline-primary'"
+                                @click="commentReplyMode = 'public'">
+                                {{ __('Reply on post') }}
+                            </button>
+                            <button type="button" class="btn"
+                                :class="commentReplyMode === 'private' ? 'btn-primary' : 'btn-outline-primary'"
+                                :disabled="!activeChat.comment_reply.can_private"
+                                @click="commentReplyMode = 'private'">
+                                {{ __('Private message') }}
+                            </button>
+                            <button v-if="activeChat.comment_reply.can_direct" type="button" class="btn"
+                                :class="commentReplyMode === 'direct' ? 'btn-primary' : 'btn-outline-primary'"
+                                @click="commentReplyMode = 'direct'">
+                                {{ __('Direct message') }}
+                            </button>
+                        </div>
+                    </div>
                     <div class="d-flex">
                     <div class="input-group">
                         <div class="input-group-prepend">

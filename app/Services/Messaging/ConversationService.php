@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Messaging\ChannelConnection;
 use App\Models\Messaging\ChannelIdentity;
 use App\Models\Messaging\Conversation;
+use App\Services\Messaging\DTO\InboundMessage;
 use Modules\Wpbox\Models\Contact;
 
 class ConversationService
@@ -134,6 +135,42 @@ class ConversationService
         }
 
         $contact->save();
+    }
+
+    public function applyInboundContext(Conversation $conversation, InboundMessage $inbound): void
+    {
+        $metadata = $conversation->metadata ?? [];
+
+        if ($inbound->isComment()) {
+            $commentId = (string) ($inbound->context['comment_id'] ?? '');
+            $permalink = (string) ($inbound->context['permalink'] ?? '');
+
+            $metadata['source'] = ($metadata['has_direct_message'] ?? false)
+                ? 'mixed'
+                : MetaCommentReply::SOURCE_COMMENT;
+            $metadata['comment_id'] = $commentId;
+            $metadata['parent_comment_id'] = $inbound->context['parent_comment_id'] ?? null;
+            $metadata['post_id'] = $inbound->context['post_id'] ?? null;
+            $metadata['media_id'] = $inbound->context['media_id'] ?? null;
+            $metadata['comment_received_at'] = $inbound->receivedAt->toIso8601String();
+
+            if ($permalink !== '') {
+                $metadata['permalink'] = $permalink;
+            }
+
+            if (! array_key_exists('has_direct_message', $metadata)) {
+                $metadata['has_direct_message'] = false;
+            }
+        } else {
+            $metadata['has_direct_message'] = true;
+
+            if (($metadata['source'] ?? null) === MetaCommentReply::SOURCE_COMMENT) {
+                $metadata['source'] = 'mixed';
+            }
+        }
+
+        $conversation->metadata = $metadata;
+        $conversation->save();
     }
 
     private function resolveConnection(Company $company, MessagingChannelType $channel): ?ChannelConnection

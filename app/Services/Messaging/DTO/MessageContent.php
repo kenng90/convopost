@@ -13,6 +13,7 @@ final class MessageContent
         public readonly ?string $mediaUrl = null,
         public readonly ?array $quickReplies = null,
         public readonly ?string $extra = null,
+        public readonly ?string $replyMode = null,
     ) {
     }
 
@@ -41,5 +42,27 @@ final class MessageContent
         }
 
         return '['.$this->type.']';
+    }
+
+    public function withReplyMode(?string $replyMode): self
+    {
+        return new self(
+            $this->type,
+            $this->body,
+            $this->mediaUrl,
+            $this->quickReplies,
+            $this->extra,
+            $replyMode,
+        );
+    }
+
+    public function isPublicCommentReply(): bool
+    {
+        return $this->replyMode === 'public_comment';
+    }
+
+    public function isPrivateCommentReply(): bool
+    {
+        return $this->replyMode === 'private_comment';
     }
 }

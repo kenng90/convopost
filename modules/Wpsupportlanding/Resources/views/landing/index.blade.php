@@ -6,7 +6,7 @@
 @php
   $siteName = config('settings.site_name', config('app.name'));
   $metaTitle = $siteName.' — Omnichannel Social Commerce for WhatsApp, Instagram & Messenger';
-  $metaDescription = 'Sell and support across WhatsApp, Instagram, and Messenger. Run WhatsApp, SMS, and email campaigns. Bookings, journeys, catalogs, and M-Pesa — one platform.';
+  $metaDescription = 'Sell, Support & Grow Across WhatsApp, Instagram & Messenger. Run WhatsApp, SMS, and email campaigns. Bookings, journeys, catalogs, and M-Pesa - one platform.';
   $registrationEnabled = !config('settings.disable_registration_page', false);
 @endphp
 <title>{{ $metaTitle }}</title>

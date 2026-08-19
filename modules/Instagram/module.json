@@ -33,7 +33,7 @@
             "key": "instagram_page_access_token",
             "ftype": "input",
             "value": "",
-            "help": "Long-lived page token with instagram_manage_messages"
+            "help": "Long-lived page token with instagram_manage_messages (add instagram_manage_comments to reply to comments)"
         }
     ],
     "ownermenus": [

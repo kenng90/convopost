@@ -2,6 +2,7 @@
 
 namespace Modules\Wpbox\Events;
 
+use App\Models\Messaging\Conversation;
 use Carbon\Carbon;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -51,6 +52,7 @@ class Chatlistchange implements ShouldBroadcast
             'is_last_message_by_contact' => (bool) $contact?->is_last_message_by_contact,
             'resolved_chat' => (bool) $contact?->resolved_chat,
             'name' => $contact?->name,
+            'inbox_kinds' => Conversation::inboxKindsForContact((int) $this->contact),
         ];
     }
 }

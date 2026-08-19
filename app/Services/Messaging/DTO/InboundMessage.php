@@ -6,6 +6,9 @@ use Carbon\Carbon;
 
 final class InboundMessage
 {
+    /**
+     * @param  array<string, mixed>  $context
+     */
     public function __construct(
         public readonly string $externalMessageId,
         public readonly string $externalParticipantId,
@@ -14,6 +17,12 @@ final class InboundMessage
         public readonly Carbon $receivedAt,
         public readonly array $raw = [],
         public readonly ?string $extra = null,
+        public readonly array $context = [],
     ) {
+    }
+
+    public function isComment(): bool
+    {
+        return ($this->context['source'] ?? null) === 'comment';
     }
 }

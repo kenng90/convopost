@@ -20,10 +20,12 @@ use Modules\Wpbox\Models\Contact;
 use Modules\Wpbox\Models\Message;
 use Modules\Wpbox\Models\Reply;
 use Modules\Wpbox\Models\Template;
+use Modules\Wpbox\Traits\InboxModes;
 use Modules\Wpbox\Traits\Whatsapp;
 
 class ChatController extends Controller
 {
+    use InboxModes;
     use Whatsapp;
 
     /**
@@ -171,9 +173,6 @@ class ChatController extends Controller
                         });
                 });
             })
-            ->when($lastmessagetime !== 'none' && $lastmessagetime !== '', function ($query) use ($lastmessagetime) {
-                $query->where('last_reply_at', '>', Carbon::parse($lastmessagetime));
-            })
             ->when(request()->filled('channel') && request()->input('channel') !== 'all', function ($query) {
                 $channel = request()->input('channel');
 
@@ -194,6 +193,14 @@ class ChatController extends Controller
                     $identityQuery->withoutGlobalScopes()->where('channel', $channel);
                 });
             });
+
+        $inboxMode = $this->resolveInboxMode(request()->input('inbox_mode'));
+        $countBase = clone $baseQuery;
+
+        $baseQuery->when($lastmessagetime !== 'none' && $lastmessagetime !== '', function ($query) use ($lastmessagetime) {
+            $query->where('last_reply_at', '>', Carbon::parse($lastmessagetime));
+        });
+        $this->applyInboxModeFilter($baseQuery, $inboxMode);
 
         $stats = (clone $baseQuery)->selectRaw('
             COUNT(*) as total,
@@ -226,22 +233,26 @@ class ChatController extends Controller
             ->with([
                 'country:id,name,iso2',
                 'channelIdentities:id,contact_id,channel,display_name',
+                'conversations' => function ($query) {
+                    $query->withoutGlobalScopes()
+                        ->select(['id', 'contact_id', 'channel', 'metadata', 'last_client_reply_at'])
+                        ->latest('id');
+                },
             ])
             ->orderByDesc('last_reply_at')
             ->skip(($page - 1) * $pageSize)
             ->limit($pageSize)
             ->get()
-            ->map(function (Contact $contact) {
-                $contact->channel = $contact->channelIdentities->first()?->channel?->value
-                    ?? MessagingChannelType::Whatsapp->value;
-
-                return $contact;
-            });
+            ->map(fn (Contact $contact) => $this->presentInboxContact($contact));
 
         return response()->json([
             'data' => $contacts,
             'numberOfPages' => $numberOfPages,
             'page' => (int) $page,
+            'inboxMode' => $inboxMode,
+            'messageChatsCount' => $this->countInboxMode($countBase, 'messages'),
+            'commentChatsCount' => $this->countInboxMode($countBase, 'comments'),
+            'commentUnreadCount' => $this->countInboxMode($countBase, 'comments', unreadOnly: true),
             'totalChats' => (int) ($stats->total ?? 0),
             'myChatsCount' => (int) ($stats->mine ?? 0),
             'unreadChatsCount' => (int) ($stats->unread ?? 0),
@@ -326,7 +337,7 @@ class ChatController extends Controller
                 'header_text', 'header_image', 'header_document', 'header_video',
                 'header_audio', 'header_location', 'footer_text', 'buttons', 'components',
                 'is_message_by_contact', 'is_campign_messages', 'is_note', 'is_call_brief',
-                'call_brief_payload', 'sender_name', 'error', 'status', 'created_at',
+                'call_brief_payload', 'sender_name', 'error', 'status', 'created_at', 'extra',
             ]);
 
         return response()->json([
@@ -382,6 +393,7 @@ class ChatController extends Controller
         // Create a validator instance
         $validator = Validator::make($request->all(), [
             'message' => 'required|string|max:500',
+            'reply_mode' => 'nullable|in:public,private,direct',
         ]);
 
         // Check if validation fails
@@ -401,7 +413,8 @@ class ChatController extends Controller
             ]);
         } else {
             //OK, we can send the message
-            $messageSend = $contact->sendMessage(strip_tags($request->message), false);
+            $extra = $this->outboundCommentReplyExtra($contact, $request->input('reply_mode'));
+            $messageSend = $contact->sendMessage(strip_tags($request->message), false, false, 'TEXT', null, $extra);
 
             return response()->json([
                 'message' => $messageSend,
