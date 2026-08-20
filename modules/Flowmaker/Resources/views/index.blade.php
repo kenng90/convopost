@@ -7,6 +7,7 @@
     <meta name="description" content="Flowmaker" />
     <meta name="author" content="Flowmaker" />
     <meta property="og:image" content="/og-image.png" />
+    @include('layouts.favicon')
     <link rel="stylesheet" href="{{ '/flowmaker/css' }}">
 
   </head>

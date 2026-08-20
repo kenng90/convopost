@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $company->name }} — {{ $occurrence['starts_at_label'] ?? __('Event') }}</title>
+    @include('layouts.favicon')
     <script src="https://cdn.tailwindcss.com"></script>
     @include('reminders::booking.partials.phone-input-head')
 </head>

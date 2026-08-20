@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Akaunting\Module\Facade as Module;
+use App\Support\FaviconWriter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -408,6 +409,10 @@ class SettingsController extends Controller
             $img32->save(public_path().'/favicon-32x32.png');
             $img16->save(public_path().'/favicon-16x16.png');
 
+            FaviconWriter::writeIcoFromPngs([
+                public_path('favicon-16x16.png'),
+                public_path('favicon-32x32.png'),
+            ], public_path('favicon.ico'));
         }
 
         Artisan::call('config:clear');

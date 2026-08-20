@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{{ config('settings.site_description', 'WhatsApp revenue & operations platform. Team inbox, campaigns, workflow automation, payments, and integrations — built on the official Meta Business API.') }}">
     <title>{{ config('settings.site_name', config('app.name')) }} — WhatsApp Operations & Revenue Platform</title>
-    <link rel="icon" href="{{ config('settings.favicon', '/favicon.ico') }}">
+    @include('layouts.favicon')
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
