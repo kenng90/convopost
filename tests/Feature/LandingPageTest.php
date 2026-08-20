@@ -75,6 +75,10 @@ class LandingPageTest extends TestCase
         $response->assertSee('Skip to content', false);
         $response->assertSee('Google Calendar sync', false);
         $response->assertSee('managed AI credits', false);
+        $response->assertSee('application/ld+json', false);
+        $response->assertSee('"@type":"WebSite"', false);
+        $response->assertSee('"@type":"Organization"', false);
+        $response->assertSee('/android-chrome-192x192.png', false);
     }
 
     public function test_landing_page_highlights_omnichannel_and_campaigns(): void
