@@ -430,6 +430,10 @@ class ChatController extends Controller
     {
         $this->ensureContactBelongsToActiveCompany($contact);
 
+        $request->validate([
+            'image' => 'required|file|max:16384|mimes:jpeg,jpg,png,gif,webp,mp4,3gp,aac,amr,mp3,ogg,opus',
+        ]);
+
         /**
          * Contact id
          * Message
@@ -473,6 +477,10 @@ class ChatController extends Controller
     public function sendDocumentMessageToContact(Request $request, Contact $contact)
     {
         $this->ensureContactBelongsToActiveCompany($contact);
+
+        $request->validate([
+            'file' => 'required|file|max:20480|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,jpeg,jpg,png,gif,webp',
+        ]);
 
         /**
          * Contact id

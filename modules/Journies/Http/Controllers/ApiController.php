@@ -3,12 +3,11 @@
 namespace Modules\Journies\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Services\Security\ApiTokenAuthenticator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Laravel\Sanctum\PersonalAccessToken;
 use Modules\Journies\Models\Journey;
 use Modules\Journies\Models\JourneyStage;
 use Modules\Journies\Services\JourneyContactService;
@@ -31,21 +30,9 @@ class ApiController extends Controller
             ], 400);
         }
 
-        if (Auth::check()) {
-            return $next($request);
-        }
-
-        $token = PersonalAccessToken::findToken($request->token);
-
-        if (! $token) {
-            return response()->json(['status' => 'error', 'message' => 'Invalid token'], 401);
-        }
-
-        $user = User::findOrFail($token->tokenable_id);
-        Auth::login($user);
-
-        if ($user->company_id) {
-            session(['company_id' => $user->company_id]);
+        $auth = app(ApiTokenAuthenticator::class)->authenticate($request);
+        if ($auth instanceof JsonResponse) {
+            return $auth;
         }
 
         return $next($request);
@@ -61,13 +48,19 @@ class ApiController extends Controller
                 'fire_campaign' => 'sometimes|boolean',
             ]);
 
+            $company = $this->getCompany();
+            if (! $company) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
+            }
+
             $contact = $request->filled('contact_id')
-                ? Contact::findOrFail($request->contact_id)
-                : Contact::where('phone', $request->phone)->firstOrFail();
+                ? Contact::query()->where('company_id', $company->id)->findOrFail($request->contact_id)
+                : Contact::query()->where('company_id', $company->id)->where('phone', $request->phone)->firstOrFail();
 
-            $stage = JourneyStage::findOrFail($request->stage_id);
+            $stage = JourneyStage::with('journey')->findOrFail($request->stage_id);
 
-            if ($contact->company_id !== $stage->journey->company_id) {
+            if ((int) $contact->company_id !== (int) $company->id
+                || (int) $stage->journey->company_id !== (int) $company->id) {
                 return response()->json(['status' => 'error', 'message' => 'Contact and stage belong to different companies'], 422);
             }
 
@@ -98,11 +91,16 @@ class ApiController extends Controller
                 'journey_id' => 'required|integer|exists:journeys,id',
             ]);
 
-            $contact = $request->filled('contact_id')
-                ? Contact::findOrFail($request->contact_id)
-                : Contact::where('phone', $request->phone)->firstOrFail();
+            $company = $this->getCompany();
+            if (! $company) {
+                return response()->json(['status' => 'error', 'message' => 'Unauthorized'], 403);
+            }
 
-            $journey = Journey::findOrFail($request->journey_id);
+            $contact = $request->filled('contact_id')
+                ? Contact::query()->where('company_id', $company->id)->findOrFail($request->contact_id)
+                : Contact::query()->where('company_id', $company->id)->where('phone', $request->phone)->firstOrFail();
+
+            $journey = Journey::query()->where('company_id', $company->id)->findOrFail($request->journey_id);
             $currentStage = $this->journeyContacts->currentStageForContact($contact, $journey);
 
             return response()->json([

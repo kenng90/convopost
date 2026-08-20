@@ -57,9 +57,9 @@ class StoreCatalogImportService
         $consumerSecret = $company->getConfig('woocommerce_consumer_secret');
 
         if (config('settings.is_demo', false)) {
-            $storeUrl = 'https://woo.mobidonia.com';
-            $consumerKey = 'ck_aa1a18c723f5d1cf6e1f739df69dc49ea601d09e';
-            $consumerSecret = 'cs_95a9976b9b256afb631ba5d34aca7987cb9ed523';
+            $storeUrl = (string) config('services.woocommerce_demo.store_url');
+            $consumerKey = (string) config('services.woocommerce_demo.consumer_key');
+            $consumerSecret = (string) config('services.woocommerce_demo.consumer_secret');
         }
 
         if (empty($storeUrl) || empty($consumerKey) || empty($consumerSecret)) {

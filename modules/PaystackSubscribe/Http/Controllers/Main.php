@@ -5,6 +5,7 @@ namespace Modules\PaystackSubscribe\Http\Controllers;
 use App\Models\Plans;
 use App\Models\User;
 use App\Services\DefaultPlanService;
+use App\Services\Security\WebhookSignature;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -49,32 +50,44 @@ class Main extends Controller
     //Webhook called when there is an event
     public function webhook(Request $request)
     {
-        //Email - find the user
-        $event = $request->event;
-        $user = User::where('email', $request->data['customer']['email'])->first();
+        $secret = (string) config('paystack-subscribe.secret');
+        $signature = $request->header('x-paystack-signature');
 
-        // Log the entire request
-        Log::info('Paystack Webhook Request:', [
+        if (! app(WebhookSignature::class)->paystackIsValid($request->getContent(), $signature, $secret)) {
+            Log::warning('Paystack subscription webhook rejected: invalid signature');
+
+            return response()->json(['status' => false], 401);
+        }
+
+        $event = $request->event;
+        $customerEmail = data_get($request->all(), 'data.customer.email');
+        $user = is_string($customerEmail) ? User::where('email', $customerEmail)->first() : null;
+
+        Log::info('Paystack subscription webhook received', [
             'event' => $event,
-            'user' => $user,
-            'data' => $request->all(),
+            'user_id' => $user?->id,
         ]);
 
         if ($user) {
             if ($event == 'subscription.create' || $event == 'charge.success') {
-                $subscription_plan_id = $request->data['plan']['plan_code'];
-                $plan = Plans::where('paystack_id', $subscription_plan_id)->firstOrFail();
-                $user->plan_id = $plan->id;
-                $user->paystack_subscribtion_id = $request->data['subscription_code'];
-                $user->update();
+                $subscription_plan_id = $request->data['plan']['plan_code'] ?? null;
+                $plan = $subscription_plan_id
+                    ? Plans::where('paystack_id', $subscription_plan_id)->first()
+                    : null;
+
+                if ($plan) {
+                    $user->plan_id = $plan->id;
+                    $user->paystack_subscribtion_id = $request->data['subscription_code'] ?? $user->paystack_subscribtion_id;
+                    $user->update();
+                }
             }
             if ($event == 'subscription.disable' || $event == 'subscription.not_renew') {
                 $user->paystack_subscribtion_id = null;
                 app(DefaultPlanService::class)->assignToUser($user);
             }
         }
-        dd('done');
 
+        return response()->json(['status' => true]);
     }
 
     /**

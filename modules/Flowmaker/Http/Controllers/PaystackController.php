@@ -4,6 +4,7 @@ namespace Modules\Flowmaker\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Services\Payments\PaystackCommerceService;
+use App\Services\Security\WebhookSignature;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Modules\Flowmaker\Jobs\ResumeFlowFromPayment;
@@ -63,6 +64,24 @@ class PaystackController extends Controller
     public function webhook(Request $request, PaystackCommerceService $paystack)
     {
         $payload = $request->all();
+        $reference = (string) data_get($payload, 'data.reference', '');
+        $payment = $reference !== ''
+            ? InvoicePayment::query()
+                ->where('gateway_reference', $reference)
+                ->orWhere('mpesa_checkout_request_id', $reference)
+                ->first()
+            : null;
+
+        $secret = $payment?->invoice?->company
+            ? $paystack->secretKey($payment->invoice->company)
+            : '';
+
+        if (! app(WebhookSignature::class)->paystackIsValid($request->getContent(), $request->header('x-paystack-signature'), $secret)) {
+            Log::warning('Paystack commerce webhook rejected: invalid signature');
+
+            return response()->json(['status' => false], 401);
+        }
+
         $result = $paystack->handleWebhook($payload);
         $payment = $result['payment'] ?? null;
 

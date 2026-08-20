@@ -7,10 +7,11 @@ use App\Models\User;
 use App\Services\Campaign\ApiCampaignService;
 use App\Services\Campaign\CampaignDispatchService;
 use App\Services\Campaign\CampaignTemplateVariablesParser;
+use App\Services\Security\ApiTokenAuthenticator;
+use App\Services\Security\SafeRemoteUrl;
 use Carbon\Carbon;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -132,7 +133,10 @@ class APIController extends Controller
 
                 $message = $contact->sendReply($replay);
 
-            } elseif ($request->has('image')) {
+            } elseif ($request->hasFile('image')) {
+                $request->validate([
+                    'image' => 'required|file|max:16384|mimes:jpeg,jpg,png,gif,webp,mp4,3gp,aac,amr,mp3,ogg,opus,pdf,doc,docx,xls,xlsx,ppt,pptx,txt',
+                ]);
                 //Image message
                 $imageUrl = '';
                 if (config('settings.use_s3_as_storage', false)) {
@@ -162,17 +166,12 @@ class APIController extends Controller
 
                 $message = $contact->sendMessage($imageUrl, false, false, $messageType);
 
-            } elseif ($request->has('media_url')) {
+            } elseif ($request->filled('media_url')) {
                 //Media URL message - fetch and store the media
                 $imageUrl = '';
 
                 try {
-                    // Fetch the media from the URL
-                    $mediaContent = file_get_contents($request->media_url);
-
-                    if ($mediaContent === false) {
-                        return response()->json(['status' => 'error', 'message' => 'Failed to fetch media from URL']);
-                    }
+                    $mediaContent = app(SafeRemoteUrl::class)->fetch((string) $request->media_url);
 
                     // Get file extension from URL or use default
                     $urlInfo = pathinfo(parse_url($request->media_url, PHP_URL_PATH));
@@ -214,8 +213,10 @@ class APIController extends Controller
 
                     $message = $contact->sendMessage($imageUrl, false, false, $messageType);
 
-                } catch (\Exception $e) {
-                    return response()->json(['status' => 'error', 'message' => 'Failed to process media URL: '.$e->getMessage()]);
+                } catch (\InvalidArgumentException) {
+                    return response()->json(['status' => 'error', 'message' => 'Media URL is not allowed']);
+                } catch (\Exception) {
+                    return response()->json(['status' => 'error', 'message' => 'Failed to process media URL']);
                 }
 
             } else {
@@ -658,14 +659,27 @@ class APIController extends Controller
     public function updateContact(Request $request)
     {
         return $this->authenticate($request, function ($request) {
-            //Company
             $company = $this->getCompany();
-            $contact = Contact::findOrFail($request->id);
-            $contact->update($request->all());
+            if (! $company) {
+                return response()->json(['status' => 'error', 'message' => 'Contact not found'], 404);
+            }
+
+            $contact = Contact::query()
+                ->where('company_id', $company->id)
+                ->findOrFail($request->id);
+
+            $contact->update($request->only([
+                'name',
+                'email',
+                'phone',
+            ]));
 
             return response()->json(['status' => 'success', 'contact' => $contact]);
         }, [
             'id' => 'required',
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|nullable|email|max:255',
+            'phone' => 'sometimes|nullable|string|max:50',
         ]);
     }
 
@@ -816,22 +830,12 @@ class APIController extends Controller
             ], 400);
         }*/
 
-        //Authenticate the user, if there is no autnenticatedd user already
-        if (! Auth::check()) {
-            $token = PersonalAccessToken::findToken($request->token);
-            if (! $token) {
-                return response()->json(['status' => 'error', 'message' => 'Invalid token']);
-            } else {
-
-                $user = User::findOrFail($token->tokenable_id);
-                Auth::login($user);
-
-                return $next($request);
-            }
-        } else {
-            //User is already authenticated, so just return the next
-            return $next($request);
+        $auth = app(ApiTokenAuthenticator::class)->authenticate($request);
+        if ($auth instanceof \Illuminate\Http\JsonResponse) {
+            return $auth;
         }
+
+        return $next($request);
     }
 
     public function info()

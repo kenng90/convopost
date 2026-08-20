@@ -92,7 +92,7 @@ class Main extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
-            'password' => 'required|string|min:6',
+            'password' => 'required|string|min:8',
             'modules' => 'nullable|array',
             'modules.*' => 'string',
             'permissions' => 'nullable|array',
@@ -154,7 +154,7 @@ class Main extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
-            'password' => 'nullable|string|min:6',
+            'password' => 'nullable|string|min:8',
             'modules' => 'nullable|array',
             'modules.*' => 'string',
             'permissions' => 'nullable|array',

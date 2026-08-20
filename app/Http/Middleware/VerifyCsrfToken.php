@@ -29,7 +29,9 @@ class VerifyCsrfToken extends Middleware
         'webhook/whatsappcall/calling/*',
         'webhook/whatsappcall/calling',
         'api/wpbox/*',
-        'api/*',
+        'api/reminders/*',
+        'api/journies/external/*',
+        'api/whatsappcall/worker/*',
         'stripe/*',
     ];
 }

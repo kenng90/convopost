@@ -5,10 +5,10 @@ namespace Modules\Reminders\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\User;
+use App\Services\Security\ApiTokenAuthenticator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Laravel\Sanctum\PersonalAccessToken;
 use Modules\Reminders\Models\EventRegistration;
 use Modules\Reminders\Models\Remineder;
 use Modules\Reminders\Models\Reservation;
@@ -50,17 +50,14 @@ class APIController extends Controller
             ], 400);
         }
 
-        if (Auth::check()) {
+        if (Auth::check() && ! $request->filled('token') && ! $request->bearerToken()) {
             return $next($request);
         }
 
-        $token = PersonalAccessToken::findToken($request->token);
-        if (! $token) {
-            return response()->json(['status' => 'error', 'message' => 'Invalid token'], 401);
+        $auth = app(ApiTokenAuthenticator::class)->authenticate($request);
+        if ($auth instanceof \Illuminate\Http\JsonResponse) {
+            return $auth;
         }
-
-        $user = User::findOrFail($token->tokenable_id);
-        Auth::login($user);
 
         return $next($request);
     }

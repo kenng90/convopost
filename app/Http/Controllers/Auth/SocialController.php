@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\DefaultPlanService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -54,7 +55,7 @@ class SocialController extends Controller
             $user = new User;
             $user->name = $user_google->name;
             $user->email = $user_google->email;
-            $user->password = Str::random(80);
+            $user->password = Hash::make(Str::random(64));
             $user->save();
 
             $user->assignRole('owner');
@@ -62,8 +63,8 @@ class SocialController extends Controller
             $this->defaultPlanService->assignToUser($user);
         }
 
-        // login
-        Auth::loginUsingId($user->id);
+        Auth::login($user, false);
+        request()->session()->regenerate();
 
         return redirect($this->redirectTo());
     }
@@ -84,14 +85,15 @@ class SocialController extends Controller
             $user = new User;
             $user->name = $user_facebook->name;
             $user->email = $user_facebook->email;
-            $user->password = Str::random(80);
+            $user->password = Hash::make(Str::random(64));
             $user->save();
             $user->assignRole('owner');
             $this->createCompany($user);
             $this->defaultPlanService->assignToUser($user);
         }
-        // login
-        Auth::loginUsingId($user->id);
+
+        Auth::login($user, false);
+        request()->session()->regenerate();
 
         return redirect($this->redirectTo());
     }
