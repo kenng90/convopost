@@ -57,6 +57,7 @@ class FaviconBrandingTest extends TestCase
 
     private function assertSeeFaviconLinks(string $html): void
     {
+        $this->assertStringContainsString('android-chrome-192x192.png', $html);
         $this->assertStringContainsString('favicon-32x32.png', $html);
         $this->assertStringContainsString('favicon-16x16.png', $html);
         $this->assertStringContainsString('favicon.ico', $html);
