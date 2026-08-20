@@ -20,10 +20,12 @@
                         <p class="mb-2 mt-2">{{ __('If DMs never appear and logs show nothing, Meta is not POSTing to this URL. Check all of these in Meta Developer Console:') }}</p>
                         <ol class="mb-0 pl-3">
                             <li>{{ __('Use this exact Callback URL (not the WhatsApp /webhook/wpbox/… URL).') }}</li>
-                            <li>{{ __('Under Messenger → Settings → Webhooks, subscribe fields: messages (and messaging_postbacks if available).') }}</li>
+                            <li>{{ __('Under Messenger → Settings → Webhooks, subscribe fields: messages, messaging_postbacks, and feed (for Page comments).') }}</li>
                             <li>{{ __('Click “Add or remove pages” and subscribe THIS Facebook Page to the webhook.') }}</li>
                             <li>{{ __('App must be Live (or your Facebook user must be a Tester/Admin/Developer role).') }}</li>
-                            <li>{{ __('Use Meta’s “Test” / “Send to Me” on the messages field, then watch storage/logs/laravel.log for messaging.webhook.hit.') }}</li>
+                            <li>{{ __('Page token / User token must include pages_messaging.') }}</li>
+                            <li>{{ __('To reply to Page comments, also include pages_read_engagement and pages_manage_engagement. Live apps need App Review for those permissions.') }}</li>
+                            <li>{{ __('Use Meta’s “Test” / “Send to Me” on the messages or feed field, then watch storage/logs/laravel.log for messaging.webhook.hit.') }}</li>
                         </ol>
                     </div>
 

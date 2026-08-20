@@ -47,6 +47,8 @@ class InboundMessageProcessor
             $inbound->participantName,
         );
 
+        $this->conversations->applyInboundContext($conversation, $inbound);
+
         $contact = Contact::withoutGlobalScopes()->findOrFail($conversation->contact_id);
         $messageType = $inbound->content->type;
         $content = $inbound->content->body;
@@ -71,10 +73,14 @@ class InboundMessageProcessor
         ]);
 
         // Ensure chat list shows this contact (some Message creates omit contact flags).
+        $preview = $inbound->isComment()
+            ? __('Comment: :text', ['text' => $inbound->content->preview()])
+            : $inbound->content->preview();
+
         $this->conversations->syncContactFromConversation(
             $conversation,
             $contact,
-            $inbound->content->preview(),
+            $preview,
             true,
         );
 

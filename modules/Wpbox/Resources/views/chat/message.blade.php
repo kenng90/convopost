@@ -30,6 +30,9 @@
                 <h4 v-if="message.header_text" class="mb-2 text-white">@{{ message.header_text }}</h4>
 
                 
+                <p v-if="commentBadge(message)" class="mb-1">
+                    <span class="badge badge-sm" :class="message.is_message_by_contact==1 ? 'badge-info' : 'badge-light'">@{{ commentBadge(message) }}</span>
+                </p>
                 <p  v-html="message._formatted || formatIt(message.value)" class="mb-2 text-left" style="text-align: left !important;" :class="[ {'text-white': message.is_message_by_contact==0} ]" ></p>
                 <p v-if="message.original_message.length>0"  v-html="message._originalFormatted || formatIt('{{ __('Original:')}}'+' '+message.original_message)" class="mb-2 small text-right" style="opacity:0.7" :class="[ {'text-white': message.is_message_by_contact==0} ]" ></p>
 

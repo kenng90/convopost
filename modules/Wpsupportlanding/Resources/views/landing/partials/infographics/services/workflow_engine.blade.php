@@ -73,7 +73,7 @@
       <line x1="620" y1="158" x2="680" y2="160" stroke="#0d9488" stroke-width="2" marker-end="url(#arrowSvc)"/>
 
       {{-- Example chips --}}
-      <text x="20" y="320" fill="#64748b" font-size="12" font-family="Figtree,sans-serif">Examples: customer onboarding · invoice approvals · leave requests · sales follow-ups</text>
+      <text x="20" y="320" fill="#64748b" font-size="12" font-family="Figtree,sans-serif">Examples: invoice approvals · lead follow-ups · booking confirmations · payment reminders</text>
     </svg>
   </div>
 </div>

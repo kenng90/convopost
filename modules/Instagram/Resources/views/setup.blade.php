@@ -32,7 +32,7 @@
                         <ol class="mb-0 pl-3">
                             <li>{{ __('Callback URL must be this Instagram webhook (…/webhook/messaging/instagram/receive/…), not WhatsApp.') }}</li>
                             <li>{{ __('Instagram Professional account must be linked to the Facebook Page you connected.') }}</li>
-                            <li>{{ __('In Meta app: Messenger (Instagram) or Instagram product → Webhooks → subscribe messages.') }}</li>
+                            <li>{{ __('In Meta app: Messenger (Instagram) or Instagram product → Webhooks → subscribe messages and comments.') }}</li>
                             <li>{{ __('Subscribe the Page / Instagram account to the app webhook (Add subscriptions).') }}</li>
                             <li>{{ __('App Live (or Tester role). Then send a DM from a different Instagram user and watch laravel.log for messaging.webhook.hit.') }}</li>
                         </ol>
@@ -44,6 +44,7 @@
                         <ol class="mb-0 pl-3">
                             <li>{{ __('Facebook Page must be linked to the Instagram Professional account that receives DMs (Business Suite → Instagram accounts / Page settings).') }}</li>
                             <li>{{ __('Page token / User token must include pages_messaging, instagram_manage_messages, pages_show_list, and pages_read_engagement (or pages_manage_metadata).') }}</li>
+                            <li>{{ __('To reply to Instagram comments, also include instagram_manage_comments. Live apps need App Review for that permission.') }}</li>
                             <li>{{ __('In Graph API Explorer: User token with those scopes → GET /me/accounts?fields=id,name,access_token,instagram_business_account{id,username} → pick the Page whose instagram_business_account.id matches your webhook IG id → paste Page id + token and Save.') }}</li>
                         </ol>
                     </div>
@@ -87,7 +88,7 @@
                             @error('page_access_token')
                                 <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
-                            <small class="text-muted">{{ __('Long-lived Page token that includes instagram_manage_messages and pages_messaging.') }}</small>
+                            <small class="text-muted">{{ __('Long-lived Page token that includes instagram_manage_messages and pages_messaging. Add instagram_manage_comments to reply to comments.') }}</small>
                         </div>
 
                         <button type="submit" class="btn btn-primary">{{ __('Save connection') }}</button>

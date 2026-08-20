@@ -14,25 +14,31 @@ class AutomationServicesLandingTest extends TestCase
         $response = $this->get(route('services.automation'));
 
         $response->assertOk();
-        $response->assertSee('Automation that', false);
-        $response->assertSee('runs the work.', false);
-        $response->assertSee('Process automation practice', false);
+        $response->assertSee('Custom AI operating systems', false);
+        $response->assertSee('your real workflows.', false);
         $response->assertSee('id="what-we-do"', false);
         $response->assertSee('id="how-it-works"', false);
+        $response->assertSee('id="deploy"', false);
         $response->assertSee('id="catalog"', false);
         $response->assertSee('id="integrations"', false);
-        $response->assertSee('id="packages"', false);
-        $response->assertSee('Business process audit', false);
-        $response->assertSee('Workflow automation engine', false);
-        $response->assertSee('Connect the tools you already use', false);
-        $response->assertSee('Starter', false);
-        $response->assertSee('Growth', false);
-        $response->assertSee('Enterprise', false);
-        $response->assertSee('$300–800', false);
-        $response->assertSee('Book a consult', false);
+        $response->assertSee('id="process"', false);
+        $response->assertSee('Context is scattered', false);
+        $response->assertSee('Human approval', false);
+        $response->assertSee('Map the workflow', false);
+        $response->assertSee('Deploy one workflow', false);
+        $response->assertSee('We deploy first. Then we productize what repeats.', false);
+        $response->assertSee('Built around the tools you already use', false);
+        $response->assertSee('Hospitality', false);
+        $response->assertSee('Professional services', false);
+        $response->assertSee('Book a deployment', false);
         $response->assertSee('Separate from', false);
         $response->assertSee('WhatsApp SaaS', false);
         $response->assertSee('Skip to content', false);
+        $response->assertSee('On-network inference when required', false);
+        $response->assertDontSee('Book a consult', false);
+        $response->assertDontSee('$300–800', false);
+        $response->assertDontSee('AI workers that use your data', false);
+        $response->assertDontSee('id="packages"', false);
     }
 
     public function test_saas_landing_links_to_automation_services_from_hero(): void
@@ -44,7 +50,7 @@ class AutomationServicesLandingTest extends TestCase
 
         $response->assertOk();
         $response->assertSee(route('services.automation', [], false), false);
-        $response->assertSee('Need help beyond WhatsApp?', false);
+        $response->assertSee('Need help beyond chat?', false);
         $response->assertSee('I want to automate processes across my business', false);
         $response->assertDontSee('>Services</a>', false);
     }

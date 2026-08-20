@@ -140,4 +140,124 @@ class MetaMessagingParserTest extends TestCase
         $this->assertSame('ig-customer-standby', $batch->messages[0]->externalParticipantId);
         $this->assertSame('Hello while Business Suite owns the thread', $batch->messages[0]->content->body);
     }
+
+    public function test_parses_facebook_page_comment(): void
+    {
+        $request = Request::create('/webhook', 'POST', [
+            'object' => 'page',
+            'entry' => [[
+                'id' => 'page-111',
+                'time' => 1710000000,
+                'changes' => [[
+                    'field' => 'feed',
+                    'value' => [
+                        'item' => 'comment',
+                        'verb' => 'add',
+                        'comment_id' => '111_222',
+                        'post_id' => '111_333',
+                        'parent_id' => '111_333',
+                        'message' => 'How much is this?',
+                        'from' => [
+                            'id' => 'fb-commenter-1',
+                            'name' => 'Jane Commenter',
+                        ],
+                        'post' => [
+                            'id' => '111_333',
+                            'permalink_url' => 'https://www.facebook.com/permalink.php?story_fbid=333',
+                        ],
+                        'created_time' => 1710000000,
+                    ],
+                ]],
+            ]],
+        ]);
+
+        $batch = app(MetaMessagingParser::class)->parsePageMessaging($request, MessagingChannelType::Messenger);
+
+        $this->assertCount(1, $batch->messages);
+        $this->assertSame('fb-commenter-1', $batch->messages[0]->externalParticipantId);
+        $this->assertSame('Jane Commenter', $batch->messages[0]->participantName);
+        $this->assertSame('How much is this?', $batch->messages[0]->content->body);
+        $this->assertSame('comment:111_222', $batch->messages[0]->externalMessageId);
+        $this->assertTrue($batch->messages[0]->isComment());
+        $this->assertSame('111_222', $batch->messages[0]->context['comment_id']);
+        $this->assertNull($batch->messages[0]->context['parent_comment_id']);
+    }
+
+    public function test_skips_facebook_feed_likes_and_page_comments(): void
+    {
+        $connection = new \App\Models\Messaging\ChannelConnection([
+            'external_account_id' => 'page-111',
+            'credentials' => ['page_id' => 'page-111'],
+        ]);
+
+        $request = Request::create('/webhook', 'POST', [
+            'object' => 'page',
+            'entry' => [[
+                'id' => 'page-111',
+                'changes' => [
+                    [
+                        'field' => 'feed',
+                        'value' => [
+                            'item' => 'like',
+                            'verb' => 'add',
+                            'from' => ['id' => 'fb-user-1'],
+                        ],
+                    ],
+                    [
+                        'field' => 'feed',
+                        'value' => [
+                            'item' => 'comment',
+                            'verb' => 'add',
+                            'comment_id' => 'page-own-comment',
+                            'message' => 'Thanks!',
+                            'from' => ['id' => 'page-111'],
+                        ],
+                    ],
+                ],
+            ]],
+        ]);
+
+        $batch = app(MetaMessagingParser::class)->parsePageMessaging(
+            $request,
+            MessagingChannelType::Messenger,
+            $connection,
+        );
+
+        $this->assertCount(0, $batch->messages);
+    }
+
+    public function test_parses_instagram_comment(): void
+    {
+        $request = Request::create('/webhook', 'POST', [
+            'object' => 'instagram',
+            'entry' => [[
+                'id' => '17841401947499512',
+                'time' => 1710000000,
+                'changes' => [[
+                    'field' => 'comments',
+                    'value' => [
+                        'id' => 'ig-comment-99',
+                        'text' => 'Love this reel',
+                        'from' => [
+                            'id' => 'ig-commenter-2',
+                            'username' => 'lover',
+                        ],
+                        'media' => [
+                            'id' => 'ig-media-1',
+                            'media_product_type' => 'REELS',
+                        ],
+                    ],
+                ]],
+            ]],
+        ]);
+
+        $batch = app(MetaMessagingParser::class)->parsePageMessaging($request, MessagingChannelType::Instagram);
+
+        $this->assertCount(1, $batch->messages);
+        $this->assertSame('ig-commenter-2', $batch->messages[0]->externalParticipantId);
+        $this->assertSame('lover', $batch->messages[0]->participantName);
+        $this->assertSame('Love this reel', $batch->messages[0]->content->body);
+        $this->assertSame('ig-comment-99', $batch->messages[0]->context['comment_id']);
+        $this->assertSame('ig-media-1', $batch->messages[0]->context['media_id']);
+    }
 }

@@ -211,6 +211,15 @@
         chatList.myMessagesCount=response.data.myChatsCount;
         chatList.totalMessagesCount=response.data.totalChats;
         chatList.newMessagesCount=response.data.newMessagesCount;
+        if(response.data.messageChatsCount!==undefined){
+            chatList.messageChatsCount=response.data.messageChatsCount;
+        }
+        if(response.data.commentChatsCount!==undefined){
+            chatList.commentChatsCount=response.data.commentChatsCount;
+        }
+        if(response.data.commentUnreadCount!==undefined){
+            chatList.commentUnreadCount=response.data.commentUnreadCount;
+        }
 
         chatList.filterContacts();
 
@@ -234,6 +243,16 @@
     var chatListUpdate=function(data){
         var contactId=data.contact_id || data.contact;
         if(!contactId || !chatList){ return; }
+
+        var kinds=data.inbox_kinds || [];
+        var matchesInbox=kinds.length===0 || kinds.indexOf(chatList.inboxMode)!==-1;
+
+        if(!matchesInbox){
+            if(kinds.indexOf('comments')!==-1 && data.is_last_message_by_contact){
+                chatList.commentUnreadCount=(chatList.commentUnreadCount||0)+1;
+            }
+            return;
+        }
 
         var allIndex=chatList.all.findIndex(function(item){ return item.id===contactId; });
 
@@ -331,6 +350,9 @@
         if (chatList && chatList.channelFilter && chatList.channelFilter !== 'all') {
             params.channel = chatList.channelFilter;
         }
+        if (chatList && chatList.inboxMode) {
+            params.inbox_mode = chatList.inboxMode;
+        }
 
         axios.get('/api/wpbox/chats/'+cursor+'/'+page+'/'+search_query, { params: params }).then(function (response) {
             applyChatListResponse(response, options);
@@ -398,6 +420,7 @@
             latestFormSubmission: null,
             messages:[],
             activeMessage:"",
+            commentReplyMode:"public",
             copilotSuggestions:[],
             activeNote:"",
             selectedImage: null,
@@ -423,6 +446,33 @@
             dynamicProperties: {}, // Placeholder object
             enabledChannels: @json($enabledChannels ?? [['value' => 'all', 'label' => 'All channels']]),
             channelFilter: @json($channelFilter ?? 'all'),
+            inboxMode: 'messages',
+            messageChatsCount: 0,
+            commentChatsCount: 0,
+            commentUnreadCount: 0,
+        },
+        computed: {
+            visibleChannelFilters() {
+                if (this.inboxMode !== 'comments') {
+                    return this.enabledChannels;
+                }
+
+                return this.enabledChannels.filter(function (channelOption) {
+                    return channelOption.value !== 'whatsapp';
+                });
+            },
+            filteredReplies() {
+                const filterText = this.filterText.toLowerCase();
+                return this.replies.filter(item => item.name.toLowerCase().includes(filterText));
+            },
+            filteredTemplates() {
+                const filterTemplates = this.filterTemplates.toLowerCase();
+                return this.templates.filter(item => item.name.toLowerCase().includes(filterTemplates));
+            },
+            filteredFetcherData(){
+                const filterFetcher = this.filterFetcher.toLowerCase();
+                return this.fetcherModules[this.selectedFetcher].data.filter(item => item.title.toLowerCase().includes(filterFetcher));
+            }
         },
         mounted() {
             var self = this;
@@ -443,20 +493,6 @@
             // Keep the inbox interactive even if a child panel throws
             // (e.g. missing country on Messenger/Instagram contacts).
             return false;
-        },
-       computed: {
-            filteredReplies() {
-                const filterText = this.filterText.toLowerCase();
-                return this.replies.filter(item => item.name.toLowerCase().includes(filterText));
-            },
-            filteredTemplates() {
-                const filterTemplates = this.filterTemplates.toLowerCase();
-                return this.templates.filter(item => item.name.toLowerCase().includes(filterTemplates));
-            },
-            filteredFetcherData(){
-                const filterFetcher = this.filterFetcher.toLowerCase();
-                return this.fetcherModules[this.selectedFetcher].data.filter(item => item.title.toLowerCase().includes(filterFetcher));
-            }
         },
         watch: {
             page(newVal, oldVal) {
@@ -518,6 +554,18 @@
                 // Keep the open chat visible even if it belongs to another channel.
                 getChatsJS(1, this.searchQuery, { incremental: false, playSoundOnUpdate: false });
             },
+            setInboxMode(mode) {
+                if(this.inboxMode === mode){
+                    return;
+                }
+                this.inboxMode = mode;
+                this.page = 1;
+                lastmessagetime = 'none';
+                if(mode === 'comments' && this.channelFilter === 'whatsapp'){
+                    this.channelFilter = 'all';
+                }
+                getChatsJS(1, this.searchQuery, { incremental: false, playSoundOnUpdate: false });
+            },
             channelLabel(channel) {
                 const labels = {
                     whatsapp: '{{ __('WhatsApp') }}',
@@ -533,6 +581,25 @@
                     whatsapp: 'badge-success',
                 };
                 return classes[channel] || 'badge-secondary';
+            },
+            commentBadge(message) {
+                const extra = message && message.extra ? String(message.extra) : '';
+                if (extra === 'comment') {
+                    return '{{ __('Comment') }}';
+                }
+                if (extra === 'comment_public') {
+                    return '{{ __('Posted on comment') }}';
+                }
+                if (extra === 'comment_private') {
+                    return '{{ __('Private reply') }}';
+                }
+                return '';
+            },
+            currentCommentReplyMode() {
+                if (!this.activeChat || !this.activeChat.comment_reply) {
+                    return 'direct';
+                }
+                return this.commentReplyMode || this.activeChat.comment_reply.default_mode || 'public';
             },
             mineMessages:function(){
                 this.tab="mine";
@@ -616,6 +683,22 @@
                 });
             },
             getReplyNotification(contact){
+                if(contact && contact.comment_reply){
+                    if(this.commentReplyMode === 'public' || (!contact.comment_reply.can_direct && this.commentReplyMode !== 'private')){
+                        return {
+                            "class":"badge-info",
+                            "text":"{{ __('This reply will be posted publicly on the comment')}}"
+                        };
+                    }
+                    if(this.commentReplyMode === 'private'){
+                        return {
+                            "class": contact.comment_reply.can_private ? "badge-success" : "badge-warning",
+                            "text": contact.comment_reply.can_private
+                                ? "{{ __('This will send a private Messenger/Instagram message (7-day window)')}}"
+                                : "{{ __('A private reply was already sent, or the 7-day window expired')}}"
+                        };
+                    }
+                }
                 if(!contact || !contact.last_client_reply_at){
                     if(contact && contact.channel && contact.channel !== 'whatsapp'){
                         return {
@@ -688,6 +771,9 @@
                     }
                     this.$set(this.all[index], 'isActive', true);
                     this.activeChat = this.all[index];
+                    this.commentReplyMode = (this.activeChat.comment_reply && this.activeChat.comment_reply.default_mode)
+                        ? this.activeChat.comment_reply.default_mode
+                        : 'public';
                     this.filterContacts();
                     console.log("Active chat set to "+index);
                     console.log(this.all[index].name);
@@ -845,7 +931,10 @@
             sendChatMessage(){
                 var message=this.activeMessage;
                 this.activeMessage="";
-                axios.post('/api/wpbox/send/'+chatList.activeChat.id, {message: message}).then(function (response) {
+                axios.post('/api/wpbox/send/'+chatList.activeChat.id, {
+                    message: message,
+                    reply_mode: this.currentCommentReplyMode()
+                }).then(function (response) {
                     
                     if(response.data.status){
                         lastmessagetime=response.data.messagetime;

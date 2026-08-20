@@ -48,6 +48,14 @@ abstract class AbstractMetaMessagingChannel implements MessagingChannel
 
     public function send(ChannelConnection $connection, Conversation $conversation, Message $message, MessageContent $content): SendResult
     {
+        if ($content->isPublicCommentReply()) {
+            return $this->sendPublicCommentReply($connection, $conversation, $content);
+        }
+
+        if ($content->isPrivateCommentReply()) {
+            return $this->sendPrivateCommentReply($connection, $conversation, $content);
+        }
+
         $actorId = $this->resolveGraphActorId($connection);
         $recipientId = trim((string) $conversation->external_participant_id);
 
@@ -263,11 +271,133 @@ abstract class AbstractMetaMessagingChannel implements MessagingChannel
             return __('This Facebook Page is not linked to an Instagram Professional account.');
         }
 
+        if (str_contains($error, 'private reply') || str_contains($error, 'already been used')) {
+            return __('A private reply was already sent for this comment. Reply publicly on the post, or wait for the customer to message you.');
+        }
+
+        if ((int) $code === 10 || str_contains($error, 'instagram_manage_comments') || str_contains($error, 'pages_manage_engagement')) {
+            return $error.' '.__('Comment replies need pages_manage_engagement (Facebook) or instagram_manage_comments (Instagram) on the Page token, plus App Review for live apps.');
+        }
+
         if (str_contains($error, 'does not support this operation') || str_contains($error, 'missing permissions')) {
             return $error.' '.__('Use a Facebook Page access token with instagram_manage_messages + pages_messaging. Do not POST to the Instagram business account id on graph.facebook.com.');
         }
 
         return $error;
+    }
+
+    protected function sendPublicCommentReply(ChannelConnection $connection, Conversation $conversation, MessageContent $content): SendResult
+    {
+        $commentId = $conversation->commentId();
+
+        if ($commentId === '') {
+            return new SendResult(false, null, __('No Facebook/Instagram comment is linked to this conversation.'));
+        }
+
+        if ($content->type !== 'TEXT' || trim($content->body) === '') {
+            return new SendResult(false, null, __('Public comment replies must be text.'));
+        }
+
+        $token = $this->resolvePageAccessToken($connection);
+
+        if ($token === '') {
+            return new SendResult(false, null, __('Page access token is missing. Reconnect Messenger/Instagram with a Facebook Page token.'));
+        }
+
+        $endpoint = $this->channel() === MessagingChannelType::Instagram ? 'replies' : 'comments';
+        $url = "https://graph.facebook.com/{$this->graphVersion}/{$commentId}/{$endpoint}";
+        $response = Http::withToken($token)->asJson()->post($url, [
+            'message' => $content->body,
+        ]);
+
+        if ($response->successful()) {
+            $externalId = (string) (data_get($response->json(), 'id') ?: data_get($response->json(), 'message_id') ?: '');
+
+            return new SendResult(true, $externalId !== '' ? $externalId : 'comment-reply:'.$commentId);
+        }
+
+        \Illuminate\Support\Facades\Log::warning('messaging.comment.public_failed', [
+            'channel' => $this->channel()->value,
+            'comment_id' => $commentId,
+            'status' => $response->status(),
+            'error' => data_get($response->json(), 'error.message'),
+            'error_code' => data_get($response->json(), 'error.code'),
+        ]);
+
+        return new SendResult(
+            false,
+            null,
+            $this->humanizeGraphError(
+                (string) data_get($response->json(), 'error.message', $response->body()),
+                data_get($response->json(), 'error.error_subcode'),
+                data_get($response->json(), 'error.code'),
+            ),
+        );
+    }
+
+    protected function sendPrivateCommentReply(ChannelConnection $connection, Conversation $conversation, MessageContent $content): SendResult
+    {
+        $commentId = $conversation->commentId();
+
+        if ($commentId === '') {
+            return new SendResult(false, null, __('No Facebook/Instagram comment is linked to this conversation.'));
+        }
+
+        if ($content->type !== 'TEXT' || trim($content->body) === '') {
+            return new SendResult(false, null, __('Private comment replies must be text.'));
+        }
+
+        $token = $this->resolvePageAccessToken($connection);
+
+        if ($token === '') {
+            return new SendResult(false, null, __('Page access token is missing. Reconnect Messenger/Instagram with a Facebook Page token.'));
+        }
+
+        $payload = [
+            'recipient' => ['comment_id' => $commentId],
+            'message' => ['text' => $content->body],
+        ];
+
+        $graph = "https://graph.facebook.com/{$this->graphVersion}";
+        $actorId = $this->resolveGraphActorId($connection);
+        $endpoints = array_values(array_unique([
+            $graph.'/me/messages',
+            $graph.'/'.$actorId.'/messages',
+        ]));
+
+        $lastResponse = null;
+
+        foreach ($endpoints as $url) {
+            $response = Http::withToken($token)->asJson()->post($url, $payload);
+
+            if ($response->successful()) {
+                $conversation->forceFill([
+                    'metadata' => array_merge($conversation->metadata ?? [], [
+                        'private_reply_sent' => true,
+                        'private_reply_comment_id' => $commentId,
+                    ]),
+                ])->save();
+
+                return new SendResult(true, (string) data_get($response->json(), 'message_id'));
+            }
+
+            $lastResponse = $response;
+
+            \Illuminate\Support\Facades\Log::warning('messaging.comment.private_failed', [
+                'channel' => $this->channel()->value,
+                'comment_id' => $commentId,
+                'status' => $response->status(),
+                'error' => data_get($response->json(), 'error.message'),
+                'error_code' => data_get($response->json(), 'error.code'),
+                'endpoint' => $url,
+            ]);
+        }
+
+        $error = data_get($lastResponse?->json(), 'error.message', $lastResponse?->body() ?? '');
+        $subcode = data_get($lastResponse?->json(), 'error.error_subcode');
+        $code = data_get($lastResponse?->json(), 'error.code');
+
+        return new SendResult(false, null, $this->humanizeGraphError((string) $error, $subcode, $code));
     }
 
     public function healthCheck(ChannelConnection $connection): ChannelHealth

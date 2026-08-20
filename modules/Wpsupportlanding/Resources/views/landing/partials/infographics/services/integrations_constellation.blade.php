@@ -5,12 +5,12 @@
     <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] mb-2" style="color:#0d9488;">Stack-agnostic</p>
-        <h3 class="font-display text-2xl sm:text-3xl font-800 text-slate-900">Connect the tools you already use</h3>
+        <h3 class="font-display text-2xl sm:text-3xl font-800 text-slate-900">Built around the tools you already use</h3>
       </div>
-      <p class="text-base text-slate-600 max-w-sm">We improve your stack — we don’t lock you into one vendor.</p>
+      <p class="text-base text-slate-600 max-w-sm">The AI layer sits in the middle — email, documents, chat, voice, CRM, and payments. Cloud or on-network.</p>
     </div>
 
-    <svg viewBox="0 0 920 380" class="w-full h-auto" role="img" aria-label="Constellation of business tools connected through Convocon automation hub">
+    <svg viewBox="0 0 920 380" class="w-full h-auto" role="img" aria-label="Constellation of email, documents, chat, voice, and business tools connected through an AI operating layer">
       <defs>
         <linearGradient id="intLine" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stop-color="#0d9488" stop-opacity="0.15"/>
@@ -40,22 +40,22 @@
       <circle cx="460" cy="190" r="52" fill="#ffffff" stroke="#0d9488" stroke-width="2"/>
       <circle cx="460" cy="190" r="42" fill="rgba(45,212,191,0.12)"/>
       <text x="460" y="184" text-anchor="middle" fill="#0d9488" font-size="10" font-weight="700" font-family="Sora,sans-serif">HUB</text>
-      <text x="460" y="202" text-anchor="middle" fill="#0f172a" font-size="12" font-weight="700" font-family="Sora,sans-serif">Automation</text>
+      <text x="460" y="202" text-anchor="middle" fill="#0f172a" font-size="12" font-weight="700" font-family="Sora,sans-serif">AI layer</text>
 
       @php
         $tools = [
-          [200, 80, 'HubSpot'],
-          [340, 55, 'Salesforce'],
-          [560, 50, 'Slack'],
-          [720, 85, 'Notion'],
-          [800, 170, 'Stripe'],
-          [780, 280, 'Xero'],
-          [620, 340, 'QuickBooks'],
-          [320, 345, 'Airtable'],
-          [170, 270, 'Calendly'],
-          [145, 160, 'Google'],
-          [250, 320, 'M365'],
-          [700, 320, 'WhatsApp'],
+          [200, 80, 'Email'],
+          [340, 55, 'Documents'],
+          [560, 50, 'WhatsApp'],
+          [720, 85, 'Voice'],
+          [800, 170, 'CRM'],
+          [780, 280, 'Sheets'],
+          [620, 340, 'Payments'],
+          [320, 345, 'Bookings'],
+          [170, 270, 'Accounting'],
+          [145, 160, 'Drive'],
+          [250, 320, 'Tickets'],
+          [700, 320, 'Human inbox'],
         ];
       @endphp
       @foreach($tools as [$x, $y, $label])

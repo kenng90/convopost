@@ -2,7 +2,6 @@
 
 namespace Modules\Wpbox\Http\Controllers;
 
-use App\Enums\MessagingChannelType;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Campaign\ApiCampaignService;
@@ -27,11 +26,13 @@ use Modules\Wpbox\Models\Message;
 use Modules\Wpbox\Models\Reply;
 use Modules\Wpbox\Models\Template;
 use Modules\Wpbox\Traits\Contacts;
+use Modules\Wpbox\Traits\InboxModes;
 use Modules\Wpbox\Traits\Whatsapp;
 
 class APIController extends Controller
 {
     use Contacts;
+    use InboxModes;
     use Whatsapp;
 
     public function sendListMessageToPhoneNumber(Request $request)
@@ -218,8 +219,8 @@ class APIController extends Controller
                 }
 
             } else {
-                //Just message
-                $message = $contact->sendMessage($request->message, false);
+                $extra = $this->outboundCommentReplyExtra($contact, $request->input('reply_mode'));
+                $message = $contact->sendMessage($request->message, false, false, 'TEXT', null, $extra);
             }
 
             return response()->json(['status' => 'success', 'message_id' => $message->id, 'message_wamid' => $message->fb_message_id]);
@@ -555,24 +556,37 @@ class APIController extends Controller
             //Company
             $company = $this->getCompany();
             session(['company_id' => $company->id]);
-            $chatList = Contact::where('has_chat', 1)
-                ->where('company_id', $company->id)
-                ->with(['channelIdentities' => function ($query) {
-                    $query->withoutGlobalScopes()->select('id', 'contact_id', 'channel', 'display_name');
-                }])
+            $inboxMode = $this->resolveInboxMode($request->input('inbox_mode'));
+
+            $baseQuery = Contact::where('has_chat', 1)
+                ->where('company_id', $company->id);
+
+            $countBase = clone $baseQuery;
+            $this->applyInboxModeFilter($baseQuery, $inboxMode);
+
+            $chatList = $baseQuery
+                ->with([
+                    'channelIdentities' => function ($query) {
+                        $query->withoutGlobalScopes()->select('id', 'contact_id', 'channel', 'display_name');
+                    },
+                    'conversations' => function ($query) {
+                        $query->withoutGlobalScopes()
+                            ->select(['id', 'contact_id', 'channel', 'metadata', 'last_client_reply_at'])
+                            ->latest('id');
+                    },
+                ])
                 ->orderBy('last_reply_at', 'DESC')
                 ->limit(150)
                 ->get()
-                ->map(function (Contact $contact) {
-                    $contact->channel = $contact->channelIdentities->first()?->channel?->value
-                        ?? MessagingChannelType::Whatsapp->value;
-
-                    return $contact;
-                });
+                ->map(fn (Contact $contact) => $this->presentInboxContact($contact));
 
             return response()->json([
                 'data' => $chatList,
                 'company_id' => $company->id,
+                'inboxMode' => $inboxMode,
+                'messageChatsCount' => $this->countInboxMode($countBase, 'messages'),
+                'commentChatsCount' => $this->countInboxMode($countBase, 'comments'),
+                'commentUnreadCount' => $this->countInboxMode($countBase, 'comments', unreadOnly: true),
                 'status' => true,
                 'errMsg' => '',
             ]);
@@ -614,9 +628,23 @@ class APIController extends Controller
                 ->limit($limit)
                 ->get();
 
+            $contact->load([
+                'channelIdentities' => function ($query) {
+                    $query->withoutGlobalScopes()->select('id', 'contact_id', 'channel', 'display_name');
+                },
+                'conversations' => function ($query) {
+                    $query->withoutGlobalScopes()
+                        ->select(['id', 'contact_id', 'channel', 'metadata', 'last_client_reply_at'])
+                        ->latest('id');
+                },
+            ]);
+            $this->presentInboxContact($contact);
+
             return response()->json([
                 'data' => $messages,
                 'has_more' => $messages->count() === $limit,
+                'comment_reply' => $contact->comment_reply,
+                'channel' => $contact->channel,
                 'status' => true,
                 'errMsg' => '',
             ]);

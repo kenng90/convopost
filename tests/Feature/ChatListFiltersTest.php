@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\MessagingChannelType;
 use App\Models\Company;
+use App\Models\Messaging\ChannelIdentity;
+use App\Models\Messaging\Conversation;
 use App\Models\User;
 use App\Scopes\CompanyScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -303,6 +306,120 @@ class ChatListFiltersTest extends TestCase
         $this->assertSame('messenger', $messengerFiltered->json('data.0.channel'));
     }
 
+    public function test_default_chatlist_excludes_comment_only_threads(): void
+    {
+        $whatsapp = $this->makeContact([
+            'name' => 'WhatsApp Customer',
+            'phone' => '254700000401',
+        ]);
+        $commenter = $this->makeCommentContact('Comment Only');
+
+        $response = $this->actingAs($this->owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $this->company->id])
+            ->getJson('/api/wpbox/chats/none/1/?filter=open');
+
+        $response->assertOk()
+            ->assertJsonPath('inboxMode', 'messages');
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+        $this->assertContains($whatsapp->id, $ids);
+        $this->assertNotContains($commenter->id, $ids);
+        $this->assertSame(1, $response->json('commentChatsCount'));
+        $this->assertGreaterThanOrEqual(1, $response->json('messageChatsCount'));
+    }
+
+    public function test_comments_inbox_returns_only_comment_threads(): void
+    {
+        $whatsapp = $this->makeContact([
+            'name' => 'WhatsApp Customer',
+            'phone' => '254700000402',
+        ]);
+        $commenter = $this->makeCommentContact('Jane Commenter');
+
+        $response = $this->actingAs($this->owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $this->company->id])
+            ->getJson('/api/wpbox/chats/none/1/?filter=open&inbox_mode=comments');
+
+        $response->assertOk()
+            ->assertJsonPath('inboxMode', 'comments')
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $commenter->id);
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+        $this->assertNotContains($whatsapp->id, $ids);
+        $this->assertNotNull($response->json('data.0.comment_reply'));
+    }
+
+    public function test_mixed_comment_and_dm_appears_in_both_inboxes(): void
+    {
+        $mixed = $this->makeCommentContact('Mixed User', hasDirectMessage: true);
+
+        $messages = $this->actingAs($this->owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $this->company->id])
+            ->getJson('/api/wpbox/chats/none/1/?filter=open&inbox_mode=messages');
+
+        $comments = $this->actingAs($this->owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $this->company->id])
+            ->getJson('/api/wpbox/chats/none/1/?filter=open&inbox_mode=comments');
+
+        $this->assertContains($mixed->id, collect($messages->json('data'))->pluck('id')->all());
+        $this->assertContains($mixed->id, collect($comments->json('data'))->pluck('id')->all());
+    }
+
+    public function test_mobile_get_conversations_defaults_to_messages_inbox(): void
+    {
+        $whatsapp = $this->makeContact([
+            'name' => 'WhatsApp Customer',
+            'phone' => '254700000501',
+        ]);
+        $commenter = $this->makeCommentContact('Mobile Comment Only');
+
+        $response = $this->actingAs($this->owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $this->company->id])
+            ->postJson('/api/wpbox/getConversations/none?from=mobile_api', [
+                'token' => 'test-token',
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('inboxMode', 'messages');
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+        $this->assertContains($whatsapp->id, $ids);
+        $this->assertNotContains($commenter->id, $ids);
+        $this->assertSame(1, $response->json('commentChatsCount'));
+    }
+
+    public function test_mobile_get_conversations_comments_inbox(): void
+    {
+        $whatsapp = $this->makeContact([
+            'name' => 'WhatsApp Customer',
+            'phone' => '254700000502',
+        ]);
+        $commenter = $this->makeCommentContact('Mobile Jane');
+
+        $response = $this->actingAs($this->owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $this->company->id])
+            ->postJson('/api/wpbox/getConversations/none?from=mobile_api', [
+                'token' => 'test-token',
+                'inbox_mode' => 'comments',
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('inboxMode', 'comments')
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $commenter->id);
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+        $this->assertNotContains($whatsapp->id, $ids);
+        $this->assertNotNull($response->json('data.0.comment_reply'));
+    }
+
     /**
      * @param  array<string, mixed>  $attributes
      */
@@ -318,5 +435,39 @@ class ChatListFiltersTest extends TestCase
             'is_last_message_by_contact' => false,
             'resolved_chat' => 0,
         ], $attributes));
+    }
+
+    private function makeCommentContact(string $name = 'Commenter', bool $hasDirectMessage = false): Contact
+    {
+        $contact = $this->makeContact([
+            'name' => $name,
+            'phone' => '',
+            'is_last_message_by_contact' => true,
+            'last_message' => 'Comment: Hello',
+        ]);
+
+        ChannelIdentity::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id,
+            'contact_id' => $contact->id,
+            'channel' => MessagingChannelType::Instagram->value,
+            'external_id' => 'ig-commenter-'.$contact->id,
+            'display_name' => $name,
+        ]);
+
+        Conversation::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id,
+            'contact_id' => $contact->id,
+            'channel' => MessagingChannelType::Instagram->value,
+            'external_participant_id' => 'ig-commenter-'.$contact->id,
+            'last_client_reply_at' => now(),
+            'metadata' => [
+                'source' => $hasDirectMessage ? 'mixed' : 'comment',
+                'comment_id' => 'igc-'.$contact->id,
+                'comment_received_at' => now()->toIso8601String(),
+                'has_direct_message' => $hasDirectMessage,
+            ],
+        ]);
+
+        return $contact;
     }
 }

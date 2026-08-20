@@ -43,8 +43,44 @@ class OutboundMessageService
 
         $adapter = $this->registry->get($channel);
         $capabilities = $adapter->capabilities();
+        $replyMode = MetaCommentReply::extraToMode((string) $message->extra);
 
-        if ($capabilities->requiresServiceWindow && ! $conversation->isWithinServiceWindow($capabilities->serviceWindowHours ?? 24)) {
+        if ($replyMode === null && $conversation->hasOpenComment() && ! $conversation->canDirectMessage()) {
+            $replyMode = MetaCommentReply::MODE_PUBLIC;
+            $message->extra = MetaCommentReply::EXTRA_PUBLIC;
+            $message->save();
+        }
+
+        $content = $content->withReplyMode($replyMode);
+
+        if ($content->isPublicCommentReply()) {
+            if (! $conversation->hasOpenComment()) {
+                $error = __('No Facebook/Instagram comment is linked to this conversation.');
+                $message->status = 5;
+                $message->error = $error;
+                $message->save();
+
+                return new SendResult(false, null, $error);
+            }
+        } elseif ($content->isPrivateCommentReply()) {
+            if (! $conversation->hasOpenComment()) {
+                $error = __('No Facebook/Instagram comment is linked to this conversation.');
+                $message->status = 5;
+                $message->error = $error;
+                $message->save();
+
+                return new SendResult(false, null, $error);
+            }
+
+            if (! $conversation->isWithinCommentPrivateReplyWindow()) {
+                $error = __('The 7-day private reply window for this comment has expired.');
+                $message->status = 5;
+                $message->error = $error;
+                $message->save();
+
+                return new SendResult(false, null, $error);
+            }
+        } elseif ($capabilities->requiresServiceWindow && ! $conversation->isWithinServiceWindow($capabilities->serviceWindowHours ?? 24)) {
             $error = __('Messaging window has expired for this channel.');
             $message->status = 5;
             $message->error = $error;

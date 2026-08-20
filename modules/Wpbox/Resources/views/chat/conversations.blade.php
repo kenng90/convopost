@@ -18,13 +18,33 @@
                     </b-input-group-append>
                 </b-input-group>
             </div>
+            <div class="btn-group btn-group-sm w-100 mt-3" role="group">
+                <button
+                    type="button"
+                    class="btn"
+                    :class="inboxMode === 'messages' ? 'btn-primary' : 'btn-outline-primary'"
+                    @click="setInboxMode('messages')"
+                >
+                    {{ __('Messages') }}
+                    <span class="badge badge-pill ml-1" :class="inboxMode === 'messages' ? 'badge-light text-primary' : 'badge-primary'">@{{ messageChatsCount }}</span>
+                </button>
+                <button
+                    type="button"
+                    class="btn"
+                    :class="inboxMode === 'comments' ? 'btn-primary' : 'btn-outline-primary'"
+                    @click="setInboxMode('comments')"
+                >
+                    {{ __('Comments') }}
+                    <span class="badge badge-pill ml-1" :class="inboxMode === 'comments' ? 'badge-light text-primary' : (commentUnreadCount > 0 ? 'badge-danger' : 'badge-primary')">@{{ commentUnreadCount > 0 ? commentUnreadCount : commentChatsCount }}</span>
+                </button>
+            </div>
         </div>
     </div>
 
-    <div class="w-100 px-3 pt-3 wpbox-filter-tabs" v-if="enabledChannels.length > 2">
+    <div class="w-100 px-3 pt-3 wpbox-filter-tabs" v-if="visibleChannelFilters.length > 2">
         <div class="btn-group btn-group-sm w-100 mb-2" role="group">
             <button
-                v-for="channelOption in enabledChannels"
+                v-for="channelOption in visibleChannelFilters"
                 :key="channelOption.value"
                 type="button"
                 class="btn"
@@ -72,6 +92,7 @@
                             <h4 :class="['mb-0', { 'text-primary': contact.isActive }]">
                                 @{{ contact.name }}
                                 <span v-if="contact.channel && contact.channel !== 'whatsapp'" class="badge badge-sm ml-1" :class="channelBadgeClass(contact.channel)">@{{ channelLabel(contact.channel) }}</span>
+                                <span v-if="contact.comment_reply" class="badge badge-sm badge-info ml-1">{{ __('Comment') }}</span>
                             </h4>
                             <span :class="['text-nowrap', 'text-xs', 'text-muted', 'opacity-6', 'px-2']">@{{ momentIt(contact.last_reply_at) }}</span>
                         </div>

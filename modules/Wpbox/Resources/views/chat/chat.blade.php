@@ -25,7 +25,14 @@
                         <h3 class="mb-0 d-block text-truncate">@{{ activeChat.name }}</h3>
                     </a>
                     <span class="text-xs wpbox-chat-header__phone" v-if="activeChat.phone">@{{ activeChat.phone }}</span>
-                    <span class="text-xs wpbox-chat-header__phone" v-else-if="activeChat.channel && activeChat.channel !== 'whatsapp'">@{{ channelLabel(activeChat.channel) }}</span>
+                    <span class="text-xs wpbox-chat-header__phone" v-else-if="activeChat.channel && activeChat.channel !== 'whatsapp'">
+                        @{{ channelLabel(activeChat.channel) }}
+                        <template v-if="activeChat.comment_reply"> · {{ __('Comment') }}</template>
+                    </span>
+                    <a v-if="activeChat.comment_reply && activeChat.comment_reply.permalink"
+                       :href="activeChat.comment_reply.permalink"
+                       target="_blank"
+                       class="text-xs text-primary">{{ __('View post') }}</a>
                 </div>
             </div>
 

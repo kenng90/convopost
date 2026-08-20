@@ -1,29 +1,29 @@
-{{-- Four practice pillars — Nominal-style how it works --}}
+{{-- Deployment process: map → connect → first workflow → expand → productize --}}
 @php
   $pillars = [
     [
       'num' => '01',
-      'title' => 'Audit',
-      'body' => 'We map how work actually moves — tools, handoffs, bottlenecks — and score what to automate first.',
-      'points' => ['Workflow interviews', 'Time & cost model', 'Prioritized backlog'],
+      'title' => 'Map the workflow',
+      'body' => 'We talk through the work that wastes the most time and find where AI creates leverage inside how you already operate.',
+      'points' => ['Time sinks', 'Handoffs &amp; constraints', 'Where AI should prepare'],
     ],
     [
       'num' => '02',
-      'title' => 'Automate',
-      'body' => 'We build reliable workflows: approvals, reminders, document generation, CRM updates, and AI replies.',
-      'points' => ['Zapier · Make · n8n', 'Power Automate', 'Custom scripts'],
+      'title' => 'Build around your tools',
+      'body' => 'We connect email, documents, chat, CRM, and the rest of the stack you already pay for. No rip-and-replace.',
+      'points' => ['WhatsApp · voice · email', 'Docs · sheets · CRM', 'Payments · bookings'],
     ],
     [
       'num' => '03',
-      'title' => 'Integrate',
-      'body' => 'We connect the stack you already pay for — CRM, chat, finance, calendars — without rip-and-replace.',
-      'points' => ['HubSpot · Salesforce', 'Google · Microsoft 365', 'Stripe · Xero · Slack'],
+      'title' => 'Deploy one workflow',
+      'body' => 'One high-impact loop goes live fast — with review and approval before anything sends or writes.',
+      'points' => ['Clear human gates', 'Source evidence', 'Team using it this week'],
     ],
     [
       'num' => '04',
-      'title' => 'Optimize',
-      'body' => 'Training, docs, monitoring, and monthly reviews so automations keep saving hours after go-live.',
-      'points' => ['Staff training', 'Playbooks', 'Ongoing support'],
+      'title' => 'Expand, then productize',
+      'body' => 'Each deployment teaches the context layer. Repeated workflows become infrastructure that compounds.',
+      'points' => ['More workflows', 'Operational memory', 'Patterns become product'],
     ],
   ];
 @endphp
@@ -39,7 +39,7 @@
         @foreach($pillar['points'] as $point)
           <li class="flex items-start gap-2 text-sm text-slate-700">
             <span class="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:#0d9488;"></span>
-            {{ $point }}
+            {!! $point !!}
           </li>
         @endforeach
       </ul>

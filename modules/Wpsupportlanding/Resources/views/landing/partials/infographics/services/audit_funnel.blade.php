@@ -4,7 +4,7 @@
     <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] mb-2" style="color:#0d9488;">Discovery</p>
-        <h3 class="font-display text-2xl sm:text-3xl font-800 text-slate-900">Business process audit</h3>
+        <h3 class="font-display text-2xl sm:text-3xl font-800 text-slate-900">Map the workflow</h3>
       </div>
       <p class="text-base text-slate-600 max-w-sm">Map work → find waste → score ROI → prioritize what to automate first.</p>
     </div>
