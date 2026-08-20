@@ -5,12 +5,12 @@
     <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] mb-2" style="color:#0d9488;">Stack-agnostic</p>
-        <h3 class="font-display text-2xl sm:text-3xl font-800 text-slate-900">Connect the tools you already use</h3>
+        <h3 class="font-display text-2xl sm:text-3xl font-800 text-slate-900">Built around the tools you already use</h3>
       </div>
-      <p class="text-base text-slate-600 max-w-sm">The worker sits in the middle — chat, voice, CRM, payments, and your docs. Cloud or on-network.</p>
+      <p class="text-base text-slate-600 max-w-sm">The AI layer sits in the middle — email, documents, chat, voice, CRM, and payments. Cloud or on-network.</p>
     </div>
 
-    <svg viewBox="0 0 920 380" class="w-full h-auto" role="img" aria-label="Constellation of chat, voice, knowledge, and business tools connected through a Convocon AI worker">
+    <svg viewBox="0 0 920 380" class="w-full h-auto" role="img" aria-label="Constellation of email, documents, chat, voice, and business tools connected through an AI operating layer">
       <defs>
         <linearGradient id="intLine" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stop-color="#0d9488" stop-opacity="0.15"/>
@@ -40,21 +40,21 @@
       <circle cx="460" cy="190" r="52" fill="#ffffff" stroke="#0d9488" stroke-width="2"/>
       <circle cx="460" cy="190" r="42" fill="rgba(45,212,191,0.12)"/>
       <text x="460" y="184" text-anchor="middle" fill="#0d9488" font-size="10" font-weight="700" font-family="Sora,sans-serif">HUB</text>
-      <text x="460" y="202" text-anchor="middle" fill="#0f172a" font-size="12" font-weight="700" font-family="Sora,sans-serif">AI worker</text>
+      <text x="460" y="202" text-anchor="middle" fill="#0f172a" font-size="12" font-weight="700" font-family="Sora,sans-serif">AI layer</text>
 
       @php
         $tools = [
-          [200, 80, 'WhatsApp'],
-          [340, 55, 'Voice'],
-          [560, 50, 'Knowledge'],
-          [720, 85, 'CRM'],
-          [800, 170, 'Payments'],
-          [780, 280, 'Bookings'],
-          [620, 340, 'Tickets'],
-          [320, 345, 'Slack'],
-          [170, 270, 'HubSpot'],
-          [145, 160, 'Local LLM'],
-          [250, 320, 'Cloud LLM'],
+          [200, 80, 'Email'],
+          [340, 55, 'Documents'],
+          [560, 50, 'WhatsApp'],
+          [720, 85, 'Voice'],
+          [800, 170, 'CRM'],
+          [780, 280, 'Sheets'],
+          [620, 340, 'Payments'],
+          [320, 345, 'Bookings'],
+          [170, 270, 'Accounting'],
+          [145, 160, 'Drive'],
+          [250, 320, 'Tickets'],
           [700, 320, 'Human inbox'],
         ];
       @endphp

@@ -6,9 +6,10 @@
 @php
   $siteName = config('settings.site_name', config('app.name'));
   $practiceName = $siteName.' Automation';
-  $metaTitle = $practiceName.' — AI workers that run the work';
-  $metaDescription = 'We audit processes, automate the handoffs that pay, and stand up AI workers that answer from your data, take calls, and trigger the next step. Cloud by default; on your network when required. Separate from '.$siteName.' WhatsApp SaaS.';
+  $metaTitle = $practiceName.' — Custom AI operating systems for real workflows';
+  $metaDescription = 'We map how your business already works, connect the tools you use, and deploy an AI layer that prepares tasks, follow-ups, and decisions for your team to approve. Deploy first, then productize what repeats. Separate from '.$siteName.' WhatsApp SaaS.';
   $supportEmail = config('settings.contact_email', 'support@convoconnect.tech');
+  $bookHref = 'mailto:'.$supportEmail.'?subject='.rawurlencode('Deployment call');
 @endphp
 <title>{{ $metaTitle }}</title>
 <meta name="title" content="{{ $metaTitle }}">
@@ -144,11 +145,10 @@ tailwind.config = {
 </style>
 </head>
 
-<body class="bg-[var(--paper)] text-slate-900" x-data="{ mobileOpen: false, workTab: 'audit' }">
+<body class="bg-[var(--paper)] text-slate-900" x-data="{ mobileOpen: false, deployTab: 'hospitality' }">
 
 <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-signal focus:text-white focus:font-semibold">Skip to content</a>
 
-<!-- NAV -->
 <nav class="navbar-blur fixed top-0 left-0 right-0 z-50" style="height:72px;">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6 flex items-center justify-between h-full">
     <a href="{{ route('services.automation') }}" class="flex items-center gap-2.5 flex-shrink-0">
@@ -159,59 +159,58 @@ tailwind.config = {
     </a>
 
     <div class="hidden lg:flex items-center gap-7">
-      <a href="#what-we-do" class="text-sm text-slate-600 hover:text-ink transition-colors">What we do</a>
+      <a href="#what-we-do" class="text-sm text-slate-600 hover:text-ink transition-colors">The gap</a>
       <a href="#how-it-works" class="text-sm text-slate-600 hover:text-ink transition-colors">How it works</a>
-      <a href="#catalog" class="text-sm text-slate-600 hover:text-ink transition-colors">Catalog</a>
-      <a href="#packages" class="text-sm text-slate-600 hover:text-ink transition-colors">Packages</a>
+      <a href="#deploy" class="text-sm text-slate-600 hover:text-ink transition-colors">Where we deploy</a>
+      <a href="#catalog" class="text-sm text-slate-600 hover:text-ink transition-colors">Capabilities</a>
       <a href="{{ route('landing') }}" class="text-sm text-slate-600 hover:text-ink transition-colors">WhatsApp SaaS</a>
     </div>
 
     <div class="hidden lg:flex items-center gap-3">
-      <a href="mailto:{{ $supportEmail }}?subject=Automation%20consultation" class="text-base font-semibold px-5 py-2.5 rounded-lg text-white transition-all hover:opacity-90" style="background:#0d9488;">Book a consult</a>
+      <a href="{{ $bookHref }}" class="text-base font-semibold px-5 py-2.5 rounded-lg text-white transition-all hover:opacity-90" style="background:#0d9488;">Book a deployment</a>
     </div>
 
     <button type="button" class="lg:hidden text-slate-600" @click="mobileOpen = !mobileOpen" :aria-expanded="mobileOpen.toString()" aria-controls="mobile-menu" aria-label="Toggle navigation">
-      <svg x-show="!mobileOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-      <svg x-show="mobileOpen" x-cloak class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      <svg x-show="!mobileOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-join="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <svg x-show="mobileOpen" x-cloak class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-join="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
   </div>
 
   <div id="mobile-menu" x-show="mobileOpen" x-cloak class="lg:hidden border-t border-slate-200 px-4 py-4 space-y-1 bg-white/95">
-    <a href="#what-we-do" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">What we do</a>
+    <a href="#what-we-do" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">The gap</a>
     <a href="#how-it-works" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">How it works</a>
-    <a href="#catalog" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">Catalog</a>
-    <a href="#packages" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">Packages</a>
+    <a href="#deploy" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">Where we deploy</a>
+    <a href="#catalog" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">Capabilities</a>
     <a href="{{ route('landing') }}" class="block py-2.5 text-base text-slate-700" @click="mobileOpen=false">WhatsApp SaaS</a>
-    <a href="mailto:{{ $supportEmail }}?subject=Automation%20consultation" class="block mt-3 text-center py-2.5 text-sm font-semibold text-white rounded-lg" style="background:#0d9488;">Book a consult</a>
+    <a href="{{ $bookHref }}" class="block mt-3 text-center py-2.5 text-sm font-semibold text-white rounded-lg" style="background:#0d9488;">Book a deployment</a>
   </div>
 </nav>
 
 <main id="main-content">
 
-<!-- HERO -->
 <section class="relative min-h-[100svh] flex items-center pt-28 pb-16 overflow-hidden noise hero-mesh">
   <div class="absolute inset-0 grid-fine opacity-60"></div>
   <div class="relative z-10 max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6 w-full">
     <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
       <div>
-        <p class="rise text-[12px] font-semibold uppercase tracking-[0.2em] mb-5" style="color:#2dd4bf;">Process automation practice</p>
+        <p class="rise text-[12px] font-semibold uppercase tracking-[0.2em] mb-5" style="color:#2dd4bf;">Custom AI operating systems</p>
         <h1 class="rise rise-delay-1 font-display text-[clamp(2.6rem,5.5vw,4.4rem)] font-800 text-white leading-[1.05] tracking-tight mb-6">
-          Automation that<br/>
-          <span style="color:#2dd4bf;">runs the work.</span>
+          Built around<br/>
+          <span style="color:#2dd4bf;">your real workflows.</span>
         </h1>
         <p class="rise rise-delay-2 text-lg text-slate-300 max-w-xl mb-8 leading-relaxed">
-          Growing businesses drown in handoffs between chat, the phone, CRM, and spreadsheets. We find the waste, stand up AI workers on your data, and keep them running — so your team ships more and chases less.
+          We connect to the tools your company already uses and turn scattered emails, documents, chats, approvals, and tasks into structured action — prepared for your team to review.
         </p>
         <div class="rise rise-delay-3 flex flex-wrap gap-3">
-          <a href="mailto:{{ $supportEmail }}?subject=Automation%20consultation" class="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold text-ink rounded-xl transition-transform hover:scale-[1.02]" style="background:#2dd4bf;">
-            Book a consult
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          <a href="{{ $bookHref }}" class="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold text-ink rounded-xl transition-transform hover:scale-[1.02]" style="background:#2dd4bf;">
+            Book a deployment
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-join="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
           </a>
           <a href="#how-it-works" class="inline-flex items-center gap-2 px-7 py-3.5 text-base font-semibold text-white rounded-xl border border-white/20 hover:bg-white/5 transition-colors">
             See how it works
           </a>
         </div>
-        <p class="mt-6 text-sm text-slate-400">Separate from {{ $siteName }} WhatsApp SaaS — workers, workflows, and on-network when you need it.</p>
+        <p class="mt-6 text-sm text-slate-400">Separate from {{ $siteName }} WhatsApp SaaS — the AI layer around the rest of the operation.</p>
       </div>
       <div class="rise rise-delay-2">
         @include('wpsupportlanding::landing.partials.infographics.services.hero_system')
@@ -220,16 +219,15 @@ tailwind.config = {
   </div>
 </section>
 
-<!-- TRUST / TOOLS STRIP -->
 <section class="border-y border-slate-200 bg-white py-8 overflow-hidden">
-  <p class="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-5">Workers that sit on the channels and data you already have</p>
+  <p class="text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-5">Works inside the stack you already run</p>
   <div class="relative">
     <div class="marquee-track gap-10 px-6 text-slate-500 font-display font-700 text-sm sm:text-base">
-      @foreach(['WhatsApp','Voice calls','Your knowledge base','Human handoff','CRM','Payments','Bookings','Tickets','Cloud LLM','On-network option','Ollama','n8n'] as $tool)
+      @foreach(['Email','Documents','Spreadsheets','WhatsApp','Voice','CRM','Approvals','Bookings','Payments','Accounting','Drive','Human inbox'] as $tool)
         <span class="whitespace-nowrap">{{ $tool }}</span>
         <span class="text-signal/40">·</span>
       @endforeach
-      @foreach(['WhatsApp','Voice calls','Your knowledge base','Human handoff','CRM','Payments','Bookings','Tickets','Cloud LLM','On-network option','Ollama','n8n'] as $tool)
+      @foreach(['Email','Documents','Spreadsheets','WhatsApp','Voice','CRM','Approvals','Bookings','Payments','Accounting','Drive','Human inbox'] as $tool)
         <span class="whitespace-nowrap" aria-hidden="true">{{ $tool }}</span>
         <span class="text-signal/40" aria-hidden="true">·</span>
       @endforeach
@@ -237,193 +235,179 @@ tailwind.config = {
   </div>
 </section>
 
-<!-- WHAT WE DO (Nominal-style tabs) -->
 <section id="what-we-do" class="py-24 bg-white">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="mb-12 max-w-2xl">
-      <p class="section-label mb-3">What we do</p>
-      <h2 class="font-display section-title font-800 mb-4">Introducing end-to-end<br/><span class="grad-text">process automation.</span></h2>
-      <p class="text-slate-600">Traditional freelancers install a few Zaps. We audit the business, automate the handoffs that pay, stand up workers that answer and act, and keep inference on your network when you need it.</p>
+      <p class="section-label mb-3">The gap</p>
+      <h2 class="font-display section-title font-800 mb-4">AI tools are powerful.<br/><span class="grad-text">Most businesses are not built to use them.</span></h2>
+      <p class="text-slate-600">Companies run on emails, files, spreadsheets, chats, meetings, approvals, and people remembering what happens next. Generic AI does not understand that workflow — or the context behind it.</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-4">
+      @foreach([
+        ['01', 'Context is scattered', 'Information lives in email threads, shared drives, spreadsheets, and chat logs. No tool has the full picture, so nothing can act on it.'],
+        ['02', 'Work is manual', 'Teams spend hours moving data between tools, writing the same follow-ups, and preparing status updates that should not need a person.'],
+        ['03', 'AI is disconnected', 'Generic tools cannot read your data, understand your workflow, or take action inside the systems where work actually happens.'],
+      ] as [$num, $title, $body])
+        <div class="rounded-3xl border border-slate-200 bg-[var(--paper)] p-7">
+          <p class="font-display text-3xl font-800 mb-4" style="color:rgba(13,148,136,0.35);">{{ $num }}</p>
+          <h3 class="font-display text-xl font-800 text-ink mb-3">{{ $title }}</h3>
+          <p class="text-slate-600">{{ $body }}</p>
+        </div>
+      @endforeach
+    </div>
+  </div>
+</section>
+
+<section id="how-it-works" class="py-24" style="background:#ecf4f5;">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
+    <div class="mb-10 max-w-2xl">
+      <p class="section-label mb-3">How it works</p>
+      <h2 class="font-display section-title font-800 mb-4">The AI layer around<br/><span class="grad-text">your actual operation.</span></h2>
+      <p class="text-slate-600">We map how the business already works, connect the systems already in use, and deploy workflows that prepare tasks, reports, approvals, follow-ups, and decisions for your team to review.</p>
+    </div>
+    @include('wpsupportlanding::landing.partials.infographics.services.ai_workers')
+  </div>
+</section>
+
+<section id="deploy" class="py-24 bg-white">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
+    <div class="mb-10 max-w-2xl">
+      <p class="section-label mb-3">Where we deploy</p>
+      <h2 class="font-display section-title font-800 mb-4">Service businesses that<br/><span class="grad-text">run on coordination.</span></h2>
+      <p class="text-slate-600">We start where hours disappear — then expand. Not a chatbot install. A first workflow inside the real operation.</p>
     </div>
 
     <div class="flex flex-wrap gap-2 mb-8">
       @foreach([
-        'audit' => 'Audit',
-        'automate' => 'Automate',
-        'workers' => 'AI workers',
-        'network' => 'On-network',
+        'hospitality' => 'Hospitality &amp; clinics',
+        'commerce' => 'Retail &amp; commerce',
+        'services' => 'Professional services',
       ] as $key => $label)
         <button type="button"
-          @click="workTab = '{{ $key }}'"
-          :class="workTab === '{{ $key }}' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
+          @click="deployTab = '{{ $key }}'"
+          :class="deployTab === '{{ $key }}' ? 'bg-ink text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
           class="px-4 py-2 rounded-full text-sm font-semibold transition-colors">
-          {{ $label }}
+          {!! $label !!}
         </button>
       @endforeach
     </div>
 
-    <div class="grid lg:grid-cols-2 gap-8 items-start">
+    <div class="grid lg:grid-cols-2 gap-10 items-start">
       <div>
-        <div x-show="workTab === 'audit'">
-          <h3 class="font-display text-3xl font-800 text-ink mb-3">Business process audit</h3>
-          <p class="text-slate-600 mb-6">Everything required to see where time and money leak — before you build anything.</p>
+        <div x-show="deployTab === 'hospitality'">
+          <h3 class="font-display text-3xl font-800 text-ink mb-3">Bookings, intake, and the front desk</h3>
+          <p class="text-slate-600 mb-6">Hotels, clinics, and appointment-led teams drowning in WhatsApp, calls, and “did we confirm that?”</p>
           <ul class="space-y-3 text-slate-700">
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Analyze current workflows</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Identify repetitive, manual tasks</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Find automation opportunities</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Calculate potential time and cost savings</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Intake and qualification from chat or a call</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Booking confirmations and no-show follow-ups</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Call briefs logged on the contact</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Daily “what needs a person” inbox</li>
           </ul>
         </div>
-        <div x-show="workTab === 'automate'" x-cloak>
-          <h3 class="font-display text-3xl font-800 text-ink mb-3">Workflow automation</h3>
-          <p class="text-slate-600 mb-6">Wire the 2–3 handoffs that pay for the engagement: approvals, reminders, documents, and CRM updates.</p>
+        <div x-show="deployTab === 'commerce'" x-cloak>
+          <h3 class="font-display text-3xl font-800 text-ink mb-3">Orders, catalogs, and payment chase</h3>
+          <p class="text-slate-600 mb-6">Retail and commerce teams moving stock, invoices, and customer questions across chat, sheets, and the till.</p>
           <ul class="space-y-3 text-slate-700">
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Customer &amp; employee onboarding</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Invoice &amp; expense approvals</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Leave requests &amp; task reminders</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Proposal, quote &amp; contract generation</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Order and payment status from the conversation</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Overdue follow-ups drafted for approval</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Catalog and SOP answers with sources</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Exceptions routed to a human before they send</li>
           </ul>
         </div>
-        <div x-show="workTab === 'workers'" x-cloak>
-          <h3 class="font-display text-3xl font-800 text-ink mb-3">AI workers that use your data</h3>
-          <p class="text-slate-600 mb-6">They answer FAQs, take calls, draft replies, and trigger the next step — payment, booking, ticket, or a human.</p>
+        <div x-show="deployTab === 'services'" x-cloak>
+          <h3 class="font-display text-3xl font-800 text-ink mb-3">Documents, invoices, and client ops</h3>
+          <p class="text-slate-600 mb-6">Firms and agencies running on email, files, proposals, and people chasing status across a dozen tools.</p>
           <ul class="space-y-3 text-slate-700">
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Retrieve from your SOPs, catalogs, and chats — not a generic model</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Take calls and log a brief on the contact</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Trigger payments, bookings, and tickets</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Hand off to a person when asked or when unsure</li>
-          </ul>
-        </div>
-        <div x-show="workTab === 'network'" x-cloak>
-          <h3 class="font-display text-3xl font-800 text-ink mb-3">Stay on your network when it matters</h3>
-          <p class="text-slate-600 mb-6">Cloud is the default. For clinics, schools, and anyone who cannot send customer data out, the same worker can run on a machine in your office.</p>
-          <ul class="space-y-3 text-slate-700">
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Documents and chats stay inside your LAN</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Point the worker at a local model (Ollama / compatible)</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Same playbook, same handoff, private inference</li>
-            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Enterprise option — not required for Starter</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Invoice classification and routing</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Proposal and document preparation</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Client follow-ups with evidence attached</li>
+            <li class="flex gap-2"><span class="text-signal font-bold">·</span> Week-end status reports from the work already done</li>
           </ul>
         </div>
       </div>
       <div>
-        <div x-show="workTab === 'audit'">
-          @include('wpsupportlanding::landing.partials.infographics.services.audit_funnel')
-        </div>
-        <div x-show="workTab === 'automate'" x-cloak>
-          @include('wpsupportlanding::landing.partials.infographics.services.workflow_engine')
-        </div>
-        <div x-show="workTab === 'workers'" x-cloak>
-          @include('wpsupportlanding::landing.partials.infographics.services.ai_workers')
-        </div>
-        <div x-show="workTab === 'network'" x-cloak>
-          @include('wpsupportlanding::landing.partials.infographics.services.on_network')
-        </div>
+        @include('wpsupportlanding::landing.partials.infographics.services.audit_funnel')
       </div>
     </div>
   </div>
 </section>
 
-<!-- OUTCOMES -->
-<section class="py-24 border-y border-slate-200" style="background:#ecf4f5;">
-  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
-    <div class="text-center mb-14">
-      <p class="section-label mb-3">Outcomes</p>
-      <h2 class="font-display section-title font-800">Autonomous where it should be.<br/><span class="grad-text">Human where it matters.</span></h2>
-    </div>
-    <div class="grid sm:grid-cols-3 gap-8 max-w-5xl mx-auto text-center">
-      <div class="stat-item px-4">
-        <p class="font-display outcome-num font-800 grad-text mb-2">10–40h</p>
-        <p class="text-base text-slate-600">Typical weekly hours reclaimed after first automations</p>
-      </div>
-      <div class="stat-item px-4">
-        <p class="font-display outcome-num font-800 grad-text mb-2">0</p>
-        <p class="text-base text-slate-600">Rip-and-replace required — we work with your stack</p>
-      </div>
-      <div class="stat-item px-4">
-        <p class="font-display outcome-num font-800 grad-text mb-2">90d</p>
-        <p class="text-base text-slate-600">Support window on Growth engagements to stabilize flows</p>
-      </div>
-    </div>
-    <div class="mt-14">
-      @include('wpsupportlanding::landing.partials.infographics.services.savings_loop')
-    </div>
-  </div>
-</section>
-
-<!-- HOW IT WORKS -->
-<section id="how-it-works" class="py-24 bg-white">
-  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
-    <div class="mb-14 max-w-2xl">
-      <p class="section-label mb-3">How it works</p>
-      <h2 class="font-display section-title font-800 mb-4">Four jobs.<br/><span class="grad-text">One engagement.</span></h2>
-      <p class="text-slate-600">Audit, automate, stand up workers, and keep inference on-network when customer data cannot leave the building.</p>
-    </div>
-    @include('wpsupportlanding::landing.partials.infographics.services.practice_pillars')
-  </div>
-</section>
-
-<!-- CATALOG -->
 <section id="catalog" class="py-24" style="background:#ecf4f5;">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     @include('wpsupportlanding::landing.partials.infographics.services.service_catalog')
   </div>
 </section>
 
-<!-- INTEGRATIONS -->
 <section id="integrations" class="py-24 bg-white">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="mb-10 max-w-2xl">
       <p class="section-label mb-3">Your stack</p>
-      <h2 class="font-display section-title font-800 mb-4">The worker sits<br/><span class="grad-text">in the middle.</span></h2>
-      <p class="text-slate-600">Chat, voice, CRM, payments, and the docs you already have. Cloud by default — on-network when required. No rip-and-replace.</p>
+      <h2 class="font-display section-title font-800 mb-4">No rip-and-replace.<br/><span class="grad-text">AI inside the current stack.</span></h2>
+      <p class="text-slate-600">Email, documents, spreadsheets, CRM, chat, voice, and payments. The operating system works where the work already lives.</p>
     </div>
     @include('wpsupportlanding::landing.partials.infographics.services.integrations_constellation')
   </div>
 </section>
 
-<!-- PACKAGES -->
-<section id="packages" class="py-24" style="background:#ecf4f5;">
+<section id="process" class="py-24" style="background:#ecf4f5;">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
-    @include('wpsupportlanding::landing.partials.infographics.services.package_ladder')
+    <div class="mb-12 max-w-2xl">
+      <p class="section-label mb-3">Deployment</p>
+      <h2 class="font-display section-title font-800 mb-4">From one workflow<br/><span class="grad-text">to an operating system.</span></h2>
+      <p class="text-slate-600">We deploy first. Then we productize what repeats — so the work compounds instead of rotting as a one-off.</p>
+    </div>
+    @include('wpsupportlanding::landing.partials.infographics.services.practice_pillars')
+    <div class="mt-12">
+      @include('wpsupportlanding::landing.partials.infographics.services.package_ladder')
+    </div>
   </div>
 </section>
 
-<!-- TRAINING -->
 <section class="py-20 bg-white border-y border-slate-200">
-  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6 grid lg:grid-cols-2 gap-10 items-center">
-    <div>
-      <p class="section-label mb-3">Training &amp; support</p>
-      <h2 class="font-display text-3xl sm:text-4xl font-800 text-ink mb-4">Workers come with a playbook, not a black box.</h2>
-      <p class="text-slate-600 mb-6">Every worker has limits: what it can answer, what it can do, and when it must hand off. Staff training, documentation, and monthly reviews keep that honest as the business changes.</p>
-      <ul class="grid sm:grid-cols-2 gap-3 text-sm text-slate-700">
-        <li class="flex gap-2"><span class="text-signal">✓</span> Staff training sessions</li>
-        <li class="flex gap-2"><span class="text-signal">✓</span> Living documentation</li>
-        <li class="flex gap-2"><span class="text-signal">✓</span> Maintenance &amp; monitoring</li>
-        <li class="flex gap-2"><span class="text-signal">✓</span> Monthly optimization reviews</li>
-      </ul>
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
+    <div class="mb-10 max-w-2xl">
+      <p class="section-label mb-3">Built for operators</p>
+      <h2 class="font-display text-3xl sm:text-4xl font-800 text-ink mb-4">Controlled AI for work that matters.</h2>
+      <p class="text-slate-600">AI suggests, prepares, and routes. Your team stays in control — with evidence, an audit trail, and data boundaries.</p>
     </div>
-    <div class="rounded-3xl border border-slate-200 p-8" style="background:linear-gradient(160deg,#0a1628,#122438);">
-      <p class="text-[11px] font-semibold uppercase tracking-[0.18em] mb-4" style="color:#2dd4bf;">Also available</p>
-      <h3 class="font-display text-2xl font-800 text-white mb-3">Need WhatsApp commerce?</h3>
-      <p class="text-slate-300 mb-6">{{ $siteName }} SaaS runs selling, journeys, bookings, and payments on WhatsApp. This practice covers the workers and workflows around — and beyond — chat.</p>
-      <a href="{{ route('landing') }}" class="inline-flex items-center gap-2 text-sm font-semibold" style="color:#2dd4bf;">
-        Explore WhatsApp SaaS
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-      </a>
+    <div class="grid lg:grid-cols-2 gap-10 items-start">
+      <ul class="grid sm:grid-cols-2 gap-3 text-sm text-slate-700">
+        <li class="flex gap-2"><span class="text-signal">✓</span> Source-backed outputs with evidence</li>
+        <li class="flex gap-2"><span class="text-signal">✓</span> Human approval before any action executes</li>
+        <li class="flex gap-2"><span class="text-signal">✓</span> Workspace-level data boundaries</li>
+        <li class="flex gap-2"><span class="text-signal">✓</span> Audit trails for every AI decision</li>
+        <li class="flex gap-2"><span class="text-signal">✓</span> Role-based views and access</li>
+        <li class="flex gap-2"><span class="text-signal">✓</span> On-network inference when required</li>
+      </ul>
+      <div class="rounded-3xl border border-slate-200 p-8" style="background:linear-gradient(160deg,#0a1628,#122438);">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] mb-4" style="color:#2dd4bf;">Also available</p>
+        <h3 class="font-display text-2xl font-800 text-white mb-3">Need WhatsApp commerce?</h3>
+        <p class="text-slate-300 mb-6">{{ $siteName }} SaaS is the self-serve inbox for selling and support on WhatsApp, Instagram, and Messenger. This practice is the AI operating system around — and beyond — chat.</p>
+        <a href="{{ route('landing') }}" class="inline-flex items-center gap-2 text-sm font-semibold" style="color:#2dd4bf;">
+          Explore WhatsApp SaaS
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-join="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="mt-12">
+      @include('wpsupportlanding::landing.partials.infographics.services.savings_loop')
+    </div>
+    <div class="mt-8">
+      @include('wpsupportlanding::landing.partials.infographics.services.on_network')
     </div>
   </div>
 </section>
 
-<!-- FINAL CTA -->
 <section id="book" class="py-28 relative overflow-hidden" style="background:#0a1628;">
   <div class="absolute inset-0" style="background:radial-gradient(ellipse 70% 60% at 50% 40%, rgba(45,212,191,0.18) 0%, transparent 65%);"></div>
   <div class="relative z-10 max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 text-center">
-    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] mb-5" style="color:#2dd4bf;">Ready when you are</p>
-    <h2 class="font-display section-title font-800 text-white mb-6">Move from doing the work<br/>to running the business.</h2>
-    <p class="text-lg text-slate-300 mb-10 max-w-xl mx-auto">Tell us where hours disappear. We’ll map the automations, decide where a worker earns its keep, and propose a Starter, Growth, or Enterprise path.</p>
-    <a href="mailto:{{ $supportEmail }}?subject=Automation%20consultation" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-ink rounded-xl hover:scale-[1.02] transition-transform" style="background:#2dd4bf;">
-      Book a consult
-      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+    <p class="text-[12px] font-semibold uppercase tracking-[0.2em] mb-5" style="color:#2dd4bf;">Show us the workflow</p>
+    <h2 class="font-display section-title font-800 text-white mb-6">We’ll show you what AI can do<br/>inside it.</h2>
+    <p class="text-lg text-slate-300 mb-10 max-w-xl mx-auto">Tell us where hours disappear. We map the first workflow, put approval gates in place, and deploy — then expand what repeats into the operating system.</p>
+    <a href="{{ $bookHref }}" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-ink rounded-xl hover:scale-[1.02] transition-transform" style="background:#2dd4bf;">
+      Book a deployment
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-join="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
     </a>
   </div>
 </section>
@@ -434,7 +418,7 @@ tailwind.config = {
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
     <div>
       <p class="font-display font-800 text-ink mb-1">{{ $practiceName }}</p>
-      <p class="text-sm text-slate-600 max-w-md">Process automation for growing businesses — audit, automate, stand up AI workers, keep data on-network when required.</p>
+      <p class="text-sm text-slate-600 max-w-md">Custom AI operating systems for real business workflows — deploy first, then productize what repeats.</p>
     </div>
     <div class="flex flex-wrap gap-4 text-sm text-slate-600">
       <a href="{{ route('landing') }}" class="hover:text-ink">WhatsApp SaaS</a>
