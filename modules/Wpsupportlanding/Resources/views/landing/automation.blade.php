@@ -11,6 +11,7 @@
   $supportEmail = config('settings.contact_email', 'support@convoconnect.tech');
   $bookHref = 'mailto:'.$supportEmail.'?subject='.rawurlencode('Deployment call');
 @endphp
+@include('layouts.favicon')
 <title>{{ $metaTitle }}</title>
 <meta name="title" content="{{ $metaTitle }}">
 <meta name="description" content="{{ $metaDescription }}" />

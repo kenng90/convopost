@@ -18,6 +18,8 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+        @include('layouts.favicon')
+
         <!-- Additional Head Content -->
         @stack('head')
     </head>
