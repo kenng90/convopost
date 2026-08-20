@@ -40,7 +40,7 @@ Route::get('/privacy-policy', [\Modules\Wpsupportlanding\Http\Controllers\Dashbo
 Route::get('/terms-of-service', [\Modules\Wpsupportlanding\Http\Controllers\DashboardController::class, 'termsOfService'])->name('terms.show');
 Route::get('/app/install', [\Modules\Wpsupportlanding\Http\Controllers\DashboardController::class, 'appInstall'])->name('app.install');
 Route::get('/'.config('settings.url_route', 'company').'/{alias}', [FrontEndController::class, 'company'])->name('vendor');
-Route::get('/notify/{type}/{id}/{message}', [CompaniesController::class, 'notify'])->name('company.notify');
+Route::middleware('auth')->get('/notify/{type}/{id}/{message}', [CompaniesController::class, 'notify'])->name('company.notify');
 
 // Public Catalog Routes (no authentication required)
 Route::controller(CatalogWebhookController::class)->prefix('webhooks/catalog')->group(function () {
@@ -84,11 +84,13 @@ Route::middleware('web', WelcomesNewUsers::class)->group(function () {
 });
 
 //AUTH
-Route::get('/session-test', function () {
-    session(['ping' => 'pong']);
+if (app()->environment('local')) {
+    Route::get('/session-test', function () {
+        session(['ping' => 'pong']);
 
-    return session('ping');
-});
+        return session('ping');
+    });
+}
 
 Route::middleware('web')->group(function () {
     Route::get('/login/google', [SocialController::class, 'googleRedirectToProvider'])->name('google.login');

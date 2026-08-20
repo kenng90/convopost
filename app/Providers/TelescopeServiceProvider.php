@@ -40,12 +40,25 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
             return;
         }
 
-        Telescope::hideRequestParameters(['_token']);
+        Telescope::hideRequestParameters([
+            '_token',
+            'password',
+            'password_confirmation',
+            'current_password',
+            'token',
+            'api_key',
+            'secret',
+            'app_secret',
+        ]);
 
         Telescope::hideRequestHeaders([
             'cookie',
             'x-csrf-token',
             'x-xsrf-token',
+            'authorization',
+            'x-hub-signature-256',
+            'x-paystack-signature',
+            'stripe-signature',
         ]);
     }
 
@@ -57,9 +70,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     protected function gate(): void
     {
         Gate::define('viewTelescope', function ($user) {
-            return in_array($user->id, [
-                1,
-            ]);
+            return $user->hasRole('admin');
         });
     }
 }

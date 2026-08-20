@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Akaunting\Module\Facade as Module;
 use App\Services\PlanResourceLimit;
+use App\Services\Security\SecureZipExtractor;
 use App\Traits\Fields;
 use App\Traits\Modules;
 use Illuminate\Http\RedirectResponse;
@@ -11,7 +12,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
-use ZipArchive;
 
 class AppsController extends Controller
 {
@@ -200,46 +200,32 @@ class AppsController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $this->adminOnly();
-        if ($request->has('file_url')) {
 
-            // Get the file content from URL
-            $fileContent = file_get_contents($request->file_url);
+        $request->validate([
+            'appupload' => 'required|file|mimes:zip|max:51200',
+        ]);
 
-            // Store the file content to storage/app/appupload
-            $fullPath = storage_path('app/appupload/'.basename($request->file_url));
+        $originalName = (string) $request->appupload->getClientOriginalName();
+        $path = $request->appupload->storeAs(
+            'appupload',
+            Str::uuid()->toString().'.zip'
+        );
+        $fullPath = storage_path('app/'.$path);
 
-            file_put_contents($fullPath, $fileContent);
-        } else {
-            $path = $request->appupload->storeAs('appupload', $request->appupload->getClientOriginalName());
-            $fullPath = storage_path('app/'.$path);
+        $destination = public_path('../modules');
+        $message = __('App is installed');
+
+        if (str_contains($originalName, '_lang')) {
+            $destination = public_path('../lang');
+            $message = __('Language pack is installed');
         }
 
-        $zip = new ZipArchive;
-
-        if ($zip->open($fullPath)) {
-
-            //Modules folder - for plugins
-            $destination = public_path('../modules');
-            $message = __('App is installed');
-
-            //If it is language pack
-            if (strpos($fullPath, '_lang') !== false) {
-                $destination = public_path('../lang');
-                $message = __('Language pack is installed');
-            } elseif (strpos($fullPath, '_update') !== false) {
-                $destination = public_path('../');
-                $message = __('Update is installed. Please go to settings.');
-            }
-
-            // Extract file
-            $zip->extractTo($destination);
-
-            // Close ZipArchive
-            $zip->close();
-
-            return redirect()->route('admin.apps.index')->withStatus($message);
-        } else {
+        try {
+            app(SecureZipExtractor::class)->extract($fullPath, $destination);
+        } catch (\RuntimeException) {
             return redirect(route('admin.apps.index'))->withError(__('There was an error on app install. Please try manual install'));
         }
+
+        return redirect()->route('admin.apps.index')->withStatus($message);
     }
 }

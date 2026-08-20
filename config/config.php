@@ -9,7 +9,7 @@ $env = [
             ['separator' => '🖥️ System', 'title' => 'Project name', 'key' => 'APP_NAME', 'value' => 'Site name'],
             ['title' => 'Link to your site', 'key' => 'APP_URL', 'value' => 'http://localhost'],
             ['title' => 'Subdomains', 'key' => 'IGNORE_SUBDOMAINS', 'value' => 'www,127', 'help' => 'Subdomain your app works in. ex if your subdomain is app.yourdomain.com, here you should have www,app '],
-            ['title' => '🚨 App debugging', 'key' => 'APP_DEBUG', 'value' => 'true', 'ftype' => 'bool', 'help' => 'Enable if you experience error 500'],
+            ['title' => '🚨 App debugging', 'key' => 'APP_DEBUG', 'value' => 'false', 'ftype' => 'bool', 'help' => 'Enable only while diagnosing errors. Must be false in production.'],
             ['title' => 'Disable the landing page', 'help' => 'When landing page is disabled, the project will start from the login page. In this case it is best to have the system in subdomain', 'key' => 'DISABLE_LANDING', 'value' => 'false', 'ftype' => 'bool'],
             ['title' => 'Wildcard domain', 'help' => 'If you have followed the procedure to enable wildcard domain, select this so you can have shopname.yourdomain.com', 'key' => 'WILDCARD_DOMAIN_READY', 'value' => 'false', 'ftype' => 'bool'],
             ['title' => 'Pagination count', 'key' => 'PAGINATE_COUNT', 'value' => 10, 'ftype' => 'input', 'type' => 'number'],
@@ -92,9 +92,9 @@ $env = [
             ['title' => 'Port', 'key' => 'MAIL_PORT', 'value' => '2525', 'help' => 'Common ports are 26, 465, 587'],
             ['title' => 'Encryption', 'key' => 'MAIL_ENCRYPTION', 'value' => '', 'ftype' => 'select', 'data' => ['null' => 'Null - best for port 26', '' => 'None - best for port 587', 'ssl' => 'SSL - best for port 465', 'tls' => 'TLS', 'starttls' => 'STARTTLS']],
 
-            ['title' => 'Username', 'key' => 'MAIL_USERNAME', 'value' => '802fc656dd8029'],
-            ['title' => 'Password', 'key' => 'MAIL_PASSWORD', 'value' => 'bbcf39d313eac6'],
-            ['title' => 'From address', 'key' => 'MAIL_FROM_ADDRESS', 'value' => 'bd5d577b7c-be3ae1@inbox.mailtrap.io'],
+            ['title' => 'Username', 'key' => 'MAIL_USERNAME', 'value' => ''],
+            ['title' => 'Password', 'key' => 'MAIL_PASSWORD', 'value' => ''],
+            ['title' => 'From address', 'key' => 'MAIL_FROM_ADDRESS', 'value' => ''],
             ['title' => 'From Name', 'key' => 'MAIL_FROM_NAME', 'value' => 'Your Site'],
 
             ['title' => '', 'key' => 'DB_CONNECTION', 'value' => 'mysql', 'data' => ['mysql' => 'MySql'], 'type' => 'hidden'],
@@ -102,7 +102,7 @@ $env = [
             ['title' => '', 'key' => 'DB_PORT', 'value' => '3306', 'type' => 'hidden'],
             ['title' => '', 'key' => 'DB_DATABASE', 'value' => 'laravel', 'type' => 'hidden'],
             ['title' => '', 'key' => 'DB_USERNAME', 'value' => 'laravel', 'type' => 'hidden'],
-            ['title' => '', 'key' => 'DB_PASSWORD', 'value' => 'laravel', 'type' => 'hidden'],
+            ['title' => '', 'key' => 'DB_PASSWORD', 'value' => '', 'type' => 'hidden'],
 
             ['title' => '', 'key' => 'CACHE_DRIVER', 'value' => 'file', 'type' => 'hidden'],
             ['title' => '', 'key' => 'SESSION_DRIVER', 'value' => 'file', 'type' => 'hidden'],

@@ -1,7 +1,10 @@
 <?php
+
 namespace Modules\Flowmaker\Services;
+
 require __DIR__.'/../vendor/autoload.php';
 
+use App\Services\Security\SafeRemoteUrl;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\DomCrawler\Crawler;
@@ -11,45 +14,50 @@ class WebsiteScraperService
     public function extractText(string $url): array
     {
         try {
-            $response = Http::timeout(30)
+            app(SafeRemoteUrl::class)->assertPublicHttpUrl($url);
+
+            $response = Http::timeout(15)
+                ->withOptions(['allow_redirects' => false])
                 ->withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (compatible; WebsiteScraperService/1.0)'
+                    'User-Agent' => 'Mozilla/5.0 (compatible; WebsiteScraperService/1.0)',
                 ])
                 ->get($url);
-            
-            if (!$response->successful()) {
-                Log::error('Failed to fetch website: ' . $url . ' - Status: ' . $response->status());
+
+            if (! $response->successful()) {
+                Log::error('Failed to fetch website: '.$url.' - Status: '.$response->status());
+
                 return [
                     'title' => '',
                     'url' => $url,
-                    'content' => ''
+                    'content' => '',
                 ];
             }
 
             $crawler = new Crawler($response->body());
 
-            $title = $crawler->filter('title')->count() > 0 
-                ? $crawler->filter('title')->text() 
+            $title = $crawler->filter('title')->count() > 0
+                ? $crawler->filter('title')->text()
                 : '';
-                
+
             $paragraphs = $crawler->filter('h1, h2, h3, p')->each(function ($node) {
                 return $node->text();
             });
 
-            $content = $title . "\n" . implode("\n", $paragraphs);
+            $content = $title."\n".implode("\n", $paragraphs);
 
             return [
                 'title' => $title,
                 'url' => $url,
-                'content' => $content
+                'content' => $content,
             ];
         } catch (\Exception $e) {
-            Log::error('Error scraping website: ' . $e->getMessage());
+            Log::error('Error scraping website: '.$e->getMessage());
+
             return [
                 'title' => '',
                 'url' => $url,
-                'content' => ''
+                'content' => '',
             ];
         }
     }
-} 
+}

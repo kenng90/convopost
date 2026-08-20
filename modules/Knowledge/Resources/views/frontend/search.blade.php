@@ -150,11 +150,11 @@
                                         @endif
                                     </div>
                                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-2">
-                                        {!! Str::of($article->title)->replace($query, '<mark class="bg-yellow-200 px-1 rounded">' . $query . '</mark>') !!}
+                                        {!! Str::of(e($article->title))->replace(e($query), '<mark class="bg-yellow-200 px-1 rounded">'.e($query).'</mark>') !!}
                                     </h3>
                                     @if($article->excerpt)
                                         <p class="text-gray-600 dark:text-gray-300 line-clamp-2 mb-4">
-                                            {!! Str::of($article->excerpt)->replace($query, '<mark class="bg-yellow-200 px-1 rounded">' . $query . '</mark>') !!}
+                                            {!! Str::of(e($article->excerpt))->replace(e($query), '<mark class="bg-yellow-200 px-1 rounded">'.e($query).'</mark>') !!}
                                         </p>
                                     @endif
                                     <div class="flex items-center justify-between">

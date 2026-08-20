@@ -245,6 +245,8 @@ class CompaniesController extends Controller
 
     public function updateApps(Request $request, Company $company): RedirectResponse
     {
+        abort_unless($this->verifyAccess($company), 403);
+
         if ($request->has('custom')) {
             $integrationError = app(PlanResourceLimit::class)->validateIntegrationConfigUpdate($company, $request->custom);
 
@@ -269,6 +271,7 @@ class CompaniesController extends Controller
         $this->imagePath = config('app.images_upload_path');
 
         $company = Company::findOrFail($companyid);
+        abort_unless($this->verifyAccess($company), 403);
         $company->name = strip_tags($request->name);
         $thereIsCompanyAddressChange = $company->address.'' != $request->address.'';
 
@@ -380,6 +383,7 @@ class CompaniesController extends Controller
     public function activateCompany($companyid): RedirectResponse
     {
         $company = Company::findOrFail($companyid);
+        abort_unless($this->verifyAccess($company), 403);
         $this->makeCompanyActive($company);
 
         return redirect()->route('admin.companies.index')->withStatus(__('Organization successfully activated.'));
@@ -456,8 +460,10 @@ class CompaniesController extends Controller
 
     public function notify($type, $companyid, $message): JsonResponse
     {
+        abort_unless(auth()->check(), 403);
 
         $company = Company::findOrFail($companyid);
+        abort_unless($this->verifyAccess($company), 403);
         $CAN_USE_PUSHER = strlen(config('broadcasting.connections.pusher.app_id')) > 2 && strlen(config('broadcasting.connections.pusher.key')) > 2 && strlen(config('broadcasting.connections.pusher.secret')) > 2;
         $messageSend = false;
         $responseMessage = '';

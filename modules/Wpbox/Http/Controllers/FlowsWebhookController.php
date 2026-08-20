@@ -420,9 +420,15 @@ class FlowsWebhookController extends Controller
             ?: config('services.whatsapp.app_secret', '');
 
         if (empty($appSecret)) {
+            if (app()->environment('production')) {
+                Log::warning('WhatsApp Flow: APP_SECRET not configured — rejecting request');
+
+                return false;
+            }
+
             Log::warning('WhatsApp Flow: APP_SECRET not configured — skipping signature validation');
 
-            return true; // Skip validation if not configured (matches Meta's sample behaviour)
+            return true;
         }
 
         $signatureHeader = $request->header('x-hub-signature-256', '');

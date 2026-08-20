@@ -8,7 +8,6 @@ use App\Services\DefaultPlanService;
 use App\Services\PlanSeatBillingService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Http;
 
 class Main extends Controller
 {
@@ -139,6 +138,10 @@ class Main extends Controller
         // Compare signatures securely
         if (! hash_equals($computedSignature, $expectedSignature)) {
             return response('Invalid signature', 400);
+        }
+
+        if (! app(\App\Services\Security\WebhookSignature::class)->stripeTimestampIsFresh((int) $timestamp)) {
+            return response('Expired signature', 400);
         }
 
         // Handle the event if verification passes

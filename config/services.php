@@ -48,4 +48,14 @@ return [
 
     ],
 
+    'whatsapp' => [
+        'app_secret' => env('WHATSAPP_APP_SECRET', env('FACEBOOK_APP_SECRET', '')),
+    ],
+
+    'woocommerce_demo' => [
+        'store_url' => env('WOOCOMMERCE_DEMO_STORE_URL', ''),
+        'consumer_key' => env('WOOCOMMERCE_DEMO_CONSUMER_KEY', ''),
+        'consumer_secret' => env('WOOCOMMERCE_DEMO_CONSUMER_SECRET', ''),
+    ],
+
 ];

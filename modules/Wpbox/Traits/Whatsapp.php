@@ -7,8 +7,9 @@ use App\Models\Company;
 use App\Models\User;
 use App\Services\Billing\CreditBillingResolver;
 use App\Services\Billing\CreditCharger;
+use App\Services\Security\SafeRemoteUrl;
+use App\Services\Security\WebhookSignature;
 use App\Services\WhatsApp\InteractiveListLimits;
-use App\Services\WhatsApp\WebhookCompanyResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -133,8 +134,25 @@ trait Whatsapp
 
     public function receiveMessage(Request $request, $token)
     {
-        Log::info('Receive WhatsApp webhook');
-        Log::info('Receive WhatsApp webhook', ['request' => $request->all()]);
+        Log::info('Receive WhatsApp webhook', [
+            'waba_id' => $request->input('entry.0.id'),
+            'field' => $request->input('entry.0.changes.0.field'),
+        ]);
+
+        $appSecret = (string) (config('services.whatsapp.app_secret') ?: config('services.facebook.app_secret', ''));
+        if ($appSecret !== '' && $request->isMethod('post')) {
+            $signatureValid = app(WebhookSignature::class)->metaHubIsValid(
+                $request->getContent(),
+                $request->header('X-Hub-Signature-256'),
+                $appSecret
+            );
+
+            if (! $signatureValid) {
+                Log::warning('WhatsApp webhook rejected: invalid signature');
+
+                return response()->json(['ok' => false], 401);
+            }
+        }
 
         // If this webhook is a WhatsApp Calling event, delegate to whatsappcall module when available
         try {
@@ -205,20 +223,17 @@ trait Whatsapp
             $user = User::findOrFail($token->tokenable_id);
             Auth::login($user);
 
-            //if the user is admin
-            if ($user->hasRole('admin') || true) {
-                $company = app(WebhookCompanyResolver::class)->resolveFromWebhookRequest($request);
+            $company = app(WebhookCompanyResolver::class)->resolveFromWebhookRequest($request)
+                ?: $this->getCompany();
 
-                if (! $company) {
-                    $wabaid = $request->entry[0]['id'] ?? 'unknown';
+            if (! $company) {
+                $wabaid = $request->entry[0]['id'] ?? 'unknown';
 
-                    return response()->json(['send' => false, 'error' => 'Company not found for WhatsApp webhook (WABAID: '.$wabaid.')']);
-                }
+                return response()->json(['send' => false, 'error' => 'Company not found for WhatsApp webhook (WABAID: '.$wabaid.')']);
+            }
 
+            if ($company->user) {
                 Auth::login($company->user);
-            } else {
-                //Company, -- not used anymore
-                $company = $this->getCompany();
             }
 
             $this->setWebhookCompanyContext($company);
@@ -226,9 +241,8 @@ trait Whatsapp
             //Resend the Request to webhook
             try {
                 $whatsapp_data_send_webhook = $company->getConfig('whatsapp_data_send_webhook', '');
-                if (strlen($whatsapp_data_send_webhook) > 5) {
-                    //Send the data to a webhook
-                    Http::post($whatsapp_data_send_webhook, $request->all());
+                if (strlen($whatsapp_data_send_webhook) > 5 && app(SafeRemoteUrl::class)->isPublicHttpUrl($whatsapp_data_send_webhook)) {
+                    Http::timeout(10)->withOptions(['allow_redirects' => false])->post($whatsapp_data_send_webhook, $request->all());
                 }
             } catch (\Throwable $th) {
                 //throw $th;
@@ -538,8 +552,7 @@ trait Whatsapp
             }
 
         } catch (\Exception $e) {
-            dd($e);
-            // Handle the exception
+            Log::error($e);
         }
     }
 

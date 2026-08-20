@@ -62,9 +62,9 @@ class Main extends Controller
 
         //If demo mode is active, return an empty array
         if (config('settings.is_demo', false)) {
-            $woocommerce_store_url = 'https://woo.mobidonia.com';
-            $woocommerce_consumer_key = 'ck_aa1a18c723f5d1cf6e1f739df69dc49ea601d09e';
-            $woocommerce_consumer_secret = 'cs_95a9976b9b256afb631ba5d34aca7987cb9ed523';
+            $woocommerce_store_url = (string) config('services.woocommerce_demo.store_url');
+            $woocommerce_consumer_key = (string) config('services.woocommerce_demo.consumer_key');
+            $woocommerce_consumer_secret = (string) config('services.woocommerce_demo.consumer_secret');
         }
 
         if (empty($woocommerce_store_url) || empty($woocommerce_consumer_key) || empty($woocommerce_consumer_secret)) {
@@ -106,9 +106,9 @@ class Main extends Controller
         $woocommerce_currency = $company->getConfig('woocommerce_currency', '$');
 
         if (config('settings.is_demo', false)) {
-            $woocommerce_store_url = 'https://woo.mobidonia.com';
-            $woocommerce_consumer_key = 'ck_aa1a18c723f5d1cf6e1f739df69dc49ea601d09e';
-            $woocommerce_consumer_secret = 'cs_95a9976b9b256afb631ba5d34aca7987cb9ed523';
+            $woocommerce_store_url = (string) config('services.woocommerce_demo.store_url');
+            $woocommerce_consumer_key = (string) config('services.woocommerce_demo.consumer_key');
+            $woocommerce_consumer_secret = (string) config('services.woocommerce_demo.consumer_secret');
         }
 
         if (empty($woocommerce_store_url) || empty($woocommerce_consumer_key) || empty($woocommerce_consumer_secret)) {
