@@ -5,9 +5,11 @@ namespace Modules\Whatsappcall\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\ListCatalog;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Modules\Contacts\Models\Field;
 use Modules\Flowmaker\Models\Flow;
 use Modules\Whatsappcall\Services\CompanyVoiceOpenAiKeyResolver;
+use Modules\Whatsappcall\Services\VoiceSpokenLanguageService;
 
 class SetupController extends Controller
 {
@@ -29,6 +31,8 @@ class SetupController extends Controller
             'use_builtin_worker' => (bool) $company->getConfig('whatsapp_use_builtin_worker', false),
             'ai_worker_url' => $company->getConfig('whatsapp_ai_worker_url', config('whatsappcallworker.default_url', 'http://127.0.0.1:8787')),
             'ai_greeting' => $company->getConfig('whatsapp_ai_greeting', ''),
+            'ai_spoken_language' => app(VoiceSpokenLanguageService::class)->resolveCode($company),
+            'ai_spoken_language_options' => app(VoiceSpokenLanguageService::class)->options(),
             'ai_handoff_phrases' => json_decode($company->getConfig('whatsapp_ai_handoff_phrases', '[]'), true) ?: [],
             'ai_required_fields' => json_decode($company->getConfig('whatsapp_ai_required_fields', '[]'), true) ?: [],
             'ai_flow_id' => (int) $company->getConfig('whatsapp_ai_flow_id', 0) ?: null,
@@ -69,6 +73,7 @@ class SetupController extends Controller
             'ai_worker_url' => 'nullable|url|max:500',
             'ai_worker_secret' => 'nullable|string|max:255',
             'ai_greeting' => 'nullable|string|max:2000',
+            'ai_spoken_language' => ['nullable', 'string', Rule::in(app(VoiceSpokenLanguageService::class)->allowedCodes())],
             'ai_handoff_phrases' => 'nullable|string',
             'ai_required_fields' => 'nullable|array',
             'ai_flow_id' => 'nullable|integer',
@@ -117,6 +122,10 @@ class SetupController extends Controller
         }
 
         $company->setConfig('whatsapp_ai_greeting', $validated['ai_greeting'] ?? '');
+        $company->setConfig(
+            VoiceSpokenLanguageService::CONFIG_KEY,
+            $validated['ai_spoken_language'] ?? VoiceSpokenLanguageService::DEFAULT_CODE
+        );
         $phrases = array_values(array_filter(array_map('trim', explode("\n", $validated['ai_handoff_phrases'] ?? ''))));
         $company->setConfig('whatsapp_ai_handoff_phrases', json_encode($phrases));
         $company->setConfig('whatsapp_ai_required_fields', json_encode(array_values($validated['ai_required_fields'] ?? [])));

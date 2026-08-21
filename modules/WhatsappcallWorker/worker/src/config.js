@@ -5,7 +5,7 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '..', '.env'), override: false });
 
-export const WORKER_VERSION = '1.4.1';
+export const WORKER_VERSION = '1.4.2';
 
 const openaiKey = process.env.OPENAI_API_KEY || '';
 const workerModeEnv = (process.env.WORKER_MODE || process.env.WHATSAPP_AI_WORKER_MODE || '').toLowerCase();

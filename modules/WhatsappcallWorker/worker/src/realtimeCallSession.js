@@ -6,6 +6,7 @@ import { addError } from './sessionDebug.js';
 import { buildSuccessCompletionPayload } from './callCompletion.js';
 import { waitForCallEnd } from './callHangup.js';
 import { buildVoiceBookingTools, isVoiceBookingEnabled, voiceBookingInstructionLines } from './voiceBookingTools.js';
+import { spokenLanguageGreetingHint, spokenLanguageInstructionLines, resolveSpokenLanguage } from './voiceLanguage.js';
 
 /**
  * Production OpenAI Realtime voice session for a connected WhatsApp call.
@@ -21,6 +22,7 @@ export async function runRealtimeCallSession({ payload, laravel, startedAt, peer
 
   const instructions = buildInstructions(payload);
   const tools = buildVoiceBookingTools(payload);
+  const spokenLanguage = resolveSpokenLanguage(payload);
   /** @type {Array<Record<string, unknown>>} */
   const voiceBookings = [];
 
@@ -29,6 +31,8 @@ export async function runRealtimeCallSession({ payload, laravel, startedAt, peer
     flow_id: payload.flow_id,
     has_system_context: Boolean(payload.system_context),
     has_vector_context: Boolean(payload.vector_context),
+    spoken_language: spokenLanguage.code,
+    spoken_language_pinned: spokenLanguage.pinned,
     voice_booking_enabled: isVoiceBookingEnabled(payload),
     booking_tools: tools.length,
   });
@@ -38,6 +42,7 @@ export async function runRealtimeCallSession({ payload, laravel, startedAt, peer
     apiKey: openaiApiKey,
     debug,
     tools,
+    transcriptionLanguage: spokenLanguage.transcriptionLanguage,
     onToolCall: tools.length
       ? async (name, args, toolCallId) => {
           const result = await laravel.invokeBookingTool(name, args, toolCallId);
@@ -97,6 +102,7 @@ export async function runRealtimeCallSession({ payload, laravel, startedAt, peer
     realtime.triggerInitialGreeting({
       mentionCapabilityInGreeting: Boolean(payload.mention_capability_in_greeting),
       capabilityBrief: payload.capability_brief || '',
+      languageHint: spokenLanguageGreetingHint(payload),
     });
 
     logInfo('Waiting for caller hangup (WebRTC + Laravel status poll)');
@@ -159,6 +165,8 @@ function buildInstructions(payload) {
       `During the call, try to collect these details if relevant: ${required.join(', ')}.`,
     );
   }
+
+  sections.push(...spokenLanguageInstructionLines(payload));
 
   return sections.join('\n\n');
 }

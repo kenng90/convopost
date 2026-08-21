@@ -17,6 +17,7 @@ class AiCallDispatchService
         protected VoiceBookingContextService $bookingContextService,
         protected VoiceAgentCapabilityBriefService $capabilityBriefService,
         protected CompanyVoiceOpenAiKeyResolver $openAiKeyResolver,
+        protected VoiceSpokenLanguageService $spokenLanguage,
     ) {
     }
 
@@ -95,6 +96,7 @@ class AiCallDispatchService
         ])));
 
         $contact = $this->resolveDispatchContact($call, $company);
+        $spokenLanguage = $this->spokenLanguage->forDispatch($company);
 
         $payload = [
             'call_id' => $call->id,
@@ -109,6 +111,8 @@ class AiCallDispatchService
             ],
             'required_field_keys' => $requiredFields,
             'ai_greeting' => $company->getConfig('whatsapp_ai_greeting', ''),
+            'spoken_language' => $spokenLanguage['code'],
+            'spoken_language_name' => $spokenLanguage['name'],
             'handoff_phrases' => json_decode($company->getConfig('whatsapp_ai_handoff_phrases', '[]'), true) ?: [],
             'system_context' => $systemContext,
             'vector_context' => $context['vector_context'],
@@ -185,6 +189,7 @@ class AiCallDispatchService
                 'openai_key_source' => 'company',
                 'session_id' => $response->json('session_id'),
                 'flow_id' => $context['flow_id'],
+                'spoken_language' => $spokenLanguage['code'],
                 'system_context_chars' => strlen($context['system_context'] ?? ''),
             ]);
 

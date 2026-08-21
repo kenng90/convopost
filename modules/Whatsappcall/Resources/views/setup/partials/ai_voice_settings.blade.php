@@ -149,6 +149,16 @@
         </div>
 
         <div class="form-group">
+            <label>{{ __('Spoken language') }}</label>
+            <select class="form-control" name="ai_spoken_language">
+                @foreach(($settings['ai_spoken_language_options'] ?? []) as $code => $label)
+                    <option value="{{ $code }}" {{ ($settings['ai_spoken_language'] ?? 'en') === $code ? 'selected' : '' }}>{{ $label }}</option>
+                @endforeach
+            </select>
+            <small class="text-muted d-block">{{ __('The agent stays in this language for the whole call. Whisper transcription is pinned to the same language so background noise is less likely to trigger a switch.') }}</small>
+        </div>
+
+        <div class="form-group">
             <label>{{ __('AI greeting (optional)') }}</label>
             <textarea class="form-control" name="ai_greeting" rows="2">{{ $settings['ai_greeting'] ?? '' }}</textarea>
             <small class="text-muted d-block">{{ __('Spoken AI uses OpenAI Realtime on your API key. Also used to seed vector search at call start.') }}</small>

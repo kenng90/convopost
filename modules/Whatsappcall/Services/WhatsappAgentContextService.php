@@ -11,6 +11,7 @@ class WhatsappAgentContextService
 {
     public function __construct(
         protected FlowKnowledgeSearch $knowledgeSearch,
+        protected VoiceSpokenLanguageService $spokenLanguage,
     ) {
     }
 
@@ -27,6 +28,8 @@ class WhatsappAgentContextService
         if ($greeting !== '') {
             $parts[] = 'Greeting: '.$greeting;
         }
+
+        $parts[] = $this->spokenLanguage->instructionText($company);
 
         $systemPrompt = $this->extractFlowSystemPrompt($company, $flowId);
         if ($systemPrompt !== '') {
