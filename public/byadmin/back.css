@@ -1,0 +1,187 @@
+/* Root Variables */
+:root {
+    --primary: #128C7E;
+}
+
+/* Body Styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    background: #E8E8E8 !important;
+}
+
+/* Navbar Styles */
+.navbar-nav {
+    font-weight: bold;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.navbar-nav i.ni {
+    color: var(--primary) !important;
+}
+
+.navbar-nav .nav-link {
+    color: rgba(0,0,0,0.8) !important;
+}
+
+.navbar-nav .nav-link.active {
+    background-color: var(--primary) !important;
+    border-radius: 2rem;
+    margin-left: 0px;
+    margin-right: 10px;
+}
+
+.navbar-nav .nav-link.active:before {
+    border-left: 0 !important;
+}
+
+.navbar-nav .nav-link.active,
+.navbar-nav .nav-link.active .ni {
+    color: #ffffff !important; 
+}
+
+.navbar-brand {
+    padding-bottom: 0 !important;
+}
+
+.navbar-brand-img {
+    max-height: 4rem !important;
+}
+
+/* Header Styles */
+.header .header-body .btn.btn-outline-primary:hover {
+    color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+}
+
+.header .header-body .btn.btn-outline-primary {
+    margin-top: 10px;
+    min-width: 180px;
+    border-color: var(--primary) !important;
+    background-color: var(--primary) !important;
+    color: #ffffff !important;
+}
+
+.header .header-body .card-stats {
+    min-height: 142px !important;
+    box-shadow: rgba(17, 12, 46, 0.15) 0px 48px 100px 0px;
+}
+
+/* Card Styles */
+.card {
+    width: unset !important;
+}
+
+.card.shadow-lg,
+.card.shadow {
+    box-shadow: rgba(17, 12, 46, 0.15) 0px 48px 100px 0px !important;
+}
+
+.shadow {
+    box-shadow: none !important;
+}
+
+/* Navigation Pills */
+.nav-pills .nav-link {
+    border: 1px solid var(--primary);
+    color: var(--primary) !important;
+}
+
+.btn-primary,
+.nav-pills .nav-link.active {
+    background-color: var(--primary) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+    border: 0 !important;
+}
+
+/* Form Controls */
+.form-control {
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid grey !important;
+}
+
+textarea.form-control {
+    padding: 1rem !important;
+}
+
+/* Preview Element */
+#previewElement,
+#previewElement .card {
+    min-width: unset !important;
+}
+
+/* Gradient Styles */
+.bg-gradient-primary,
+.bg-gradient-info {
+    background: var(--primary) !important;
+}
+
+.bg-gradient-success {
+    background: var(--primary) !important;
+}
+
+.bg-gradient-success .avatar {
+    color: var(--primary) !important;
+    background-color: #ffffff !important;
+}
+
+/* Avatar Styles */
+.avatar.bg-gradient-primary {
+    min-height: 48px;
+    min-width: 48px;
+}
+
+/* Chat List Styles */
+#chatList .card-body .d-block {
+    cursor: pointer;
+}
+
+#chatList .nav-pills .nav-link {
+    box-shadow: none !important;
+}
+
+#chatList .nav-pills .nav-item {
+    padding-right: 0.5rem !important;
+}
+
+/* Nav Wrapper Styles */
+.nav-wrapper .nav-item .nav-link {
+    color: var(--primary) !important;
+    box-shadow: none !important;
+}
+
+.nav-wrapper .nav-item .nav-link.active {
+    color: #ffffff !important;
+}
+
+/* Media Queries */
+@media only screen and (min-width: 768px) {
+    .main-content .navbar-top {
+        background: #ffffff !important;
+    }
+}
+
+/* Chat Bubbles & Messages */
+.message-bubble-right {
+    background: #DCF8C6 !important;
+    border-radius: 7.5px !important;
+    padding: 6px 7px 8px 9px !important;
+}
+
+.message-bubble-left {
+    background: #FFFFFF !important;
+    border-radius: 7.5px !important;
+    padding: 6px 7px 8px 9px !important;
+}
+
+#chatList .card {
+    border-bottom: 1px solid #E8E8E8 !important;
+    margin-bottom: 0 !important;
+    border-radius: 0 !important;
+}

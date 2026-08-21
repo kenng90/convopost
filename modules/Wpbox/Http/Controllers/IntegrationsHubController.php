@@ -28,7 +28,7 @@ class IntegrationsHubController extends Controller
             'triggers' => $triggers,
             'events' => $events,
             'webhookUrl' => $this->getCompany()->getConfig('campaign_webhook_url', ''),
-            'apiDocs' => config('wpbox.api_docs'),
+            'apiDocs' => \App\Http\Controllers\Api\V1\OpenApiController::documentationUrl(),
         ]);
     }
 
@@ -58,21 +58,38 @@ class IntegrationsHubController extends Controller
 
     public function receiveStoreEvent(Request $request, CampaignTriggerService $triggerService)
     {
-        $token = $request->header('X-Store-Event-Token') ?? $request->input('token');
-        $expected = config('wpbox.campaign_dispatch_token') ?: hash('sha256', config('app.key').':campaign-dispatch');
+        $authenticator = app(\App\Services\Api\PublicApiAuthenticator::class);
+        $auth = $authenticator->authenticate($request, true);
 
-        if (! is_string($token) || ! hash_equals($expected, $token)) {
-            abort(403);
+        if ($auth instanceof \Illuminate\Http\JsonResponse) {
+            $provided = $request->header('X-Store-Event-Token') ?? $request->input('token');
+            $expected = config('wpbox.campaign_dispatch_token') ?: hash('sha256', config('app.key').':campaign-dispatch');
+
+            if (is_string($provided) && hash_equals($expected, $provided)) {
+                return \App\Services\Api\PublicApiResponse::error(
+                    'gone',
+                    'POST /webhook/wpbox/store-event no longer accepts the platform dispatch token. Use POST /api/v1/events with a company Bearer token.',
+                    410
+                );
+            }
+
+            return $auth;
         }
 
         $request->validate([
-            'company_id' => 'required|integer',
-            'event_type' => 'required|string',
+            'event_type' => 'required_without:event|string',
+            'event' => 'required_without:event_type|string',
         ]);
 
-        $company = \App\Models\Company::findOrFail($request->company_id);
-        $sent = $triggerService->fire($company, $request->event_type, $request->input('data', []));
+        $company = $auth['company'];
+        $type = (string) $request->input('event_type', $request->input('event'));
+        $sent = $triggerService->fire($company, $type, $request->input('data', []));
+        app(\App\Services\Api\PublicWebhookDispatcher::class)->dispatch($company->id, $type, $request->input('data', []));
 
-        return response()->json(['status' => 'ok', 'triggered' => $sent]);
+        return response()->json([
+            'status' => 'ok',
+            'triggered' => $sent,
+            'company_id' => $company->id,
+        ]);
     }
 }

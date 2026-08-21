@@ -109,7 +109,7 @@ class SecurityHardeningTest extends TestCase
             $this->postJson('/api/v2/login', [
                 'email' => $user->email,
                 'password' => 'wrong-password',
-            ])->assertOk();
+            ])->assertStatus(401);
         }
 
         $this->postJson('/api/v2/login', [

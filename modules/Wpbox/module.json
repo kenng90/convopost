@@ -403,7 +403,7 @@
             "id":"more",
             "name":"WhatsApp & team",
             "icon":"ni ni-settings text-green",
-            "route":"api.info",
+            "route":"whatsapp.setup",
             "isGroup":true,
             "onlyin": "wpbox,whatssupport",
             "menus":[ 
@@ -419,7 +419,23 @@
                     "route":"templates.index",
                     "onlyin": "wpbox,whatssupport"
                 },
-              
+                {
+                    "name":"Cloud API Setup",
+                    "route":"whatsapp.setup",
+                    "icon":"ni ni-settings text-blue",
+                    "priority": 101
+                }
+            ]
+        },
+        {
+            "id":"apiDocsMenu",
+            "name":"API Docs",
+            "icon":"ni ni-collection text-primary",
+            "route":"api.info",
+            "isGroup":true,
+            "priority": 79,
+            "onlyin": "wpbox,whatssupport",
+            "menus":[
                 {
                     "name":"API info",
                     "icon":"ni ni-badge text-green",
@@ -429,12 +445,6 @@
                     "name":"API campaigns",
                     "icon":"ni ni-bullet-list-67 text-primary",
                     "route":"wpbox.api.index"
-                },
-                {
-                    "name":"Cloud API Setup",
-                    "route":"whatsapp.setup",
-                    "icon":"ni ni-settings text-blue",
-                    "priority": 101
                 }
             ]
         }

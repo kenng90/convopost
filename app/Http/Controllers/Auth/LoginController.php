@@ -22,7 +22,11 @@ class LoginController extends Controller
             return response()->json([
                 'status' => false,
                 'errMsg' => __('The provided credentials are incorrect.'),
-            ]);
+                'error' => [
+                    'code' => 'invalid_credentials',
+                    'message' => __('The provided credentials are incorrect.'),
+                ],
+            ], 401);
         }
 
         //If admin, don't allow login

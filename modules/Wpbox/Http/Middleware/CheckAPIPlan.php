@@ -2,18 +2,18 @@
 
 namespace Modules\Wpbox\Http\Middleware;
 
-use App\Models\User;
-use App\Services\PlanEntitlementResolver;
-use App\Services\PlanUsageLimit;
+use App\Services\Api\PublicApiAuthenticator;
+use App\Services\Api\PublicApiResponse;
 use Closure;
+use Illuminate\Cache\RateLimiter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Laravel\Sanctum\PersonalAccessToken;
 
 class CheckAPIPlan
 {
     public function __construct(
-        private readonly PlanUsageLimit $planUsageLimit,
-        private readonly PlanEntitlementResolver $entitlementResolver,
+        private readonly PublicApiAuthenticator $authenticator,
+        private readonly RateLimiter $rateLimiter,
     ) {
     }
 
@@ -24,32 +24,28 @@ class CheckAPIPlan
      */
     public function handle(Request $request, Closure $next)
     {
-        $token = PersonalAccessToken::findToken($request->token);
+        $auth = $this->authenticator->authenticate($request, true);
 
-        if (! $token) {
-            return response()->json(['status' => 'error', 'message' => 'Invalid token']);
+        if ($auth instanceof JsonResponse) {
+            return $auth;
         }
 
-        $user = User::findOrFail($token->tokenable_id);
-        $plan = $this->planUsageLimit->resolvePlanForUser($user);
+        $plan = $auth['plan'];
+        $company = $auth['company'];
+        $bucket = $this->authenticator->rateLimitBucket($plan);
+        $isWrite = ! in_array($request->method(), ['GET', 'HEAD', 'OPTIONS'], true);
+        $limits = config('public-api.rate_limits.'.$bucket, config('public-api.rate_limits.default'));
+        $limit = (int) ($isWrite ? $limits['write'] : $limits['read']);
+        $key = 'public-api:'.$company->id.':'.($isWrite ? 'write' : 'read');
 
-        if (! $plan) {
-            return response()->json(['status' => 'error', 'message' => 'Invalid plan']);
+        if ($this->rateLimiter->tooManyAttempts($key, $limit)) {
+            $retryAfter = $this->rateLimiter->availableIn($key);
+
+            return PublicApiResponse::error('rate_limited', 'Too many requests.', 429)
+                ->header('Retry-After', (string) $retryAfter);
         }
 
-        if (! $this->entitlementResolver->hasCapability($plan, 'api_access')) {
-            return response()->json(['status' => 'error', 'message' => 'API access is not included in your plan']);
-        }
-
-        $company = $user->currentCompany();
-        $exceeded = $this->planUsageLimit->firstExceededLimit($company, $plan);
-
-        if ($exceeded !== null) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $this->planUsageLimit->exceededMessage($exceeded),
-            ]);
-        }
+        $this->rateLimiter->hit($key, 60);
 
         return $next($request);
     }

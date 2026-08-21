@@ -70,6 +70,14 @@ class ReservationBookingService
 
         $this->staffNotifications->notifyBooked($reservation);
 
+        app(\App\Services\Api\PublicWebhookDispatcher::class)->dispatch($company->id, 'booking.created', [
+            'id' => $reservation->id,
+            'contact_id' => $reservation->contact_id,
+            'source_id' => $reservation->source_id,
+            'start_date' => optional($reservation->start_date)?->toIso8601String(),
+            'end_date' => optional($reservation->end_date)?->toIso8601String(),
+        ]);
+
         try {
             if ($company->getConfig('outcome_booking_convert_installed', 'no') === 'yes' && $reservation->contact) {
                 app(\App\Services\Outcomes\OutcomeJourneyEnroller::class)
@@ -109,6 +117,13 @@ class ReservationBookingService
         });
 
         $this->staffNotifications->notifyCancelled($reservation);
+
+        app(\App\Services\Api\PublicWebhookDispatcher::class)->dispatch($reservation->company_id, 'booking.cancelled', [
+            'id' => $reservation->id,
+            'contact_id' => $reservation->contact_id,
+            'source_id' => $reservation->source_id,
+            'cancelled_at' => optional($reservation->cancelled_at)?->toIso8601String(),
+        ]);
 
         return $reservation;
     }
@@ -180,6 +195,14 @@ class ReservationBookingService
         });
 
         $this->staffNotifications->notifyRescheduled($reservation);
+
+        app(\App\Services\Api\PublicWebhookDispatcher::class)->dispatch($reservation->company_id, 'booking.rescheduled', [
+            'id' => $reservation->id,
+            'contact_id' => $reservation->contact_id,
+            'source_id' => $reservation->source_id,
+            'start_date' => optional($reservation->start_date)?->toIso8601String(),
+            'end_date' => optional($reservation->end_date)?->toIso8601String(),
+        ]);
 
         return $reservation;
     }

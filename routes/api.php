@@ -75,6 +75,49 @@ Route::prefix('invoice')->group(function () {
     });
 });
 
+Route::get('/v1/docs', [\App\Http\Controllers\Api\V1\OpenApiController::class, 'docs'])->name('api.v1.docs');
+Route::get('/v1/openapi.yaml', [\App\Http\Controllers\Api\V1\OpenApiController::class, 'yaml'])->name('api.v1.openapi.yaml');
+Route::get('/v1/openapi.json', [\App\Http\Controllers\Api\V1\OpenApiController::class, 'json'])->name('api.v1.openapi.json');
+
+Route::prefix('v1')->middleware(['public.api', 'idempotency'])->group(function () {
+    Route::get('me', [\App\Http\Controllers\Api\V1\MeController::class, 'show'])->name('api.v1.me');
+
+    Route::get('contacts', [\App\Http\Controllers\Api\V1\ContactsController::class, 'index'])->name('api.v1.contacts.index');
+    Route::post('contacts', [\App\Http\Controllers\Api\V1\ContactsController::class, 'store'])->name('api.v1.contacts.store');
+    Route::get('contacts/{contact}', [\App\Http\Controllers\Api\V1\ContactsController::class, 'show'])->name('api.v1.contacts.show')->whereNumber('contact');
+    Route::patch('contacts/{contact}', [\App\Http\Controllers\Api\V1\ContactsController::class, 'update'])->name('api.v1.contacts.update')->whereNumber('contact');
+
+    Route::post('messages', [\App\Http\Controllers\Api\V1\MessagesController::class, 'store'])->name('api.v1.messages.store');
+    Route::get('messages/{message}', [\App\Http\Controllers\Api\V1\MessagesController::class, 'show'])->name('api.v1.messages.show')->whereNumber('message');
+
+    Route::get('conversations', [\App\Http\Controllers\Api\V1\ConversationsController::class, 'index'])->name('api.v1.conversations.index');
+    Route::get('conversations/{conversation}', [\App\Http\Controllers\Api\V1\ConversationsController::class, 'show'])->name('api.v1.conversations.show')->whereNumber('conversation');
+    Route::post('conversations/{conversation}/messages', [\App\Http\Controllers\Api\V1\ConversationsController::class, 'reply'])->name('api.v1.conversations.reply')->whereNumber('conversation');
+    Route::post('conversations/{conversation}/assign', [\App\Http\Controllers\Api\V1\ConversationsController::class, 'assign'])->name('api.v1.conversations.assign')->whereNumber('conversation');
+    Route::post('conversations/{conversation}/resolve', [\App\Http\Controllers\Api\V1\ConversationsController::class, 'resolve'])->name('api.v1.conversations.resolve')->whereNumber('conversation');
+    Route::post('conversations/{conversation}/reopen', [\App\Http\Controllers\Api\V1\ConversationsController::class, 'reopen'])->name('api.v1.conversations.reopen')->whereNumber('conversation');
+    Route::post('conversations/{conversation}/notes', [\App\Http\Controllers\Api\V1\ConversationsController::class, 'storeNote'])->name('api.v1.conversations.notes.store')->whereNumber('conversation');
+    Route::get('conversations/{conversation}/notes', [\App\Http\Controllers\Api\V1\ConversationsController::class, 'notes'])->name('api.v1.conversations.notes.index')->whereNumber('conversation');
+
+    Route::post('events', [\App\Http\Controllers\Api\V1\EventsController::class, 'store'])->name('api.v1.events.store');
+
+    Route::get('webhooks', [\App\Http\Controllers\Api\V1\WebhooksController::class, 'index'])->name('api.v1.webhooks.index');
+    Route::post('webhooks', [\App\Http\Controllers\Api\V1\WebhooksController::class, 'store'])->name('api.v1.webhooks.store');
+    Route::delete('webhooks/{webhook}', [\App\Http\Controllers\Api\V1\WebhooksController::class, 'destroy'])->name('api.v1.webhooks.destroy')->whereNumber('webhook');
+
+    Route::get('bookings', [\App\Http\Controllers\Api\V1\BookingsController::class, 'index'])->name('api.v1.bookings.index');
+    Route::get('bookings/services', [\App\Http\Controllers\Api\V1\BookingsController::class, 'services'])->name('api.v1.bookings.services');
+    Route::get('bookings/availability', [\App\Http\Controllers\Api\V1\BookingsController::class, 'availability'])->name('api.v1.bookings.availability');
+    Route::post('bookings', [\App\Http\Controllers\Api\V1\BookingsController::class, 'store'])->name('api.v1.bookings.store');
+    Route::post('bookings/pay', [\App\Http\Controllers\Api\V1\BookingsController::class, 'pay'])->name('api.v1.bookings.pay');
+    Route::get('bookings/{booking}', [\App\Http\Controllers\Api\V1\BookingsController::class, 'show'])->name('api.v1.bookings.show')->whereNumber('booking');
+    Route::post('bookings/{booking}/cancel', [\App\Http\Controllers\Api\V1\BookingsController::class, 'cancel'])->name('api.v1.bookings.cancel')->whereNumber('booking');
+    Route::post('bookings/{booking}/reschedule', [\App\Http\Controllers\Api\V1\BookingsController::class, 'reschedule'])->name('api.v1.bookings.reschedule')->whereNumber('booking');
+
+    Route::post('invoices', [\App\Http\Controllers\Api\V1\InvoicesController::class, 'store'])->name('api.v1.invoices.store');
+    Route::get('invoices/{invoice}', [\App\Http\Controllers\Api\V1\InvoicesController::class, 'show'])->name('api.v1.invoices.show');
+});
+
 Route::group([
     'middleware' => ['Modules\Wpbox\Http\Middleware\CheckAPIPlan'],
 ], function () {

@@ -107,5 +107,45 @@ class Message extends Model
                 $model->company_id = $company_id;
             }
         });
+
+        static::created(function (Message $message) {
+            if ($message->is_note) {
+                return;
+            }
+
+            $type = $message->is_message_by_contact ? 'message.received' : 'message.sent';
+            app(\App\Services\Api\PublicWebhookDispatcher::class)->dispatch($message->company_id, $type, [
+                'id' => $message->id,
+                'contact_id' => $message->contact_id,
+                'body' => $message->value,
+                'status' => $message->status,
+                'wamid' => $message->fb_message_id,
+            ]);
+        });
+
+        static::updated(function (Message $message) {
+            if (! $message->wasChanged('status') || $message->is_note) {
+                return;
+            }
+
+            $map = [
+                self::STATUS_SENT => 'message.sent',
+                self::STATUS_DELIVERED => 'message.delivered',
+                self::STATUS_READ => 'message.read',
+                self::STATUS_FAILED => 'message.failed',
+            ];
+
+            $type = $map[(int) $message->status] ?? null;
+
+            if ($type) {
+                app(\App\Services\Api\PublicWebhookDispatcher::class)->dispatch($message->company_id, $type, [
+                    'id' => $message->id,
+                    'contact_id' => $message->contact_id,
+                    'status' => $message->status,
+                    'error' => $message->error,
+                    'wamid' => $message->fb_message_id,
+                ]);
+            }
+        });
     }
 }

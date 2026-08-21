@@ -9,6 +9,7 @@ use App\Services\Security\ApiTokenAuthenticator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Laravel\Sanctum\PersonalAccessToken;
 use Modules\Reminders\Models\EventRegistration;
 use Modules\Reminders\Models\Remineder;
 use Modules\Reminders\Models\Reservation;
@@ -72,6 +73,11 @@ class APIController extends Controller
 
     private function authenticatePublicBooking(Request $request, \Closure $next, array $rules = [])
     {
+        $plain = $request->bearerToken() ?: $request->input('token');
+        if ($plain && ! $request->filled('token')) {
+            $request->merge(['token' => $plain]);
+        }
+
         $validator = Validator::make($request->all(), $this->publicBookingAuthRules($rules));
 
         if ($validator->fails()) {
@@ -86,7 +92,7 @@ class APIController extends Controller
         }
 
         $bookingKey = $request->input('booking_key') ?? $request->header('X-Booking-Key');
-        $legacyToken = $request->input('token');
+        $legacyToken = $request->bearerToken() ?: $request->input('token');
 
         if (! $bookingKey && $this->bookingPublicKeyService->isBookingKey($legacyToken)) {
             $bookingKey = $legacyToken;

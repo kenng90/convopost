@@ -8,7 +8,7 @@ class WhatsAppRateLimiter
 {
     public function perSecondLimit(): int
     {
-        return max(1, (int) config('wpbox.whatsapp_messages_per_second', 80));
+        return max(1, (int) config('wpbox.whatsapp_messages_per_second', 10));
     }
 
     public function acquire(string $phoneNumberId, int $attempts = 50): bool
