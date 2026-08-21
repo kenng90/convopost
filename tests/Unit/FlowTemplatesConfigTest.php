@@ -473,6 +473,10 @@ class FlowTemplatesConfigTest extends TestCase
         $instructions = $nodes->firstWhere('id', 'openai-voice-instructions');
         $this->assertNotNull($instructions);
         $this->assertFalse((bool) ($instructions['data']['settings']['llm']['autoSendMessage'] ?? true));
+        $this->assertStringContainsString(
+            'runtime language',
+            (string) ($instructions['data']['settings']['llm']['systemPrompt'] ?? '')
+        );
 
         $this->assertTrue(
             $edges->contains(fn (array $edge) => ($edge['source'] ?? '') === 'incomingMessage-1'

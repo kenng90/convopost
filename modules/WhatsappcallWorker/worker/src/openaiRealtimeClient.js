@@ -10,6 +10,7 @@ export class OpenAIRealtimeClient {
     this.tools = options.tools ?? [];
     this.onToolCall = options.onToolCall;
     this.debug = options.debug ?? null;
+    this.transcriptionLanguage = options.transcriptionLanguage ?? null;
     this.onAudioDelta = options.onAudioDelta;
     this.onUserTranscript = options.onUserTranscript;
     this.onAssistantTranscript = options.onAssistantTranscript;
@@ -290,6 +291,7 @@ export class OpenAIRealtimeClient {
       vad_type: turnDetection.type,
       vad_threshold: turnDetection.threshold ?? null,
       noise_reduction: noiseReduction?.type ?? 'off',
+      transcription_language: this.transcriptionLanguage ?? 'auto',
     });
 
     const input = {
@@ -302,6 +304,10 @@ export class OpenAIRealtimeClient {
         model: config.openaiTranscriptionModel,
       },
     };
+
+    if (this.transcriptionLanguage) {
+      input.transcription.language = this.transcriptionLanguage;
+    }
 
     if (noiseReduction) {
       input.noise_reduction = noiseReduction;
@@ -341,6 +347,10 @@ export class OpenAIRealtimeClient {
 
     let instructions =
       'The caller just connected on a WhatsApp voice call. Greet them warmly and briefly.';
+
+    if (options.languageHint) {
+      instructions += ' ' + options.languageHint;
+    }
 
     if (options.mentionCapabilityInGreeting && options.capabilityBrief) {
       instructions +=
