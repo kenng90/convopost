@@ -79,5 +79,7 @@ class Kernel extends HttpKernel
         'campaign.plan' => \Modules\Wpbox\Http\Middleware\CheckCampaignPlanLimit::class,
         'org.route' => \App\Http\Middleware\EnsureOrgRouteAccess::class,
         'owner.account' => \App\Http\Middleware\EnsureOwnerAccount::class,
+        'public.api' => \App\Http\Middleware\AuthenticatePublicApi::class,
+        'idempotency' => \App\Http\Middleware\EnforceIdempotency::class,
     ];
 }

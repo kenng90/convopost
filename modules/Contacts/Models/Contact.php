@@ -66,15 +66,33 @@ class Contact extends Model
         });
 
         static::created(function ($model) {
-            if (! filled($model->phone)) {
+            if (filled($model->phone)) {
+                $country_id = $model->getCountryByPhoneNumber($model->phone);
+                if ($country_id) {
+                    $model->country_id = $country_id;
+                    $model->updateQuietly();
+                }
+            }
+
+            app(\App\Services\Api\PublicWebhookDispatcher::class)->dispatch($model->company_id, 'contact.created', [
+                'id' => $model->id,
+                'name' => $model->name,
+                'phone' => $model->phone,
+                'email' => $model->email,
+            ]);
+        });
+
+        static::updated(function ($model) {
+            if (! $model->wasChanged(['name', 'email', 'phone'])) {
                 return;
             }
 
-            $country_id = $model->getCountryByPhoneNumber($model->phone);
-            if ($country_id) {
-                $model->country_id = $country_id;
-                $model->update();
-            }
+            app(\App\Services\Api\PublicWebhookDispatcher::class)->dispatch($model->company_id, 'contact.updated', [
+                'id' => $model->id,
+                'name' => $model->name,
+                'phone' => $model->phone,
+                'email' => $model->email,
+            ]);
         });
     }
 

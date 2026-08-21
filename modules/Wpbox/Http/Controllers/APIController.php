@@ -264,7 +264,7 @@ class APIController extends Controller
                 'template_id' => $template->id,
                 'group_id' => null,
                 'contact_id' => $contact->id,
-                'total_contacts' => Contact::count(),
+                'total_contacts' => Contact::where('company_id', $company->id)->count(),
             ]);
 
             $bodyText = 'API Message';
@@ -544,10 +544,15 @@ class APIController extends Controller
     public function getContacts(Request $request)
     {
         return $this->authenticate($request, function ($request) {
-            //Company
             $company = $this->getCompany();
+            [$contacts, $meta] = app(\App\Http\Controllers\Api\V1\ContactsController::class)
+                ->paginateContacts($request, $company);
 
-            return response()->json(['status' => 'success', 'contacts' => Contact::where('company_id', $company->id)->get()]);
+            return response()->json([
+                'status' => 'success',
+                'contacts' => $contacts,
+                'meta' => $meta,
+            ]);
         });
     }
 

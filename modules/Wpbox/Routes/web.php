@@ -125,8 +125,7 @@ Route::group([
         Route::get('receive/{tokenViaURL}', 'ChatController@verifyWebhook');
         Route::get('sendschuduledmessages', 'CampaignsController@sendSchuduledMessages')
             ->middleware('campaign.dispatch');
-        Route::post('store-event', 'IntegrationsHubController@receiveStoreEvent')
-            ->middleware('campaign.dispatch');
+        Route::post('store-event', 'IntegrationsHubController@receiveStoreEvent');
 
         // WhatsApp Flows webhook — handles data_exchange payloads from Meta
         Route::post('flows/{token}', 'FlowsWebhookController@receive')->name('wpbox.flows.webhook');

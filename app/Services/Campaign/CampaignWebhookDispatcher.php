@@ -77,5 +77,7 @@ class CampaignWebhookDispatcher
                 'error' => $e->getMessage(),
             ]);
         }
+
+        app(\App\Services\Api\PublicWebhookDispatcher::class)->dispatch($companyId, $event, $payload);
     }
 }

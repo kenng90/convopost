@@ -161,7 +161,8 @@ class CatalogApiController extends Controller
     private function resolveCompany(): Company
     {
         if (! Auth::check()) {
-            $token = PersonalAccessToken::findToken(request()->input('token'));
+            $plain = request()->bearerToken() ?: request()->input('token');
+            $token = is_string($plain) ? PersonalAccessToken::findToken($plain) : null;
             if (! $token) {
                 abort(401, 'Invalid token');
             }
@@ -170,7 +171,10 @@ class CatalogApiController extends Controller
         }
 
         $user = auth()->user();
-        $company = $user?->currentCompany();
+        $requestedId = request()->header('X-Company-Id') ?: request()->input('company_id');
+        $company = $requestedId
+            ? $user?->accessibleCompanies()->firstWhere('id', (int) $requestedId)
+            : $user?->currentCompany();
 
         if (! $company) {
             abort(403, 'No active company.');
@@ -207,7 +211,6 @@ class CatalogApiController extends Controller
 
         if ($includeItems) {
             $data['items'] = $this->catalogItemRepository->getItemsArray($catalog);
-            $data['api_config'] = $catalog->api_config;
         }
 
         return $data;

@@ -1662,10 +1662,20 @@ tailwind.config = {
       <div class="space-y-2">
         <h3 class="font-display font-700 text-lg mb-5 text-gray-900">Available endpoints</h3>
         <div class="space-y-2">
+          <a href="{{ url('/api/v1/docs') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200 hover:border-green-300 transition-colors">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(59,130,246,0.15);color:#60a5fa;">GET</span>
+            <code class="text-base text-gray-700">/api/v1/docs</code>
+            <span class="text-xs text-gray-500 ml-auto">OpenAPI docs</span>
+          </a>
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
+            <code class="text-base text-gray-700">/api/v1/messages</code>
+            <span class="text-xs text-gray-500 ml-auto">WhatsApp + SMS</span>
+          </div>
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
             <code class="text-base text-gray-700">/api/wpbox/sendmessage</code>
-            <span class="text-xs text-gray-500 ml-auto">Send message</span>
+            <span class="text-xs text-gray-500 ml-auto">Legacy alias</span>
           </div>
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
@@ -1674,8 +1684,33 @@ tailwind.config = {
           </div>
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(59,130,246,0.15);color:#60a5fa;">GET</span>
-            <code class="text-base text-gray-700">/api/wpbox/getContacts</code>
-            <span class="text-xs text-gray-500 ml-auto">List contacts</span>
+            <code class="text-base text-gray-700">/api/v1/contacts</code>
+            <span class="text-xs text-gray-500 ml-auto">Paginated contacts</span>
+          </div>
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(59,130,246,0.15);color:#60a5fa;">GET</span>
+            <code class="text-base text-gray-700">/api/v1/conversations</code>
+            <span class="text-xs text-gray-500 ml-auto">Inbox API</span>
+          </div>
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
+            <code class="text-base text-gray-700">/api/v1/events</code>
+            <span class="text-xs text-gray-500 ml-auto">Store events</span>
+          </div>
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
+            <code class="text-base text-gray-700">/api/v1/webhooks</code>
+            <span class="text-xs text-gray-500 ml-auto">Signed webhooks</span>
+          </div>
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
+            <code class="text-base text-gray-700">/api/v1/bookings</code>
+            <span class="text-xs text-gray-500 ml-auto">Create booking</span>
+          </div>
+          <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
+            <code class="text-base text-gray-700">/api/v1/invoices</code>
+            <span class="text-xs text-gray-500 ml-auto">Create + send invoice</span>
           </div>
           <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200">
             <span class="text-xs font-mono font-bold px-2 py-0.5 rounded" style="background:rgba(37,211,102,0.15);color:#25D366;">POST</span>
@@ -1708,10 +1743,11 @@ tailwind.config = {
             <span class="text-xs text-gray-500 ml-auto">API account info</span>
           </div>
         </div>
-        <div class="pt-4">
+        <div class="pt-4 flex flex-wrap items-center gap-3">
           @if($registrationEnabled)
           <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-black rounded-xl" style="background:#25D366;">Get Your API Key →</a>
           @endif
+          <a href="{{ url('/api/v1/docs') }}" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-gray-800 rounded-xl bg-white border border-gray-200">View API docs →</a>
         </div>
       </div>
 
@@ -1720,16 +1756,19 @@ tailwind.config = {
         <h3 class="font-display font-700 text-lg mb-5 text-gray-900">Send a message in seconds</h3>
         <div class="code-block p-5 overflow-x-auto">
           <pre class="text-sm leading-relaxed"><code><span style="color:#569cd6;">const</span> <span style="color:#9cdcfe;">response</span> <span style="color:#d4d4d4;">= </span><span style="color:#569cd6;">await</span> <span style="color:#dcdcaa;">fetch</span><span style="color:#d4d4d4;">(</span>
-  <span style="color:#ce9178;">"{{ url('/api/wpbox/sendmessage') }}"</span><span style="color:#d4d4d4;">,</span>
+  <span style="color:#ce9178;">"{{ url('/api/v1/messages') }}"</span><span style="color:#d4d4d4;">,</span>
   <span style="color:#d4d4d4;">{</span>
     <span style="color:#9cdcfe;">method</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"POST"</span><span style="color:#d4d4d4;">,</span>
     <span style="color:#9cdcfe;">headers</span><span style="color:#d4d4d4;">: {</span>
       <span style="color:#ce9178;">"Authorization"</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">`Bearer ${API_KEY}`</span><span style="color:#d4d4d4;">,</span>
+      <span style="color:#ce9178;">"X-Company-Id"</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"1"</span><span style="color:#d4d4d4;">,</span>
+      <span style="color:#ce9178;">"Idempotency-Key"</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"msg-001"</span><span style="color:#d4d4d4;">,</span>
       <span style="color:#ce9178;">"Content-Type"</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"application/json"</span>
     <span style="color:#d4d4d4;">},</span>
     <span style="color:#9cdcfe;">body</span><span style="color:#d4d4d4;">: </span><span style="color:#dcdcaa;">JSON</span><span style="color:#d4d4d4;">.</span><span style="color:#dcdcaa;">stringify</span><span style="color:#d4d4d4;">({</span>
-      <span style="color:#9cdcfe;">phone</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"254700000000"</span><span style="color:#d4d4d4;">,</span>
-      <span style="color:#9cdcfe;">message</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"Hello from {{ $siteName }}!"</span>
+      <span style="color:#9cdcfe;">channel</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"whatsapp"</span><span style="color:#d4d4d4;">,</span>
+      <span style="color:#9cdcfe;">to</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"254700000000"</span><span style="color:#d4d4d4;">,</span>
+      <span style="color:#9cdcfe;">body</span><span style="color:#d4d4d4;">: </span><span style="color:#ce9178;">"Hello from {{ $siteName }}!"</span>
     <span style="color:#d4d4d4;">})</span>
   <span style="color:#d4d4d4;">}</span>
 <span style="color:#d4d4d4;">);</span>
@@ -1739,7 +1778,7 @@ tailwind.config = {
         </div>
         <div class="mt-4 flex items-center gap-3 p-3 rounded-xl" style="background:rgba(37,211,102,0.05);border:1px solid rgba(37,211,102,0.1);">
           <div class="w-2 h-2 rounded-full flex-shrink-0" style="background:#25D366;"></div>
-          <p class="text-xs text-gray-400">Catalog, invoice, and messaging APIs are plan-gated. Webhooks support inbound WhatsApp events and payment callbacks.</p>
+          <p class="text-xs text-gray-400">Plan-gated API with signed, retried webhooks. Docs: <a href="{{ url('/api/v1/docs') }}" class="underline">/api/v1/docs</a>. Broadcasts capped at 10 WhatsApp messages/second.</p>
         </div>
       </div>
     </div>

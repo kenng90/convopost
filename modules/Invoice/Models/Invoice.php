@@ -170,6 +170,14 @@ class Invoice extends Model
             'status' => 'paid',
             'paid_at' => now(),
         ]);
+
+        app(\App\Services\Api\PublicWebhookDispatcher::class)->dispatch($this->company_id, 'payment.completed', [
+            'invoice_id' => $this->id,
+            'public_uuid' => $this->public_uuid,
+            'amount' => (float) $this->amount,
+            'currency' => $this->currency,
+            'customer_phone' => $this->customer_phone,
+        ]);
     }
 
     /**

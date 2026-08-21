@@ -70,6 +70,7 @@ class LandingPageTest extends TestCase
         $response->assertSee('KES 0.6', false);
         $response->assertDontSee('Twilio SMS', false);
         $response->assertSee('/api/wpbox/sendmessage', false);
+        $response->assertSee('/api/v1/docs', false);
         $response->assertSee('/popup/whatsapp', false);
         $response->assertSee('property="og:title"', false);
         $response->assertSee('Skip to content', false);

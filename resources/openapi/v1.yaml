@@ -1,0 +1,722 @@
+openapi: 3.0.3
+info:
+  title: ConvoConnect Public API
+  version: 1.0.0
+  description: "Plan-gated public API for WhatsApp, SMS, inbox, contacts, bookings, invoices, and signed webhooks.\n\nAuthenticate with `Authorization: Bearer {token}`. Optional `X-Company-Id` selects a company the token can access. Write requests may send `Idempotency-Key` (replayed for 24 hours).\n\nLegacy `/api/wpbox/*` routes remain as aliases. `POST /api/wpbox/sendmessage` is an alias of `POST /api/v1/messages` with `channel=whatsapp`.\n\nWhatsApp campaign/broadcast sending is capped at **10 messages per second** (Meta Cloud API default throughput).\n\nRate limits (per company, per minute): Agency 600 read / 120 write; Pro 120 / 30; otherwise 60 / 20. Errors use `{error:{code,message,details,request_id}}` with HTTP 401/403/429."
+servers:
+  -
+    url: /api/v1
+    description: Public API v1
+tags:
+  -
+    name: Account
+  -
+    name: Contacts
+  -
+    name: Messages
+  -
+    name: Conversations
+  -
+    name: Events
+  -
+    name: Webhooks
+  -
+    name: Bookings
+  -
+    name: Invoices
+security:
+  -
+    bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "Sanctum personal access token. Body/query `token` is also accepted on legacy aliases."
+  parameters:
+    CompanyId:
+      name: X-Company-Id
+      in: header
+      required: false
+      schema:
+        type: integer
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+  schemas:
+    Error:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+            request_id:
+              type: string
+    Success:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        data: []
+        meta:
+          type: object
+paths:
+  /me:
+    get:
+      tags:
+        - Account
+      summary: Current token user and company
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+      responses:
+        200:
+          description: Authenticated account
+        401:
+          description: Invalid token
+  /contacts:
+    get:
+      tags:
+        - Contacts
+      summary: "List contacts (cursor pagination, hard cap 100)"
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/Cursor"
+        -
+          $ref: "#/components/parameters/Limit"
+        -
+          name: phone
+          in: query
+          schema:
+            type: string
+        -
+          name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        200:
+          description: Paginated contacts
+    post:
+      tags:
+        - Contacts
+      summary: Create or update a contact by phone
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+              properties:
+                phone:
+                  type: string
+                name:
+                  type: string
+                email:
+                  type: string
+                groups:
+                  type: array
+                  items:
+                    type: string
+                custom:
+                  type: object
+      responses:
+        201:
+          description: Contact created
+  /contacts/{contact}:
+    get:
+      tags:
+        - Contacts
+      summary: Get a contact
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: contact
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Contact
+        404:
+          description: Not found
+    patch:
+      tags:
+        - Contacts
+      summary: Update a contact
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/IdempotencyKey"
+        -
+          name: contact
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Updated
+  /messages:
+    post:
+      tags:
+        - Messages
+      summary: Send a WhatsApp or SMS message
+      description: "Wraps existing send paths: session text/media, template, list/interactive. Set `channel=sms` for HostPinnacle SMS. Alias: POST /api/wpbox/sendmessage."
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                channel:
+                  type: string
+                  enum:
+                    - whatsapp
+                    - sms
+                    - instagram
+                    - messenger
+                  default: whatsapp
+                to:
+                  type: string
+                phone:
+                  type: string
+                contact_id:
+                  type: integer
+                body:
+                  type: string
+                message:
+                  type: string
+                template_name:
+                  type: string
+                template_language:
+                  type: string
+                media_url:
+                  type: string
+                action:
+                  type: object
+      responses:
+        201:
+          description: Queued or sent
+  /messages/{message}:
+    get:
+      tags:
+        - Messages
+      summary: Get a message
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: message
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Message
+  /conversations:
+    get:
+      tags:
+        - Conversations
+      summary: List inbox conversations
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/Cursor"
+        -
+          $ref: "#/components/parameters/Limit"
+        -
+          name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - open
+              - resolved
+      responses:
+        200:
+          description: Conversations
+  /conversations/{conversation}:
+    get:
+      tags:
+        - Conversations
+      summary: Get a conversation and recent messages
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: conversation
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Conversation
+  /conversations/{conversation}/messages:
+    post:
+      tags:
+        - Conversations
+      summary: Reply in a conversation
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/IdempotencyKey"
+        -
+          name: conversation
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        201:
+          description: Sent
+  /conversations/{conversation}/assign:
+    post:
+      tags:
+        - Conversations
+      summary: Assign an agent
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: conversation
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: integer
+      responses:
+        200:
+          description: Assigned
+  /conversations/{conversation}/resolve:
+    post:
+      tags:
+        - Conversations
+      summary: Resolve a conversation
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: conversation
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Resolved
+  /conversations/{conversation}/reopen:
+    post:
+      tags:
+        - Conversations
+      summary: Reopen a conversation
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: conversation
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Reopened
+  /conversations/{conversation}/notes:
+    get:
+      tags:
+        - Conversations
+      summary: List internal notes
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: conversation
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Notes
+    post:
+      tags:
+        - Conversations
+      summary: Add an internal note
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: conversation
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - note
+              properties:
+                note:
+                  type: string
+      responses:
+        201:
+          description: Created
+  /events:
+    post:
+      tags:
+        - Events
+      summary: Ingest a tenant-scoped store event
+      description: "Replaces POST /webhook/wpbox/store-event. Fires campaign triggers for order.created, cart.abandoned, fulfillment.shipped and signed partner webhooks."
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event:
+                  type: string
+                  example: order.created
+                event_type:
+                  type: string
+                data:
+                  type: object
+      responses:
+        202:
+          description: Accepted
+  /webhooks:
+    get:
+      tags:
+        - Webhooks
+      summary: List webhook endpoints
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+      responses:
+        200:
+          description: Endpoints
+    post:
+      tags:
+        - Webhooks
+      summary: Create a signed webhook endpoint
+      description: "Deliveries use HMAC SHA-256 header X-ConvoConnect-Signature: t={unix},v1={hex} and retry with backoff."
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                events:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                    - "message.*"
+                    - contact.created
+                description:
+                  type: string
+      responses:
+        201:
+          description: Created with secret shown once
+  /webhooks/{webhook}:
+    delete:
+      tags:
+        - Webhooks
+      summary: Delete a webhook endpoint
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: webhook
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Deleted
+  /bookings:
+    get:
+      tags:
+        - Bookings
+      summary: List bookings
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/Cursor"
+        -
+          $ref: "#/components/parameters/Limit"
+      responses:
+        200:
+          description: Bookings
+    post:
+      tags:
+        - Bookings
+      summary: Create a booking
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - name
+                - source
+              properties:
+                phone:
+                  type: string
+                name:
+                  type: string
+                source:
+                  type: string
+                slot_id:
+                  type: string
+                start_date:
+                  type: string
+                end_date:
+                  type: string
+      responses:
+        201:
+          description: Created
+  /bookings/services:
+    get:
+      tags:
+        - Bookings
+      summary: List bookable services
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+      responses:
+        200:
+          description: Services
+  /bookings/availability:
+    get:
+      tags:
+        - Bookings
+      summary: List availability
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: source
+          in: query
+          required: true
+          schema:
+            type: string
+        -
+          name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        200:
+          description: Slots or dates
+  /bookings/pay:
+    post:
+      tags:
+        - Bookings
+      summary: Start booking payment
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        201:
+          description: Booked
+        202:
+          description: Payment required
+  /bookings/{booking}:
+    get:
+      tags:
+        - Bookings
+      summary: Get a booking
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: booking
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Booking
+  /bookings/{booking}/cancel:
+    post:
+      tags:
+        - Bookings
+      summary: Cancel a booking
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: booking
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Cancelled
+  /bookings/{booking}/reschedule:
+    post:
+      tags:
+        - Bookings
+      summary: Reschedule a booking
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/IdempotencyKey"
+        -
+          name: booking
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Rescheduled
+  /invoices:
+    post:
+      tags:
+        - Invoices
+      summary: Create an invoice and optionally send it on WhatsApp
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customer_phone
+                - amount
+              properties:
+                customer_phone:
+                  type: string
+                customer_name:
+                  type: string
+                customer_email:
+                  type: string
+                amount:
+                  type: number
+                currency:
+                  type: string
+                  example: KES
+                description:
+                  type: string
+                items:
+                  type: array
+                send_whatsapp:
+                  type: boolean
+                  default: true
+      responses:
+        201:
+          description: Created
+  /invoices/{invoice}:
+    get:
+      tags:
+        - Invoices
+      summary: Get an invoice by id or public UUID
+      parameters:
+        -
+          $ref: "#/components/parameters/CompanyId"
+        -
+          name: invoice
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Invoice
