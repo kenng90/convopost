@@ -420,6 +420,47 @@ class ChatListFiltersTest extends TestCase
         $this->assertNotNull($response->json('data.0.comment_reply'));
     }
 
+    public function test_chatlist_marks_service_window_open_when_customer_just_replied(): void
+    {
+        $this->makeContact([
+            'name' => 'Active Session',
+            'phone' => '254700000601',
+            'is_last_message_by_contact' => true,
+            'last_reply_at' => now()->subMinutes(5),
+            'last_client_reply_at' => now()->subMinutes(5),
+            'resolved_chat' => 0,
+        ]);
+
+        $response = $this->actingAs($this->owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $this->company->id])
+            ->getJson('/api/wpbox/chats/none/1/?filter=open');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.in_service_window', true);
+        $this->assertNotEmpty($response->json('data.0.service_window_expires_at'));
+    }
+
+    public function test_chatlist_marks_service_window_open_from_last_inbound_without_last_client_reply_at(): void
+    {
+        $this->makeContact([
+            'name' => 'Missing Client Reply Stamp',
+            'phone' => '254700000602',
+            'is_last_message_by_contact' => true,
+            'last_reply_at' => now()->subMinutes(8),
+            'last_client_reply_at' => null,
+            'resolved_chat' => 0,
+        ]);
+
+        $response = $this->actingAs($this->owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $this->company->id])
+            ->getJson('/api/wpbox/chats/none/1/?filter=open');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.in_service_window', true);
+    }
+
     /**
      * @param  array<string, mixed>  $attributes
      */

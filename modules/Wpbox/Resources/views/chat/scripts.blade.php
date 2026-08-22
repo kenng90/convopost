@@ -178,14 +178,47 @@
         });
     };
 
+    var parseInboxDate=function(value){
+        if(!value){
+            return null;
+        }
+        var asString=String(value);
+        var iso=moment(asString.replace(/\.\d{4,}Z$/, 'Z'), moment.ISO_8601);
+        if(iso.isValid()){
+            return iso;
+        }
+        var local=moment.tz(asString.substring(0, 19), serverTimezone);
+        return local.isValid() ? local : null;
+    };
+
+    var latestInboundMessageAt=function(contact){
+        if(!contact || !chatList || !chatList.messages || chatList.activeChat.id!==contact.id){
+            return null;
+        }
+        var latest=null;
+        chatList.messages.forEach(function(message){
+            if(message.is_message_by_contact!=1 || !message.created_at){
+                return;
+            }
+            var parsed=parseInboxDate(message.created_at);
+            if(parsed && (!latest || parsed.isAfter(latest))){
+                latest=parsed;
+            }
+        });
+        return latest;
+    };
+
     var buildContactFromPusher=function(data){
         return {
             id: data.contact_id || data.contact,
             name: data.name || '',
             last_message: data.last_message || '',
             last_reply_at: data.last_reply_at,
+            last_client_reply_at: data.last_client_reply_at,
             is_last_message_by_contact: data.is_last_message_by_contact ? 1 : 0,
             resolved_chat: data.resolved_chat ? 1 : 0,
+            in_service_window: data.in_service_window === true,
+            service_window_expires_at: data.service_window_expires_at || null,
         };
     };
 
@@ -260,9 +293,12 @@
             var contact=chatList.all[allIndex];
             if(data.last_message!==undefined){ contact.last_message=data.last_message; }
             if(data.last_reply_at!==undefined){ contact.last_reply_at=data.last_reply_at; }
+            if(data.last_client_reply_at!==undefined){ contact.last_client_reply_at=data.last_client_reply_at; }
             if(data.is_last_message_by_contact!==undefined){
                 contact.is_last_message_by_contact=data.is_last_message_by_contact ? 1 : 0;
             }
+            if(data.in_service_window!==undefined){ contact.in_service_window=data.in_service_window; }
+            if(data.service_window_expires_at!==undefined){ contact.service_window_expires_at=data.service_window_expires_at; }
             if(data.resolved_chat!==undefined){
                 contact.resolved_chat=data.resolved_chat ? 1 : 0;
             }
@@ -699,39 +735,48 @@
                         };
                     }
                 }
-                if(!contact || !contact.last_client_reply_at){
-                    if(contact && contact.channel && contact.channel !== 'whatsapp'){
-                        return {
-                            "class":"badge-warning",
-                            "text":"{{ __('Reply within the 24-hour messaging window')}}"
-                        };
-                    }
 
+                var expiredText = contact && contact.channel && contact.channel !== 'whatsapp'
+                    ? "{{ __('Messaging window expired')}}"
+                    : "{{ __('You can reply only with template')}}!";
+                var missingText = contact && contact.channel && contact.channel !== 'whatsapp'
+                    ? "{{ __('Reply within the 24-hour messaging window')}}"
+                    : "{{ __('You can reply only with template')}}!";
+
+                var expiresAt=parseInboxDate(contact && contact.service_window_expires_at);
+                if(!expiresAt){
+                    var customerRepliedAt=parseInboxDate(contact && contact.last_client_reply_at);
+                    if(!customerRepliedAt && contact && contact.is_last_message_by_contact){
+                        customerRepliedAt=parseInboxDate(contact.last_reply_at);
+                    }
+                    if(!customerRepliedAt){
+                        customerRepliedAt=latestInboundMessageAt(contact);
+                    }
+                    if(customerRepliedAt){
+                        expiresAt=customerRepliedAt.clone().add(24, 'hours');
+                    }
+                }
+
+                if(!expiresAt){
                     return {
                         "class":"badge-danger",
-                        "text":"{{ __('You can reply only with template')}}!"
+                        "text": missingText
                     };
                 }
 
-                var timeSinceLastClientReply= moment.tz(contact.last_client_reply_at,serverTimezone).add(24, 'hours');
-                const minutesDifference = timeSinceLastClientReply.diff(moment.now(), 'minutes');
-                var statusOfReply={
-                    "class":"badge-danger",
-                    "text": contact.channel && contact.channel !== 'whatsapp'
-                        ? "{{ __('Messaging window expired')}}"
-                        : "{{ __('You can reply only with template')}}!"
-                };
+                var minutesDifference=expiresAt.diff(moment(), 'minutes');
                 if(minutesDifference>0){
-                    if(minutesDifference>60){
-                        statusOfReply.class="badge-success";
-                        statusOfReply.text=moment.duration(minutesDifference, 'minutes').humanize();
-                    }else{
-                        statusOfReply.class="badge-warning";
-                        statusOfReply.text=moment.duration(minutesDifference, 'minutes').humanize();
-                    }
-                    statusOfReply.text+=" {{ __('left to reply')}}";
+                    var remaining=moment.duration(minutesDifference, 'minutes').humanize();
+                    return {
+                        "class": minutesDifference>60 ? "badge-success" : "badge-warning",
+                        "text": remaining+" {{ __('left to reply')}}"
+                    };
                 }
-                return statusOfReply;
+
+                return {
+                    "class":"badge-danger",
+                    "text": expiredText
+                };
             },
             setCurrentChat: function (contact_id) {
 

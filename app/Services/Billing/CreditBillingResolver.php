@@ -2,7 +2,6 @@
 
 namespace App\Services\Billing;
 
-use Carbon\Carbon;
 use Modules\Wpbox\Models\Contact;
 use Modules\Wpbox\Models\Template;
 
@@ -41,12 +40,6 @@ class CreditBillingResolver
 
     public function isWithinServiceWindow(Contact $contact): bool
     {
-        if ($contact->last_client_reply_at === null) {
-            return false;
-        }
-
-        $hours = (int) config('credit-actions.service_window_hours', 24);
-
-        return Carbon::parse($contact->last_client_reply_at)->greaterThan(now()->subHours($hours));
+        return app(\App\Services\WhatsApp\WhatsAppSessionWindow::class)->isOpen($contact);
     }
 }
