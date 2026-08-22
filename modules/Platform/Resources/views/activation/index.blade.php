@@ -37,9 +37,20 @@
                                             @endif
                                         </div>
                                         <div class="flex-grow-1">
-                                            <h4 class="mb-1">{{ $step['title'] }}</h4>
+                                            <h4 class="mb-1">{{ $step['title'] }} @if(!empty($step['optional']))<span class="badge badge-light">{{ __('Optional') }}</span>@endif</h4>
                                             <p class="text-muted mb-2 small">{{ $step['description'] }}</p>
-                                            @if(!$step['completed'] && $step['action_route'])
+                                            @if($step['key'] === 'vertical' && !$step['completed'])
+                                                <form method="POST" action="{{ route('activation.vertical') }}" class="d-flex flex-wrap gap-2">
+                                                    @csrf
+                                                    <select name="vertical" class="form-control form-control-sm" style="max-width: 240px;" required>
+                                                        @foreach($verticals as $key => $pack)
+                                                            <option value="{{ $key }}">{{ $pack['name'] }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <input type="hidden" name="install_playbook" value="1">
+                                                    <button class="btn btn-sm btn-primary">{{ __('Install pack') }}</button>
+                                                </form>
+                                            @elseif(!$step['completed'] && $step['action_route'] && $step['key'] !== 'vertical')
                                                 <a href="{{ route($step['action_route']) }}" class="btn btn-sm btn-primary">
                                                     {{ $step['action_label'] }}
                                                 </a>
@@ -49,10 +60,11 @@
                                 @endforeach
                             </div>
 
+                            @php($canFinish = collect($steps)->reject(fn ($s) => !empty($s['optional']))->every(fn ($s) => $s['completed']))
                             <div class="d-flex flex-wrap gap-2 mt-4">
                                 <form method="POST" action="{{ route('activation.complete') }}">
                                     @csrf
-                                    <button type="submit" class="btn btn-success" @if($progress < 100) disabled @endif>
+                                    <button type="submit" class="btn btn-success" @if(!$canFinish) disabled @endif>
                                         {{ __('Finish activation') }}
                                     </button>
                                 </form>

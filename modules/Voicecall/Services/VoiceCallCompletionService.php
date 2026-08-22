@@ -3,11 +3,11 @@
 namespace Modules\Voicecall\Services;
 
 use App\Models\Company;
+use App\Services\VoiceBooking\VoiceCallBookingService;
 use Illuminate\Support\Facades\Log;
 use Modules\Voicecall\Models\VoiceCall;
 use Modules\Voicecall\Models\VoicePhoneNumber;
 use Modules\Whatsappcall\Services\CallBriefService;
-use App\Services\VoiceBooking\VoiceCallBookingService;
 use Modules\Wpbox\Events\Chatlistchange;
 use Modules\Wpbox\Models\Contact;
 
@@ -51,6 +51,11 @@ class VoiceCallCompletionService
             'handoff_reason' => $voiceCall->handoff_reason,
         ]);
 
+        $payload['channel'] = $structured['channel'] ?? 'telnyx_voice';
+        $payload['shared_brain'] = (bool) ($structured['shared_brain'] ?? false);
+        $payload['telnyx_stage'] = 'done';
+        $payload['agent_turns'] = $structured['agent_turns'] ?? null;
+
         if ($voiceCall->id) {
             $payload = app(VoiceCallBookingService::class)->mergeBookingResultsIntoStructured($payload);
         }
@@ -66,12 +71,11 @@ class VoiceCallCompletionService
         ]);
 
         if ($voiceCall->handoff_requested) {
-            $contact->voice_handoff_pending = true;
-            $contact->has_chat = true;
-            $contact->is_last_message_by_contact = true;
-            $contact->last_reply_at = now();
-            $contact->last_message = $contact->trimString(__('Phone call — needs agent'), 40);
-            $contact->save();
+            app(\App\Services\Agents\AgentHandoffService::class)->handoff(
+                $company,
+                $contact,
+                $voiceCall->handoff_reason ?: __('Caller requested a human agent')
+            );
         }
 
         try {

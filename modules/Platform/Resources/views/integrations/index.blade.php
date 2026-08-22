@@ -21,6 +21,10 @@
                                 <p class="text-muted flex-grow-1">{{ $integration['description'] }}</p>
                                 @if($connected)
                                     <span class="badge badge-success mb-2">{{ __('Connected') }}</span>
+                                    <form method="POST" action="{{ route('integrations.test', $key) }}" class="mb-2">
+                                        @csrf
+                                        <button class="btn btn-sm btn-outline-primary">{{ __('Send test event') }}</button>
+                                    </form>
                                     <form method="POST" action="{{ route('integrations.disconnect', $key) }}">
                                         @csrf @method('DELETE')
                                         <button class="btn btn-sm btn-outline-danger">{{ __('Disconnect') }}</button>

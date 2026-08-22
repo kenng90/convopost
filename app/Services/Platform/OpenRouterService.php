@@ -8,8 +8,9 @@ use Illuminate\Support\Facades\Log;
 class OpenRouterService
 {
     /**
-     * @param  array<int, array{role: string, content: string}>  $messages
-     * @return array{content: string, model: string, usage: array<string, mixed>}
+     * @param  array<int, array{role: string, content?: string|null, tool_calls?: mixed, tool_call_id?: string}>  $messages
+     * @param  array<int, array<string, mixed>>  $tools
+     * @return array{content: string, model: string, usage: array<string, mixed>, message: array<string, mixed>}
      */
     public function chatCompletion(
         string $apiKey,
@@ -18,6 +19,7 @@ class OpenRouterService
         float $temperature = 0.7,
         int $maxTokens = 4000,
         bool $jsonMode = false,
+        array $tools = [],
     ): array {
         $payload = [
             'model' => $model,
@@ -28,6 +30,11 @@ class OpenRouterService
 
         if ($jsonMode) {
             $payload['response_format'] = ['type' => 'json_object'];
+        }
+
+        if ($tools !== []) {
+            $payload['tools'] = $tools;
+            $payload['tool_choice'] = 'auto';
         }
 
         $response = Http::timeout(90)
@@ -49,12 +56,14 @@ class OpenRouterService
         }
 
         $data = $response->json();
-        $content = $data['choices'][0]['message']['content'] ?? '';
+        $message = $data['choices'][0]['message'] ?? [];
+        $content = $message['content'] ?? '';
 
         return [
-            'content' => $content,
+            'content' => is_string($content) ? $content : '',
             'model' => $data['model'] ?? $model,
             'usage' => $data['usage'] ?? [],
+            'message' => is_array($message) ? $message : [],
         ];
     }
 

@@ -87,6 +87,12 @@ class RespondOnMessage
                     'body_preview' => mb_substr($messageBody, 0, 80),
                 ]);
 
+                if ($company->getConfig('action_agent_enabled', 'yes') === 'yes') {
+                    app(\App\Services\Agents\ActionAgentService::class)
+                        ->handleInbound($company, $contact, $messageBody);
+                    app(\App\Services\Workspace\ConversationSlaService::class)->start($company, $contact);
+                }
+
                 return;
             }
 

@@ -60,4 +60,21 @@ class IntegrationHubController extends Controller
 
         return redirect()->route('integrations.index')->withStatus(__('Integration disconnected.'));
     }
+
+    public function testEvent(string $provider): RedirectResponse
+    {
+        $this->ownerOnly();
+        $company = $this->getCompany();
+
+        $event = app(\App\Services\Integrations\PlatformEventBus::class)->emit($company, 'integration.test', [
+            'provider' => $provider,
+            'phone' => $company->getConfig('whatsapp_phone_number', ''),
+        ]);
+
+        return redirect()->route('integrations.index')->withStatus(
+            $event->status === 'delivered'
+                ? __('Test event delivered to :name.', ['name' => $provider])
+                : __('Test event recorded. Delivery: :status', ['status' => $event->status])
+        );
+    }
 }

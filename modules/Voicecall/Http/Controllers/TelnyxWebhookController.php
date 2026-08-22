@@ -174,42 +174,70 @@ class TelnyxWebhookController extends Controller
         $line = VoicePhoneNumber::withoutGlobalScopes()->find($voiceCall->voice_phone_number_id);
         $company = Company::find($voiceCall->company_id);
         $speech = $this->extractTelnyxSpeech($payload);
-
-        $transcript = "[Caller] {$speech}\n";
         $handoff = $this->detectHandoff($speech, $line?->handoff_phrases ?? []);
 
         $voiceCall->load('contact');
+        $transcript = ($voiceCall->transcript ?? '')."[Caller] {$speech}\n";
+        $turns = (int) ($voiceCall->structured['agent_turns'] ?? 0) + 1;
+        $maxTurns = 8;
+
+        $agentReply = '';
+        $agentHandoff = $handoff;
+        $contact = $voiceCall->contact;
+
+        if ($company && $contact && ! $handoff) {
+            $result = app(\App\Services\Agents\ActionAgentService::class)
+                ->replyForVoice($company, $contact, $speech, (string) $voiceCall->transcript);
+            $agentReply = $result['reply'];
+            $agentHandoff = $result['handoff'] || $handoff;
+            $transcript .= '[Agent] '.$agentReply."\n";
+        }
+
+        $shouldFinish = $agentHandoff || $turns >= $maxTurns || $agentReply === '';
+
         $voiceCall->update([
-            'transcript' => ($voiceCall->transcript ?? '').$transcript,
-            'handoff_requested' => $handoff,
-            'handoff_reason' => $handoff ? 'Caller requested a human agent' : null,
+            'transcript' => $transcript,
+            'handoff_requested' => $agentHandoff,
+            'handoff_reason' => $agentHandoff ? 'Caller requested a human agent' : null,
             'structured' => array_merge($voiceCall->structured ?? [], [
-                'telnyx_stage' => 'done',
-                'intent' => 'phone_inquiry',
+                'channel' => 'telnyx_voice',
+                'telnyx_stage' => $shouldFinish ? 'done' : 'gathering',
+                'agent_turns' => $turns,
+                'intent' => $agentHandoff ? 'handoff' : 'phone_inquiry',
                 'summary_bullets' => [
                     'Inbound Telnyx voice call',
                     $speech ? 'Caller said: '.mb_substr($speech, 0, 120) : 'No speech captured',
                 ],
                 'fields' => $this->stubFields($line, $voiceCall),
-                'handoff_requested' => $handoff,
+                'handoff_requested' => $agentHandoff,
+                'shared_brain' => true,
             ]),
             'duration_seconds' => $voiceCall->started_at
                 ? max(1, now()->diffInSeconds($voiceCall->started_at))
                 : 15,
-            'ended_at' => now(),
+            'ended_at' => $shouldFinish ? now() : $voiceCall->ended_at,
         ]);
 
-        if ($line && $company) {
-            $this->completionService->completeFromVoiceCall($voiceCall, $line);
+        $control = $company ? TelnyxCallControl::forCompany($company) : null;
+
+        if (! $shouldFinish && $agentReply !== '' && $control) {
+            $control->gatherUsingSpeak($callControlId, $agentReply);
+
+            return response('', 200);
         }
 
-        $closing = $handoff
-            ? 'Thank you. A team member will follow up with you in chat shortly.'
-            : 'Thank you for calling. Goodbye.';
+        if ($line && $company) {
+            $this->completionService->completeFromVoiceCall($voiceCall->fresh(), $line);
+        }
 
-        $control = TelnyxCallControl::forCompany($company);
-        $control->speak($callControlId, $closing);
-        $control->hangup($callControlId);
+        $closing = $agentHandoff
+            ? ($agentReply !== '' ? $agentReply : 'Thank you. A team member will follow up with you in chat shortly.')
+            : ($agentReply !== '' ? $agentReply.' Goodbye.' : 'Thank you for calling. Goodbye.');
+
+        if ($control) {
+            $control->speak($callControlId, $closing);
+            $control->hangup($callControlId);
+        }
 
         return response('', 200);
     }
