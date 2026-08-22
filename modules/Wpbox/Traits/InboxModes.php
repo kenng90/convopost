@@ -60,6 +60,11 @@ trait InboxModes
         $contact->comment_reply = $conversation?->commentReplyPayload();
         $contact->unsetRelation('conversations');
 
+        $window = app(\App\Services\WhatsApp\WhatsAppSessionWindow::class);
+        $expiresAt = $window->expiresAt($contact);
+        $contact->in_service_window = $expiresAt !== null && $expiresAt->isFuture();
+        $contact->service_window_expires_at = $expiresAt?->toIso8601String();
+
         return $contact;
     }
 
