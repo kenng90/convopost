@@ -10,6 +10,7 @@ use App\Services\Billing\CreditCharger;
 use App\Services\Security\SafeRemoteUrl;
 use App\Services\Security\WebhookSignature;
 use App\Services\WhatsApp\InteractiveListLimits;
+use App\Services\WhatsApp\WebhookCompanyResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;

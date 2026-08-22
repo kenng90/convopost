@@ -49,6 +49,8 @@ class UnifiedMessagingTest extends TestCase
 
         $token = $owner->createToken('webhook-test')->plainTextToken;
 
+        config(['services.whatsapp.app_secret' => '', 'services.facebook.app_secret' => '']);
+
         $payload = [
             'entry' => [
                 [
