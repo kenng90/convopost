@@ -3,6 +3,8 @@
 namespace App\Services\Platform;
 
 use App\Models\Company;
+use App\Models\ConversationWorkspace;
+use App\Models\Messaging\ChannelIdentity;
 use Illuminate\Support\Facades\DB;
 use Modules\Invoice\Models\Invoice;
 use Modules\Journies\Models\Journey;
@@ -34,6 +36,8 @@ class Customer360Service
             'campaigns' => $this->campaignHistory($company, $contact),
             'outcomes' => $this->outcomesSummary($company, $contact),
             'conversation_summary' => $this->summarizeRecentMessages($contact),
+            'identities' => $this->identities($contact),
+            'workspace' => $this->workspace($company, $contact),
         ];
     }
 
@@ -240,5 +244,43 @@ class Customer360Service
         });
 
         return $lines->implode("\n");
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function identities(Contact $contact): array
+    {
+        return ChannelIdentity::withoutGlobalScopes()
+            ->where('contact_id', $contact->id)
+            ->get()
+            ->map(fn (ChannelIdentity $identity) => [
+                'channel' => is_object($identity->channel) ? $identity->channel->value : $identity->channel,
+                'external_id' => $identity->external_id,
+                'display_name' => $identity->display_name,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function workspace(Company $company, Contact $contact): ?array
+    {
+        $row = ConversationWorkspace::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->where('contact_id', $contact->id)
+            ->first();
+
+        if (! $row) {
+            return null;
+        }
+
+        return [
+            'sla_due_at' => $row->sla_due_at?->toDateTimeString(),
+            'sla_breached' => $row->isSlaBreached(),
+            'locked_by' => $row->locked_by,
+            'csat_score' => $row->csat_score,
+        ];
     }
 }

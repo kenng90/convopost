@@ -297,7 +297,11 @@ class ChatController extends Controller
 
         // Assign the contact to the user
         $contact->user_id = $validatedData['user_id'];
+        $contact->enabled_ai_bot = false;
         $contact->save();
+
+        app(\App\Services\Workspace\ConversationLockService::class)
+            ->lock($this->getCompany(), $contact, auth()->user());
 
         event(new Chatlistchange($contact->id, $contact->company_id));
 
@@ -540,6 +544,11 @@ class ChatController extends Controller
         $contact->resolved_chat = 1;
         $contact->save();
 
+        $company = $this->getCompany();
+        app(\App\Services\Workspace\ConversationSlaService::class)->clearOnResolve($company, $contact);
+        app(\App\Services\Workspace\CsatService::class)->request($company, $contact);
+        app(\App\Services\Workspace\ConversationLockService::class)->unlock($company, $contact);
+
         event(new Chatlistchange($contact->id, $contact->company_id));
 
         return response()->json([
@@ -555,6 +564,8 @@ class ChatController extends Controller
         // Update the resolved_chat status to reopen
         $contact->resolved_chat = 0;
         $contact->save();
+
+        app(\App\Services\Workspace\ConversationSlaService::class)->start($this->getCompany(), $contact);
 
         event(new Chatlistchange($contact->id, $contact->company_id));
 

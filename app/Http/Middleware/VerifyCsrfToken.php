@@ -28,6 +28,8 @@ class VerifyCsrfToken extends Middleware
         'webhook/messaging/*',
         'webhook/whatsappcall/calling/*',
         'webhook/whatsappcall/calling',
+        'webhook/voicecall/*',
+        'webhook/voicecall/telnyx',
         'api/wpbox/*',
         'api/reminders/*',
         'api/journies/external/*',

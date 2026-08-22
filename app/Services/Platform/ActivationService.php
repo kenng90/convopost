@@ -61,6 +61,15 @@ class ActivationService
                 'action_route' => 'flows.index',
                 'action_label' => __('Browse templates'),
             ],
+            'vertical' => [
+                'key' => 'vertical',
+                'title' => __('Go live in 15 minutes'),
+                'description' => __('Install a clinic, shop, spa, or sales pack with journeys and automation.'),
+                'completed' => filled($company->getConfig('vertical_golive_pack', '')),
+                'optional' => true,
+                'action_route' => 'activation.index',
+                'action_label' => __('Choose a vertical'),
+            ],
         ];
     }
 
@@ -82,7 +91,9 @@ class ActivationService
             return true;
         }
 
-        return collect($this->steps($company))->every(fn (array $step) => $step['completed']);
+        return collect($this->steps($company))
+            ->reject(fn (array $step) => ! empty($step['optional']))
+            ->every(fn (array $step) => $step['completed']);
     }
 
     public function markComplete(Company $company): void

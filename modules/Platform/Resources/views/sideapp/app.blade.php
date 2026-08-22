@@ -48,6 +48,24 @@
             </div>
         </div>
 
+        <div class="mb-3" v-if="dynamicProperties.customer360.identities && dynamicProperties.customer360.identities.length">
+            <h6 class="text-muted text-uppercase small">{{ __('Channels') }}</h6>
+            <div v-for="id in dynamicProperties.customer360.identities" :key="id.channel + id.external_id" class="small mb-1">
+                <strong>@{{ id.channel }}</strong> — @{{ id.display_name || id.external_id }}
+            </div>
+        </div>
+
+        <div class="mb-3" v-if="dynamicProperties.customer360.workspace">
+            <h6 class="text-muted text-uppercase small">{{ __('Workspace') }}</h6>
+            <div class="small" v-if="dynamicProperties.customer360.workspace.sla_due_at">
+                {{ __('SLA due') }}: @{{ dynamicProperties.customer360.workspace.sla_due_at }}
+                <span v-if="dynamicProperties.customer360.workspace.sla_breached" class="text-danger">{{ __('breached') }}</span>
+            </div>
+            <div class="small" v-if="dynamicProperties.customer360.workspace.csat_score">
+                {{ __('CSAT') }}: @{{ dynamicProperties.customer360.workspace.csat_score }}/5
+            </div>
+        </div>
+
         <div class="mb-0">
             <h6 class="text-muted text-uppercase small">{{ __('Conversation summary') }}</h6>
             <pre class="small bg-light p-2 rounded mb-0" style="white-space: pre-wrap;">@{{ dynamicProperties.customer360.conversation_summary }}</pre>

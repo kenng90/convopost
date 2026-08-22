@@ -30,6 +30,20 @@
             "priority": 80
         },
         {
+            "name": "Trust",
+            "icon": "ni ni-lock-circle-open text-warning",
+            "route": "trust.index",
+            "color": "#f59e0b",
+            "priority": 82
+        },
+        {
+            "name": "Agency",
+            "icon": "ni ni-building text-purple",
+            "route": "agency.index",
+            "color": "#7c3aed",
+            "priority": 84
+        },
+        {
             "name": "Integrations",
             "icon": "ni ni-app text-info",
             "route": "integrations.index",
@@ -39,5 +53,45 @@
     ],
     "aliases": {},
     "files": [],
-    "requires": []
+    "requires": [],
+    "vendor_fields": [
+        {
+            "separator": "Action agent",
+            "title": "Enable action agent when no flow matches",
+            "key": "action_agent_enabled",
+            "ftype": "bool",
+            "value": true
+        },
+        {
+            "separator": "Inbox workspace",
+            "title": "Inbox routing",
+            "key": "inbox_routing_mode",
+            "ftype": "select",
+            "value": "round_robin",
+            "data": {
+                "round_robin": "Round robin",
+                "least_busy": "Least busy",
+                "manual": "Manual"
+            }
+        },
+        {
+            "title": "SLA minutes",
+            "key": "inbox_sla_minutes",
+            "ftype": "input",
+            "value": "30"
+        },
+        {
+            "title": "CSAT prompt",
+            "key": "csat_prompt",
+            "ftype": "input",
+            "value": "How would you rate this conversation from 1 (poor) to 5 (excellent)?"
+        },
+        {
+            "separator": "WhatsApp trust",
+            "title": "Quality rating (GREEN / YELLOW / RED)",
+            "key": "whatsapp_quality_rating",
+            "ftype": "input",
+            "value": "GREEN"
+        }
+    ]
 }

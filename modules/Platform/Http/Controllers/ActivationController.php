@@ -3,6 +3,8 @@
 namespace Modules\Platform\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\InstallVerticalRequest;
+use App\Services\Onboarding\VerticalGoLiveService;
 use App\Services\Platform\ActivationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +35,7 @@ class ActivationController extends Controller
             'company' => $company,
             'steps' => $this->activation->steps($company),
             'progress' => $this->activation->progressPercent($company),
+            'verticals' => app(VerticalGoLiveService::class)->packs(),
         ]);
     }
 
@@ -65,5 +68,22 @@ class ActivationController extends Controller
         $this->activation->markTestMessageSent($this->getCompany());
 
         return redirect()->route('activation.index')->withStatus(__('Test message step recorded.'));
+    }
+
+    public function installVertical(InstallVerticalRequest $request, VerticalGoLiveService $goLive): RedirectResponse
+    {
+        $this->ownerOnly();
+
+        $result = $goLive->install(
+            $this->getCompany(),
+            $request->validated('vertical'),
+            (bool) $request->boolean('install_playbook', true)
+        );
+
+        if (! ($result['success'] ?? false)) {
+            return redirect()->route('activation.index')->withError($result['message']);
+        }
+
+        return redirect()->route('flows.index')->withStatus($result['message']);
     }
 }

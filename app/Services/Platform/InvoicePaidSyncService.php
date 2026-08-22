@@ -25,6 +25,17 @@ class InvoicePaidSyncService
 
         $this->addPaymentNote($contact, $invoice);
         $this->moveToPaidStage($contact, $invoice);
+
+        $company = \App\Models\Company::find($invoice->company_id);
+        if ($company) {
+            app(\App\Services\Integrations\PlatformEventBus::class)->emit($company, 'invoice.paid', [
+                'invoice_id' => $invoice->id,
+                'phone' => $invoice->customer_phone,
+                'email' => $invoice->customer_email,
+                'amount' => $invoice->amount,
+                'customer_name' => $invoice->customer_name,
+            ]);
+        }
     }
 
     private function resolveContact(Invoice $invoice): ?Contact

@@ -418,14 +418,30 @@ class Contact extends ModelsContact
                 if ($content == $this->getCompany()->getConfig('unsubscribe_trigger', 'Stop promotions')) {
                     $this->subscribed = 0;
                     $this->update();
+                    try {
+                        app(\App\Services\Trust\ConsentService::class)->record(
+                            $this->getCompany(),
+                            $this,
+                            'opt_out',
+                            'whatsapp',
+                            'unsubscribe_trigger'
+                        );
+                    } catch (\Throwable) {
+                    }
                 }
 
-                //Check it it is agent handover
                 if ($content == $this->getCompany()->getConfig('agent_handover_trigger', 'Talk to a human')) {
                     $this->enabled_ai_bot = false;
                     $this->update();
+                    try {
+                        app(\App\Services\Agents\AgentHandoffService::class)->handoff(
+                            $this->getCompany(),
+                            $this,
+                            'Talk to a human'
+                        );
+                    } catch (\Throwable) {
+                    }
 
-                    //Send the message to the client that soon human will contact him
                     $this->sendMessage($this->getCompany()->getConfig('agent_handover_message', 'Soon you will be connected to a human agent. Thanks for your patience.'), false, false);
                 }
 

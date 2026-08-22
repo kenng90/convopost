@@ -327,6 +327,10 @@ trait Whatsapp
                             'last_message' => '',
                             'is_last_message_by_contact' => true,
                         ]);
+                        try {
+                            app(\App\Services\Trust\ConsentService::class)->record($company, $contact, 'opt_in', 'whatsapp', 'inbound');
+                        } catch (\Throwable) {
+                        }
                     }
 
                     if ($type == 'image') {

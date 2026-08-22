@@ -56,6 +56,12 @@ class StoreCommerceWebhookService
         return match (true) {
             str_contains($topic, 'order.created'),
             str_contains($topic, 'order.updated') => $this->handleOrder($company, $payload, 'woocommerce'),
+            str_contains($topic, 'checkout.created'),
+            str_contains($topic, 'checkout.updated'),
+            str_contains($topic, 'cart.updated'),
+            str_contains($topic, 'cart.abandoned') => $this->handleAbandonedCheckout($company, $payload, 'woocommerce'),
+            str_contains($topic, 'order.fulfilled'),
+            str_contains($topic, 'fulfillment') => $this->handleFulfillment($company, $payload, 'woocommerce'),
             default => ['handled' => false, 'event' => $topic, 'triggered' => 0],
         };
     }
@@ -97,6 +103,8 @@ class StoreCommerceWebhookService
         $triggered = $this->triggers->fire($company, CampaignTriggerService::EVENT_CART_ABANDONED, $data);
         $enrolled = $this->enroller->enrollCartAbandoned($company, $phone, $data['customer_name']);
 
+        app(\App\Services\Integrations\PlatformEventBus::class)->emit($company, CampaignTriggerService::EVENT_CART_ABANDONED, $data);
+
         return [
             'handled' => true,
             'event' => CampaignTriggerService::EVENT_CART_ABANDONED,
@@ -136,6 +144,8 @@ class StoreCommerceWebhookService
         );
         $this->enroller->markCartRecovered($company, $contact);
 
+        app(\App\Services\Integrations\PlatformEventBus::class)->emit($company, CampaignTriggerService::EVENT_ORDER_CREATED, $data);
+
         return [
             'handled' => true,
             'event' => CampaignTriggerService::EVENT_ORDER_CREATED,
@@ -158,6 +168,12 @@ class StoreCommerceWebhookService
         $triggered = $this->triggers->fire($company, CampaignTriggerService::EVENT_FULFILLMENT_SHIPPED, [
             'phone' => $phone,
             'customer_phone' => $phone,
+            'source' => $source,
+            'tracking_number' => $payload['tracking_number'] ?? null,
+        ]);
+
+        app(\App\Services\Integrations\PlatformEventBus::class)->emit($company, CampaignTriggerService::EVENT_FULFILLMENT_SHIPPED, [
+            'phone' => $phone,
             'source' => $source,
             'tracking_number' => $payload['tracking_number'] ?? null,
         ]);

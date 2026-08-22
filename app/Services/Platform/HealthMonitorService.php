@@ -42,6 +42,25 @@ class HealthMonitorService
             $alerts[] = $this->alert('warning', 'token_check', __('Verify WhatsApp access token'), __('We could not validate your token with Meta. Reconnect if sends are failing.'), 'whatsapp.setup');
         }
 
+        $quality = (string) $company->getConfig('whatsapp_quality_rating', '');
+        if (in_array(strtoupper($quality), ['YELLOW', 'RED', 'FLAGGED'], true)) {
+            $alerts[] = $this->alert(
+                strtoupper($quality) === 'RED' ? 'critical' : 'warning',
+                'quality_rating',
+                __('WhatsApp quality rating is :rating', ['rating' => $quality]),
+                __('Pause marketing templates until the number rating recovers.'),
+                'templates.index'
+            );
+        }
+
+        $breaches = \App\Models\ConversationWorkspace::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->whereNotNull('sla_breached_at')
+            ->count();
+        if ($breaches > 0) {
+            $alerts[] = $this->alert('warning', 'sla_breaches', __(':count SLA breach(es)', ['count' => $breaches]), __('Open conversations missed their reply window.'), 'chat.index');
+        }
+
         return $alerts;
     }
 
