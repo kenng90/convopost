@@ -85,7 +85,10 @@ class OutcomeJourneyEnroller
 
     public function markCartRecovered(Company $company, Contact $contact): bool
     {
-        return $this->moveToPlaybookStage($company, $contact, 'cart_recovery', 'Recovered', 'cart_converted');
+        $moved = $this->moveToPlaybookStage($company, $contact, 'cart_recovery', 'Recovered', 'cart_converted');
+        app(OutcomeSkuBiller::class)->record($company, $contact, 'cart_recovery', 'cart.recovered', 0, 'contact', (string) $contact->id);
+
+        return $moved;
     }
 
     public function enrollBooking(Company $company, Contact $contact): bool
@@ -95,12 +98,18 @@ class OutcomeJourneyEnroller
 
     public function markBookingNoShow(Company $company, Contact $contact): bool
     {
-        return $this->moveToPlaybookStage($company, $contact, 'booking_convert', 'No-show', 'booking_no_show');
+        $moved = $this->moveToPlaybookStage($company, $contact, 'booking_convert', 'No-show', 'booking_no_show');
+        app(OutcomeSkuBiller::class)->void($company, 'booking_convert', 'contact', (string) $contact->id, $contact);
+
+        return $moved;
     }
 
     public function markBookingAttended(Company $company, Contact $contact): bool
     {
-        return $this->moveToPlaybookStage($company, $contact, 'booking_convert', 'Attended', 'booking_attended');
+        $moved = $this->moveToPlaybookStage($company, $contact, 'booking_convert', 'Attended', 'booking_attended');
+        app(OutcomeSkuBiller::class)->record($company, $contact, 'booking_convert', 'booking.attended', 0, 'contact', (string) $contact->id);
+
+        return $moved;
     }
 
     public function resolvePlaybookJourney(Company $company, string $playbookKey): ?Journey

@@ -48,6 +48,7 @@
                                                         @endforeach
                                                     </select>
                                                     <input type="hidden" name="install_playbook" value="1">
+                                                    <input type="text" name="test_phone" class="form-control form-control-sm" style="max-width: 180px;" placeholder="{{ __('Test phone (optional)') }}">
                                                     <button class="btn btn-sm btn-primary">{{ __('Install pack') }}</button>
                                                 </form>
                                             @elseif(!$step['completed'] && $step['action_route'] && $step['key'] !== 'vertical')
@@ -59,6 +60,31 @@
                                     </div>
                                 @endforeach
                             </div>
+
+                            @if(!empty($launch['checklist'] ?? null))
+                                <div class="mt-4 p-3 rounded border">
+                                    <h4 class="mb-2">{{ __('Go-live checklist') }}</h4>
+                                    <p class="text-muted small mb-3">{{ $launch['message'] ?? '' }}</p>
+                                    <ul class="list-unstyled mb-0">
+                                        @foreach($launch['checklist'] as $item)
+                                            <li class="d-flex justify-content-between gap-3 py-1">
+                                                <span>
+                                                    <strong>{{ $item['label'] }}</strong>
+                                                    <span class="text-muted small d-block">{{ $item['detail'] ?? '' }}</span>
+                                                </span>
+                                                <span class="badge badge-{{ ($item['status'] ?? '') === 'live' ? 'success' : (($item['status'] ?? '') === 'waiting_on_meta' ? 'warning' : 'light') }}">
+                                                    {{ str_replace('_', ' ', $item['status'] ?? '') }}
+                                                </span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                    @if(!empty($launch['waiting_on_meta']))
+                                        <p class="small text-warning mb-0 mt-3">
+                                            {{ __('Still waiting on Meta:') }} {{ implode(', ', $launch['waiting_on_meta']) }}
+                                        </p>
+                                    @endif
+                                </div>
+                            @endif
 
                             @php($canFinish = collect($steps)->reject(fn ($s) => !empty($s['optional']))->every(fn ($s) => $s['completed']))
                             <div class="d-flex flex-wrap gap-2 mt-4">

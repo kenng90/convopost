@@ -17,10 +17,18 @@ class OutcomeMetricsService
      */
     public function forCompany(Company $company): array
     {
+        $billing = app(OutcomeSkuBiller::class)->summaryForCompany($company);
+
         return [
-            'cart_recovery' => $this->cartRecovery($company),
-            'booking_convert' => $this->bookingConvert($company),
-            'lead_to_cash' => $this->leadToCash($company),
+            'cart_recovery' => array_merge($this->cartRecovery($company), [
+                'sku_billing' => $billing['cart_recovery'] ?? ['count' => 0, 'credits' => 0, 'revenue' => 0],
+            ]),
+            'booking_convert' => array_merge($this->bookingConvert($company), [
+                'sku_billing' => $billing['booking_convert'] ?? ['count' => 0, 'credits' => 0, 'revenue' => 0],
+            ]),
+            'lead_to_cash' => array_merge($this->leadToCash($company), [
+                'sku_billing' => $billing['lead_to_cash'] ?? ['count' => 0, 'credits' => 0, 'revenue' => 0],
+            ]),
         ];
     }
 

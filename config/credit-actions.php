@@ -113,6 +113,33 @@ return [
             'module' => 'flowmaker',
             'sort_order' => 90,
         ],
+        [
+            'action' => 'outcome_cart_recovered',
+            'name' => 'Outcome SKU — recovered cart',
+            'category' => 'outcomes',
+            'default_cost' => 10,
+            'help' => 'Success fee when an abandoned cart is recovered. Refunded if reversed within the guarantee window.',
+            'module' => 'platform',
+            'sort_order' => 100,
+        ],
+        [
+            'action' => 'outcome_booking_attended',
+            'name' => 'Outcome SKU — attended booking',
+            'category' => 'outcomes',
+            'default_cost' => 8,
+            'help' => 'Success fee when a booking is marked attended. Refunded if it becomes a no-show inside the guarantee window.',
+            'module' => 'platform',
+            'sort_order' => 110,
+        ],
+        [
+            'action' => 'outcome_lead_collected',
+            'name' => 'Outcome SKU — collected invoice',
+            'category' => 'outcomes',
+            'default_cost' => 12,
+            'help' => 'Success fee when a lead-to-cash invoice is paid.',
+            'module' => 'platform',
+            'sort_order' => 120,
+        ],
     ],
 
     'category_labels' => [
@@ -121,6 +148,7 @@ return [
         'automation' => 'Automation',
         'payments' => 'Payments',
         'managed_ai' => 'Managed AI',
+        'outcomes' => 'Outcome SKUs',
         'other' => 'Other',
     ],
 

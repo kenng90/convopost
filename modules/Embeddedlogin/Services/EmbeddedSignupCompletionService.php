@@ -102,6 +102,15 @@ class EmbeddedSignupCompletionService
         $this->persistWhatsappCompanyConfig($company, (string) $phoneId, (string) $wabaId, $accessToken);
         $this->channelConnections->ensureWhatsappConnection($company);
 
+        try {
+            app(\App\Services\Onboarding\VerticalGoLiveService::class)->publishPendingMetaAssets($company);
+        } catch (\Throwable $e) {
+            Log::warning('Embedded signup: vertical go-live Meta publish failed', [
+                'company_id' => $company->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $connected = ['whatsapp' => true];
 
         if ($session->isOmnichannel()) {

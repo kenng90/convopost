@@ -86,7 +86,7 @@ return
     'forceUserToPay' => env('FORCE_USERS_TO_PAY', false),
     'document_repository' => env('DOCUMENT_REPOSITORY', 'Modules\Privacygen\Models\Document'),
     'apps_link' => env('APPS_GIST_LINK', 'https://gist.githubusercontent.com/dimovdaniel/b1621923f8bb30327a6a53a7d6562216/raw/apps.json'),
-    'enable_credits' => env('ENABLE_CREDITS', false),
+    'enable_credits' => env('ENABLE_CREDITS', true),
     'enable_multi_organizations' => env('ENABLE_MULTI_ORGANIZATIONS', true),
     'icon_type' => env('IS_DEMO', false) ? 'hero' : env('ICON_TYPE', 'hero'),
     'icon_size' => env('ICON_SIZE', '16px'),

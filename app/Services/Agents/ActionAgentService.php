@@ -25,6 +25,15 @@ class ActionAgentService
     {
         $result = $this->reason($company, $contact, $message, 'chat');
 
+        app(AgentMemoryService::class)->remember(
+            $company,
+            $contact,
+            $message,
+            (string) ($result['reply'] ?? ''),
+            $result['tools_used'] ?? [],
+            ['handoff' => $result['handoff'] ?? false],
+        );
+
         if ($result['handoff']) {
             return $result;
         }
@@ -107,6 +116,41 @@ class ActionAgentService
             return ['reply' => $reply, 'tools_used' => $toolsUsed, 'handoff' => false, 'source' => 'rules'];
         }
 
+        if (preg_match('/\b(book|booking|appointment|reserve)\b/i', $message)) {
+            $listed = $this->tools->execute($company, $contact, 'list_services');
+            $toolsUsed[] = 'list_services';
+            $names = collect($listed['services'] ?? [])->pluck('name')->filter()->take(3)->implode(', ');
+            $reply = $names
+                ? __('I can book: :services. Which one and when?', ['services' => $names])
+                : __('I can help you book. Tell me the service and time you want.');
+
+            return ['reply' => $reply, 'tools_used' => $toolsUsed, 'handoff' => false, 'source' => 'rules'];
+        }
+
+        if (preg_match('/\b(pay|charge|stk|mpesa|invoice)\b/i', $message)) {
+            preg_match('/(\d+(?:\.\d+)?)/', $message, $amountMatch);
+            $pending = app(AgentMemoryService::class)->pendingCharge($company, $contact);
+            $amount = (float) ($amountMatch[1] ?? ($pending['amount'] ?? 0));
+            $confirmed = (bool) preg_match('/\b(yes|confirm|proceed|ok)\b/i', $message);
+            $pay = $this->tools->execute($company, $contact, 'send_payment', [
+                'amount' => $amount,
+                'description' => $message,
+                'confirmed' => $confirmed && $amount > 0,
+            ]);
+            $toolsUsed[] = 'send_payment';
+            $reply = ! empty($pay['needs_confirmation'])
+                ? __('I can charge :amount. Reply YES to confirm.', ['amount' => $amount])
+                : (($pay['ok'] ?? false)
+                    ? __('Payment request is ready for :amount.', ['amount' => $pay['amount'] ?? $amount])
+                    : ($pay['error'] ?? __('I could not start the payment. A teammate can help.')));
+
+            app(AgentMemoryService::class)->remember($company, $contact, $message, $reply, $toolsUsed, [
+                'pending_charge' => ! empty($pay['needs_confirmation']) ? ['amount' => $amount] : null,
+            ]);
+
+            return ['reply' => $reply, 'tools_used' => $toolsUsed, 'handoff' => false, 'source' => 'rules'];
+        }
+
         $kb = $this->tools->searchKnowledge($company, $message);
         if (! empty($kb['articles'])) {
             $toolsUsed[] = 'search_knowledge';
@@ -136,12 +180,15 @@ class ActionAgentService
     private function callModel(Company $company, Contact $contact, string $message, string $channel, string $apiKey): array
     {
         $history = $this->recentHistory($contact);
+        $memory = app(AgentMemoryService::class)->recentTurns($company, $contact);
         $system = 'You are the Convocon business agent for '.$company->name.'. '
             .'Use tools to search knowledge, catalog, bookings, invoices, and journeys. '
+            .'Never collect payment until the customer confirms. Never exceed the company charge limit. '
             .'Channel: '.$channel.'. Keep replies short. Call handoff_to_human when the customer asks for a person or you cannot complete the job.';
 
         $messages = [
             ['role' => 'system', 'content' => $system],
+            ...$memory,
             ...$history,
             ['role' => 'user', 'content' => $message],
         ];

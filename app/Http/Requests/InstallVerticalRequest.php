@@ -20,6 +20,7 @@ class InstallVerticalRequest extends FormRequest
         return [
             'vertical' => ['required', 'string', Rule::in(array_keys(config('vertical-golive.packs', [])))],
             'install_playbook' => ['nullable', 'boolean'],
+            'test_phone' => ['nullable', 'string', 'max:32'],
         ];
     }
 
