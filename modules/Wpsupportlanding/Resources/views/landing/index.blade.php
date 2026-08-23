@@ -1617,10 +1617,10 @@ tailwind.config = {
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(0,174,239,0.1);" aria-hidden="true">💳</div>
         <div><p class="text-base font-semibold text-gray-900">Paystack</p><p class="text-xs text-gray-500 mt-0.5">Card checkout for invoices</p></div>
       </div>
-      <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
+      <!-- <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(99,91,255,0.1);" aria-hidden="true">💳</div>
         <div><p class="text-base font-semibold text-gray-900">Stripe</p><p class="text-xs text-gray-500 mt-0.5">SaaS plan subscriptions</p></div>
-      </div>
+      </div> -->
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(245,47,47,0.1);" aria-hidden="true">📨</div>
         <div><p class="text-base font-semibold text-gray-900">ConvoConnect SMS</p><p class="text-xs text-gray-500 mt-0.5">Sender ID · KES 0.6 / SMS</p></div>
