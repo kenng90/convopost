@@ -318,29 +318,21 @@ class AgentToolRegistry
             return $invoice;
         }
 
-        $stk = null;
-        if (class_exists(\App\Services\MpesaService::class)) {
-            try {
-                $mpesa = new \App\Services\MpesaService($company);
-                if (method_exists($mpesa, 'isConfigured') && $mpesa->isConfigured()) {
-                    $stk = $mpesa->initiateStk(
-                        (string) $contact->phone,
-                        (float) ($arguments['amount'] ?? 0),
-                        'INV'.($invoice['invoice_id'] ?? ''),
-                        'Invoice'
-                    );
-                }
-            } catch (\Throwable $e) {
-                $stk = ['success' => false, 'error' => $e->getMessage()];
-            }
+        $model = Invoice::query()->find($invoice['invoice_id'] ?? 0);
+        if (! $model) {
+            return ['ok' => false, 'error' => 'Invoice could not be created'];
         }
 
+        $result = app(\App\Services\Collections\CollectionEngine::class)->start($model);
+
         return [
-            'ok' => true,
+            'ok' => (bool) ($result['success'] ?? false),
             'invoice_id' => $invoice['invoice_id'] ?? null,
             'public_uuid' => $invoice['public_uuid'] ?? null,
             'amount' => $invoice['amount'] ?? $arguments['amount'] ?? null,
-            'stk' => $stk,
+            'payment' => $result['payment'] ?? null,
+            'authorization_url' => $result['authorization_url'] ?? null,
+            'message' => $result['message'] ?? null,
         ];
     }
 

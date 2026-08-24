@@ -162,6 +162,8 @@ class MpesaStkPush extends Node
 
             $charger->charge($company, $creditAction, $company->id);
 
+            app(\App\Services\Collections\CollectionEngine::class)->trackInitiated($records['invoice'], $payment);
+
             $contact->setContactState($this->flow_id, 'mpesa_checkout_request_id', $checkoutRequestId);
             $contact->setContactState($this->flow_id, 'mpesa_merchant_request_id', $result['merchant_request_id'] ?? '');
             $contact->setContactState($this->flow_id, 'mpesa_payment_id', (string) $payment->id);
@@ -195,6 +197,11 @@ class MpesaStkPush extends Node
 
         if ($payment && $payment->isPending()) {
             $payment->markAsFailed('STK push failed before callback');
+        }
+
+        $invoice = $payment?->invoice;
+        if ($invoice && app(\App\Services\Collections\CollectionEngine::class)->shouldDeferFlowFailure($invoice)) {
+            return;
         }
 
         $contact->clearContactState($this->flow_id, 'current_node');

@@ -192,6 +192,8 @@ class InvoiceController extends Controller
             /** @var \Modules\Invoice\Models\InvoicePayment $payment */
             $payment = $result['payment'];
 
+            app(\App\Services\Collections\CollectionEngine::class)->trackInitiated($invoice, $payment);
+
             Log::info('Invoice payment initiated', [
                 'invoice_id' => $invoice->id,
                 'payment_id' => $payment->id,

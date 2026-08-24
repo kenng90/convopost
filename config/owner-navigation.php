@@ -113,6 +113,11 @@ return [
                     'icon' => 'ni ni-chart-pie-35 text-warning',
                     'route' => 'reports.dashboard',
                 ],
+                [
+                    'name' => 'Collections',
+                    'icon' => 'ni ni-money-coins text-success',
+                    'route' => 'collections.index',
+                ],
                 // [
                 //     'name' => 'Form submissions',
                 //     'icon' => 'ni ni-collection text-success',

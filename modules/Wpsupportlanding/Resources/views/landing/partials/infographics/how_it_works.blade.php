@@ -23,8 +23,8 @@
       [
         'num' => '04',
         'title' => 'Collect & scale',
-        'body' => 'Close with M-Pesa or Paystack, sync paid status to CRM stages, and extend via developer APIs.',
-        'points' => ['M-Pesa STK & Paystack', 'Google Calendar sync', 'managed AI credits'],
+        'body' => 'Retry M-Pesa STK when a PIN times out, fall back to Paystack, and chase unpaid invoices on WhatsApp until paid — then resume the flow.',
+        'points' => ['M-Pesa STK retry & Paystack fallback', 'Google Calendar sync', 'managed AI credits'],
       ],
     ];
   @endphp

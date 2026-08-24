@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\MyWelcomeController;
 use App\Http\Controllers\Auth\SocialController;
 use App\Http\Controllers\CatalogWebhookController;
+use App\Http\Controllers\CollectionsController;
 use App\Http\Controllers\CompaniesController;
 use App\Http\Controllers\CreditsController;
 use App\Http\Controllers\CRUD\PostsController;
@@ -294,6 +295,12 @@ Route::middleware(['web', 'auth', 'impersonate', 'acivatedProject', 'org.route']
         Route::get('/daily-summary', 'dailySummary')->name('daily-summary');
     });
 
+    Route::controller(CollectionsController::class)->prefix('collections')->name('collections.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/{invoice}/match', 'match')->name('match')->whereNumber('invoice');
+        Route::post('/{invoice}/retry', 'retry')->name('retry')->whereNumber('invoice');
+    });
+
 });
 
 Route::post('/webhook/sms/convoconnect/dlr', [\App\Http\Controllers\HostPinnacleWebhookController::class, 'deliveryReport'])
@@ -307,5 +314,5 @@ Route::middleware('web')->group(function () {
 //Static pages or vendor by alias
 Route::middleware('web')->group(function () {
     Route::get('/{alias}', [FrontEndController::class, 'staticPage'])->name('static-page')
-        ->where('alias', '^(?!flows|whatsapp-flows|dashboard|home|reports|reports/|api/|login|logout|password|register|forgot-password).*');
+        ->where('alias', '^(?!flows|whatsapp-flows|dashboard|home|reports|reports/|collections|collections/|api/|login|logout|password|register|forgot-password).*');
 });

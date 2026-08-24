@@ -258,4 +258,32 @@ class InvoiceWhatsAppService
 
         return $phone;
     }
+
+    public function sendChaseMessage(Invoice $invoice, string $message): bool
+    {
+        try {
+            $graph = new WhatsAppGraphClient($this->company);
+            if (! $graph->hasMessagingCredentials()) {
+                return false;
+            }
+
+            $phoneNumber = $this->formatPhoneNumber($invoice->customer_phone);
+            $contact = $this->resolveContact($invoice, $phoneNumber);
+
+            if ($contact && $this->sessionWindow->isOpen($contact)) {
+                $response = $graph->sendTextMessage($phoneNumber, $message);
+
+                return $response['status'] >= 200 && $response['status'] < 300;
+            }
+
+            return $this->sendInvoice($invoice, $contact);
+        } catch (\Throwable $e) {
+            Log::info('Collection chase message failed', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
 }

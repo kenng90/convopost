@@ -41,18 +41,17 @@ class PaystackController extends Controller
             $payment->markAsSuccess($reference);
             $payment->update(['paid_via' => 'paystack']);
         } else {
-            $payment->update([
-                'status' => 'failed',
-                'completed_at' => now(),
-                'result_description' => $verified['message'] ?? 'Verification failed',
-            ]);
+            $payment->markAsFailed($verified['message'] ?? 'Verification failed');
         }
 
         $notes = is_array($invoice->notes) ? $invoice->notes : [];
         $flowId = (int) ($notes['flow_id'] ?? 0);
         $contactId = (int) ($notes['contact_id'] ?? 0);
 
-        if ($flowId > 0 && $contactId > 0) {
+        $deferFailure = $status !== 'success'
+            && app(\App\Services\Collections\CollectionEngine::class)->shouldDeferFlowFailure($invoice->fresh());
+
+        if ($flowId > 0 && $contactId > 0 && ! $deferFailure) {
             ResumeFlowFromPayment::dispatch($flowId, $contactId, $status)->onQueue('flows');
         }
 
@@ -92,7 +91,11 @@ class PaystackController extends Controller
             $contactId = (int) ($notes['contact_id'] ?? 0);
             $status = $payment->status === 'success' ? 'success' : 'failed';
 
-            if ($flowId > 0 && $contactId > 0) {
+            $deferFailure = $status !== 'success'
+                && $invoice
+                && app(\App\Services\Collections\CollectionEngine::class)->shouldDeferFlowFailure($invoice);
+
+            if ($flowId > 0 && $contactId > 0 && ! $deferFailure) {
                 ResumeFlowFromPayment::dispatch($flowId, $contactId, $status)->onQueue('flows');
             }
         }

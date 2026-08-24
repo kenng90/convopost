@@ -118,7 +118,14 @@ class MpesaController extends Controller
                 'paymentId' => $payment?->id,
             ]);
 
-            ResumeFlowFromMpesa::dispatch($flow->id, $contact->id)->onQueue('flows');
+            $invoice = $payment?->invoice;
+            $deferFailure = $resultCode != 0
+                && $invoice
+                && app(\App\Services\Collections\CollectionEngine::class)->shouldDeferFlowFailure($invoice);
+
+            if (! $deferFailure) {
+                ResumeFlowFromMpesa::dispatch($flow->id, $contact->id)->onQueue('flows');
+            }
 
             MpesaCallbackValidator::logCallback($body, 'processed');
         } catch (\Exception $e) {
