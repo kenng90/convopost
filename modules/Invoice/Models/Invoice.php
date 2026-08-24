@@ -42,6 +42,12 @@ class Invoice extends Model
         'paid_at',
         'cancelled_at',
         'notes',
+        'collection_status',
+        'due_at',
+        'next_chase_at',
+        'chase_step',
+        'collection_channel',
+        'assigned_user_id',
     ];
 
     protected $casts = [
@@ -51,6 +57,9 @@ class Invoice extends Model
         'sent_at' => 'datetime',
         'paid_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'due_at' => 'datetime',
+        'next_chase_at' => 'datetime',
+        'chase_step' => 'integer',
     ];
 
     /**
@@ -61,6 +70,9 @@ class Invoice extends Model
         static::creating(function ($model) {
             if (empty($model->public_uuid)) {
                 $model->public_uuid = Str::uuid();
+            }
+            if (empty($model->collection_status)) {
+                $model->collection_status = \App\Enums\CollectionStatus::Draft->value;
             }
         });
     }
@@ -169,6 +181,8 @@ class Invoice extends Model
         $this->update([
             'status' => 'paid',
             'paid_at' => now(),
+            'collection_status' => \App\Enums\CollectionStatus::Paid->value,
+            'next_chase_at' => null,
         ]);
 
         app(\App\Services\Api\PublicWebhookDispatcher::class)->dispatch($this->company_id, 'payment.completed', [
@@ -252,6 +266,8 @@ class Invoice extends Model
             'amount' => $amount,
             'currency' => 'KES',
             'status' => 'sent',
+            'collection_status' => \App\Enums\CollectionStatus::Requested->value,
+            'due_at' => now(),
             'description' => $transactionDesc,
             'items' => [
                 [
@@ -312,6 +328,8 @@ class Invoice extends Model
             'amount' => $amount,
             'currency' => strtoupper($currency),
             'status' => 'sent',
+            'collection_status' => \App\Enums\CollectionStatus::Requested->value,
+            'due_at' => now(),
             'description' => $transactionDesc,
             'items' => [
                 [

@@ -35,6 +35,18 @@ class ConsentService
             ->exists();
     }
 
+    public function hasOptOut(Company $company, Contact $contact, string $channel = 'whatsapp'): bool
+    {
+        $latest = ConsentRecord::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->where('contact_id', $contact->id)
+            ->where('channel', $channel)
+            ->orderByDesc('id')
+            ->first();
+
+        return $latest?->type === 'opt_out';
+    }
+
     /**
      * @return array{opt_ins: int, opt_outs: int, missing_opt_in_contacts: int}
      */

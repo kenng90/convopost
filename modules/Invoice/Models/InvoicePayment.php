@@ -98,6 +98,8 @@ class InvoicePayment extends Model
             // Partial payment, update status to pending
             $this->invoice->update(['status' => 'pending']);
         }
+
+        app(\App\Services\Collections\CollectionEngine::class)->onPaymentSucceeded($this->fresh());
     }
 
     /**
@@ -110,6 +112,8 @@ class InvoicePayment extends Model
             'result_description' => $description,
             'completed_at' => now(),
         ]);
+
+        app(\App\Services\Collections\CollectionEngine::class)->onPaymentFailed($this->fresh());
     }
 
     /**

@@ -6,7 +6,7 @@
 @php
   $siteName = config('settings.site_name', config('app.name'));
   $metaTitle = $siteName.' — Omnichannel Social Commerce for WhatsApp, Instagram & Messenger';
-  $metaDescription = 'Sell, Support & Grow Across WhatsApp, Instagram & Messenger. Run WhatsApp, SMS, and email campaigns. Bookings, journeys, catalogs, and M-Pesa - one platform.';
+  $metaDescription = 'Sell, support, and get paid on WhatsApp, Instagram & Messenger. Recover carts, convert bookings, and collect unpaid invoices with M-Pesa STK retry, Paystack fallback, and WhatsApp chase — one platform.';
   $registrationEnabled = !config('settings.disable_registration_page', false);
 @endphp
 @include('layouts.favicon')
@@ -381,6 +381,10 @@ tailwind.config = {
               <p class="text-sm font-semibold text-gray-900">Catalog</p>
               <p class="text-xs text-gray-500 mt-0.5">In-chat shop</p>
             </a>
+            <a href="#collections" class="rounded-xl px-3 py-2.5 hover:bg-slate-50" @click="productOpen=false">
+              <p class="text-sm font-semibold text-gray-900">Collections</p>
+              <p class="text-xs text-gray-500 mt-0.5">STK retry &amp; chase</p>
+            </a>
             <a href="#automation" class="rounded-xl px-3 py-2.5 hover:bg-slate-50" @click="productOpen=false">
               <p class="text-sm font-semibold text-gray-900">Automation</p>
               <p class="text-xs text-gray-500 mt-0.5">38+ Flowmaker nodes</p>
@@ -433,6 +437,7 @@ tailwind.config = {
         <a href="#journeys" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">Journeys</a>
         <a href="#bookings" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">Bookings</a>
         <a href="#catalog" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">Catalog</a>
+        <a href="#collections" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">Collections</a>
         <a href="#automation" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">Automation</a>
         <a href="#integrations" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">Integrations</a>
         <a href="#api" class="block rounded-lg px-3 py-2 text-sm text-gray-700" @click="mobileOpen=false">API</a>
@@ -471,11 +476,11 @@ tailwind.config = {
       <div class="max-w-2xl">
         <p class="font-display hero-brand font-800 text-gray-900 mb-4">{{ $siteName }}</p>
         <h1 class="font-display hero-title font-800 text-gray-900 mb-5">
-          Sell, support and grow across<br class="hidden sm:block" />
-          <span class="hero-title font-800 grad-text">WhatsApp, Instagram &amp; Messenger</span>
+          Recover carts, convert bookings,<br class="hidden sm:block" />
+          <span class="hero-title font-800 grad-text">and collect cash in chat</span>
         </h1>
         <p class="body-lg text-gray-600 mb-6">
-          One shared inbox, journeys, bookings, catalogs, and payments — plus WhatsApp, SMS, and email campaigns from the same platform.
+          One shared inbox for WhatsApp, Instagram &amp; Messenger — plus journeys, catalogs, bookings, M-Pesa STK retries, Paystack fallback, and WhatsApp chase when a PIN times out.
         </p>
         <div class="flex flex-wrap gap-2 mb-8" aria-label="Supported messaging channels">
           <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
@@ -606,9 +611,9 @@ tailwind.config = {
     <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-12">
       <div>
         <p class="section-label mb-3">Outcomes</p>
-        <h2 class="font-display section-title font-800 text-gray-900">Built to sell and support<br/>across Meta channels — end to end.</h2>
+        <h2 class="font-display section-title font-800 text-gray-900">Sell the result, not the inbox:<br/>recovered carts, kept bookings, paid invoices.</h2>
       </div>
-      <p class="text-gray-600 max-w-md text-base leading-relaxed">WhatsApp, Instagram &amp; Messenger inbox. WhatsApp, SMS &amp; email campaigns. Guided activation. 38+ Flowmaker nodes.</p>
+      <p class="text-gray-600 max-w-md text-base leading-relaxed">Cart Recovery, Booking Convert, and Lead-to-Cash playbooks run in the same thread as your inbox, catalog, and collections engine.</p>
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
       <div class="stat-item px-2 lg:px-6">
@@ -749,10 +754,10 @@ tailwind.config = {
       <div class="rounded-3xl border border-gray-200 p-8" style="background:linear-gradient(180deg,rgba(37,211,102,0.06),transparent);">
         <p class="section-label mb-4">Sell</p>
         <h3 class="font-display text-3xl font-800 text-gray-900 mb-3">Commerce</h3>
-        <p class="text-base text-gray-600 mb-6 leading-relaxed">Catalogs, branded shops, invoices, and M-Pesa / Paystack — close inside the conversation.</p>
+        <p class="text-base text-gray-600 mb-6 leading-relaxed">Catalogs, branded shops, invoices, and collections — STK retry, Paystack fallback, and WhatsApp chase until the invoice is paid.</p>
         <ul class="space-y-2.5 text-base text-gray-700">
           <li class="flex gap-2"><span style="color:#25D366;">·</span> Product Catalog & Shop</li>
-          <li class="flex gap-2"><span style="color:#25D366;">·</span> Invoices & Payments</li>
+          <li class="flex gap-2"><span style="color:#25D366;">·</span> Invoices & Collections</li>
           <li class="flex gap-2"><span style="color:#25D366;">·</span> Shopify & WooCommerce sync</li>
           <li class="flex gap-2"><span style="color:#25D366;">·</span> Bookings & events</li>
         </ul>
@@ -875,13 +880,13 @@ tailwind.config = {
       <!-- Card 7 -->
       <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">💰</div>
-        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">Invoices & Payments</h3>
-        <p class="text-base text-gray-600 mb-4 leading-relaxed">Share public invoice pages, collect M-Pesa or Paystack in-chat, and sync paid status back to contacts and journey stages automatically.</p>
+        <h3 class="font-display font-700 text-xl mb-2 text-gray-900">Invoices & Collections</h3>
+        <p class="text-base text-gray-600 mb-4 leading-relaxed">Share public invoice pages, collect on your M-Pesa or Paystack keys, then retry, fall back, and chase until the invoice is paid — without warehousing funds.</p>
         <ul class="space-y-2">
           <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Public invoice &amp; payment links</li>
-          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>M-Pesa STK push integration</li>
-          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Paystack commerce checkout</li>
-          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Auto-update CRM on payment</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>M-Pesa STK retry when PIN times out</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Paystack fallback + WhatsApp chase</li>
+          <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Collections board for open invoices</li>
         </ul>
       </div>
       <!-- Card 8 -->
@@ -1341,7 +1346,7 @@ tailwind.config = {
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Product Catalog & Commerce</div>
       <h2 class="font-display section-title font-800 mb-4">Import products. Sell inside<br/><span class="grad-text">WhatsApp.</span></h2>
-      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Import from Excel, Shopify, or WooCommerce with live inventory sync. Share branded shop links, sell from the chat sidebar, and collect payment via invoice or M-Pesa.</p>
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Import from Excel, Shopify, or WooCommerce with live inventory sync. Share branded shop links, sell from the chat sidebar, and collect via invoice — with STK retry, Paystack fallback, and WhatsApp chase if a PIN times out.</p>
     </div>
 
     <!-- 3-step flow -->
@@ -1359,7 +1364,7 @@ tailwind.config = {
       <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">💳</div>
         <p class="font-display font-700 text-lg mb-2 text-gray-900">3. Invoice & Collect Payment</p>
-        <p class="text-base text-gray-600 leading-relaxed">Generate a PDF invoice and send a payment link in the same conversation. Accept M-Pesa STK or Paystack — confirmed in seconds.</p>
+        <p class="text-base text-gray-600 leading-relaxed">Generate a PDF invoice in the same conversation. If STK times out, ConvoConnect retries, offers Paystack, and chases on WhatsApp until the invoice is paid.</p>
       </div>
     </div>
 
@@ -1393,8 +1398,8 @@ tailwind.config = {
           <div class="flex items-start gap-4">
             <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🧾</div>
             <div>
-              <p class="text-base font-semibold text-gray-900 mb-0.5">Checkout & payments</p>
-              <p class="text-sm text-gray-600">Customers checkout via WhatsApp message or auto-generated invoice. M-Pesa STK and Paystack confirm payment and trigger next flow steps.</p>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Checkout &amp; collections</p>
+              <p class="text-sm text-gray-600">Customers checkout via WhatsApp or an auto-generated invoice. Unpaid invoices are retried, offered Paystack, and chased — the flow resumes when payment lands on your keys.</p>
             </div>
           </div>
           <div class="flex items-start gap-4">
@@ -1453,12 +1458,12 @@ tailwind.config = {
               <div class="flow-node px-3 py-3 text-center">
                 <span class="text-sm">📱</span>
                 <p class="text-xs font-semibold text-gray-900 mt-1">M-Pesa STK</p>
-                <p class="text-xs text-gray-500">Push to phone</p>
+                <p class="text-xs text-gray-500">Retry on timeout</p>
               </div>
               <div class="flow-node px-3 py-3 text-center">
                 <span class="text-sm">💳</span>
                 <p class="text-xs font-semibold text-gray-900 mt-1">Paystack</p>
-                <p class="text-xs text-gray-500">Card payment</p>
+                <p class="text-xs text-gray-500">Fallback + chase</p>
               </div>
             </div>
             <div class="flow-line"></div>
@@ -1474,8 +1479,110 @@ tailwind.config = {
             <p class="text-xs text-gray-500">Drag to add more nodes</p>
             <div class="flex gap-2">
               <div class="badge text-xs">Catalog ✓</div>
-              <div class="badge text-xs">Payments ✓</div>
+              <div class="badge text-xs">Collections ✓</div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== COLLECTIONS SPOTLIGHT ===== -->
+<section id="collections" class="py-24 border-y border-gray-200" style="background:#f7f4ff;">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
+    <div class="text-center mb-16">
+      <div class="badge inline-flex mb-4">Collections</div>
+      <h2 class="font-display section-title font-800 mb-4">Ask. Retry. Fall back.<br/><span class="grad-text">Chase until paid.</span></h2>
+      <p class="body-lg text-gray-600 max-w-3xl mx-auto">Conversation to catalog or booking to invoice to STK. If the PIN times out, ConvoConnect retries on your Daraja keys, offers Paystack, then chases on WhatsApp. Money never sits in our wallet — settlement stays on your keys.</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-4 mb-16">
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6 text-center">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">📱</div>
+        <p class="font-display font-700 text-lg mb-2 text-gray-900">1. Request payment</p>
+        <p class="text-base text-gray-600 leading-relaxed">Send M-Pesa STK from catalog checkout, a booking, a flow, or the inbox. The invoice stays open until the customer enters a PIN or the attempt times out.</p>
+      </div>
+      <div class="card-lift border rounded-2xl p-6 text-center" style="background:rgba(37,211,102,0.04);border-color:rgba(37,211,102,0.2);">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.15);">🔁</div>
+        <p class="font-display font-700 text-base mb-2" style="color:#25D366;">2. STK retry &amp; Paystack fallback</p>
+        <p class="text-base text-gray-600 leading-relaxed">If the PIN prompt expires, retry STK on the same merchant keys, then offer Paystack card checkout so the sale is not lost to a single missed prompt.</p>
+      </div>
+      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6 text-center">
+        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">💬</div>
+        <p class="font-display font-700 text-lg mb-2 text-gray-900">3. WhatsApp chase</p>
+        <p class="text-base text-gray-600 leading-relaxed">Unpaid invoices move to chasing. WhatsApp reminders keep the thread alive until paid, then the flow resumes and the collections board clears the row.</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-12 items-center">
+      <div>
+        <h3 class="font-display text-2xl font-800 mb-6">A collections board, not a payment wallet</h3>
+        <div class="space-y-4">
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🔑</div>
+            <div>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Your Daraja and Paystack keys</p>
+              <p class="text-sm text-gray-600">ConvoConnect orchestrates STK, retries, fallback, and chase. Settlement lands on the merchant account you already connected — we are not a PSP.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">📋</div>
+            <div>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Open-invoice board</p>
+              <p class="text-sm text-gray-600">See due, PIN pending, failed, chasing, and unmatched invoices in one list. Retry STK or match a receipt without leaving the dashboard.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">🛒</div>
+            <div>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Same path as Cart Recovery, Booking Convert, and Lead-to-Cash</p>
+              <p class="text-sm text-gray-600">Catalog carts, bookings, and flow invoices all enter the same collection engine — so outcome playbooks close on collected cash, not a one-shot STK.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base" style="background:rgba(37,211,102,0.1);">⚡</div>
+            <div>
+              <p class="text-base font-semibold text-gray-900 mb-0.5">Flows wait for a terminal result</p>
+              <p class="text-sm text-gray-600">Automation does not treat a timed-out PIN as a failed sale. The flow resumes when the invoice is paid, fulfilled, closed, or cancelled.</p>
+            </div>
+          </div>
+        </div>
+        @if($registrationEnabled)
+        <a href="{{ route('register') }}" class="inline-flex items-center gap-2 mt-8 px-5 py-3 text-sm font-semibold text-black rounded-xl" style="background:#25D366;">Start collecting on WhatsApp →</a>
+        @endif
+      </div>
+
+      <div class="relative">
+        <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200" style="background:#f8fbf9;">
+            <div>
+              <p class="text-sm font-semibold text-gray-900">Collections board</p>
+              <p class="text-xs text-gray-500">3 open · merchant keys</p>
+            </div>
+            <div class="badge text-xs">Live</div>
+          </div>
+          <div class="divide-y divide-gray-100">
+            @foreach([
+              ['INV-1042', 'Amina K.', 'KES 4,500', 'PIN pending', 'Retry STK in 8m', '#ca8a04'],
+              ['INV-1041', 'Brian O.', 'KES 12,000', 'Chasing', 'WhatsApp reminder queued', '#7c3aed'],
+              ['INV-1038', 'Wanjiku M.', 'KES 2,800', 'Paid', 'Flow resumed', '#16a34a'],
+            ] as [$number, $name, $amount, $status, $next, $color])
+            <div class="px-4 py-3 flex items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-gray-900">{{ $number }}</p>
+                <p class="text-xs text-gray-500">{{ $name }} · {{ $amount }}</p>
+              </div>
+              <div class="text-right">
+                <span class="inline-flex text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full" style="background:{{ $color }}1a;color:{{ $color }};">{{ $status }}</span>
+                <p class="text-[11px] text-gray-500 mt-1">{{ $next }}</p>
+              </div>
+            </div>
+            @endforeach
+          </div>
+          <div class="px-4 py-2.5 border-t border-gray-200 flex items-center justify-between" style="background:#f8fbf9;">
+            <p class="text-xs text-gray-500">Retry · Paystack fallback · chase</p>
+            <div class="badge text-xs">Not a wallet</div>
           </div>
         </div>
       </div>
@@ -1611,11 +1718,11 @@ tailwind.config = {
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(0,150,64,0.1);" aria-hidden="true">📱</div>
-        <div><p class="text-base font-semibold text-gray-900">M-Pesa</p><p class="text-xs text-gray-500 mt-0.5">STK push commerce payments</p></div>
+        <div><p class="text-base font-semibold text-gray-900">M-Pesa</p><p class="text-xs text-gray-500 mt-0.5">STK retry on merchant keys</p></div>
       </div>
       <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(0,174,239,0.1);" aria-hidden="true">💳</div>
-        <div><p class="text-base font-semibold text-gray-900">Paystack</p><p class="text-xs text-gray-500 mt-0.5">Card checkout for invoices</p></div>
+        <div><p class="text-base font-semibold text-gray-900">Paystack</p><p class="text-xs text-gray-500 mt-0.5">Fallback checkout on invoices</p></div>
       </div>
       <!-- <div class="integration-card rounded-2xl p-5 flex flex-col items-center text-center gap-2.5">
         <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background:rgba(99,91,255,0.1);" aria-hidden="true">💳</div>
@@ -1961,7 +2068,7 @@ tailwind.config = {
           <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 5 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-5" x-show="faqOpen === 5" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-5">
-          <p class="text-base text-gray-600 leading-relaxed">Yes. Native M-Pesa STK push handles commerce payments for Kenya and East Africa, and Paystack supports card checkout on invoices. Successful payments trigger confirmation messages and can resume automation flows. Stripe is used for ConvoConnect SaaS subscriptions, not in-chat commerce checkout.</p>
+          <p class="text-base text-gray-600 leading-relaxed">Yes. Native M-Pesa STK push collects on your Daraja keys for Kenya and East Africa. If a PIN times out, ConvoConnect retries STK, then offers Paystack as a fallback and chases unpaid invoices on WhatsApp. Paid status shows on the collections board and can resume automation flows. Money stays on your keys — ConvoConnect is not a wallet or PSP. Stripe is used for ConvoConnect SaaS subscriptions, not in-chat commerce checkout.</p>
         </div>
       </div>
       <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
@@ -2006,7 +2113,7 @@ tailwind.config = {
           <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 10 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </button>
         <div id="faq-panel-10" x-show="faqOpen === 10" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-10">
-          <p class="text-base text-gray-600 leading-relaxed">Yes. Build product catalogs and branded shop pages, then sell from the inbox catalog sidebar — search products and send shop links without leaving the conversation. Catalogs sync from Shopify, WooCommerce, Excel, or your own API. Customers checkout via WhatsApp or receive a public invoice page with M-Pesa or Paystack payment that syncs back to your CRM.</p>
+          <p class="text-base text-gray-600 leading-relaxed">Yes. Build product catalogs and branded shop pages, then sell from the inbox catalog sidebar — search products and send shop links without leaving the conversation. Catalogs sync from Shopify, WooCommerce, Excel, or your own API. Customers checkout via WhatsApp or a public invoice. If STK is not completed, collections retry, fall back to Paystack, and chase until paid — then sync back to your CRM.</p>
         </div>
       </div>
       <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
@@ -2036,6 +2143,15 @@ tailwind.config = {
           <p class="text-base text-gray-600 leading-relaxed">Journey pipelines are kanban boards for your WhatsApp contacts. Create pipelines from templates (sales, support, e-commerce, events, and more), drag contacts between stages, and attach WhatsApp campaigns that fire when someone enters a stage. New contacts can auto-enroll, agents manage journeys from the inbox sidebar, and owners configure the app from the Journeys tab in Company Apps.</p>
         </div>
       </div>
+      <div class="border border-gray-200 rounded-2xl overflow-hidden bg-white">
+        <button type="button" class="w-full flex items-center justify-between px-6 py-4 text-left" @click="faqOpen = faqOpen === 14 ? null : 14" :aria-expanded="(faqOpen === 14).toString()" aria-controls="faq-panel-14" id="faq-button-14">
+          <span class="text-lg font-semibold text-gray-900">How do collections work — do you hold the money?</span>
+          <svg class="w-4 h-4 text-gray-500 flex-shrink-0 transition-transform" :class="faqOpen === 14 ? 'rotate-45' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+        <div id="faq-panel-14" x-show="faqOpen === 14" x-cloak class="px-6 pb-4" role="region" aria-labelledby="faq-button-14">
+          <p class="text-base text-gray-600 leading-relaxed">No. Collections is the engine around your existing invoices: M-Pesa STK retry when a PIN times out, Paystack fallback, WhatsApp chase, and a board of open invoices. Settlement stays on your Daraja and Paystack keys. ConvoConnect is not a wallet, float, or PSP. Stripe is only for ConvoConnect SaaS billing.</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -2049,7 +2165,7 @@ tailwind.config = {
     <h2 class="font-display section-title font-800 leading-tight mb-6 text-gray-900" style="letter-spacing:-0.02em;">
       Start selling on<br/><span class="grad-text">WhatsApp today</span>
     </h2>
-    <p class="body-lg text-gray-600 mb-10 max-w-xl mx-auto">Journey pipelines, catalogs, multichannel campaigns, bookings, inbox, and payments in one social commerce platform.</p>
+    <p class="body-lg text-gray-600 mb-10 max-w-xl mx-auto">Recover carts, convert bookings, and collect unpaid invoices — journeys, catalogs, collections, campaigns, and inbox in one conversational commerce platform.</p>
     <div class="flex flex-wrap justify-center gap-4 mb-6">
       @if($registrationEnabled)
       <a href="{{ route('register') }}" class="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-black rounded-xl transition-all hover:opacity-90 hover:scale-105" style="background:#25D366;">
@@ -2081,7 +2197,7 @@ tailwind.config = {
           </div>
           <span class="font-display font-800 text-lg tracking-tight text-gray-900">{{ config('settings.site_name', config('app.name')) }}</span>
         </a>
-        <p class="text-base text-gray-600 leading-relaxed max-w-xs mb-5">The social commerce platform for WhatsApp — sell from chat, run journey pipelines, take bookings, and get paid. Built on the official Meta WhatsApp Business API.</p>
+        <p class="text-base text-gray-600 leading-relaxed max-w-xs mb-5">The conversational commerce platform for WhatsApp — recover carts, convert bookings, collect unpaid invoices, and get paid on your M-Pesa or Paystack keys. Built on the official Meta WhatsApp Business API.</p>
       </div>
       <!-- Product -->
       <div>
@@ -2091,6 +2207,7 @@ tailwind.config = {
           <li><a href="#journeys" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Journeys</a></li>
           <li><a href="#bookings" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Bookings</a></li>
           <li><a href="#catalog" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Product Catalog</a></li>
+          <li><a href="#collections" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Collections</a></li>
           <li><a href="#automation" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Automation</a></li>
           <li><a href="#integrations" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">Integrations</a></li>
           <li><a href="#api" class="text-sm text-gray-600 hover:text-gray-900 transition-colors">API Docs</a></li>

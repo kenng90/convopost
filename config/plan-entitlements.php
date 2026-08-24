@@ -85,6 +85,7 @@ return [
                 'catalog',
                 'integrations',
                 'inbox_instagram',
+                'collections',
             ],
         ],
 
@@ -132,6 +133,7 @@ return [
                 'voice',
                 'journeys',
                 'payments',
+                'collections',
                 'reminders',
                 'knowledge',
                 'api_access',
@@ -197,6 +199,7 @@ return [
         'voice' => 'WhatsApp voice calling',
         'journeys' => 'Journey pipelines',
         'payments' => 'In-chat payments',
+        'collections' => 'Collections board',
         'reminders' => 'Bookings (appointments & events)',
         'knowledge' => 'Knowledge base',
         'api_access' => 'REST API access',

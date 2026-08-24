@@ -10,6 +10,24 @@ return [
 
     'suite_key' => 'commerce_ops_suite',
 
+    'sku_billing' => [
+        'guarantee_hours' => 48,
+        'skus' => [
+            'cart_recovery' => [
+                'action' => 'outcome_cart_recovered',
+                'event' => 'cart.recovered',
+            ],
+            'booking_convert' => [
+                'action' => 'outcome_booking_attended',
+                'event' => 'booking.attended',
+            ],
+            'lead_to_cash' => [
+                'action' => 'outcome_lead_collected',
+                'event' => 'invoice.paid',
+            ],
+        ],
+    ],
+
     'credit_action_estimates' => [
         'send_campaign_marketing' => 3,
         'send_template_utility' => 1,

@@ -35,6 +35,15 @@ class InvoicePaidSyncService
                 'amount' => $invoice->amount,
                 'customer_name' => $invoice->customer_name,
             ]);
+            app(\App\Services\Outcomes\OutcomeSkuBiller::class)->record(
+                $company,
+                $contact,
+                'lead_to_cash',
+                'invoice.paid',
+                (float) $invoice->amount,
+                'invoice',
+                (string) $invoice->id,
+            );
         }
     }
 

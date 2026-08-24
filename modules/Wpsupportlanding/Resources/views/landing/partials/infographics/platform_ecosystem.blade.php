@@ -7,7 +7,7 @@
         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] mb-2" style="color:#25D366;">Platform map</p>
         <h3 class="font-display text-3xl sm:text-4xl font-800 text-gray-900">One hub. Every commerce signal.</h3>
       </div>
-      <p class="text-base text-gray-600 max-w-sm">WhatsApp, Instagram &amp; Messenger sit at the center — campaigns, journeys, bookings, catalog, and payments orbit the same Customer 360.</p>
+      <p class="text-base text-gray-600 max-w-sm">WhatsApp, Instagram &amp; Messenger sit at the center — campaigns, journeys, bookings, catalog, and collections orbit the same Customer 360.</p>
     </div>
 
     <svg viewBox="0 0 920 420" class="w-full h-auto" role="img" aria-label="ConvoConnect platform ecosystem diagram showing Meta messaging hub connected to inbox, journeys, bookings, catalog, campaigns, payments, flows, and APIs">
@@ -57,7 +57,7 @@
           [520, 55, 'Bookings', 'Calendar sync'],
           [700, 85, 'Catalog', 'In-chat shop'],
           [780, 170, 'Campaigns', 'WA · SMS · Email'],
-          [760, 300, 'Payments', 'M-Pesa · Paystack'],
+          [760, 300, 'Collections', 'Retry · Paystack · chase'],
           [600, 365, 'Flows', '38+ nodes'],
           [320, 360, 'Forms', 'Native WA Flows'],
           [180, 290, 'Calling', 'Voice + AI'],

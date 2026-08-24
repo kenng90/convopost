@@ -92,6 +92,19 @@
             "key": "whatsapp_quality_rating",
             "ftype": "input",
             "value": "GREEN"
+        },
+        {
+            "separator": "Action agent guardrails",
+            "title": "Max agent charge (KES)",
+            "key": "action_agent_max_charge",
+            "ftype": "input",
+            "value": "50000"
+        },
+        {
+            "title": "Require customer confirmation before charging",
+            "key": "action_agent_require_charge_confirm",
+            "ftype": "bool",
+            "value": true
         }
     ]
 }

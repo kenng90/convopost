@@ -28,7 +28,7 @@
         [250, '02', 'Engage', 'Inbox + Copilot'],
         [410, '03', 'Qualify', 'Journey stage'],
         [570, '04', 'Convert', 'Catalog / booking'],
-        [730, '05', 'Collect', 'M-Pesa / Paystack'],
+        [730, '05', 'Collect', 'Retry · fallback · chase'],
         [890, '06', 'Retain', 'Reminder + rebuy'],
       ];
     @endphp
@@ -49,7 +49,7 @@
       ['02', 'Engage', 'Inbox + Copilot'],
       ['03', 'Qualify', 'Journey stage'],
       ['04', 'Convert', 'Catalog / booking'],
-      ['05', 'Collect', 'M-Pesa / Paystack'],
+      ['05', 'Collect', 'Retry · fallback · chase'],
       ['06', 'Retain', 'Reminder + rebuy'],
     ] as [$num, $title, $sub])
       <div class="flex items-center gap-3 rounded-2xl border border-gray-200 px-4 py-3" style="background:rgba(37,211,102,0.08);">

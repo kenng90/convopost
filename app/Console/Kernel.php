@@ -21,6 +21,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('campaigns:flush-counters')->everyMinute();
         $schedule->command('voice-booking:expire-holds')->everyFiveMinutes();
         $schedule->command('outcomes:process-booking-no-shows')->hourly();
+        $schedule->command('collections:advance')->everyFiveMinutes();
     }
 
     /**

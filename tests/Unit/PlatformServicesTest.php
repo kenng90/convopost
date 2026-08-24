@@ -51,6 +51,9 @@ class PlatformServicesTest extends TestCase
         $this->assertTrue($actions->contains('ai_flow_generate'));
         $this->assertTrue($actions->contains('ai_llm_reply'));
         $this->assertTrue($actions->contains('ai_embedding'));
+        $this->assertTrue($actions->contains('outcome_cart_recovered'));
+        $this->assertTrue($actions->contains('outcome_booking_attended'));
+        $this->assertTrue($actions->contains('outcome_lead_collected'));
     }
 
     public function test_pro_tier_includes_ai_flow_assistant_capability(): void

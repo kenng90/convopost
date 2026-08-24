@@ -31,11 +31,14 @@ class ActivationController extends Controller
             return redirect()->route('whatsapp.setup');
         }
 
+        $goLive = app(VerticalGoLiveService::class);
+
         return view('platform::activation.index', [
             'company' => $company,
             'steps' => $this->activation->steps($company),
             'progress' => $this->activation->progressPercent($company),
-            'verticals' => app(VerticalGoLiveService::class)->packs(),
+            'verticals' => $goLive->packs(),
+            'launch' => $goLive->lastLaunch($company),
         ]);
     }
 
@@ -77,13 +80,14 @@ class ActivationController extends Controller
         $result = $goLive->install(
             $this->getCompany(),
             $request->validated('vertical'),
-            (bool) $request->boolean('install_playbook', true)
+            (bool) $request->boolean('install_playbook', true),
+            $request->validated('test_phone')
         );
 
         if (! ($result['success'] ?? false)) {
             return redirect()->route('activation.index')->withError($result['message']);
         }
 
-        return redirect()->route('flows.index')->withStatus($result['message']);
+        return redirect()->route('activation.index')->withStatus($result['message']);
     }
 }

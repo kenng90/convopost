@@ -122,6 +122,17 @@ class RequestPayment extends Node
                 'provider' => $gateway->key(),
                 'message' => $result['message'] ?? null,
             ]);
+
+            $engine = app(\App\Services\Collections\CollectionEngine::class);
+            if ($engine->collectionsEnabled($invoice)) {
+                $engine->applyStatus($invoice, \App\Enums\CollectionStatus::Due, [
+                    'chase_step' => 1,
+                    'next_chase_at' => now()->addMinutes(15),
+                ]);
+
+                return ['success' => true, 'waiting' => true];
+            }
+
             $contact->setContactState($this->flow_id, 'payment_result_status', 'failed');
             FlowRunLogger::log((int) $this->flow_id, (int) $contact->id, 'payment_failed', (string) $this->id, 'initiate_failed');
             $failed = $this->getNextNodeId('failed');
@@ -162,6 +173,10 @@ class RequestPayment extends Node
         }
 
         FlowRunLogger::log((int) $this->flow_id, (int) $contact->id, 'payment_initiated', (string) $this->id, $gateway->key());
+
+        if ($paymentModel) {
+            app(\App\Services\Collections\CollectionEngine::class)->trackInitiated($invoice, $paymentModel);
+        }
 
         return ['success' => true, 'waiting' => true];
     }

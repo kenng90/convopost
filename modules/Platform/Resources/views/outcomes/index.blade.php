@@ -30,6 +30,9 @@
                             <p class="display-4 mb-0">{{ $metrics['cart_recovery']['recovered'] }}</p>
                             <p class="text-muted mb-0">{{ __(':count abandoned open', ['count' => $metrics['cart_recovery']['abandoned']]) }}</p>
                             <p class="small text-muted mt-2">{{ $metrics['cart_recovery']['recovered_revenue_formatted'] }} {{ __('recovered revenue') }}</p>
+                            @if(!empty($metrics['cart_recovery']['sku_billing']['credits']))
+                                <p class="small mb-0">{{ __(':credits outcome credits billed', ['credits' => $metrics['cart_recovery']['sku_billing']['credits']]) }}</p>
+                            @endif
                         </div>
                     </div>
                 </div>

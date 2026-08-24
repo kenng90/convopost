@@ -80,6 +80,16 @@ class LandingPageTest extends TestCase
         $response->assertSee('"@type":"WebSite"', false);
         $response->assertSee('"@type":"Organization"', false);
         $response->assertSee('/android-chrome-192x192.png', false);
+        $response->assertSee('id="collections"', false);
+        $response->assertSee('Collections board', false);
+        $response->assertSee('STK retry', false);
+        $response->assertSee('Paystack fallback', false);
+        $response->assertSee('WhatsApp chase', false);
+        $response->assertSee('Cart Recovery', false);
+        $response->assertSee('Booking Convert', false);
+        $response->assertSee('Lead-to-Cash', false);
+        $response->assertSee('not a wallet or PSP', false);
+        $response->assertDontSee('autonomous agent', false);
     }
 
     public function test_landing_page_highlights_omnichannel_and_campaigns(): void
