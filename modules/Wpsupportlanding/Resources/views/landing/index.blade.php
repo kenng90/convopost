@@ -476,11 +476,11 @@ tailwind.config = {
       <div class="max-w-2xl">
         <p class="font-display hero-brand font-800 text-gray-900 mb-4">{{ $siteName }}</p>
         <h1 class="font-display hero-title font-800 text-gray-900 mb-5">
-          Recover carts, convert bookings,<br class="hidden sm:block" />
-          <span class="hero-title font-800 grad-text">and collect cash in chat</span>
+         Sell, support and grow across<br class="hidden sm:block" />
+        <span class="hero-title font-800 grad-text">WhatsApp, Instagram &amp; Messenger</span>
         </h1>
         <p class="body-lg text-gray-600 mb-6">
-          One shared inbox for WhatsApp, Instagram &amp; Messenger — plus journeys, catalogs, bookings, M-Pesa STK retries, Paystack fallback, and WhatsApp chase when a PIN times out.
+          One shared inbox, journeys, bookings, catalogs, and payments - plus WhatsApp, SMS, and email campaigns from the same platform.
         </p>
         <div class="flex flex-wrap gap-2 mb-8" aria-label="Supported messaging channels">
           <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
