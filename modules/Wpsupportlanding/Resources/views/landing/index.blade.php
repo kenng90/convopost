@@ -680,7 +680,7 @@ tailwind.config = {
 </section>
 
 <!-- ===== CAMPAIGNS ===== -->
-<section id="campaigns" class="py-24 relative overflow-hidden" style="background:#eef8f3;">
+<!-- <section id="campaigns" class="py-24 relative overflow-hidden" style="background:#eef8f3;">
   <div class="absolute inset-0 dots-bg opacity-40"></div>
   <div class="relative z-10 max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-14">
@@ -724,7 +724,7 @@ tailwind.config = {
 
     @include('wpsupportlanding::landing.partials.infographics.channel_orchestration')
   </div>
-</section>
+</section> -->
 
 <!-- ===== HOW IT WORKS ===== -->
 <section id="how-it-works" class="py-24 relative overflow-hidden">
@@ -1213,7 +1213,7 @@ tailwind.config = {
 </section>
 
 <!-- ===== BOOKINGS SPOTLIGHT ===== -->
-<section id="bookings" class="py-24 border-y border-gray-200" style="background:#f3faf6;">
+<!-- <section id="bookings" class="py-24 border-y border-gray-200" style="background:#f3faf6;">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Bookings</div>
@@ -1225,7 +1225,7 @@ tailwind.config = {
       @include('wpsupportlanding::landing.partials.infographics.booking_lifecycle')
     </div>
 
-    <!-- 3-step flow -->
+   
     <div class="grid md:grid-cols-3 gap-4 mb-16">
       <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">⚙️</div>
@@ -1244,7 +1244,7 @@ tailwind.config = {
       </div>
     </div>
 
-    <!-- Two-column detail -->
+
     <div class="grid lg:grid-cols-2 gap-12 items-center">
       <div>
         <h3 class="font-display text-2xl font-800 mb-6">Everything you need to manage bookings on WhatsApp</h3>
@@ -1283,7 +1283,7 @@ tailwind.config = {
         @endif
       </div>
 
-      <!-- Booking widget mockup -->
+    
       <div class="relative">
         <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl">
           <div class="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style="background:#f8fbf9;">
@@ -1338,7 +1338,7 @@ tailwind.config = {
       </div>
     </div>
   </div>
-</section>
+</section> -->
 
 <!-- ===== CATALOG SPOTLIGHT ===== -->
 <section id="catalog" class="py-24 border-y border-gray-200" style="background:#f0faf7;">
