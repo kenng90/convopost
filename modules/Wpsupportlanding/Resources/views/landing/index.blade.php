@@ -680,7 +680,7 @@ tailwind.config = {
 </section>
 
 <!-- ===== CAMPAIGNS ===== -->
-<section id="campaigns" class="py-24 relative overflow-hidden" style="background:#eef8f3;">
+<!-- <section id="campaigns" class="py-24 relative overflow-hidden" style="background:#eef8f3;">
   <div class="absolute inset-0 dots-bg opacity-40"></div>
   <div class="relative z-10 max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-14">
@@ -724,7 +724,7 @@ tailwind.config = {
 
     @include('wpsupportlanding::landing.partials.infographics.channel_orchestration')
   </div>
-</section>
+</section> -->
 
 <!-- ===== HOW IT WORKS ===== -->
 <section id="how-it-works" class="py-24 relative overflow-hidden">
@@ -816,7 +816,7 @@ tailwind.config = {
         </ul>
       </div>
       <!-- Card 2 -->
-      <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
+      <!-- <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">📢</div>
         <h3 class="font-display font-700 text-xl mb-2 text-gray-900">WhatsApp, SMS &amp; email campaigns</h3>
         <p class="text-base text-gray-600 mb-4 leading-relaxed">One campaign engine for WhatsApp templates, ConvoConnect SMS, and SMTP email — file upload, contact groups, or quick lists — with delivery analytics and timezone-aware scheduling.</p>
@@ -827,7 +827,7 @@ tailwind.config = {
           <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>Segments, scheduling &amp; analytics</li>
           <li class="flex items-start gap-2 text-base text-gray-600"><span style="color:#25D366;" class="mt-0.5 flex-shrink-0">✓</span>API-triggered campaign sends</li>
         </ul>
-      </div>
+      </div> -->
       <!-- Card 3 -->
       <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-xl" style="background:rgba(37,211,102,0.1);">🗂️</div>
@@ -1213,7 +1213,7 @@ tailwind.config = {
 </section>
 
 <!-- ===== BOOKINGS SPOTLIGHT ===== -->
-<section id="bookings" class="py-24 border-y border-gray-200" style="background:#f3faf6;">
+<!-- <section id="bookings" class="py-24 border-y border-gray-200" style="background:#f3faf6;">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Bookings</div>
@@ -1225,7 +1225,7 @@ tailwind.config = {
       @include('wpsupportlanding::landing.partials.infographics.booking_lifecycle')
     </div>
 
-    <!-- 3-step flow -->
+   
     <div class="grid md:grid-cols-3 gap-4 mb-16">
       <div class="card-lift bg-white border border-gray-200 rounded-2xl p-6 text-center">
         <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style="background:rgba(37,211,102,0.1);">⚙️</div>
@@ -1244,7 +1244,7 @@ tailwind.config = {
       </div>
     </div>
 
-    <!-- Two-column detail -->
+
     <div class="grid lg:grid-cols-2 gap-12 items-center">
       <div>
         <h3 class="font-display text-2xl font-800 mb-6">Everything you need to manage bookings on WhatsApp</h3>
@@ -1283,7 +1283,7 @@ tailwind.config = {
         @endif
       </div>
 
-      <!-- Booking widget mockup -->
+    
       <div class="relative">
         <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-2xl">
           <div class="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]" style="background:#f8fbf9;">
@@ -1338,7 +1338,7 @@ tailwind.config = {
       </div>
     </div>
   </div>
-</section>
+</section> -->
 
 <!-- ===== CATALOG SPOTLIGHT ===== -->
 <section id="catalog" class="py-24 border-y border-gray-200" style="background:#f0faf7;">
@@ -1982,7 +1982,7 @@ tailwind.config = {
 </section>
 
 <!-- ===== TESTIMONIALS ===== -->
-<section class="py-24 border-t border-gray-200" style="background:#f3faf6;">
+<!-- <section class="py-24 border-t border-gray-200" style="background:#f3faf6;">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-16">
       <div class="badge inline-flex mb-4">Testimonials</div>
@@ -2015,7 +2015,7 @@ tailwind.config = {
       </div>
     </div>
   </div>
-</section>
+</section> -->
 
 <!-- ===== FAQ ===== -->
 <section id="faq" class="py-24 border-t border-gray-200">

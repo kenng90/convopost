@@ -17,8 +17,8 @@
       [
         'num' => '03',
         'title' => 'Engage',
-        'body' => 'Broadcast WhatsApp, SMS & email campaigns. Agents reply across Meta channels with Copilot and sidebar commerce tools.',
-        'points' => ['Omnichannel team inbox', 'WhatsApp · SMS · email campaigns', 'Catalog & bookings sidebars'],
+        'body' => 'Agents reply across Meta channels with Copilot and sidebar commerce tools.',
+        'points' => ['Omnichannel team inbox', 'WhatsApp · SMS · email ', 'Catalog  sidebars'],
       ],
       [
         'num' => '04',
@@ -28,7 +28,12 @@
       ],
     ];
   @endphp
-
+ <!-- [
+        'num' => '03',
+        'title' => 'Engage',
+        'body' => 'Broadcast WhatsApp, SMS & email campaigns. Agents reply across Meta channels with Copilot and sidebar commerce tools.',
+        'points' => ['Omnichannel team inbox', 'WhatsApp · SMS · email campaigns', 'Catalog & bookings sidebars'],
+      ], -->
   @foreach($howSteps as $step)
     <div class="relative rounded-3xl border border-gray-200 p-6 overflow-hidden group" style="background:#ffffff;">
       <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-20 blur-2xl group-hover:opacity-40 transition-opacity" style="background:#ffffff;"></div>

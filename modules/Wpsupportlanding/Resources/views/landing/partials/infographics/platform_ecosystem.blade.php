@@ -56,7 +56,6 @@
           [320, 70, 'Journeys', 'Kanban CRM'],
           [520, 55, 'Bookings', 'Calendar sync'],
           [700, 85, 'Catalog', 'In-chat shop'],
-          [780, 170, 'Campaigns', 'WA · SMS · Email'],
           [760, 300, 'Collections', 'Retry · Paystack · chase'],
           [600, 365, 'Flows', '38+ nodes'],
           [320, 360, 'Forms', 'Native WA Flows'],
@@ -64,6 +63,7 @@
           [150, 180, 'API', 'Developer'],
         ];
       @endphp
+       <!-- [780, 170, 'Campaigns', 'WA · SMS · Email'], -->
       @foreach($nodes as [$x, $y, $title, $sub])
         <g>
           <rect x="{{ $x - 62 }}" y="{{ $y - 28 }}" width="124" height="56" rx="14" fill="#ffffff" stroke="rgba(37,211,102,0.28)" stroke-width="1.5"/>
