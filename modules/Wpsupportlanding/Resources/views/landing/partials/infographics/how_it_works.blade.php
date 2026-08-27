@@ -14,7 +14,7 @@
         'body' => 'Build journeys, bookings, catalogs, and Flowmaker automations around the same Customer 360 inbox.',
         'points' => ['Journey Pipelines', '38+ automation nodes', 'Forms ↔ Flow Builder bridge'],
       ],
-      [
+      <!-- [
         'num' => '03',
         'title' => 'Engage',
         'body' => 'Agents reply across Meta channels with Copilot and sidebar commerce tools.',
