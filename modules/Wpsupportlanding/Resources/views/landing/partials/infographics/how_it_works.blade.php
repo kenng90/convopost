@@ -14,12 +14,12 @@
         'body' => 'Build journeys, bookings, catalogs, and Flowmaker automations around the same Customer 360 inbox.',
         'points' => ['Journey Pipelines', '38+ automation nodes', 'Forms ↔ Flow Builder bridge'],
       ],
-      [
+      <!-- [
         'num' => '03',
         'title' => 'Engage',
         'body' => 'Broadcast WhatsApp, SMS & email campaigns. Agents reply across Meta channels with Copilot and sidebar commerce tools.',
         'points' => ['Omnichannel team inbox', 'WhatsApp · SMS · email campaigns', 'Catalog & bookings sidebars'],
-      ],
+      ], -->
       [
         'num' => '04',
         'title' => 'Collect & scale',

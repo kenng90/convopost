@@ -677,7 +677,7 @@
 
 {{-- ===== TESTIMONIALS ===== --}}
 @if(isset($testimonials) && $testimonials->count() > 0)
-<section class="py-24 gradient-subtle">
+<!-- <section class="py-24 gradient-subtle">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
             <span class="text-wa font-semibold text-sm uppercase tracking-widest">Testimonials</span>
@@ -701,7 +701,7 @@
             @endforeach
         </div>
     </div>
-</section>
+</section> -->
 @else
 {{-- Static testimonials when none in DB --}}
 <section class="py-24 gradient-subtle">
