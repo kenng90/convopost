@@ -2,7 +2,7 @@
     $schemaSiteName = $schemaSiteName ?? config('settings.site_name', config('app.name', 'ConvoConnect'));
     $schemaUrl = rtrim((string) config('app.url'), '/') ?: url('/');
     $schemaDescription = $schemaDescription ?? 'Sell, Support & Grow Across WhatsApp, Instagram & Messenger.';
-    $schemaLogo = url('/android-chrome-192x192.png');
+    $schemaLogo = $schemaLogo ?? url('/android-chrome-192x192.png');
     $schema = [
         '@context' => 'https://schema.org',
         '@graph' => [

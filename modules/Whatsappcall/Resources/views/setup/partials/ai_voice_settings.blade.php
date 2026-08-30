@@ -41,8 +41,8 @@
         </div>
 
         <div class="row">
-            <div class="col-md-6">
-                <div class="form-group">
+            <!-- <div class="col-md-6">
+                 <div class="form-group">
                     <label>{{ __('Flowmaker flow (knowledge & instructions)') }}</label>
                     <select class="form-control" name="ai_flow_id">
                         <option value="">{{ __('— None —') }}</option>
@@ -51,8 +51,8 @@
                         @endforeach
                     </select>
                     <small class="text-muted">{{ __('Uses flow training documents, LLM system prompt, and vector search.') }}</small>
-                </div>
-            </div>
+                </div> 
+            </div> -->
             <div class="col-md-6">
                 <div class="form-group">
                     <label class="d-block">
@@ -124,15 +124,15 @@
             </div>
         </div>
 
-        <div class="form-group">
+        <!-- <div class="form-group">
             <label class="d-block">
                 <input type="checkbox" name="use_builtin_worker" value="1" {{ ($settings['use_builtin_worker'] ?? false) ? 'checked' : '' }}>
                 {{ __('Use built-in worker') }} (<code>php artisan whatsappcall:worker</code>)
             </label>
             <small class="text-muted d-block">{{ __('Uses http://127.0.0.1:8787 — run the worker in a separate terminal.') }}</small>
-        </div>
+        </div> -->
 
-        <div class="row">
+        <!-- <div class="row">
             <div class="col-md-8">
                 <div class="form-group">
                     <label>{{ __('AI worker URL') }}</label>
@@ -146,7 +146,7 @@
                     <input type="password" class="form-control" name="ai_worker_secret" placeholder="{{ __('Leave blank to keep') }}">
                 </div>
             </div>
-        </div>
+        </div> -->
 
         <div class="form-group">
             <label>{{ __('Spoken language') }}</label>

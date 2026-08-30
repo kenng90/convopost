@@ -37,7 +37,7 @@
   @foreach($howSteps as $step)
     <div class="relative rounded-3xl border border-gray-200 p-6 overflow-hidden group" style="background:#ffffff;">
       <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-20 blur-2xl group-hover:opacity-40 transition-opacity" style="background:#ffffff;"></div>
-      <p class="font-display text-4xl font-800 mb-4" style="color:rgba(37,211,102,0.35);">{{ $step['num'] }}</p>
+      <p class="font-display text-4xl font-800 mb-4" style="color:rgba(232,163,23,0.35);">{{ $step['num'] }}</p>
       <h3 class="font-display text-xl font-800 text-gray-900 mb-2">{{ $step['title'] }}</h3>
       <p class="text-base text-gray-600 leading-relaxed mb-5">{{ $step['body'] }}</p>
       <ul class="space-y-2">

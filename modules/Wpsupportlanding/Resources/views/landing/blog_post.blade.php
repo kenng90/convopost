@@ -10,7 +10,7 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     @endif
 </head>
-<body class="bg-[#040f0c] text-white min-h-screen">
+<body class="bg-paper text-ink min-h-screen">
     @include('wpsupportlanding::landing.partials.marketing_nav')
 
     <section class="relative pt-28 pb-12 noise hero-glow">
@@ -21,13 +21,13 @@
 
     <section class="max-w-4xl mx-auto px-4 sm:px-6 pb-8">
         <div class="flex justify-center gap-4">
-            <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(url()->current()) }}" target="_blank" rel="noopener" class="w-10 h-10 rounded-lg border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:border-wa-green/30 transition-all" aria-label="Share on Facebook">
+            <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(url()->current()) }}" target="_blank" rel="noopener" class="w-10 h-10 rounded-lg border border-indigo/10 flex items-center justify-center text-gray-500 hover:text-ink hover:border-saffron transition-all" aria-label="Share on Facebook">
                 <i class="fab fa-facebook"></i>
             </a>
-            <a href="https://twitter.com/intent/tweet?url={{ urlencode(url()->current()) }}&text={{ urlencode($post->title) }}" target="_blank" rel="noopener" class="w-10 h-10 rounded-lg border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:border-wa-green/30 transition-all" aria-label="Share on X">
+            <a href="https://twitter.com/intent/tweet?url={{ urlencode(url()->current()) }}&text={{ urlencode($post->title) }}" target="_blank" rel="noopener" class="w-10 h-10 rounded-lg border border-indigo/10 flex items-center justify-center text-gray-500 hover:text-ink hover:border-saffron transition-all" aria-label="Share on X">
                 <i class="fab fa-twitter"></i>
             </a>
-            <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ urlencode(url()->current()) }}" target="_blank" rel="noopener" class="w-10 h-10 rounded-lg border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:border-wa-green/30 transition-all" aria-label="Share on LinkedIn">
+            <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ urlencode(url()->current()) }}" target="_blank" rel="noopener" class="w-10 h-10 rounded-lg border border-indigo/10 flex items-center justify-center text-gray-500 hover:text-ink hover:border-saffron transition-all" aria-label="Share on LinkedIn">
                 <i class="fab fa-linkedin"></i>
             </a>
         </div>
@@ -49,10 +49,10 @@
         </script>
     @endif
 
-    <footer class="border-t border-white/[0.05] py-10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
-            <p>© {{ date('Y') }} {{ config('app.name') }}. {{ __('All rights reserved.') }}</p>
-            <a href="{{ url('/blog') }}" class="text-wa-green hover:underline">{{ __('More articles') }}</a>
+    <footer class="border-t border-white/10 py-10" style="background:#151D40;">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/60">
+            <p>© {{ date('Y') }} {{ \Modules\Wpsupportlanding\Support\ChatDukaBrand::name() }}. {{ __('All rights reserved.') }}</p>
+            <a href="{{ url('/blog') }}" class="hover:text-white" style="color:#E8A317;">{{ __('More articles') }}</a>
         </div>
     </footer>
 </body>

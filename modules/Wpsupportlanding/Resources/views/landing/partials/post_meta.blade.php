@@ -3,7 +3,7 @@
     $metaTitle = $post->meta_title ?: $post->title;
     $metaDescription = $post->meta_description ?: ($post->excerpt ?: strip_tags(\Illuminate\Support\Str::limit($post->content, 160)));
 @endphp
-<title>{{ $metaTitle }} — {{ config('app.name') }}</title>
+<title>{{ $metaTitle }} — {{ \Modules\Wpsupportlanding\Support\ChatDukaBrand::name() }}</title>
 <meta name="title" content="{{ $metaTitle }}">
 <meta name="description" content="{{ $metaDescription }}">
 @if($post->meta_keywords)

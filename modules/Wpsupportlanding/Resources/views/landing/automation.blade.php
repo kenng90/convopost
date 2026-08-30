@@ -4,14 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 @php
-  $siteName = config('settings.site_name', config('app.name'));
+  $siteName = \Modules\Wpsupportlanding\Support\ChatDukaBrand::name();
   $practiceName = $siteName.' Automation';
   $metaTitle = $practiceName.' — Custom AI operating systems for real workflows';
   $metaDescription = 'We map how your business already works, connect the tools you use, and deploy an AI layer that prepares tasks, follow-ups, and decisions for your team to approve. Deploy first, then productize what repeats. Separate from '.$siteName.' WhatsApp SaaS.';
-  $supportEmail = config('settings.contact_email', 'support@convoconnect.tech');
+  $supportEmail = \Modules\Wpsupportlanding\Support\ChatDukaBrand::supportEmail();
   $bookHref = 'mailto:'.$supportEmail.'?subject='.rawurlencode('Deployment call');
 @endphp
-@include('layouts.favicon')
+@include('wpsupportlanding::landing.partials.chatduka.favicon')
 <title>{{ $metaTitle }}</title>
 <meta name="title" content="{{ $metaTitle }}">
 <meta name="description" content="{{ $metaDescription }}" />
@@ -154,7 +154,7 @@ tailwind.config = {
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6 flex items-center justify-between h-full">
     <a href="{{ route('services.automation') }}" class="flex items-center gap-2.5 flex-shrink-0">
       <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#0d9488,#0a1628);">
-        <img src="{{ config('settings.logo', asset('favicon.ico')) }}" alt="{{ $practiceName }}" class="w-full h-full object-contain p-1" />
+        <img src="{{ \Modules\Wpsupportlanding\Support\ChatDukaBrand::markUrl() }}" alt="{{ $practiceName }}" class="w-full h-full object-contain p-1" />
       </div>
       <span class="font-display font-800 text-lg tracking-tight text-ink">{{ $practiceName }}</span>
     </a>
