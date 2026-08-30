@@ -9,7 +9,7 @@ class FaviconBrandingTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_landing_page_declares_chatduka_favicon_links(): void
+    public function test_landing_page_declares_mauzochat_favicon_links(): void
     {
         config(['settings.disable_landing_page' => false]);
         config(['settings.landing_page' => 'Wpsupportlanding']);
@@ -18,13 +18,13 @@ class FaviconBrandingTest extends TestCase
 
         $response->assertOk();
         $html = $response->getContent();
-        $this->assertStringContainsString('/landing/chatduka/android-chrome-192x192.png', $html);
-        $this->assertStringContainsString('/landing/chatduka/favicon-32x32.png', $html);
-        $this->assertStringContainsString('/landing/chatduka/favicon-16x16.png', $html);
-        $this->assertStringContainsString('/landing/chatduka/favicon.ico', $html);
-        $this->assertStringContainsString('/landing/chatduka/apple-touch-icon.png', $html);
-        $this->assertStringContainsString('/landing/chatduka/site.webmanifest', $html);
-        $this->assertStringContainsString('/landing/chatduka/mark.svg', $html);
+        $this->assertStringContainsString('/landing/mauzochat/android-chrome-192x192.png', $html);
+        $this->assertStringContainsString('/landing/mauzochat/favicon-32x32.png', $html);
+        $this->assertStringContainsString('/landing/mauzochat/favicon-16x16.png', $html);
+        $this->assertStringContainsString('/landing/mauzochat/favicon.ico', $html);
+        $this->assertStringContainsString('/landing/mauzochat/apple-touch-icon.png', $html);
+        $this->assertStringContainsString('/landing/mauzochat/site.webmanifest', $html);
+        $this->assertStringContainsString('/landing/mauzochat/mark.svg', $html);
         $this->assertStringNotContainsString('⚖️', $html);
     }
 
@@ -36,13 +36,13 @@ class FaviconBrandingTest extends TestCase
         $this->assertSeeFaviconLinks($response->getContent());
     }
 
-    public function test_login_page_does_not_use_chatduka_landing_assets(): void
+    public function test_login_page_does_not_use_mauzochat_landing_assets(): void
     {
         $response = $this->get('/login');
 
         $response->assertOk();
-        $this->assertStringNotContainsString('/landing/chatduka/', $response->getContent());
-        $this->assertStringNotContainsString('ChatDuka', $response->getContent());
+        $this->assertStringNotContainsString('/landing/mauzochat/', $response->getContent());
+        $this->assertStringNotContainsString('MauzoChat', $response->getContent());
     }
 
     public function test_public_favicon_ico_is_png_packed_not_legacy_dib(): void
@@ -63,14 +63,14 @@ class FaviconBrandingTest extends TestCase
         $this->assertStringContainsString($sixteen, $ico);
     }
 
-    public function test_web_manifest_names_chatduka(): void
+    public function test_web_manifest_names_mauzochat(): void
     {
         $manifest = json_decode(file_get_contents(public_path('site.webmanifest')), true);
 
-        $this->assertSame('ChatDuka', $manifest['name']);
-        $this->assertSame('ChatDuka', $manifest['short_name']);
+        $this->assertSame('MauzoChat', $manifest['name']);
+        $this->assertSame('MauzoChat', $manifest['short_name']);
         $this->assertNotEmpty($manifest['icons']);
-        $this->assertSame('#1E2A5A', $manifest['theme_color']);
+        $this->assertSame('#0D1117', $manifest['theme_color']);
     }
 
     private function assertSeeFaviconLinks(string $html): void

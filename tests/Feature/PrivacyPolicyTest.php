@@ -12,7 +12,7 @@ class PrivacyPolicyTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Privacy Policy', false);
-        $response->assertSee('ChatDuka', false);
+        $response->assertSee('MauzoChat', false);
         $response->assertDontSee('ConvoConnect', false);
         $response->assertSee('WhatsApp', false);
     }

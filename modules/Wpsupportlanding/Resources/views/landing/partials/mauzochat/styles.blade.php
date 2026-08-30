@@ -1,7 +1,7 @@
-@include('wpsupportlanding::landing.partials.chatduka.favicon')
+@include('wpsupportlanding::landing.partials.mauzochat.favicon')
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
 <script src="https://cdn.tailwindcss.com"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script>
@@ -9,15 +9,15 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        ink: '#1A1410',
-        paper: '#FBF6EE',
-        saffron: '#E8A317',
-        terracotta: '#C45C26',
-        indigo: { DEFAULT: '#1E2A5A', deep: '#151D40' },
+        ink: '#0D1117',
+        paper: '#FFFFFF',
+        saffron: '#28B463',
+        terracotta: '#28B463',
+        indigo: { DEFAULT: '#0D1117', deep: '#0D1117' },
         wa: { green: '#25D366' }
       },
       fontFamily: {
-        display: ['Fraunces', 'Georgia', 'serif'],
+        display: ['Outfit', 'Plus Jakarta Sans', 'sans-serif'],
         body: ['Plus Jakarta Sans', 'sans-serif'],
       }
     }
@@ -26,16 +26,16 @@ tailwind.config = {
 </script>
 <style>
   *, body { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 17px; line-height: 1.65; }
-  h1,h2,h3,h4,h5,.font-display { font-family: 'Fraunces', Georgia, serif; }
+  h1,h2,h3,h4,h5,.font-display { font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif; }
 
   :root {
-    --ink: #1A1410;
-    --paper: #FBF6EE;
-    --saffron: #E8A317;
-    --terracotta: #C45C26;
-    --indigo: #1E2A5A;
+    --ink: #0D1117;
+    --paper: #FFFFFF;
+    --saffron: #28B463;
+    --terracotta: #28B463;
+    --indigo: #0D1117;
     --wa-green: #25D366;
-    --hero-bg: #FBF6EE;
+    --hero-bg: #FFFFFF;
   }
 
   html { scroll-padding-top: 72px; }
@@ -50,14 +50,14 @@ tailwind.config = {
   }
 
   .hero-glow {
-    background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(232,163,23,0.18) 0%, transparent 70%),
-                radial-gradient(ellipse 50% 40% at 80% 60%, rgba(196,92,38,0.10) 0%, transparent 60%),
-                radial-gradient(ellipse 40% 30% at 10% 80%, rgba(30,42,90,0.08) 0%, transparent 50%);
+    background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(40,180,99,0.18) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 40% at 80% 60%, rgba(40,180,99,0.10) 0%, transparent 60%),
+                radial-gradient(ellipse 40% 30% at 10% 80%, rgba(13,17,23,0.08) 0%, transparent 50%);
   }
 
   .grid-pattern {
-    background-image: linear-gradient(rgba(30,42,90,0.05) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(30,42,90,0.05) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(13,17,23,0.05) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(13,17,23,0.05) 1px, transparent 1px);
     background-size: 48px 48px;
   }
 
@@ -85,22 +85,22 @@ tailwind.config = {
   }
   .card-lift:hover {
     transform: translateY(-6px) scale(1.01);
-    box-shadow: 0 20px 60px rgba(30,42,90,0.10);
-    border-color: rgba(232,163,23,0.35);
+    box-shadow: 0 20px 60px rgba(13,17,23,0.10);
+    border-color: rgba(40,180,99,0.35);
   }
 
   .navbar-blur {
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    background: rgba(21,29,64,0.94);
-    border-bottom: 1px solid rgba(232,163,23,0.18);
+    background: rgba(13,17,23,0.94);
+    border-bottom: 1px solid rgba(40,180,99,0.18);
   }
 
   .phone-frame {
-    background: #1A1410;
+    background: #0D1117;
     border-radius: 40px;
-    border: 2px solid rgba(232,163,23,0.22);
-    box-shadow: 0 40px 100px rgba(30,42,90,0.18), 0 0 0 1px rgba(30,42,90,0.06);
+    border: 2px solid rgba(40,180,99,0.22);
+    box-shadow: 0 40px 100px rgba(13,17,23,0.18), 0 0 0 1px rgba(13,17,23,0.06);
   }
   .phone-notch {
     background: #0d0d1a;
@@ -120,8 +120,8 @@ tailwind.config = {
   }
 
   .code-block {
-    background: #151D40;
-    border: 1px solid rgba(232,163,23,0.2);
+    background: #0D1117;
+    border: 1px solid rgba(40,180,99,0.2);
     border-radius: 12px;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     font-size: 13px;
@@ -129,30 +129,30 @@ tailwind.config = {
   }
 
   .grad-text {
-    color: #C45C26;
+    color: #28B463;
   }
 
   .flow-node {
-    background: rgba(232,163,23,0.08);
-    border: 1px solid rgba(232,163,23,0.28);
+    background: rgba(40,180,99,0.08);
+    border: 1px solid rgba(40,180,99,0.28);
     border-radius: 12px;
     transition: all 0.2s ease;
   }
   .flow-node:hover {
-    background: rgba(232,163,23,0.14);
-    border-color: rgba(232,163,23,0.5);
+    background: rgba(40,180,99,0.14);
+    border-color: rgba(40,180,99,0.5);
     transform: scale(1.02);
   }
   .flow-line {
     width: 2px;
-    background: linear-gradient(to bottom, rgba(232,163,23,0.45), rgba(232,163,23,0.1));
+    background: linear-gradient(to bottom, rgba(40,180,99,0.45), rgba(40,180,99,0.1));
     margin: 0 auto;
     height: 24px;
   }
 
   .pricing-popular {
-    background: linear-gradient(135deg, rgba(232,163,23,0.10), rgba(196,92,38,0.06));
-    border: 1px solid rgba(232,163,23,0.35);
+    background: linear-gradient(135deg, rgba(40,180,99,0.10), rgba(40,180,99,0.06));
+    border: 1px solid rgba(40,180,99,0.35);
     position: relative;
   }
   .pricing-popular::before {
@@ -160,7 +160,7 @@ tailwind.config = {
     position: absolute;
     inset: -1px;
     border-radius: inherit;
-    background: linear-gradient(135deg, rgba(232,163,23,0.3), rgba(30,42,90,0.12));
+    background: linear-gradient(135deg, rgba(40,180,99,0.3), rgba(13,17,23,0.12));
     z-index: -1;
   }
 
@@ -172,13 +172,13 @@ tailwind.config = {
     top: 20%;
     height: 60%;
     width: 1px;
-    background: rgba(30,42,90,0.12);
+    background: rgba(13,17,23,0.12);
   }
 
   .badge {
-    background: rgba(232,163,23,0.12);
-    border: 1px solid rgba(232,163,23,0.35);
-    color: #C45C26;
+    background: rgba(40,180,99,0.12);
+    border: 1px solid rgba(40,180,99,0.35);
+    color: #28B463;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -189,18 +189,18 @@ tailwind.config = {
 
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: #F4EBD8; }
-  ::-webkit-scrollbar-thumb { background: rgba(30,42,90,0.28); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: rgba(13,17,23,0.28); border-radius: 3px; }
 
   .blog-card {
     background: #fff;
-    border: 1px solid rgba(30,42,90,0.08);
+    border: 1px solid rgba(13,17,23,0.08);
     border-radius: 1rem;
     overflow: hidden;
   }
   .blog-prose { color: #3f3a34; line-height: 1.75; }
-  .blog-prose h2, .blog-prose h3 { color: #1A1410; font-family: 'Fraunces', Georgia, serif; margin-top: 1.5em; margin-bottom: 0.5em; }
+  .blog-prose h2, .blog-prose h3 { color: #0D1117; font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif; margin-top: 1.5em; margin-bottom: 0.5em; }
   .blog-prose p { margin-bottom: 1.25em; }
-  .blog-prose a { color: #C45C26; text-decoration: underline; }
+  .blog-prose a { color: #28B463; text-decoration: underline; }
   .blog-prose ul, .blog-prose ol { margin: 1em 0; padding-left: 1.5em; }
   .blog-prose img { border-radius: 0.75rem; margin: 1.5em 0; }
 
@@ -212,7 +212,7 @@ tailwind.config = {
   }
 
   a:focus-visible, button:focus-visible {
-    outline: 2px solid #E8A317;
+    outline: 2px solid #28B463;
     outline-offset: 2px;
   }
 
@@ -221,7 +221,7 @@ tailwind.config = {
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: #C45C26;
+    color: #28B463;
   }
   .hero-brand {
     font-size: clamp(2rem, 3.6vw, 3.25rem);
@@ -249,7 +249,7 @@ tailwind.config = {
     margin-left: auto;
     margin-right: auto;
     transform: rotate(-2deg);
-    box-shadow: 0 32px 80px rgba(30,42,90,0.16), 0 0 0 1px rgba(30,42,90,0.06);
+    box-shadow: 0 32px 80px rgba(13,17,23,0.16), 0 0 0 1px rgba(13,17,23,0.06);
   }
   @media (min-width: 1024px) {
     .hero-phone {
@@ -258,7 +258,7 @@ tailwind.config = {
     }
   }
   .infographic-panel {
-    box-shadow: 0 24px 60px rgba(30,42,90,0.08), inset 0 1px 0 rgba(255,255,255,0.8);
+    box-shadow: 0 24px 60px rgba(13,17,23,0.08), inset 0 1px 0 rgba(255,255,255,0.8);
   }
   .outcome-num {
     font-size: clamp(3rem, 8vw, 5.5rem);
@@ -266,7 +266,7 @@ tailwind.config = {
     letter-spacing: -0.03em;
   }
   .reveal-line {
-    background: linear-gradient(90deg, transparent, rgba(232,163,23,0.4), transparent);
+    background: linear-gradient(90deg, transparent, rgba(40,180,99,0.4), transparent);
     height: 1px;
   }
   @keyframes dash-flow {

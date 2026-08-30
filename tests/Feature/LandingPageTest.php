@@ -20,8 +20,8 @@ class LandingPageTest extends TestCase
         $response->assertSee('id="journeys"', false);
         $response->assertSee('id="bookings"', false);
         $response->assertSee('Journey Pipelines', false);
-        $response->assertSee('The Bookings app inside ChatDuka', false);
-        $response->assertSee('Your duka, in every chat.', false);
+        $response->assertSee('The Bookings app inside MauzoChat', false);
+        $response->assertSee('Connect. Chat. Close More Sales.', false);
         $response->assertDontSee('ConvoConnect', false);
         $response->assertSee('Journeys tab in Company Apps', false);
         $response->assertSee('Bookings tab in Company Apps', false);
@@ -67,9 +67,10 @@ class LandingPageTest extends TestCase
         $response->assertSee('id="campaigns"', false);
         $response->assertSee('WhatsApp, SMS &amp; email campaigns', false);
         $response->assertSee('WhatsApp, SMS &amp; email channels', false);
-        $response->assertSee('ChatDuka SMS', false);
-        $response->assertSee('Fraunces', false);
-        $response->assertSee('/landing/chatduka/og.png', false);
+        $response->assertSee('MauzoChat SMS', false);
+        $response->assertSee('Outfit', false);
+        $response->assertDontSee('ChatDuka', false);
+        $response->assertSee('/landing/mauzochat/og.png', false);
         $response->assertSee('Sender ID', false);
         $response->assertSee('KES 0.6', false);
         $response->assertDontSee('Twilio SMS', false);
@@ -83,9 +84,9 @@ class LandingPageTest extends TestCase
         $response->assertSee('application/ld+json', false);
         $response->assertSee('"@type":"WebSite"', false);
         $response->assertSee('"@type":"Organization"', false);
-        $response->assertSee('/landing/chatduka/android-chrome-192x192.png', false);
-        $response->assertSee('/landing/chatduka/mark.svg', false);
-        $response->assertSee('/landing/chatduka/mark.png', false);
+        $response->assertSee('/landing/mauzochat/android-chrome-192x192.png', false);
+        $response->assertSee('/landing/mauzochat/mark.svg', false);
+        $response->assertSee('/landing/mauzochat/mark.png', false);
         $response->assertDontSee('href="/favicon.ico"', false);
         $response->assertDontSee('href="/android-chrome-192x192.png"', false);
         $response->assertSee('id="collections"', false);

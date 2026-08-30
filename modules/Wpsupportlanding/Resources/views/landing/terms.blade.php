@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="index, follow">
-    <title>Terms of Service — {{ \Modules\Wpsupportlanding\Support\ChatDukaBrand::name() }}</title>
-    <meta name="description" content="Terms of Service for ChatDuka, the social commerce platform for WhatsApp.">
+    <title>Terms of Service — {{ \Modules\Wpsupportlanding\Support\MauzoChatBrand::name() }}</title>
+    <meta name="description" content="Terms of Service for MauzoChat, the social commerce platform for WhatsApp.">
     @include('wpsupportlanding::landing.partials.marketing_styles')
 </head>
 <body class="bg-paper text-ink min-h-screen">
@@ -35,9 +35,9 @@
         </div>
     </section>
 
-    <footer class="border-t border-white/10 py-8" style="background:#151D40;">
+    <footer class="border-t border-white/10 py-8" style="background:#0D1117;">
         <div class="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-            <p class="text-xs text-white/50">© {{ date('Y') }} {{ \Modules\Wpsupportlanding\Support\ChatDukaBrand::name() }}. All rights reserved.</p>
+            <p class="text-xs text-white/50">© {{ date('Y') }} {{ \Modules\Wpsupportlanding\Support\MauzoChatBrand::name() }}. All rights reserved.</p>
         </div>
     </footer>
 </body>
