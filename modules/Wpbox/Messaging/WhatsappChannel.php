@@ -5,6 +5,7 @@ namespace Modules\Wpbox\Messaging;
 use App\Enums\MessagingChannelType;
 use App\Models\Messaging\ChannelConnection;
 use App\Models\Messaging\Conversation;
+use App\Services\Messaging\ChannelConnectionService;
 use App\Services\Messaging\Contracts\MessagingChannel;
 use App\Services\Messaging\DTO\ChannelCapabilities;
 use App\Services\Messaging\DTO\ChannelHealth;
@@ -21,14 +22,29 @@ class WhatsappChannel implements MessagingChannel
 {
     use Whatsapp;
 
+    public function __construct(
+        private readonly ChannelConnectionService $connections,
+    ) {
+    }
+
     public function channel(): MessagingChannelType
     {
         return MessagingChannelType::Whatsapp;
     }
 
-    public function verifyWebhook(Request $request, ChannelConnection $connection): ?Response
+    public function verifyWebhook(Request $request, string $urlToken): ?Response
     {
         return null;
+    }
+
+    public function isWebhookAuthorized(Request $request, string $urlToken): bool
+    {
+        return $this->connections->isAuthorizedWebhookToken($urlToken, $this->channel());
+    }
+
+    public function resolveWebhookConnection(Request $request, string $urlToken): ?ChannelConnection
+    {
+        return $this->connections->findByWebhookToken($urlToken, $this->channel());
     }
 
     public function parseInbound(Request $request, ChannelConnection $connection): InboundBatch

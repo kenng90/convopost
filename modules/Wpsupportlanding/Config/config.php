@@ -3,7 +3,7 @@
 return [
     'name' => 'Wpsupportlanding',
     'brand' => [
-        'name' => 'MauzoChat',
-        'tagline' => 'Connect. Chat. Close More Sales.',
+        'name' => 'Unganisha',
+        'tagline' => 'Where conversations become commerce.',
     ],
 ];

@@ -5,6 +5,7 @@ namespace App\Services\Messaging;
 use App\Enums\MessagingChannelType;
 use App\Models\Company;
 use App\Models\Messaging\ChannelConnection;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class ChannelConnectionService
 {
@@ -15,6 +16,19 @@ class ChannelConnectionService
             ->where('webhook_token', $token)
             ->where('status', 'connected')
             ->first();
+    }
+
+    public function isAuthorizedWebhookToken(string $token, MessagingChannelType $channel): bool
+    {
+        if ($token === '') {
+            return false;
+        }
+
+        if ($this->findByWebhookToken($token, $channel)) {
+            return true;
+        }
+
+        return PersonalAccessToken::findToken($token) !== null;
     }
 
     public function findByExternalAccount(

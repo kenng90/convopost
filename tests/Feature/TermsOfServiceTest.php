@@ -12,7 +12,7 @@ class TermsOfServiceTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Terms of Service', false);
-        $response->assertSee('MauzoChat', false);
+        $response->assertSee('Unganisha', false);
         $response->assertDontSee('ConvoConnect', false);
         $response->assertSee('WhatsApp', false);
     }

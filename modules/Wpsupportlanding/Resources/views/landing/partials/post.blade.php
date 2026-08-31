@@ -24,7 +24,7 @@
     @endif
 
     @if($post->excerpt)
-        <p class="text-lg text-gray-600 mb-8 leading-relaxed border-l-2 pl-5" style="border-color:#28B463;">{{ $post->excerpt }}</p>
+        <p class="text-lg text-gray-600 mb-8 leading-relaxed border-l-2 pl-5" style="border-color:#0E8A7A;">{{ $post->excerpt }}</p>
     @endif
 
     <div class="blog-prose text-base">

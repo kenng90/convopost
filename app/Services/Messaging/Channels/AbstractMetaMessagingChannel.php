@@ -12,6 +12,7 @@ use App\Services\Messaging\DTO\InboundBatch;
 use App\Services\Messaging\DTO\MessageContent;
 use App\Services\Messaging\DTO\SendResult;
 use App\Services\Messaging\MetaMessagingParser;
+use App\Services\Messaging\MetaWebhookConnectionResolver;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
@@ -23,22 +24,38 @@ abstract class AbstractMetaMessagingChannel implements MessagingChannel
 
     public function __construct(
         protected readonly MetaMessagingParser $parser,
+        protected readonly MetaWebhookConnectionResolver $webhookResolver,
     ) {
     }
 
     abstract public function channel(): MessagingChannelType;
 
-    public function verifyWebhook(Request $request, ChannelConnection $connection): ?Response
+    public function verifyWebhook(Request $request, string $urlToken): ?Response
     {
         $mode = $request->query('hub_mode');
-        $token = $request->query('hub_verify_token');
+        $verifyToken = (string) $request->query('hub_verify_token', '');
         $challenge = $request->query('hub_challenge');
 
-        if ($mode === 'subscribe' && $token === $connection->webhook_token) {
+        $ok = $mode === 'subscribe'
+            && $challenge !== null
+            && $verifyToken !== ''
+            && $this->webhookResolver->isAuthorizedToken($verifyToken, $this->channel());
+
+        if ($ok) {
             return response($challenge, 200);
         }
 
         return null;
+    }
+
+    public function isWebhookAuthorized(Request $request, string $urlToken): bool
+    {
+        return $this->webhookResolver->isAuthorizedToken($urlToken, $this->channel());
+    }
+
+    public function resolveWebhookConnection(Request $request, string $urlToken): ?ChannelConnection
+    {
+        return $this->webhookResolver->resolve($request, $this->channel(), $urlToken);
     }
 
     public function parseInbound(Request $request, ChannelConnection $connection): InboundBatch

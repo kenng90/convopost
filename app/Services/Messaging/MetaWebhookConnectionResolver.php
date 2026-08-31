@@ -9,7 +9,6 @@ use App\Models\Messaging\ChannelConnection;
 use App\Services\WhatsApp\WebhookCompanyResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Laravel\Sanctum\PersonalAccessToken;
 
 class MetaWebhookConnectionResolver
 {
@@ -26,15 +25,7 @@ class MetaWebhookConnectionResolver
 
     public function isAuthorizedToken(string $token, MessagingChannelType $channel): bool
     {
-        if ($token === '') {
-            return false;
-        }
-
-        if ($this->connections->findByWebhookToken($token, $channel)) {
-            return true;
-        }
-
-        return PersonalAccessToken::findToken($token) !== null;
+        return $this->connections->isAuthorizedWebhookToken($token, $channel);
     }
 
     public function resolve(Request $request, MessagingChannelType $channel, string $urlToken): ?ChannelConnection

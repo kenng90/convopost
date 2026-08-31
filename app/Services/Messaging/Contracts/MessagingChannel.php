@@ -18,7 +18,11 @@ interface MessagingChannel
 {
     public function channel(): MessagingChannelType;
 
-    public function verifyWebhook(Request $request, ChannelConnection $connection): ?Response;
+    public function verifyWebhook(Request $request, string $urlToken): ?Response;
+
+    public function isWebhookAuthorized(Request $request, string $urlToken): bool;
+
+    public function resolveWebhookConnection(Request $request, string $urlToken): ?ChannelConnection;
 
     public function parseInbound(Request $request, ChannelConnection $connection): InboundBatch;
 

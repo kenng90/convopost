@@ -2,7 +2,7 @@
 
 **Last updated:** June 16, 2026
 
-MauzoChat ("**we**", "**us**", or "**our**") operates the MauzoChat social commerce platform for WhatsApp (the "**Service**"), available at our website and related applications. This Privacy Policy explains how we collect, use, disclose, and protect personal information when you visit our website, create an account, use the Service, or interact with us in other ways.
+Unganisha ("**we**", "**us**", or "**our**") operates the Unganisha social commerce platform for WhatsApp (the "**Service**"), available at our website and related applications. This Privacy Policy explains how we collect, use, disclose, and protect personal information when you visit our website, create an account, use the Service, or interact with us in other ways.
 
 Please read this policy carefully. By using the Service, you agree to the practices described here. If you do not agree, please do not use the Service.
 
@@ -12,11 +12,11 @@ Please read this policy carefully. By using the Service, you agree to the practi
 
 This policy applies to:
 
-- **Business users** — individuals and organizations that register for and use MauzoChat (account owners, administrators, agents, and staff).
+- **Business users** — individuals and organizations that register for and use Unganisha (account owners, administrators, agents, and staff).
 - **Website visitors** — people who browse our marketing site, blog, booking pages, or public shop pages.
 - **End customers** — individuals whose personal data is processed through the Service when our business users communicate with them via WhatsApp, SMS, email, or related channels.
 
-When our business users upload contacts, send messages, or collect orders and bookings through MauzoChat, those users are generally the **data controllers** for their end customers' information. MauzoChat acts as a **data processor** on their behalf, processing that data according to their instructions and our agreement with them. End customers should contact the relevant business directly for questions about how their data is used.
+When our business users upload contacts, send messages, or collect orders and bookings through Unganisha, those users are generally the **data controllers** for their end customers' information. Unganisha acts as a **data processor** on their behalf, processing that data according to their instructions and our agreement with them. End customers should contact the relevant business directly for questions about how their data is used.
 
 ---
 
@@ -33,7 +33,7 @@ When you register or use the Service, we may collect:
 
 ### 2.2 Information processed through the Service
 
-When you use MauzoChat to operate your WhatsApp business, we process data you and your customers generate, including:
+When you use Unganisha to operate your WhatsApp business, we process data you and your customers generate, including:
 
 - **Contact records** — names, phone numbers, email addresses, tags, custom fields, and conversation history.
 - **Messages and media** — WhatsApp messages, templates, images, documents, voice notes, call metadata, and internal agent notes.
@@ -92,7 +92,7 @@ Where applicable data protection law requires a legal basis, we rely on:
 
 ## 5. WhatsApp and Meta
 
-MauzoChat integrates with the **WhatsApp Business Platform** provided by Meta Platforms, Inc. When you use WhatsApp features:
+Unganisha integrates with the **WhatsApp Business Platform** provided by Meta Platforms, Inc. When you use WhatsApp features:
 
 - Your use of WhatsApp is also subject to [WhatsApp's Terms of Service](https://www.whatsapp.com/legal/terms-of-service) and [WhatsApp Business Terms](https://www.whatsapp.com/legal/business-terms).
 - Message content and metadata are transmitted through Meta's infrastructure.
@@ -119,7 +119,7 @@ We require processors to handle personal data only as instructed and to apply ap
 
 ## 7. International data transfers
 
-MauzoChat may process and store information in countries other than where you live. Where required, we implement appropriate safeguards for cross-border transfers, such as standard contractual clauses or equivalent mechanisms.
+Unganisha may process and store information in countries other than where you live. Where required, we implement appropriate safeguards for cross-border transfers, such as standard contractual clauses or equivalent mechanisms.
 
 ---
 
@@ -179,7 +179,7 @@ The Service is not directed to children under 16 (or the minimum age required in
 
 ## 13. Business user responsibilities
 
-If you use MauzoChat to process personal data about your customers, you agree to:
+If you use Unganisha to process personal data about your customers, you agree to:
 
 - Provide a privacy notice to your customers that explains your data practices.
 - Obtain all required consents and permissions before contacting individuals via WhatsApp or other channels.
@@ -198,7 +198,7 @@ We may update this Privacy Policy from time to time. When we make material chang
 
 If you have questions about this Privacy Policy or our data practices, contact us at:
 
-**MauzoChat**  
+**Unganisha**  
 Email: [support@convoconnect.tech](mailto:support@convoconnect.tech)  
 Website: [{{APP_URL}}]({{APP_URL}})
 

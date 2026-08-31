@@ -1,1 +1,1 @@
-@include('wpsupportlanding::landing.partials.mauzochat.styles')
+@include('wpsupportlanding::landing.partials.unganisha.styles')

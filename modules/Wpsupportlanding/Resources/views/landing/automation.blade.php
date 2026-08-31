@@ -4,14 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 @php
-  $siteName = \Modules\Wpsupportlanding\Support\MauzoChatBrand::name();
+  $siteName = \Modules\Wpsupportlanding\Support\UnganishaBrand::name();
   $practiceName = $siteName.' Automation';
   $metaTitle = $practiceName.' — Custom AI operating systems for real workflows';
   $metaDescription = 'We map how your business already works, connect the tools you use, and deploy an AI layer that prepares tasks, follow-ups, and decisions for your team to approve. Deploy first, then productize what repeats. Separate from '.$siteName.' WhatsApp SaaS.';
-  $supportEmail = \Modules\Wpsupportlanding\Support\MauzoChatBrand::supportEmail();
+  $supportEmail = \Modules\Wpsupportlanding\Support\UnganishaBrand::supportEmail();
   $bookHref = 'mailto:'.$supportEmail.'?subject='.rawurlencode('Deployment call');
 @endphp
-@include('wpsupportlanding::landing.partials.mauzochat.favicon')
+@include('wpsupportlanding::landing.partials.unganisha.favicon')
 <title>{{ $metaTitle }}</title>
 <meta name="title" content="{{ $metaTitle }}">
 <meta name="description" content="{{ $metaDescription }}" />
@@ -154,7 +154,7 @@ tailwind.config = {
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6 flex items-center justify-between h-full">
     <a href="{{ route('services.automation') }}" class="flex items-center gap-2.5 flex-shrink-0">
       <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#0d9488,#0a1628);">
-        <img src="{{ \Modules\Wpsupportlanding\Support\MauzoChatBrand::markUrl() }}" alt="{{ $practiceName }}" class="w-full h-full object-contain p-1" />
+        <img src="{{ \Modules\Wpsupportlanding\Support\UnganishaBrand::markUrl() }}" alt="{{ $practiceName }}" class="w-full h-full object-contain p-1" />
       </div>
       <span class="font-display font-800 text-lg tracking-tight text-ink">{{ $practiceName }}</span>
     </a>

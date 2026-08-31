@@ -1,6 +1,6 @@
 {
-    "name": "MauzoChat",
-    "short_name": "MauzoChat",
+    "name": "Unganisha",
+    "short_name": "Unganisha",
     "icons": [
         {
             "src": "/android-chrome-192x192.png",
@@ -13,7 +13,7 @@
             "type": "image/png"
         }
     ],
-    "theme_color": "#0D1117",
+    "theme_color": "#12263A",
     "background_color": "#FFFFFF",
     "display": "standalone"
 }

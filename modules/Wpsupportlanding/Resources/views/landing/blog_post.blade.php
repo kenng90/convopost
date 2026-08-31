@@ -49,10 +49,10 @@
         </script>
     @endif
 
-    <footer class="border-t border-white/10 py-10" style="background:#0D1117;">
+    <footer class="border-t border-white/10 py-10" style="background:#12263A;">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/60">
-            <p>© {{ date('Y') }} {{ \Modules\Wpsupportlanding\Support\MauzoChatBrand::name() }}. {{ __('All rights reserved.') }}</p>
-            <a href="{{ url('/blog') }}" class="hover:text-white" style="color:#28B463;">{{ __('More articles') }}</a>
+            <p>© {{ date('Y') }} {{ \Modules\Wpsupportlanding\Support\UnganishaBrand::name() }}. {{ __('All rights reserved.') }}</p>
+            <a href="{{ url('/blog') }}" class="hover:text-white" style="color:#0E8A7A;">{{ __('More articles') }}</a>
         </div>
     </footer>
 </body>

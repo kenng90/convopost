@@ -2,7 +2,7 @@
 <div class="infographic-panel relative overflow-hidden rounded-3xl border border-gray-200 p-5 sm:p-7" style="background:linear-gradient(180deg,#FFF8EC 0%,#ffffff 100%);">
   <div class="flex items-center justify-between mb-5">
     <div>
-      <p class="text-[11px] font-semibold uppercase tracking-[0.18em] mb-1" style="color:#28B463;">Journey Pipelines</p>
+      <p class="text-[11px] font-semibold uppercase tracking-[0.18em] mb-1" style="color:#0E8A7A;">Journey Pipelines</p>
       <p class="text-base text-gray-600">Stage-triggered WhatsApp campaigns on every move</p>
     </div>
     <span class="badge text-xs">Live board</span>
@@ -15,17 +15,17 @@
         [30, 'Lead', '12', '#64748b', [['Amina K.', 'New inquiry'], ['Brian O.', 'Catalog ask']]],
         [200, 'Qualified', '8', '#3b82f6', [['Faith W.', 'Budget ok'], ['James M.', 'Demo done']]],
         [370, 'Proposal', '5', '#d97706', [['Grace N.', 'Quote sent']]],
-        [540, 'Won', '3', '#28B463', [['Leo T.', 'Paid ✓']]],
+        [540, 'Won', '3', '#0E8A7A', [['Leo T.', 'Paid ✓']]],
       ];
     @endphp
 
     {{-- Flow arrows between columns --}}
-    <path d="M175 40 H195" stroke="rgba(40,180,99,0.4)" stroke-width="2" marker-end="url(#jpArrow)"/>
-    <path d="M345 40 H365" stroke="rgba(40,180,99,0.4)" stroke-width="2"/>
-    <path d="M515 40 H535" stroke="rgba(40,180,99,0.4)" stroke-width="2"/>
+    <path d="M175 40 H195" stroke="rgba(14,138,122,0.4)" stroke-width="2" marker-end="url(#jpArrow)"/>
+    <path d="M345 40 H365" stroke="rgba(14,138,122,0.4)" stroke-width="2"/>
+    <path d="M515 40 H535" stroke="rgba(14,138,122,0.4)" stroke-width="2"/>
     <defs>
       <marker id="jpArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-        <path d="M0,0 L6,3 L0,6 Z" fill="#28B463"/>
+        <path d="M0,0 L6,3 L0,6 Z" fill="#0E8A7A"/>
       </marker>
     </defs>
 
@@ -46,7 +46,7 @@
     @endforeach
 
     {{-- Campaign pulse under Won --}}
-    <rect x="540" y="200" width="150" height="32" rx="8" fill="rgba(40,180,99,0.1)" stroke="rgba(40,180,99,0.3)"/>
-    <text x="615" y="220" text-anchor="middle" fill="#28B463" font-size="10" font-weight="600" font-family="DM Sans,sans-serif">Campaign fired →</text>
+    <rect x="540" y="200" width="150" height="32" rx="8" fill="rgba(14,138,122,0.1)" stroke="rgba(14,138,122,0.3)"/>
+    <text x="615" y="220" text-anchor="middle" fill="#0E8A7A" font-size="10" font-weight="600" font-family="DM Sans,sans-serif">Campaign fired →</text>
   </svg>
 </div>

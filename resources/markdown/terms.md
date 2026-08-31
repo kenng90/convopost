@@ -2,7 +2,7 @@
 
 **Last updated:** June 16, 2026
 
-These Terms of Service ("**Terms**") govern your access to and use of the MauzoChat social commerce platform for WhatsApp (the "**Service**"), operated by MauzoChat ("**we**", "**us**", or "**our**"), available at [{{APP_URL}}]({{APP_URL}}) and related applications.
+These Terms of Service ("**Terms**") govern your access to and use of the Unganisha social commerce platform for WhatsApp (the "**Service**"), operated by Unganisha ("**we**", "**us**", or "**our**"), available at [{{APP_URL}}]({{APP_URL}}) and related applications.
 
 By creating an account, accessing, or using the Service, you agree to these Terms and our [Privacy Policy]({{APP_URL}}/privacy-policy). If you are using the Service on behalf of an organization, you represent that you have authority to bind that organization. If you do not agree, do not use the Service.
 
@@ -10,7 +10,7 @@ By creating an account, accessing, or using the Service, you agree to these Term
 
 ## 1. The Service
 
-MauzoChat provides a cloud-based platform that enables businesses to:
+Unganisha provides a cloud-based platform that enables businesses to:
 
 - Operate a shared WhatsApp team inbox and manage customer conversations.
 - Send campaigns and broadcasts using approved WhatsApp message templates.
@@ -112,7 +112,7 @@ Do not upload sensitive personal data (such as health records, government IDs, o
 
 ## 6. Intellectual property
 
-The Service, including software, design, documentation, and branding, is owned by MauzoChat and its licensors. These Terms do not grant you any rights to our trademarks or branding except as needed to use the Service.
+The Service, including software, design, documentation, and branding, is owned by Unganisha and its licensors. These Terms do not grant you any rights to our trademarks or branding except as needed to use the Service.
 
 Feedback you provide may be used by us without restriction or compensation.
 
@@ -148,7 +148,7 @@ To the fullest extent permitted by law, we disclaim all warranties, express or i
 
 To the fullest extent permitted by law:
 
-- MauzoChat will not be liable for indirect, incidental, special, consequential, or punitive damages, or for lost profits, revenue, data, or goodwill.
+- Unganisha will not be liable for indirect, incidental, special, consequential, or punitive damages, or for lost profits, revenue, data, or goodwill.
 - Our total liability arising from or related to the Service in any twelve-month period will not exceed the greater of (a) amounts you paid us in that period or (b) one hundred US dollars (USD $100).
 
 Some jurisdictions do not allow certain limitations; in those cases, our liability is limited to the maximum extent permitted by law.
@@ -157,7 +157,7 @@ Some jurisdictions do not allow certain limitations; in those cases, our liabili
 
 ## 11. Indemnification
 
-You agree to indemnify and hold harmless MauzoChat, its affiliates, and their officers, directors, employees, and agents from claims, damages, losses, and expenses (including reasonable legal fees) arising from:
+You agree to indemnify and hold harmless Unganisha, its affiliates, and their officers, directors, employees, and agents from claims, damages, losses, and expenses (including reasonable legal fees) arising from:
 
 - Your use of the Service.
 - Your Content or messages sent through the Service.
@@ -190,7 +190,7 @@ We may update these Terms from time to time. Material changes will be posted on 
 
 ## 14. Governing law and disputes
 
-These Terms are governed by the laws of the jurisdiction in which MauzoChat is incorporated, without regard to conflict-of-law principles, unless mandatory local law requires otherwise.
+These Terms are governed by the laws of the jurisdiction in which Unganisha is incorporated, without regard to conflict-of-law principles, unless mandatory local law requires otherwise.
 
 Any dispute will be resolved in the courts of that jurisdiction, unless we agree to an alternative dispute resolution process in writing.
 
@@ -209,7 +209,7 @@ Any dispute will be resolved in the courts of that jurisdiction, unless we agree
 
 Questions about these Terms:
 
-**MauzoChat**  
+**Unganisha**  
 Email: [support@convoconnect.tech](mailto:support@convoconnect.tech)  
 Website: [{{APP_URL}}]({{APP_URL}})
 

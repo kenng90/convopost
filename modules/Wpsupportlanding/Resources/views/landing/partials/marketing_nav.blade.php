@@ -4,7 +4,7 @@
 <nav class="navbar-blur fixed top-0 left-0 right-0 z-50" style="height:72px;" x-data="{ mobileOpen: false }">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-full">
     <a href="{{ url('/') }}" class="flex items-center gap-2.5 flex-shrink-0">
-      @include('wpsupportlanding::landing.partials.mauzochat.logo', ['wordmarkClass' => 'font-display font-800 text-lg tracking-tight text-white'])
+      @include('wpsupportlanding::landing.partials.unganisha.logo', ['wordmarkClass' => 'font-display font-800 text-lg tracking-tight text-white'])
     </a>
 
     <div class="hidden lg:flex items-center gap-7">
@@ -12,14 +12,14 @@
       <a href="{{ url('/#pricing') }}" class="text-sm text-white/70 hover:text-white transition-colors">{{ __('Pricing') }}</a>
       <a href="{{ url('/#faq') }}" class="text-sm text-white/70 hover:text-white transition-colors">{{ __('FAQ') }}</a>
       @if($hasBlog ?? false)
-        <a href="{{ url('/blog') }}" class="text-sm font-medium" style="color:#28B463;">{{ __('Blog') }}</a>
+        <a href="{{ url('/blog') }}" class="text-sm font-medium" style="color:#0E8A7A;">{{ __('Blog') }}</a>
       @endif
     </div>
 
     <div class="hidden lg:flex items-center gap-3">
       <a href="{{ route('login') }}" class="text-sm text-white/80 hover:text-white transition-colors font-medium">{{ __('Sign In') }}</a>
       @if ($registrationEnabled)
-        <a href="{{ route('register') }}" class="text-sm font-semibold px-4 py-2 rounded-lg text-ink transition-all hover:opacity-90" style="background:#28B463;">{{ __('Get Started') }}</a>
+        <a href="{{ route('register') }}" class="text-sm font-semibold px-4 py-2 rounded-lg text-white transition-all hover:opacity-90" style="background:#0E8A7A;">{{ __('Get Started') }}</a>
       @endif
     </div>
 
@@ -29,17 +29,17 @@
     </button>
   </div>
 
-  <div x-show="mobileOpen" x-cloak class="lg:hidden border-t border-white/10 px-4 py-4 space-y-1" style="background:rgba(13,17,23,0.98);">
+  <div x-show="mobileOpen" x-cloak class="lg:hidden border-t border-white/10 px-4 py-4 space-y-1" style="background:rgba(18,38,58,0.98);">
     <a href="{{ url('/#features') }}" class="block py-2.5 text-sm text-white/80">{{ __('Features') }}</a>
     <a href="{{ url('/#pricing') }}" class="block py-2.5 text-sm text-white/80">{{ __('Pricing') }}</a>
     <a href="{{ url('/#faq') }}" class="block py-2.5 text-sm text-white/80">{{ __('FAQ') }}</a>
     @if($hasBlog ?? false)
-      <a href="{{ url('/blog') }}" class="block py-2.5 text-sm" style="color:#28B463;">{{ __('Blog') }}</a>
+      <a href="{{ url('/blog') }}" class="block py-2.5 text-sm" style="color:#0E8A7A;">{{ __('Blog') }}</a>
     @endif
     <div class="pt-3 flex flex-col gap-2">
       <a href="{{ route('login') }}" class="text-center py-2.5 text-sm text-white/80 border border-white/15 rounded-lg">{{ __('Sign In') }}</a>
       @if ($registrationEnabled)
-        <a href="{{ route('register') }}" class="text-center py-2.5 text-sm font-semibold text-ink rounded-lg" style="background:#28B463;">{{ __('Get Started') }}</a>
+        <a href="{{ route('register') }}" class="text-center py-2.5 text-sm font-semibold text-white rounded-lg" style="background:#0E8A7A;">{{ __('Get Started') }}</a>
       @endif
     </div>
   </div>
