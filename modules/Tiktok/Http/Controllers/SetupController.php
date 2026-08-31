@@ -9,11 +9,15 @@ use App\Services\Messaging\ChannelConnectionService;
 use App\Services\PlanEntitlementResolver;
 use App\Services\PlanUsageLimit;
 use Illuminate\Http\Request;
+use Modules\Tiktok\Messaging\TiktokWebhookSubscriber;
 
 class SetupController extends Controller
 {
-    public function index(PlanUsageLimit $planUsageLimit, PlanEntitlementResolver $entitlements)
-    {
+    public function index(
+        PlanUsageLimit $planUsageLimit,
+        PlanEntitlementResolver $entitlements,
+        TiktokWebhookSubscriber $webhooks,
+    ) {
         $user = auth()->user();
 
         if ($user->hasRole('admin') && ! session()->has('impersonate')) {
@@ -33,21 +37,23 @@ class SetupController extends Controller
             ->where('channel', MessagingChannelType::Tiktok->value)
             ->first();
 
-        $token = $connection?->webhook_token ?? auth()->user()->createToken('tiktok-webhook')->plainTextToken;
+        $companyToken = $connection?->webhook_token ?? auth()->user()->createToken('tiktok-webhook')->plainTextToken;
+        $callbackToken = $webhooks->resolveCallbackToken($companyToken);
 
         return view('tiktok::setup', [
             'company' => $company,
             'webhookUrl' => route('messaging.webhook.receive', [
                 'channel' => MessagingChannelType::Tiktok->value,
-                'token' => $token,
+                'token' => $callbackToken,
             ]),
-            'verifyToken' => $token,
+            'verifyToken' => $companyToken,
+            'callbackToken' => $callbackToken,
             'isConnected' => $company->getConfig('tiktok_connected', 'no') === 'yes',
             'connection' => $connection,
         ]);
     }
 
-    public function store(Request $request, ChannelConnectionService $connections)
+    public function store(Request $request, ChannelConnectionService $connections, TiktokWebhookSubscriber $webhooks)
     {
         $validated = $request->validate([
             'business_id' => 'required|string',
@@ -71,9 +77,23 @@ class SetupController extends Controller
         );
 
         $connections->storeWebhookToken($connection, $validated['webhook_token']);
+        $connection->refresh();
 
-        return redirect()
-            ->route('tiktok.setup')
+        $subscription = $webhooks->subscribeForConnection($connection);
+
+        $redirect = redirect()->route('tiktok.setup')
             ->withStatus(__('TikTok Business Messaging connected successfully.'));
+
+        if ($subscription['attempted'] && ! $subscription['ok']) {
+            return $redirect->with('warning', __('Connection saved, but TikTok webhook subscribe failed: :message', [
+                'message' => $subscription['message'],
+            ]));
+        }
+
+        if (! $subscription['attempted']) {
+            return $redirect->with('warning', $subscription['message']);
+        }
+
+        return $redirect;
     }
 }

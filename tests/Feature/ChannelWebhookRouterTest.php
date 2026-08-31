@@ -49,6 +49,15 @@ class ChannelWebhookRouterTest extends TestCase
             ->assertJson(['error' => 'Invalid token']);
     }
 
+    public function test_tiktok_platform_token_echoes_challenge(): void
+    {
+        config(['services.tiktok.webhook_token' => 'platform-tt-verify']);
+
+        $this->get('/webhook/messaging/tiktok/receive/platform-tt-verify?challenge=tt-platform-echo')
+            ->assertOk()
+            ->assertSee('tt-platform-echo');
+    }
+
     public function test_meta_adapter_verifies_hub_challenge_with_connection_token(): void
     {
         $company = Company::factory()->create();

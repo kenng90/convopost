@@ -3,15 +3,19 @@
 namespace Tests\Feature;
 
 use App\Enums\MessagingChannelType;
+use App\Http\Middleware\EnsureOwnerIsOnPROPlan;
+use App\Http\Middleware\EnsurePlanCapability;
 use App\Models\Company;
 use App\Models\Messaging\ChannelConnection;
 use App\Models\Messaging\ChannelIdentity;
 use App\Models\Messaging\Conversation;
+use App\Models\Plans;
 use App\Models\User;
 use App\Scopes\CompanyScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Modules\Wpbox\Http\Middleware\CheckPlan;
 use Modules\Wpbox\Models\Contact;
 use Modules\Wpbox\Models\Message;
 use Spatie\Permission\Models\Role;
@@ -237,6 +241,234 @@ class TiktokMessagingTest extends TestCase
         $this->actingAs($admin)
             ->get(route('tiktok.setup'))
             ->assertRedirect(route('whatsapp.setup'));
+    }
+
+    public function test_tiktok_setup_store_subscribes_webhooks_and_stores_expiry(): void
+    {
+        Http::fake([
+            '*/business/webhook/update/' => Http::response([
+                'code' => 0,
+                'message' => 'OK',
+                'data' => [],
+            ], 200),
+        ]);
+
+        config([
+            'services.tiktok.app_id' => 'tt-app-id',
+            'services.tiktok.app_secret' => 'tt-app-secret',
+        ]);
+
+        [$owner, $company] = $this->makeTiktokOwnerWithPlan();
+
+        $this->withoutMiddleware([
+            EnsureOwnerIsOnPROPlan::class,
+            EnsurePlanCapability::class,
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['company_id' => $company->id])
+            ->post(route('tiktok.setup.store'), [
+                'business_id' => 'biz-open-setup',
+                'access_token' => 'access-setup',
+                'refresh_token' => 'refresh-setup',
+                'webhook_token' => 'wh-setup-token',
+            ])
+            ->assertRedirect(route('tiktok.setup'))
+            ->assertSessionHas('status');
+
+        $connection = ChannelConnection::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->where('channel', MessagingChannelType::Tiktok->value)
+            ->first();
+
+        $this->assertNotNull($connection);
+        $this->assertSame('refresh-setup', $connection->credential('refresh_token'));
+        $this->assertNotEmpty($connection->credential('access_token_expires_at'));
+        $this->assertSame('wh-setup-token', $connection->webhook_token);
+
+        Http::assertSentCount(3);
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/business/webhook/update/')
+                && $request['app_id'] === 'tt-app-id'
+                && $request['secret'] === 'tt-app-secret'
+                && $request['event_type'] === 'im_receive_msg'
+                && str_contains((string) $request['callback_url'], '/webhook/messaging/tiktok/receive/wh-setup-token');
+        });
+    }
+
+    public function test_tiktok_refresh_tokens_command_renews_due_access_token(): void
+    {
+        config([
+            'services.tiktok.app_id' => 'tt-app-id',
+            'services.tiktok.app_secret' => 'tt-app-secret',
+        ]);
+
+        Http::fake([
+            '*/tt_user/oauth2/refresh_token/' => Http::response([
+                'code' => 0,
+                'message' => 'OK',
+                'data' => [
+                    'access_token' => 'new-access',
+                    'refresh_token' => 'new-refresh',
+                    'expires_in' => 86400,
+                ],
+            ], 200),
+        ]);
+
+        $company = Company::factory()->create();
+        $connection = ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_account_id' => 'biz-open-1',
+            'display_name' => 'TikTok',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'old-access',
+                'business_id' => 'biz-open-1',
+                'refresh_token' => 'old-refresh',
+                'access_token_expires_at' => now()->addHour()->toIso8601String(),
+            ],
+        ]);
+
+        $this->artisan('tiktok:refresh-tokens')
+            ->expectsOutputToContain('1 refreshed')
+            ->assertSuccessful();
+
+        $connection->refresh();
+        $this->assertSame('new-access', $connection->accessToken());
+        $this->assertSame('new-refresh', $connection->credential('refresh_token'));
+
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/tt_user/oauth2/refresh_token/')
+                && $request['refresh_token'] === 'old-refresh'
+                && $request['client_id'] === 'tt-app-id';
+        });
+    }
+
+    public function test_tiktok_refresh_tokens_skips_when_not_due(): void
+    {
+        config([
+            'services.tiktok.app_id' => 'tt-app-id',
+            'services.tiktok.app_secret' => 'tt-app-secret',
+        ]);
+
+        Http::fake();
+
+        $company = Company::factory()->create();
+        ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_account_id' => 'biz-open-1',
+            'display_name' => 'TikTok',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'still-valid',
+                'business_id' => 'biz-open-1',
+                'refresh_token' => 'refresh-keep',
+                'access_token_expires_at' => now()->addHours(20)->toIso8601String(),
+            ],
+        ]);
+
+        $this->artisan('tiktok:refresh-tokens')
+            ->expectsOutputToContain('1 skipped')
+            ->assertSuccessful();
+
+        Http::assertNothingSent();
+    }
+
+    public function test_tiktok_only_workspace_can_open_inbox_with_channel_tab(): void
+    {
+        [$owner, $company] = $this->makeTiktokOwnerWithPlan();
+
+        ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_account_id' => 'biz-open-1',
+            'display_name' => 'TikTok',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'tt-token',
+                'business_id' => 'biz-open-1',
+            ],
+        ]);
+
+        $this->withoutMiddleware([
+            EnsureOwnerIsOnPROPlan::class,
+            CheckPlan::class,
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['company_id' => $company->id])
+            ->get(route('chat.index'))
+            ->assertOk()
+            ->assertSee('tiktok', false);
+    }
+
+    public function test_platform_webhook_token_accepts_inbound_matched_by_business_id(): void
+    {
+        Event::fake();
+
+        config(['services.tiktok.webhook_token' => 'platform-tt-token']);
+
+        $company = Company::factory()->create();
+        ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_account_id' => 'biz-open-1',
+            'display_name' => 'TikTok',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'tt-token',
+                'business_id' => 'biz-open-1',
+            ],
+            'webhook_token' => 'company-specific-token',
+        ]);
+
+        $this->postJson('/webhook/messaging/tiktok/receive/platform-tt-token', [
+            'event' => 'im_receive_msg',
+            'user_openid' => 'biz-open-1',
+            'content' => json_encode([
+                'conversation_id' => 'cid-platform',
+                'message_id' => 'mid.TT_PLATFORM',
+                'sender' => 'user-open-77',
+                'sender_nickname' => 'Platform User',
+                'message_type' => 'TEXT',
+                'text' => ['body' => 'Via platform token'],
+            ]),
+        ])
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $this->assertDatabaseHas('messages', [
+            'company_id' => $company->id,
+            'fb_message_id' => 'mid.TT_PLATFORM',
+            'value' => 'Via platform token',
+        ]);
+    }
+
+    /**
+     * @return array{0: User, 1: Company}
+     */
+    private function makeTiktokOwnerWithPlan(): array
+    {
+        $plan = Plans::create([
+            'name' => 'Pro TikTok',
+            'limit_items' => 0,
+            'limit_orders' => 0,
+            'limit_views' => 0,
+            'price' => 149,
+            'period' => 1,
+            'description' => 'Pro',
+            'features' => 'Pro',
+        ]);
+        $plan->setConfig('capabilities', json_encode(['inbox', 'inbox_tiktok']));
+
+        $owner = User::factory()->create(['plan_id' => $plan->id]);
+        $owner->assignRole('owner');
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+        $owner->update(['company_id' => $company->id]);
+
+        return [$owner, $company];
     }
 
     /**

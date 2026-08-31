@@ -128,6 +128,7 @@ class Main extends Controller
             'whatsapp' => 'WhatsApp',
             'instagram' => 'Instagram',
             'messenger' => 'Messenger',
+            'tiktok' => 'TikTok',
         ], 'required' => false];
 
         //unset($fields[2]);

@@ -44,7 +44,7 @@ class ContactsImport implements ToModel, WithChunkReading, WithEvents, WithGroup
         if ($phone === null) {
             if (
                 $externalId !== ''
-                && in_array($channel, ['instagram', 'messenger'], true)
+                && in_array($channel, ['instagram', 'messenger', 'tiktok'], true)
             ) {
                 return $this->upsertByChannelIdentity($channel, $externalId, $name, $row);
             }
@@ -92,7 +92,7 @@ class ContactsImport implements ToModel, WithChunkReading, WithEvents, WithGroup
             }
         }
 
-        if ($externalId !== '' && in_array($channel, ['whatsapp', 'instagram', 'messenger'], true)) {
+        if ($externalId !== '' && in_array($channel, ['whatsapp', 'instagram', 'messenger', 'tiktok'], true)) {
             $this->linkChannelIdentity($contact, $channel, $externalId, $name);
         }
 

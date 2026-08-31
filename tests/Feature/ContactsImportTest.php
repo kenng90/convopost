@@ -136,4 +136,31 @@ class ContactsImportTest extends TestCase
         $this->assertNotNull($contact);
         $this->assertSame('+254798000000', $contact->phone);
     }
+
+    public function test_import_creates_tiktok_contact_without_phone(): void
+    {
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+        session(['company_id' => $company->id]);
+
+        $import = new ContactsImport;
+        $contact = $import->model([
+            'phone' => null,
+            'name' => 'TikTok Fan',
+            'channel' => 'tiktok',
+            'external_id' => 'user-open-99',
+        ]);
+
+        $this->assertNotNull($contact);
+        $this->assertSame('TikTok Fan', $contact->name);
+
+        $this->assertDatabaseHas('channel_identities', [
+            'company_id' => $company->id,
+            'contact_id' => $contact->id,
+            'channel' => 'tiktok',
+            'external_id' => 'user-open-99',
+        ]);
+    }
 }

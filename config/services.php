@@ -54,6 +54,9 @@ return [
 
     'tiktok' => [
         'base_url' => env('TIKTOK_BUSINESS_API_BASE', 'https://business-api.tiktok.com/open_api/v1.3'),
+        'app_id' => env('TIKTOK_APP_ID', ''),
+        'app_secret' => env('TIKTOK_APP_SECRET', ''),
+        'webhook_token' => env('TIKTOK_WEBHOOK_TOKEN', ''),
     ],
 
     'woocommerce_demo' => [

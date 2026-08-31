@@ -124,6 +124,37 @@ class ContactsOmnichannelAudienceTest extends TestCase
         $this->assertSame([$ig->id], $query->pluck('id')->all());
     }
 
+    public function test_has_channel_segment_filter_includes_tiktok(): void
+    {
+        $tiktok = Contact::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id,
+            'name' => 'TikTok',
+            'phone' => '',
+            'subscribed' => 1,
+        ]);
+
+        ChannelIdentity::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id,
+            'contact_id' => $tiktok->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_id' => 'tt-open-1',
+        ]);
+
+        Contact::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id,
+            'name' => 'WA',
+            'phone' => '+15550003334',
+            'subscribed' => 1,
+        ]);
+
+        $query = Contact::query()->where('company_id', $this->company->id);
+        app(CampaignAudienceResolver::class)->applySegmentFilters($query, [
+            ['field' => 'has_channel', 'operator' => 'equals', 'value' => 'tiktok'],
+        ]);
+
+        $this->assertSame([$tiktok->id], $query->pluck('id')->all());
+    }
+
     public function test_ensure_for_contact_refuses_synthetic_instagram_ids(): void
     {
         $contact = Contact::withoutGlobalScopes()->create([

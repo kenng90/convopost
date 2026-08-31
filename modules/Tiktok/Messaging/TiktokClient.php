@@ -54,6 +54,54 @@ class TiktokClient
     }
 
     /**
+     * Refresh a Business Account (or Marketing API) access token.
+     *
+     * @return array{ok: bool, data: array<string, mixed>, message: string, code: mixed}
+     */
+    public function refreshAccessToken(string $refreshToken): array
+    {
+        $appId = (string) config('services.tiktok.app_id', '');
+        $secret = (string) config('services.tiktok.app_secret', '');
+
+        $businessAccount = Http::asJson()->post($this->url('/tt_user/oauth2/refresh_token/'), [
+            'client_id' => $appId,
+            'client_secret' => $secret,
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $refreshToken,
+        ]);
+
+        $decoded = $this->decode($businessAccount);
+        if ($decoded['ok']) {
+            return $decoded;
+        }
+
+        $marketing = Http::asJson()->post($this->url('/oauth2/refresh_token/'), [
+            'app_id' => $appId,
+            'secret' => $secret,
+            'refresh_token' => $refreshToken,
+        ]);
+
+        return $this->decode($marketing);
+    }
+
+    /**
+     * Register or update the app-level Webhooks API callback for a Business Messaging event.
+     *
+     * @return array{ok: bool, data: array<string, mixed>, message: string, code: mixed}
+     */
+    public function updateWebhook(string $eventType, string $callbackUrl): array
+    {
+        $response = Http::asJson()->post($this->url('/business/webhook/update/'), [
+            'app_id' => (string) config('services.tiktok.app_id', ''),
+            'secret' => (string) config('services.tiktok.app_secret', ''),
+            'event_type' => $eventType,
+            'callback_url' => $callbackUrl,
+        ]);
+
+        return $this->decode($response);
+    }
+
+    /**
      * @return array<string, string>
      */
     private function headers(string $accessToken): array

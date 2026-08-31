@@ -27,7 +27,7 @@
             "key": "tiktok_access_token",
             "ftype": "input",
             "value": "",
-            "help": "TikTok Business API access token (refresh in Phase 3)"
+            "help": "TikTok Business API access token (~24h; refresh job renews it when a refresh token is stored)"
         }
     ],
     "ownermenus": [

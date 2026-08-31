@@ -125,10 +125,21 @@ class ChannelConnectionService
         string $accessToken,
         array $extra = [],
     ): ChannelConnection {
-        $credentials = array_merge([
-            'access_token' => $accessToken,
-            'business_id' => $businessId,
-        ], $extra);
+        $existing = ChannelConnection::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->where('channel', MessagingChannelType::Tiktok->value)
+            ->where('external_account_id', $businessId)
+            ->first();
+
+        $credentials = array_merge(
+            $existing?->credentials ?? [],
+            [
+                'access_token' => $accessToken,
+                'business_id' => $businessId,
+                'access_token_expires_at' => now()->addHours(23)->toIso8601String(),
+            ],
+            array_filter($extra, fn ($value) => $value !== null && $value !== ''),
+        );
 
         $connection = ChannelConnection::withoutGlobalScopes()->updateOrCreate(
             [

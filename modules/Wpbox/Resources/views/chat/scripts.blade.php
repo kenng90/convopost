@@ -607,6 +607,7 @@
                     whatsapp: '{{ __('WhatsApp') }}',
                     instagram: '{{ __('Instagram') }}',
                     messenger: '{{ __('Messenger') }}',
+                    tiktok: '{{ __('TikTok') }}',
                 };
                 return labels[channel] || channel;
             },
@@ -615,6 +616,7 @@
                     instagram: 'badge-danger',
                     messenger: 'badge-primary',
                     whatsapp: 'badge-success',
+                    tiktok: 'badge-dark',
                 };
                 return classes[channel] || 'badge-secondary';
             },

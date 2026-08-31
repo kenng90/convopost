@@ -46,6 +46,7 @@ class ChatController extends Controller
             ->whereIn('channel', [
                 MessagingChannelType::Instagram->value,
                 MessagingChannelType::Messenger->value,
+                MessagingChannelType::Tiktok->value,
             ])
             ->exists();
 
@@ -606,6 +607,18 @@ class ChatController extends Controller
 
             if ($hasMessenger) {
                 $channels[] = ['value' => MessagingChannelType::Messenger->value, 'label' => __('Messenger')];
+            }
+        }
+
+        if ($entitlements->userHasCapability($user, 'inbox_tiktok')) {
+            $hasTiktok = ChannelConnection::withoutGlobalScopes()
+                ->where('company_id', $company->id)
+                ->where('channel', MessagingChannelType::Tiktok->value)
+                ->where('status', 'connected')
+                ->exists();
+
+            if ($hasTiktok) {
+                $channels[] = ['value' => MessagingChannelType::Tiktok->value, 'label' => __('TikTok')];
             }
         }
 

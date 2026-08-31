@@ -48,6 +48,13 @@ class TiktokChannel implements MessagingChannel
 
     public function isWebhookAuthorized(Request $request, string $urlToken): bool
     {
+        $platformToken = (string) config('services.tiktok.webhook_token', '');
+        if ($platformToken !== ''
+            && strlen($platformToken) === strlen($urlToken)
+            && hash_equals($platformToken, $urlToken)) {
+            return true;
+        }
+
         return $this->connections->isAuthorizedWebhookToken($urlToken, $this->channel());
     }
 

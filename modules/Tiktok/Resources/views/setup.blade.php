@@ -30,9 +30,9 @@
                         <strong>{{ __('Open Beta and regional limits') }}</strong>
                         <p class="mb-2 mt-2">{{ __('TikTok Business Messaging is in Open Beta. Inbound DMs via API are not available for users in the EEA, UK, or Switzerland.') }}</p>
                         <ol class="mb-0 pl-3">
-                            <li>{{ __('Paste this webhook URL into TikTok Business Messaging Webhooks (callback URL).') }}</li>
+                            <li>{{ __('Paste this webhook URL into TikTok Business Messaging Webhooks (callback URL), or save below to subscribe automatically when TIKTOK_APP_ID and TIKTOK_APP_SECRET are set.') }}</li>
                             <li>{{ __('Replies are limited to 48 hours after the customer’s last message, with a maximum of 10 consecutive outbound messages.') }}</li>
-                            <li>{{ __('Access tokens expire in about 24 hours. A refresh job ships in a later phase — reconnect if send starts failing.') }}</li>
+                            <li>{{ __('Access tokens expire in about 24 hours. Provide a refresh token so the hourly tiktok:refresh-tokens job can renew them.') }}</li>
                         </ol>
                     </div>
 
@@ -48,7 +48,7 @@
 
                         <div class="form-group">
                             <label>{{ __('Webhook token') }}</label>
-                            <input type="text" class="form-control" readonly value="{{ $verifyToken }}">
+                            <input type="text" class="form-control" readonly value="{{ $callbackToken }}">
                         </div>
 
                         <div class="form-group">
@@ -70,7 +70,7 @@
                         <div class="form-group">
                             <label for="refresh_token">{{ __('Refresh token') }} ({{ __('optional') }})</label>
                             <input id="refresh_token" name="refresh_token" type="text" class="form-control" value="{{ old('refresh_token', '') }}">
-                            <small class="text-muted">{{ __('Stored for a later token-refresh job. Not required to connect.') }}</small>
+                            <small class="text-muted">{{ __('Stored so the hourly refresh job can renew the ~24h access token. Required for unattended send.') }}</small>
                         </div>
 
                         <button type="submit" class="btn btn-primary">{{ __('Save connection') }}</button>

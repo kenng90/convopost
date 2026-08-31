@@ -133,6 +133,7 @@ class CampaignAudienceResolver
         if (in_array($channel, [
             MessagingChannelType::Instagram->value,
             MessagingChannelType::Messenger->value,
+            MessagingChannelType::Tiktok->value,
         ], true)) {
             $query->whereHas('channelIdentities', function (Builder $identity) use ($channel) {
                 $identity->where('channel', $channel);

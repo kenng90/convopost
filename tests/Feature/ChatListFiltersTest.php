@@ -306,6 +306,38 @@ class ChatListFiltersTest extends TestCase
         $this->assertSame('messenger', $messengerFiltered->json('data.0.channel'));
     }
 
+    public function test_chatlist_tiktok_channel_includes_tiktok_identities(): void
+    {
+        $whatsapp = $this->makeContact([
+            'name' => 'WA Legacy',
+            'phone' => '254700000301',
+        ]);
+
+        $tiktok = $this->makeContact([
+            'name' => 'TikTok User',
+            'phone' => '',
+        ]);
+
+        ChannelIdentity::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id,
+            'contact_id' => $tiktok->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_id' => 'tt-user-301',
+            'display_name' => 'TikTok User',
+        ]);
+
+        $response = $this->actingAs($this->owner)
+            ->withoutMiddleware()
+            ->withSession(['company_id' => $this->company->id])
+            ->getJson('/api/wpbox/chats/none/1/?filter=open&channel=tiktok');
+
+        $response->assertOk();
+        $ids = collect($response->json('data'))->pluck('id')->all();
+        $this->assertContains($tiktok->id, $ids);
+        $this->assertNotContains($whatsapp->id, $ids);
+        $this->assertSame('tiktok', $response->json('data.0.channel'));
+    }
+
     public function test_default_chatlist_excludes_comment_only_threads(): void
     {
         $whatsapp = $this->makeContact([
