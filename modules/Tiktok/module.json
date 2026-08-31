@@ -1,0 +1,42 @@
+{
+    "alias": "tiktok",
+    "version": "1.0",
+    "description": "TikTok Business Messaging inbox channel",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "nameSpace": "Modules\\Tiktok",
+    "providers": [
+        "Modules\\Tiktok\\Providers\\Main"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": ["wpbox"],
+    "vendor_fields": [
+        {
+            "separator": "TikTok Business Messaging",
+            "title": "TikTok Business Account ID",
+            "key": "tiktok_business_id",
+            "ftype": "input",
+            "icon": "",
+            "value": "",
+            "help": "Business Account open_id / business_id from TikTok Business API"
+        },
+        {
+            "title": "Access token",
+            "key": "tiktok_access_token",
+            "ftype": "input",
+            "value": "",
+            "help": "TikTok Business API access token (refresh in Phase 3)"
+        }
+    ],
+    "ownermenus": [
+        {
+            "name": "TikTok setup",
+            "icon": "ni ni-button-play text-dark",
+            "route": "tiktok.setup",
+            "onlyin": "wpbox",
+            "priority": 104
+        }
+    ]
+}

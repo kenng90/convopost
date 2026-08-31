@@ -141,6 +141,11 @@ class ConversationService
     {
         $metadata = $conversation->metadata ?? [];
 
+        $threadId = (string) ($inbound->context['external_thread_id'] ?? '');
+        if ($threadId !== '') {
+            $conversation->external_thread_id = $threadId;
+        }
+
         if ($inbound->isComment()) {
             $commentId = (string) ($inbound->context['comment_id'] ?? '');
             $permalink = (string) ($inbound->context['permalink'] ?? '');

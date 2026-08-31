@@ -29,23 +29,24 @@ class ChannelWebhookRouterTest extends TestCase
             ->assertJson(['error' => 'Unknown channel']);
     }
 
-    public function test_unregistered_tiktok_channel_returns_404(): void
+    public function test_tiktok_does_not_use_meta_hub_verify(): void
     {
-        $this->assertSame('tiktok', MessagingChannelType::Tiktok->value);
-
-        $this->get('/webhook/messaging/tiktok/receive/some-token?'.http_build_query([
+        $this->get('/webhook/messaging/tiktok/receive/not-a-real-token?'.http_build_query([
             'hub_mode' => 'subscribe',
-            'hub_verify_token' => 'some-token',
+            'hub_verify_token' => 'not-a-real-token',
             'hub_challenge' => 'should-not-echo',
         ]))
-            ->assertNotFound()
-            ->assertJson(['error' => 'Unknown channel']);
+            ->assertForbidden()
+            ->assertDontSee('should-not-echo');
+    }
 
-        $this->postJson('/webhook/messaging/tiktok/receive/some-token', [
+    public function test_tiktok_invalid_token_is_rejected(): void
+    {
+        $this->postJson('/webhook/messaging/tiktok/receive/wrong-token', [
             'event' => 'im_receive_msg',
         ])
-            ->assertNotFound()
-            ->assertJson(['error' => 'Unknown channel']);
+            ->assertForbidden()
+            ->assertJson(['error' => 'Invalid token']);
     }
 
     public function test_meta_adapter_verifies_hub_challenge_with_connection_token(): void

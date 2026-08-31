@@ -12,6 +12,7 @@ use App\Services\Messaging\OutboundMessageService;
 use Illuminate\Support\ServiceProvider;
 use Modules\Instagram\Messaging\InstagramChannel;
 use Modules\Messenger\Messaging\MessengerChannel;
+use Modules\Tiktok\Messaging\TiktokChannel;
 use Modules\Wpbox\Messaging\WhatsappChannel;
 
 class MessagingServiceProvider extends ServiceProvider
@@ -23,6 +24,7 @@ class MessagingServiceProvider extends ServiceProvider
             $registry->register($app->make(WhatsappChannel::class));
             $registry->register($app->make(InstagramChannel::class));
             $registry->register($app->make(MessengerChannel::class));
+            $registry->register($app->make(TiktokChannel::class));
 
             return $registry;
         });

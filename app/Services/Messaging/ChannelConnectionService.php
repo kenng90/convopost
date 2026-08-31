@@ -119,6 +119,37 @@ class ChannelConnectionService
         return $connection;
     }
 
+    public function upsertTiktokConnection(
+        Company $company,
+        string $businessId,
+        string $accessToken,
+        array $extra = [],
+    ): ChannelConnection {
+        $credentials = array_merge([
+            'access_token' => $accessToken,
+            'business_id' => $businessId,
+        ], $extra);
+
+        $connection = ChannelConnection::withoutGlobalScopes()->updateOrCreate(
+            [
+                'company_id' => $company->id,
+                'channel' => MessagingChannelType::Tiktok->value,
+                'external_account_id' => $businessId,
+            ],
+            [
+                'display_name' => MessagingChannelType::Tiktok->label(),
+                'status' => 'connected',
+                'credentials' => $credentials,
+                'capabilities' => ['text', 'image'],
+            ],
+        );
+
+        $company->setConfig('tiktok_connected', 'yes');
+        $company->setConfig('tiktok_business_id', $businessId);
+
+        return $connection;
+    }
+
     public function storeWebhookToken(ChannelConnection $connection, string $plainToken): void
     {
         $connection->update([
