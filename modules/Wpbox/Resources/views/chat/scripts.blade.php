@@ -738,11 +738,14 @@
                     }
                 }
 
+                var isTiktok = contact && contact.channel === 'tiktok';
                 var expiredText = contact && contact.channel && contact.channel !== 'whatsapp'
                     ? "{{ __('Messaging window expired')}}"
                     : "{{ __('You can reply only with template')}}!";
                 var missingText = contact && contact.channel && contact.channel !== 'whatsapp'
-                    ? "{{ __('Reply within the 24-hour messaging window')}}"
+                    ? (isTiktok
+                        ? "{{ __('Reply within the 48-hour messaging window')}}"
+                        : "{{ __('Reply within the 24-hour messaging window')}}")
                     : "{{ __('You can reply only with template')}}!";
 
                 var expiresAt=parseInboxDate(contact && contact.service_window_expires_at);
@@ -755,7 +758,8 @@
                         customerRepliedAt=latestInboundMessageAt(contact);
                     }
                     if(customerRepliedAt){
-                        expiresAt=customerRepliedAt.clone().add(24, 'hours');
+                        var windowHours = (contact && contact.channel === 'tiktok') ? 48 : 24;
+                        expiresAt=customerRepliedAt.clone().add(windowHours, 'hours');
                     }
                 }
 

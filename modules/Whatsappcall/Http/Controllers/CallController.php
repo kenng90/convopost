@@ -310,7 +310,7 @@ class CallController extends Controller
     }
 
     /**
-     * WhatsApp Calling only applies to WhatsApp contacts. Messenger/Instagram
+     * WhatsApp Calling only applies to WhatsApp contacts. Messenger/Instagram/TikTok
      * identities must not hit Graph call_permissions (empty wa_id / PSIDs).
      */
     protected function contactIsNotWhatsappCallable(Contact $contact): bool

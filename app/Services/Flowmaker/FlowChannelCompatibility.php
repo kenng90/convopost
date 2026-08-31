@@ -41,6 +41,7 @@ class FlowChannelCompatibility
         'whatsapp',
         'instagram',
         'messenger',
+        'tiktok',
     ];
 
     /**
@@ -62,7 +63,7 @@ class FlowChannelCompatibility
 
             if (in_array($type, self::WHATSAPP_ONLY_TYPES, true)) {
                 $whatsappOnly[] = ['id' => $id, 'type' => $type];
-                $warnings[] = "Node [{$id}] ({$type}) is WhatsApp-only — Instagram/Messenger will skip it or use a text fallback.";
+                $warnings[] = "Node [{$id}] ({$type}) is WhatsApp-only — Instagram/Messenger/TikTok will skip it or use a text fallback.";
             }
         }
 
@@ -77,7 +78,7 @@ class FlowChannelCompatibility
             ));
 
             if ($nonWhatsapp !== []) {
-                $warnings[] = 'This flow includes WhatsApp-only nodes but lists non-WhatsApp channels ('.implode(', ', $nonWhatsapp).'). Those steps will not run natively on Instagram/Messenger.';
+                $warnings[] = 'This flow includes WhatsApp-only nodes but lists non-WhatsApp channels ('.implode(', ', $nonWhatsapp).'). Those steps will not run natively on Instagram/Messenger/TikTok.';
             }
         }
 

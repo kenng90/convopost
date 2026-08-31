@@ -9,6 +9,7 @@ use App\Models\Messaging\ChannelIdentity;
 use App\Models\Messaging\Conversation;
 use App\Models\User;
 use App\Scopes\CompanyScope;
+use App\Services\Flowmaker\FlowChannelCompatibility;
 use App\Services\Flowmaker\FlowHealthValidator;
 use App\Services\Flowmaker\FlowOutboundService;
 use App\Services\Messaging\DTO\MessageContent;
@@ -388,6 +389,198 @@ class FlowmakerOmnichannelTest extends TestCase
     {
         $this->assertTrue((new FlowChannelCompatibility)->isWhatsappOnlyType('whatsapp_flow'));
         $this->assertFalse((new FlowChannelCompatibility)->isWhatsappOnlyType('message'));
+        $this->assertContains('tiktok', FlowChannelCompatibility::SUPPORTED_FLOW_CHANNELS);
+    }
+
+    public function test_tiktok_contact_is_created_with_ai_bot_enabled(): void
+    {
+        Event::fake([ContactReplies::class]);
+
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+
+        $webhookToken = 'tt-bot-enable-token';
+        ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_account_id' => 'biz-open-flow',
+            'display_name' => 'TikTok',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'tt-token',
+                'business_id' => 'biz-open-flow',
+            ],
+            'webhook_token' => $webhookToken,
+        ]);
+
+        $this->postJson('/webhook/messaging/tiktok/receive/'.$webhookToken, [
+            'event' => 'im_receive_msg',
+            'user_openid' => 'biz-open-flow',
+            'content' => json_encode([
+                'conversation_id' => 'cid-flow-1',
+                'message_id' => 'mid.TT_BOT_ENABLE',
+                'sender' => 'user-open-flow',
+                'sender_nickname' => 'TikTok User',
+                'message_type' => 'TEXT',
+                'text' => ['body' => 'hi'],
+            ]),
+        ])->assertOk();
+
+        $contact = Contact::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->first();
+
+        $this->assertNotNull($contact);
+        $this->assertTrue((bool) $contact->enabled_ai_bot);
+    }
+
+    public function test_tiktok_inbound_dispatches_flowmaker_job(): void
+    {
+        Queue::fake();
+
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+        $owner->update(['company_id' => $company->id]);
+
+        Flow::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'name' => 'TikTok Omni Flow',
+            'is_active' => true,
+            'flow_data' => json_encode([
+                'nodes' => [
+                    [
+                        'id' => 'keyword_trigger-1',
+                        'type' => 'keyword_trigger',
+                        'data' => [
+                            'settings' => [
+                                'keywords' => [
+                                    ['id' => 'kw1', 'value' => 'hello', 'matchType' => 'contains'],
+                                ],
+                            ],
+                        ],
+                    ],
+                    [
+                        'id' => 'message-1',
+                        'type' => 'message',
+                        'data' => ['settings' => ['message' => 'Welcome']],
+                    ],
+                ],
+                'edges' => [
+                    [
+                        'id' => 'e1',
+                        'source' => 'keyword_trigger-1',
+                        'target' => 'message-1',
+                        'sourceHandle' => 'keyword-kw1',
+                    ],
+                ],
+            ]),
+        ]);
+
+        $webhookToken = 'tt-flow-dispatch-token';
+        ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_account_id' => 'biz-open-flow-2',
+            'display_name' => 'TikTok',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'tt-token',
+                'business_id' => 'biz-open-flow-2',
+            ],
+            'webhook_token' => $webhookToken,
+        ]);
+
+        $this->postJson('/webhook/messaging/tiktok/receive/'.$webhookToken, [
+            'event' => 'im_receive_msg',
+            'user_openid' => 'biz-open-flow-2',
+            'content' => json_encode([
+                'conversation_id' => 'cid-flow-2',
+                'message_id' => 'mid.TT_FLOW_DISPATCH',
+                'sender' => 'user-open-flow-2',
+                'sender_nickname' => 'TikTok User',
+                'message_type' => 'TEXT',
+                'text' => ['body' => 'hello there'],
+            ]),
+        ])->assertOk();
+
+        Queue::assertPushed(ProcessFlowMessage::class);
+    }
+
+    public function test_tiktok_choices_send_numbered_text_not_quick_replies(): void
+    {
+        Http::fake([
+            'business-api.tiktok.com/*' => Http::response([
+                'code' => 0,
+                'message' => 'ok',
+                'data' => ['message' => ['message_id' => 'mid.TT_CHOICE_001']],
+            ], 200),
+        ]);
+
+        $owner = User::factory()->create();
+        $owner->assignRole('owner');
+        $company = Company::factory()->create(['user_id' => $owner->id]);
+
+        $contact = Contact::withoutGlobalScope(CompanyScope::class)->create([
+            'name' => 'TikTok User',
+            'phone' => '',
+            'company_id' => $company->id,
+            'has_chat' => true,
+            'enabled_ai_bot' => true,
+        ]);
+
+        $connection = ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_account_id' => 'biz-open-choices',
+            'display_name' => 'TikTok',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'tt-token',
+                'business_id' => 'biz-open-choices',
+            ],
+        ]);
+
+        Conversation::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'contact_id' => $contact->id,
+            'channel_connection_id' => $connection->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_participant_id' => 'user-open-choices',
+            'external_thread_id' => 'cid-choices',
+            'last_client_reply_at' => now(),
+        ]);
+
+        ChannelIdentity::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'contact_id' => $contact->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_id' => 'user-open-choices',
+        ]);
+
+        $sent = app(FlowOutboundService::class)->sendChoices(
+            $contact,
+            'Pick one',
+            [
+                ['id' => 'button-1', 'title' => 'Yes'],
+                ['id' => 'button-2', 'title' => 'No'],
+            ],
+        );
+
+        $this->assertNotNull($sent);
+        $this->assertSame(2, (int) $sent->status);
+        $this->assertStringContainsString('1. Yes', (string) $sent->value);
+        $this->assertStringContainsString('2. No', (string) $sent->value);
+
+        Http::assertSent(function ($request) {
+            $data = $request->data();
+
+            return str_contains($request->url(), '/business/message/send/')
+                && ($data['message_type'] ?? null) === 'TEXT'
+                && str_contains((string) data_get($data, 'text.body'), '1. Yes')
+                && ! isset($data['message']['quick_replies']);
+        });
     }
 
     public function test_messenger_successful_send_continues_flow_when_status_is_sent(): void

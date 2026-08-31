@@ -56,6 +56,10 @@ class FlowOutboundService
             return $this->sendWhatsappChoices($contact, $body, $choices, $header, $footer, $listButton);
         }
 
+        if ($channel === MessagingChannelType::Tiktok) {
+            return $this->sendNumberedChoiceList($contact, $body, $choices, $header, $footer);
+        }
+
         return $this->sendMetaChoices($contact, $body, $choices, $header, $footer);
     }
 
@@ -173,6 +177,22 @@ class FlowOutboundService
 
             return $this->sendMetaMessage($contact, MessageContent::textWithQuickReplies($text, $quickReplies));
         }
+
+        return $this->sendNumberedChoiceList($contact, $body, $choices, $header, $footer);
+    }
+
+    /**
+     * @param  array<int, array{id: string, title: string, description?: string}>  $choices
+     */
+    private function sendNumberedChoiceList(
+        Contact $contact,
+        string $body,
+        array $choices,
+        ?string $header,
+        ?string $footer,
+    ): ?Message {
+        $textParts = array_filter([$header, $body, $footer], fn ($part) => is_string($part) && trim($part) !== '');
+        $text = implode("\n\n", $textParts);
 
         $lines = [$text, ''];
         foreach ($choices as $index => $choice) {

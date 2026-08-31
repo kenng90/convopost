@@ -108,7 +108,7 @@ class Node
     }
 
     /**
-     * Skip WhatsApp-native nodes on Instagram/Messenger with an optional text fallback,
+     * Skip WhatsApp-native nodes on Instagram/Messenger/TikTok with an optional text fallback,
      * then continue via else / completed / first outgoing edge.
      *
      * @return array{success: bool}|null Null when the node should continue normally.

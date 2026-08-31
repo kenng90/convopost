@@ -3,6 +3,7 @@
 namespace Modules\Flowmaker\Listeners;
 
 use App\Models\Company;
+use App\Services\Flowmaker\FlowChannelCompatibility;
 use App\Services\Flowmaker\FlowDispatchService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -27,7 +28,7 @@ class RespondOnMessage
             }
 
             $channel = $message->channel ?? 'whatsapp';
-            if (! in_array($channel, ['whatsapp', 'instagram', 'messenger'], true)) {
+            if (! in_array($channel, FlowChannelCompatibility::SUPPORTED_FLOW_CHANNELS, true)) {
                 Log::debug('flowmaker.respond.skip_channel', [
                     'channel' => $channel,
                     'message_id' => $message->id,

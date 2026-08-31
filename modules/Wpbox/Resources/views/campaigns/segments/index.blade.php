@@ -40,6 +40,7 @@
                 <option value="whatsapp">{{ __('WhatsApp (or phone)') }}</option>
                 <option value="instagram">{{ __('Instagram') }}</option>
                 <option value="messenger">{{ __('Messenger') }}</option>
+                <option value="tiktok">{{ __('TikTok') }}</option>
               </select>
               <small class="text-muted">{{ __('For WhatsApp template campaigns, choose WhatsApp.') }}</small>
             </div>

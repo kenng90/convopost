@@ -81,6 +81,29 @@ class WhatsappCallPermissionStatusTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_permission_status_skips_graph_for_tiktok_contacts(): void
+    {
+        Http::fake();
+
+        $contact = $this->makeContact(['phone' => '']);
+
+        ChannelIdentity::withoutGlobalScopes()->create([
+            'company_id' => $this->company->id,
+            'contact_id' => $contact->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_id' => 'user-open-call',
+        ]);
+
+        $this->actingAs($this->owner)
+            ->withSession(['company_id' => $this->company->id])
+            ->getJson(route('whatsappcall.bic.permission_status', ['contact_id' => $contact->id]))
+            ->assertOk()
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('error_message', 'Not a WhatsApp contact');
+
+        Http::assertNothingSent();
+    }
+
     /**
      * @param  array<string, mixed>  $attributes
      */

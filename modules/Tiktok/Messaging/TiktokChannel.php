@@ -146,7 +146,7 @@ class TiktokChannel implements MessagingChannel
             media: true,
             templates: false,
             campaigns: false,
-            flows: false,
+            flows: true,
             requiresServiceWindow: true,
             serviceWindowHours: 48,
         );
