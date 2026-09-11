@@ -5,6 +5,7 @@ namespace Modules\Tiktok\Messaging;
 use App\Services\Messaging\DTO\InboundBatch;
 use App\Services\Messaging\DTO\InboundMessage;
 use App\Services\Messaging\DTO\MessageContent;
+use App\Services\Messaging\MetaCommentReply;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -12,17 +13,33 @@ class TiktokWebhookParser
 {
     private const RECEIVE_EVENT = 'im_receive_msg';
 
+    private const HIGH_INTENT_COMMENT_EVENT = 'im_receive_high_intent_comment';
+
+    private const ORGANIC_COMMENT_EVENTS = [
+        'comment.create',
+    ];
+
     private const STATUS_EVENTS = [
         'im_send_msg',
         'im_mark_read_msg',
+        'comment.delete',
+        'comment.reply.create',
     ];
 
     public function parse(Request $request): InboundBatch
     {
-        $event = (string) $request->input('event', '');
+        $event = (string) $request->input('event', $request->input('event_type', ''));
 
         if (in_array($event, self::STATUS_EVENTS, true)) {
             return new InboundBatch(isStatusUpdate: true);
+        }
+
+        $isHighIntent = $event === self::HIGH_INTENT_COMMENT_EVENT;
+        $isOrganicComment = in_array($event, self::ORGANIC_COMMENT_EVENTS, true)
+            || strcasecmp($event, 'COMMENT') === 0;
+
+        if ($isHighIntent || $isOrganicComment) {
+            return $this->parseComment($request, $isHighIntent);
         }
 
         if ($event !== self::RECEIVE_EVENT) {
@@ -75,6 +92,58 @@ class TiktokWebhookParser
         $decoded = json_decode($content, true);
 
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function parseComment(Request $request, bool $highIntent): InboundBatch
+    {
+        $content = $this->decodeContent($request->input('content'));
+        $commentId = (string) ($content['comment_id'] ?? '');
+        $senderId = (string) (
+            $content['unique_identifier']
+            ?? $content['sender']
+            ?? $content['user_id']
+            ?? $content['unique_id']
+            ?? ''
+        );
+        $videoId = (string) ($content['video_id'] ?? $content['item_id'] ?? '');
+
+        if ($commentId === '' || $senderId === '') {
+            return new InboundBatch;
+        }
+
+        $body = (string) (
+            data_get($content, 'text.body')
+            ?: data_get($content, 'text')
+            ?: data_get($content, 'comment_text')
+            ?: ''
+        );
+
+        $receivedAt = $this->timestampToCarbon(
+            $content['create_time'] ?? $content['timestamp'] ?? $request->input('create_time')
+        );
+
+        return new InboundBatch([
+            new InboundMessage(
+                externalMessageId: 'comment:'.$commentId,
+                externalParticipantId: $senderId,
+                participantName: isset($content['sender_nickname'])
+                    ? (string) $content['sender_nickname']
+                    : (isset($content['unique_identifier']) ? (string) $content['unique_identifier'] : null),
+                content: MessageContent::text($body !== '' ? $body : __('Comment')),
+                receivedAt: $receivedAt,
+                raw: $request->all(),
+                extra: MetaCommentReply::EXTRA_INBOUND,
+                context: [
+                    'source' => 'comment',
+                    'comment_id' => $commentId,
+                    'parent_comment_id' => $content['parent_comment_id'] ?? null,
+                    'post_id' => $videoId !== '' ? $videoId : null,
+                    'media_id' => $videoId !== '' ? $videoId : null,
+                    'high_intent' => $highIntent,
+                    'business_id' => (string) $request->input('user_openid', ''),
+                ],
+            ),
+        ]);
     }
 
     /**

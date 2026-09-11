@@ -150,7 +150,15 @@ class Conversation extends Model
         $alreadySentForThisComment = (bool) data_get($this->metadata, 'private_reply_sent', false)
             && (string) data_get($this->metadata, 'private_reply_comment_id', '') === $this->commentId();
 
-        return ! $alreadySentForThisComment && $this->isWithinCommentPrivateReplyWindow();
+        if ($alreadySentForThisComment || ! $this->isWithinCommentPrivateReplyWindow()) {
+            return false;
+        }
+
+        if ($this->channel === MessagingChannelType::Tiktok) {
+            return (bool) data_get($this->metadata, 'high_intent', false);
+        }
+
+        return true;
     }
 
     public function isWithinCommentPrivateReplyWindow(int $days = MetaCommentReply::PRIVATE_WINDOW_DAYS): bool

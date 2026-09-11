@@ -26,13 +26,29 @@
                         <div class="alert alert-success">{{ __('TikTok is connected for this workspace.') }}</div>
                     @endif
 
+                    @if($oauthEnabled)
+                        <div class="mb-4">
+                            <a href="{{ route('tiktok.oauth.redirect') }}" class="btn btn-dark">{{ __('Connect with TikTok') }}</a>
+                            <p class="text-muted small mt-2 mb-0">{{ __('Opens TikTok to authorize Business Messaging and Comment-to-Message for this workspace.') }}</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label>{{ __('OAuth redirect URI') }}</label>
+                            <input type="text" class="form-control" readonly value="{{ $oauthRedirectUri }}">
+                            <small class="text-muted">{{ __('Register this exact HTTPS URL (no query params) in the TikTok Developer Portal.') }}</small>
+                        </div>
+
+                        <hr>
+                    @endif
+
                     <div class="alert alert-warning">
                         <strong>{{ __('Open Beta and regional limits') }}</strong>
                         <p class="mb-2 mt-2">{{ __('TikTok Business Messaging is in Open Beta. Inbound DMs via API are not available for users in the EEA, UK, or Switzerland.') }}</p>
                         <ol class="mb-0 pl-3">
-                            <li>{{ __('Paste this webhook URL into TikTok Business Messaging Webhooks (callback URL), or save below to subscribe automatically when TIKTOK_APP_ID and TIKTOK_APP_SECRET are set.') }}</li>
+                            <li>{{ __('Paste this webhook URL into TikTok Business Messaging Webhooks (callback URL), or save / Connect with TikTok to subscribe automatically when TIKTOK_APP_ID and TIKTOK_APP_SECRET are set.') }}</li>
                             <li>{{ __('Replies are limited to 48 hours after the customer’s last message, with a maximum of 10 consecutive outbound messages.') }}</li>
-                            <li>{{ __('Access tokens expire in about 24 hours. Provide a refresh token so the hourly tiktok:refresh-tokens job can renew them.') }}</li>
+                            <li>{{ __('High-intent comments can be answered privately (Comment-to-Message). Other comments can only be answered publicly on the video.') }}</li>
+                            <li>{{ __('Access tokens expire in about 24 hours. OAuth stores a refresh token so the hourly tiktok:refresh-tokens job can renew them.') }}</li>
                         </ol>
                     </div>
 
@@ -40,10 +56,14 @@
                         @csrf
                         <input type="hidden" name="webhook_token" value="{{ $verifyToken }}">
 
+                        @if($oauthEnabled)
+                            <h4 class="mb-3">{{ __('Or paste tokens manually') }}</h4>
+                        @endif
+
                         <div class="form-group">
                             <label>{{ __('Webhook URL') }}</label>
                             <input type="text" class="form-control" readonly value="{{ $webhookUrl }}">
-                            <small class="text-muted">{{ __('TikTok POSTs im_receive_msg events to this URL. Return HTTP 200.') }}</small>
+                            <small class="text-muted">{{ __('TikTok POSTs im_receive_msg and comment events to this URL. Return HTTP 200.') }}</small>
                         </div>
 
                         <div class="form-group">

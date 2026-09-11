@@ -57,6 +57,8 @@ return [
         'app_id' => env('TIKTOK_APP_ID', ''),
         'app_secret' => env('TIKTOK_APP_SECRET', ''),
         'webhook_token' => env('TIKTOK_WEBHOOK_TOKEN', ''),
+        'oauth_authorize_url' => env('TIKTOK_OAUTH_AUTHORIZE_URL', 'https://www.tiktok.com/v2/auth/authorize/'),
+        'oauth_scopes' => env('TIKTOK_OAUTH_SCOPES', ''),
     ],
 
     'woocommerce_demo' => [

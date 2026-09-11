@@ -15,6 +15,8 @@ class TiktokWebhookSubscriber
         'im_receive_msg',
         'im_send_msg',
         'im_mark_read_msg',
+        'im_receive_high_intent_comment',
+        'COMMENT',
     ];
 
     public function __construct(private readonly TiktokClient $client)

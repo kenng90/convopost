@@ -55,7 +55,7 @@ class OutboundMessageService
 
         if ($content->isPublicCommentReply()) {
             if (! $conversation->hasOpenComment()) {
-                $error = __('No Facebook/Instagram comment is linked to this conversation.');
+                $error = __('No comment is linked to this conversation.');
                 $message->status = 5;
                 $message->error = $error;
                 $message->save();
@@ -64,7 +64,7 @@ class OutboundMessageService
             }
         } elseif ($content->isPrivateCommentReply()) {
             if (! $conversation->hasOpenComment()) {
-                $error = __('No Facebook/Instagram comment is linked to this conversation.');
+                $error = __('No comment is linked to this conversation.');
                 $message->status = 5;
                 $message->error = $error;
                 $message->save();

@@ -12,6 +12,7 @@ use App\Models\Messaging\Conversation;
 use App\Models\Plans;
 use App\Models\User;
 use App\Scopes\CompanyScope;
+use App\Services\Messaging\MetaCommentReply;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
@@ -251,6 +252,11 @@ class TiktokMessagingTest extends TestCase
                 'message' => 'OK',
                 'data' => [],
             ], 200),
+            '*/business/message/direct_reply/update/' => Http::response([
+                'code' => 0,
+                'message' => 'OK',
+                'data' => [],
+            ], 200),
         ]);
 
         config([
@@ -286,7 +292,7 @@ class TiktokMessagingTest extends TestCase
         $this->assertNotEmpty($connection->credential('access_token_expires_at'));
         $this->assertSame('wh-setup-token', $connection->webhook_token);
 
-        Http::assertSentCount(3);
+        Http::assertSentCount(6);
         Http::assertSent(function ($request) {
             return str_contains($request->url(), '/business/webhook/update/')
                 && $request['app_id'] === 'tt-app-id'
@@ -294,6 +300,356 @@ class TiktokMessagingTest extends TestCase
                 && $request['event_type'] === 'im_receive_msg'
                 && str_contains((string) $request['callback_url'], '/webhook/messaging/tiktok/receive/wh-setup-token');
         });
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/business/webhook/update/')
+                && $request['event_type'] === 'im_receive_high_intent_comment';
+        });
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/business/message/direct_reply/update/')
+                && $request['business_id'] === 'biz-open-setup'
+                && $request['direct_reply_type'] === 'COMMENT_TO_MESSAGE'
+                && $request['operation_status'] === 'ENABLE';
+        });
+    }
+
+    public function test_tiktok_oauth_redirect_requires_app_credentials(): void
+    {
+        config([
+            'services.tiktok.app_id' => '',
+            'services.tiktok.app_secret' => '',
+        ]);
+
+        [$owner, $company] = $this->makeTiktokOwnerWithPlan();
+
+        $this->withoutMiddleware([
+            EnsureOwnerIsOnPROPlan::class,
+            EnsurePlanCapability::class,
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['company_id' => $company->id])
+            ->get(route('tiktok.oauth.redirect'))
+            ->assertRedirect(route('tiktok.setup'))
+            ->assertSessionHas('error');
+    }
+
+    public function test_tiktok_oauth_redirect_sends_user_to_tiktok_authorize(): void
+    {
+        config([
+            'services.tiktok.app_id' => 'tt-app-id',
+            'services.tiktok.app_secret' => 'tt-app-secret',
+        ]);
+
+        [$owner, $company] = $this->makeTiktokOwnerWithPlan();
+
+        $this->withoutMiddleware([
+            EnsureOwnerIsOnPROPlan::class,
+            EnsurePlanCapability::class,
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->withSession(['company_id' => $company->id])
+            ->get(route('tiktok.oauth.redirect'));
+
+        $response->assertRedirect();
+        $location = (string) $response->headers->get('Location');
+        $this->assertStringContainsString('https://www.tiktok.com/v2/auth/authorize/', $location);
+        $this->assertStringContainsString('client_key=tt-app-id', $location);
+        $this->assertStringContainsString('response_type=code', $location);
+        $this->assertStringContainsString('message.list.send', $location);
+        $this->assertStringContainsString(rawurlencode(route('tiktok.oauth.callback')), $location);
+        $this->assertNotEmpty(session('tiktok_oauth_state'));
+        $this->assertSame($company->id, session('tiktok_oauth_company_id'));
+    }
+
+    public function test_tiktok_oauth_callback_exchanges_code_and_connects(): void
+    {
+        config([
+            'services.tiktok.app_id' => 'tt-app-id',
+            'services.tiktok.app_secret' => 'tt-app-secret',
+        ]);
+
+        Http::fake([
+            '*/tt_user/oauth2/token/' => Http::response([
+                'code' => 0,
+                'message' => 'OK',
+                'data' => [
+                    'open_id' => 'biz-oauth-1',
+                    'access_token' => 'oauth-access',
+                    'refresh_token' => 'oauth-refresh',
+                    'expires_in' => 86400,
+                    'refresh_token_expires_in' => 31536000,
+                    'scope' => 'user.info.basic,message.list.send',
+                ],
+            ], 200),
+            '*/business/webhook/update/' => Http::response([
+                'code' => 0,
+                'message' => 'OK',
+                'data' => [],
+            ], 200),
+            '*/business/message/direct_reply/update/' => Http::response([
+                'code' => 0,
+                'message' => 'OK',
+                'data' => [],
+            ], 200),
+        ]);
+
+        [$owner, $company] = $this->makeTiktokOwnerWithPlan();
+
+        $this->withoutMiddleware([
+            EnsureOwnerIsOnPROPlan::class,
+            EnsurePlanCapability::class,
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['company_id' => $company->id])
+            ->get(route('tiktok.oauth.redirect'))
+            ->assertRedirect();
+
+        $state = (string) session('tiktok_oauth_state');
+        $this->assertNotEmpty($state);
+
+        $this->get(route('tiktok.oauth.callback', [
+            'code' => 'tt-auth-code',
+            'state' => $state,
+        ]))
+            ->assertRedirect(route('tiktok.setup'))
+            ->assertSessionHas('status');
+
+        $connection = ChannelConnection::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->where('channel', MessagingChannelType::Tiktok->value)
+            ->first();
+
+        $this->assertNotNull($connection);
+        $this->assertSame('biz-oauth-1', $connection->external_account_id);
+        $this->assertSame('oauth-access', $connection->accessToken());
+        $this->assertSame('oauth-refresh', $connection->credential('refresh_token'));
+        $this->assertSame('yes', $company->fresh()->getConfig('tiktok_connected'));
+
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/tt_user/oauth2/token/')
+                && $request['grant_type'] === 'authorization_code'
+                && $request['auth_code'] === 'tt-auth-code'
+                && $request['client_id'] === 'tt-app-id'
+                && $request['redirect_uri'] === route('tiktok.oauth.callback');
+        });
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/business/message/direct_reply/update/')
+                && $request['business_id'] === 'biz-oauth-1'
+                && $request['operation_status'] === 'ENABLE';
+        });
+    }
+
+    public function test_tiktok_oauth_callback_rejects_invalid_state(): void
+    {
+        config([
+            'services.tiktok.app_id' => 'tt-app-id',
+            'services.tiktok.app_secret' => 'tt-app-secret',
+        ]);
+
+        Http::fake();
+
+        [$owner, $company] = $this->makeTiktokOwnerWithPlan();
+
+        $this->withoutMiddleware([
+            EnsureOwnerIsOnPROPlan::class,
+            EnsurePlanCapability::class,
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession([
+                'company_id' => $company->id,
+                'tiktok_oauth_state' => 'expected-state',
+                'tiktok_oauth_company_id' => $company->id,
+            ])
+            ->get(route('tiktok.oauth.callback', [
+                'code' => 'tt-auth-code',
+                'state' => 'forged-state',
+            ]))
+            ->assertRedirect(route('tiktok.setup'))
+            ->assertSessionHas('error');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_high_intent_comment_webhook_opens_comments_inbox(): void
+    {
+        Event::fake();
+
+        $company = Company::factory()->create();
+        $webhookToken = 'tt-hi-comment';
+
+        ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_account_id' => 'biz-open-1',
+            'display_name' => 'TikTok',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'tt-token',
+                'business_id' => 'biz-open-1',
+            ],
+            'webhook_token' => $webhookToken,
+        ]);
+
+        $commentedAt = now()->subMinutes(5)->timestamp;
+
+        $this->postJson('/webhook/messaging/tiktok/receive/'.$webhookToken, [
+            'event' => 'im_receive_high_intent_comment',
+            'user_openid' => 'biz-open-1',
+            'create_time' => $commentedAt,
+            'content' => json_encode([
+                'comment_id' => 'cmt-hi-1',
+                'video_id' => 'vid-99',
+                'unique_identifier' => 'user-open-55',
+                'sender_nickname' => 'Ada',
+                'text' => ['body' => 'How much?'],
+                'timestamp' => $commentedAt,
+            ]),
+        ])
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $this->assertDatabaseHas('messages', [
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'value' => 'How much?',
+            'fb_message_id' => 'comment:cmt-hi-1',
+            'extra' => MetaCommentReply::EXTRA_INBOUND,
+        ]);
+
+        $conversation = Conversation::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->where('external_participant_id', 'user-open-55')
+            ->first();
+
+        $this->assertNotNull($conversation);
+        $this->assertSame('cmt-hi-1', $conversation->commentId());
+        $this->assertSame('vid-99', data_get($conversation->metadata, 'media_id'));
+        $this->assertTrue((bool) data_get($conversation->metadata, 'high_intent'));
+        $this->assertFalse($conversation->canDirectMessage());
+        $this->assertTrue($conversation->canPrivateCommentReply());
+        $this->assertTrue($conversation->belongsToCommentsInbox());
+    }
+
+    public function test_organic_comment_webhook_is_public_reply_only(): void
+    {
+        Event::fake();
+
+        $company = Company::factory()->create();
+        $webhookToken = 'tt-org-comment';
+
+        ChannelConnection::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'channel' => MessagingChannelType::Tiktok->value,
+            'external_account_id' => 'biz-open-1',
+            'display_name' => 'TikTok',
+            'status' => 'connected',
+            'credentials' => [
+                'access_token' => 'tt-token',
+                'business_id' => 'biz-open-1',
+            ],
+            'webhook_token' => $webhookToken,
+        ]);
+
+        $this->postJson('/webhook/messaging/tiktok/receive/'.$webhookToken, [
+            'event' => 'comment.create',
+            'user_openid' => 'biz-open-1',
+            'content' => json_encode([
+                'comment_id' => 'cmt-org-1',
+                'video_id' => 'vid-1',
+                'user_id' => 'user-open-88',
+                'text' => 'Nice video',
+            ]),
+        ])
+            ->assertOk();
+
+        $conversation = Conversation::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->where('external_participant_id', 'user-open-88')
+            ->first();
+
+        $this->assertNotNull($conversation);
+        $this->assertSame('cmt-org-1', $conversation->commentId());
+        $this->assertFalse((bool) data_get($conversation->metadata, 'high_intent'));
+        $this->assertFalse($conversation->canPrivateCommentReply());
+    }
+
+    public function test_tiktok_public_comment_reply_posts_to_comment_reply_endpoint(): void
+    {
+        Http::fake([
+            'business-api.tiktok.com/*' => Http::response([
+                'code' => 0,
+                'message' => 'ok',
+                'data' => ['comment_id' => 'cmt-reply-9'],
+            ], 200),
+        ]);
+
+        [$owner, $company, $contact] = $this->makeTiktokCommentThread(highIntent: false);
+
+        $this->actingAs($owner);
+        session(['company_id' => $company->id]);
+
+        $message = $contact->sendMessage('Thanks for watching', false, false, 'TEXT', null, MetaCommentReply::EXTRA_PUBLIC);
+
+        $this->assertSame('cmt-reply-9', $message->fb_message_id);
+        $this->assertSame(2, (int) $message->status);
+
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/business/comment/reply/create/')
+                && $request->hasHeader('Access-Token', 'tt-token')
+                && $request['business_id'] === 'biz-open-1'
+                && $request['video_id'] === 'vid-99'
+                && $request['comment_id'] === 'cmt-hi-1'
+                && $request['text'] === 'Thanks for watching';
+        });
+    }
+
+    public function test_tiktok_private_comment_reply_uses_direct_reply(): void
+    {
+        Http::fake([
+            'business-api.tiktok.com/*' => Http::response([
+                'code' => 0,
+                'message' => 'ok',
+                'data' => ['message' => ['message_id' => 'mid.TT_PRIV_001']],
+            ], 200),
+        ]);
+
+        [$owner, $company, $contact, $conversation] = $this->makeTiktokCommentThread(highIntent: true);
+
+        $this->actingAs($owner);
+        session(['company_id' => $company->id]);
+
+        $message = $contact->sendMessage('Sending details', false, false, 'TEXT', null, MetaCommentReply::EXTRA_PRIVATE);
+
+        $this->assertSame('mid.TT_PRIV_001', $message->fb_message_id);
+        $this->assertTrue((bool) data_get($conversation->fresh()->metadata, 'private_reply_sent'));
+
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/business/message/send/')
+                && $request->hasHeader('Access-Token', 'tt-token')
+                && ! isset($request['recipient_type'])
+                && data_get($request->data(), 'direct_reply.reply_type') === 'COMMENT_TO_MESSAGE'
+                && data_get($request->data(), 'direct_reply.comment_reply.comment_id') === 'cmt-hi-1'
+                && data_get($request->data(), 'text.body') === 'Sending details';
+        });
+    }
+
+    public function test_tiktok_private_comment_reply_rejected_without_high_intent(): void
+    {
+        Http::fake();
+
+        [$owner, $company, $contact] = $this->makeTiktokCommentThread(highIntent: false);
+
+        $this->actingAs($owner);
+        session(['company_id' => $company->id]);
+
+        $message = $contact->sendMessage('Should not send', false, false, 'TEXT', null, MetaCommentReply::EXTRA_PRIVATE);
+
+        $this->assertSame(5, (int) $message->status);
+        $this->assertStringContainsString('high-intent', (string) $message->error);
+        Http::assertNothingSent();
     }
 
     public function test_tiktok_refresh_tokens_command_renews_due_access_token(): void
@@ -518,5 +874,28 @@ class TiktokMessagingTest extends TestCase
         ]);
 
         return [$owner, $company, $contact, $conversation];
+    }
+
+    /**
+     * @return array{0: User, 1: Company, 2: Contact, 3: Conversation}
+     */
+    private function makeTiktokCommentThread(bool $highIntent): array
+    {
+        [$owner, $company, $contact, $conversation] = $this->makeTiktokThread(now()->subHour());
+
+        $conversation->forceFill([
+            'external_thread_id' => null,
+            'metadata' => [
+                'source' => MetaCommentReply::SOURCE_COMMENT,
+                'comment_id' => 'cmt-hi-1',
+                'post_id' => 'vid-99',
+                'media_id' => 'vid-99',
+                'comment_received_at' => now()->subHour()->toIso8601String(),
+                'has_direct_message' => false,
+                'high_intent' => $highIntent,
+            ],
+        ])->save();
+
+        return [$owner, $company, $contact, $conversation->fresh()];
     }
 }

@@ -85,6 +85,92 @@ class TiktokClient
     }
 
     /**
+     * Exchange a Login Kit / Business Account authorization code for tokens.
+     *
+     * @return array{ok: bool, data: array<string, mixed>, message: string, code: mixed}
+     */
+    public function exchangeAuthorizationCode(string $code, string $redirectUri): array
+    {
+        $response = Http::asJson()->post($this->url('/tt_user/oauth2/token/'), [
+            'client_id' => (string) config('services.tiktok.app_id', ''),
+            'client_secret' => (string) config('services.tiktok.app_secret', ''),
+            'grant_type' => 'authorization_code',
+            'auth_code' => $code,
+            'redirect_uri' => $redirectUri,
+        ]);
+
+        return $this->decode($response);
+    }
+
+    /**
+     * Send a Comment-to-Message private reply for a high-intent comment.
+     *
+     * @return array{ok: bool, data: array<string, mixed>, message: string, code: mixed}
+     */
+    public function sendDirectReply(
+        string $accessToken,
+        string $businessId,
+        string $commentId,
+        string $text,
+    ): array {
+        $response = Http::withHeaders($this->headers($accessToken))
+            ->asJson()
+            ->post($this->url('/business/message/send/'), [
+                'business_id' => $businessId,
+                'message_type' => 'TEXT',
+                'text' => ['body' => $text],
+                'direct_reply' => [
+                    'reply_type' => 'COMMENT_TO_MESSAGE',
+                    'comment_reply' => ['comment_id' => $commentId],
+                ],
+            ]);
+
+        return $this->decode($response);
+    }
+
+    /**
+     * Post a public reply under a video comment.
+     *
+     * @return array{ok: bool, data: array<string, mixed>, message: string, code: mixed}
+     */
+    public function replyToPublicComment(
+        string $accessToken,
+        string $businessId,
+        string $videoId,
+        string $commentId,
+        string $text,
+    ): array {
+        $response = Http::withHeaders($this->headers($accessToken))
+            ->asJson()
+            ->post($this->url('/business/comment/reply/create/'), [
+                'business_id' => $businessId,
+                'video_id' => $videoId,
+                'comment_id' => $commentId,
+                'text' => $text,
+            ]);
+
+        return $this->decode($response);
+    }
+
+    /**
+     * Enable or disable Comment-to-Message for a Business Account.
+     *
+     * @return array{ok: bool, data: array<string, mixed>, message: string, code: mixed}
+     */
+    public function updateCommentToMessage(string $accessToken, string $businessId, string $status = 'ENABLE'): array
+    {
+        $response = Http::withHeaders($this->headers($accessToken))
+            ->asJson()
+            ->post($this->url('/business/message/direct_reply/update/'), [
+                'business_id' => $businessId,
+                'direct_reply_type' => 'COMMENT_TO_MESSAGE',
+                'operation_status' => $status,
+            ]);
+
+        return $this->decode($response);
+    }
+
+    /**
      * Register or update the app-level Webhooks API callback for a Business Messaging event.
      *
      * @return array{ok: bool, data: array<string, mixed>, message: string, code: mixed}

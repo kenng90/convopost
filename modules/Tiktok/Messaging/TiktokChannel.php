@@ -79,13 +79,22 @@ class TiktokChannel implements MessagingChannel
 
     public function send(ChannelConnection $connection, Conversation $conversation, Message $message, MessageContent $content): SendResult
     {
-        $conversationId = trim((string) $conversation->external_thread_id);
         $businessId = (string) $connection->credential('business_id', $connection->external_account_id);
         $token = $connection->accessToken();
 
         if ($token === '' || $businessId === '') {
             return new SendResult(false, null, __('TikTok credentials are incomplete. Reconnect the channel.'));
         }
+
+        if ($content->isPublicCommentReply()) {
+            return $this->sendPublicCommentReply($conversation, $content, $token, $businessId);
+        }
+
+        if ($content->isPrivateCommentReply()) {
+            return $this->sendPrivateCommentReply($conversation, $content, $token, $businessId);
+        }
+
+        $conversationId = trim((string) $conversation->external_thread_id);
 
         if ($conversationId === '') {
             return new SendResult(false, null, __('Missing TikTok conversation id for this thread. Wait for the customer to message again.'));
@@ -166,6 +175,91 @@ class TiktokChannel implements MessagingChannel
             ->count();
 
         return $alreadySent >= self::MAX_OUTBOUND_IN_WINDOW;
+    }
+
+    private function sendPublicCommentReply(
+        Conversation $conversation,
+        MessageContent $content,
+        string $token,
+        string $businessId,
+    ): SendResult {
+        $commentId = $conversation->commentId();
+        $videoId = (string) data_get(
+            $conversation->metadata,
+            'media_id',
+            data_get($conversation->metadata, 'post_id', '')
+        );
+
+        if ($commentId === '' || $videoId === '') {
+            return new SendResult(false, null, __('No comment is linked to this conversation.'));
+        }
+
+        if ($content->type !== 'TEXT' || trim($content->body) === '') {
+            return new SendResult(false, null, __('Public comment replies must be text.'));
+        }
+
+        $result = $this->client->replyToPublicComment(
+            $token,
+            $businessId,
+            $videoId,
+            $commentId,
+            $content->body,
+        );
+
+        if (! $result['ok']) {
+            return new SendResult(false, null, $result['message'] !== '' ? $result['message'] : __('TikTok public comment reply failed.'));
+        }
+
+        $externalId = (string) data_get($result['data'], 'comment_id', data_get($result['data'], 'reply_id', ''));
+
+        return new SendResult(true, $externalId !== '' ? $externalId : null);
+    }
+
+    private function sendPrivateCommentReply(
+        Conversation $conversation,
+        MessageContent $content,
+        string $token,
+        string $businessId,
+    ): SendResult {
+        $commentId = $conversation->commentId();
+
+        if ($commentId === '') {
+            return new SendResult(false, null, __('No comment is linked to this conversation.'));
+        }
+
+        if (! $conversation->canPrivateCommentReply()) {
+            if (! (bool) data_get($conversation->metadata, 'high_intent', false)) {
+                return new SendResult(false, null, __('Private replies are only available for high-intent TikTok comments.'));
+            }
+
+            return new SendResult(false, null, __('A private reply was already sent for this comment, or the reply window has expired.'));
+        }
+
+        if ($content->type !== 'TEXT' || trim($content->body) === '') {
+            return new SendResult(false, null, __('Private comment replies must be text.'));
+        }
+
+        $result = $this->client->sendDirectReply(
+            $token,
+            $businessId,
+            $commentId,
+            $content->body,
+        );
+
+        if (! $result['ok']) {
+            return new SendResult(false, null, $result['message'] !== '' ? $result['message'] : __('TikTok Comment-to-Message reply failed.'));
+        }
+
+        $conversation->forceFill([
+            'metadata' => array_merge($conversation->metadata ?? [], [
+                'private_reply_sent' => true,
+                'private_reply_comment_id' => $commentId,
+            ]),
+        ])->save();
+
+        $externalId = (string) data_get($result['data'], 'message.message_id', data_get($result['data'], 'message_id', ''));
+
+        return new SendResult(true, $externalId !== '' ? $externalId : null);
     }
 
     /**

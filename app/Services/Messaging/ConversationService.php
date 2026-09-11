@@ -159,6 +159,10 @@ class ConversationService
             $metadata['media_id'] = $inbound->context['media_id'] ?? null;
             $metadata['comment_received_at'] = $inbound->receivedAt->toIso8601String();
 
+            if (array_key_exists('high_intent', $inbound->context)) {
+                $metadata['high_intent'] = (bool) $inbound->context['high_intent'];
+            }
+
             if ($permalink !== '') {
                 $metadata['permalink'] = $permalink;
             }
