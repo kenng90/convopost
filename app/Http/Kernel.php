@@ -38,6 +38,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\Language::class,
+            \App\Http\Middleware\BlockDormantWhatsappUi::class,
         ],
 
         'api' => [
@@ -75,6 +76,7 @@ class Kernel extends HttpKernel
         'XssSanitizer' => \App\Http\Middleware\XssSanitization::class,
         'plan.plugin' => \App\Http\Middleware\EnsurePlanPlugin::class,
         'plan.capability' => \App\Http\Middleware\EnsurePlanCapability::class,
+        'offering.whatsapp' => \App\Http\Middleware\BlockDormantWhatsappUi::class,
         'campaign.dispatch' => \App\Http\Middleware\VerifyCampaignDispatchToken::class,
         'campaign.plan' => \Modules\Wpbox\Http\Middleware\CheckCampaignPlanLimit::class,
         'org.route' => \App\Http\Middleware\EnsureOrgRouteAccess::class,
