@@ -16,6 +16,14 @@ return [
 
     'sections' => [
         [
+            'id' => 'social',
+            'label' => 'Social',
+        ],
+        [
+            'id' => 'commerce',
+            'label' => 'Commerce',
+        ],
+        [
             'id' => 'inbox',
             'label' => 'Inbox',
         ],
@@ -29,7 +37,7 @@ return [
         ],
         [
             'id' => 'automations',
-            'label' => 'Automations & commerce',
+            'label' => 'Automations',
         ],
         [
             'id' => 'insights',
@@ -59,6 +67,8 @@ return [
      * Single-link menus (by route name) assigned to a section.
      */
     'routes' => [
+        'social.home' => 'social',
+
         'chat.index' => 'inbox',
         'whatsappcall.calls.index' => 'inbox',
         'orgmanager.index' => 'setup',
@@ -66,7 +76,8 @@ return [
         'campaigns.index' => 'outbound',
 
         'flows.index' => 'automations',
-        'catalogs.page' => 'automations',
+        'catalogs.page' => 'commerce',
+        'collections.index' => 'commerce',
 
         'embedwhatsapp.edit' => 'addons',
         'journies.index' => 'addons',
@@ -118,12 +129,6 @@ return [
                     'icon' => 'ni ni-money-coins text-success',
                     'route' => 'collections.index',
                 ],
-                // [
-                //     'name' => 'Form submissions',
-                //     'icon' => 'ni ni-collection text-success',
-                //     'route' => 'whatsapp-flows.responses',
-                //     'plugin' => 'whatsappflows',
-                // ],
             ],
         ],
         'callsMenu' => [
