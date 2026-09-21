@@ -7,13 +7,18 @@ return [
     | Plan tier presets (used by PlanEntitlementsSeeder)
     |--------------------------------------------------------------------------
     |
+    | Social-commerce-first copy. WhatsApp inbox capabilities remain on higher
+    | tiers so OFFERING_MODE=full can re-enable CRM UI without re-seeding.
+    |
     | limit_items    → campaigns per billing period (0 = unlimited)
     | limit_views    → outbound/inbound messages per period (0 = unlimited)
     | limit_orders   → contacts stored (0 = unlimited)
     | limit_catalog_items → catalog SKUs (0 = unlimited)
     | limit_agents       → staff agent seats per organization (0 = unlimited)
-    | limit_companies    → organizations / WhatsApp numbers per owner (0 = unlimited)
+    | limit_companies    → organizations / brands per owner (0 = unlimited)
     | limit_integrations → connected store integrations per organization (0 = unlimited)
+    | limit_social_accounts → connected social profiles (0 = unlimited)
+    | limit_social_posts    → scheduled/published posts per period (0 = unlimited)
     | plugins        → module aliases allowed; null = all modules
     | capabilities   → feature flags; null = all capabilities
     |
@@ -22,8 +27,8 @@ return [
         'starter' => [
             'name' => 'Starter',
             'price' => 29,
-            'description' => 'Team inbox, contacts, and basic workflow automation for solo operators and small support teams.',
-            'features' => 'Shared team inbox, Customer 360 sidebar, Up to 3 agents, 500 contacts, 1,000 messages/mo, Flow templates & visual builder, Contact CRM',
+            'description' => 'Social publishing and contact CRM for solo sellers getting started.',
+            'features' => 'Unganisha Social home, Up to 3 social accounts, Content calendar (coming), Contact CRM, Up to 3 agents, 500 contacts',
             'limit_items' => 0,
             'limit_views' => 1000,
             'limit_orders' => 500,
@@ -31,30 +36,30 @@ return [
             'limit_agents' => 3,
             'limit_companies' => 1,
             'limit_integrations' => 0,
+            'limit_social_accounts' => 3,
+            'limit_social_posts' => 30,
             'included_agent_seats' => 3,
             'agent_seat_price' => 0,
             'included_companies' => 1,
             'company_seat_price' => 0,
             'plugins' => [
+                'social',
                 'wpbox',
                 'contacts',
                 'agents',
-                'flowmaker',
             ],
             'managed_ai_monthly_credits' => 50,
             'capabilities' => [
-                'inbox',
+                'social_publish',
                 'contacts',
-                'flows',
-                'inbox_instagram',
             ],
         ],
 
         'growth' => [
             'name' => 'Growth',
             'price' => 79,
-            'description' => 'Outbound campaigns, catalog commerce, and store integrations for WhatsApp sales teams.',
-            'features' => 'Everything in Starter, Agent Copilot, Campaigns & broadcasts, Product catalog & branded shop, Shopify/WooCommerce import, Chat widget, 5 agents, 5,000 contacts',
+            'description' => 'Social publishing plus catalog commerce and M-Pesa collections for growing brands.',
+            'features' => 'Everything in Starter, Product catalog & branded shop, Shopify/WooCommerce import, Collections & M-Pesa, 5 agents, 5,000 contacts',
             'limit_items' => 10,
             'limit_views' => 5000,
             'limit_orders' => 5000,
@@ -62,38 +67,39 @@ return [
             'limit_agents' => 5,
             'limit_companies' => 3,
             'limit_integrations' => 1,
+            'limit_social_accounts' => 10,
+            'limit_social_posts' => 150,
             'included_agent_seats' => 3,
             'agent_seat_price' => 15,
             'included_companies' => 1,
             'company_seat_price' => 25,
             'plugins' => [
+                'social',
                 'wpbox',
                 'contacts',
                 'agents',
-                'flowmaker',
                 'whatsappcatalog',
                 'shopifylist',
                 'woolist',
-                'embedwhatsapp',
+                'flowmaker',
             ],
             'managed_ai_monthly_credits' => 250,
             'capabilities' => [
-                'inbox',
+                'social_publish',
                 'contacts',
                 'flows',
-                'campaigns',
                 'catalog',
                 'integrations',
-                'inbox_instagram',
                 'collections',
+                'payments',
             ],
         ],
 
         'pro' => [
             'name' => 'Pro',
             'price' => 149,
-            'description' => 'Full operations stack — WhatsApp Flows, voice, journeys, payments, and API access.',
-            'features' => 'Everything in Growth, WhatsApp Flows, AI Flow Assistant, Journey playbooks, Revenue dashboard, M-Pesa & Stripe, Public invoices, 15 agents, API access',
+            'description' => 'Full social commerce stack — AI captions, analytics, journeys, bookings, and API access.',
+            'features' => 'Everything in Growth, Social AI captions, Social analytics, Journey playbooks, Bookings, Knowledge base, M-Pesa & Paystack, Public API, 15 agents',
             'limit_items' => 0,
             'limit_views' => 0,
             'limit_orders' => 0,
@@ -101,11 +107,14 @@ return [
             'limit_agents' => 15,
             'limit_companies' => 0,
             'limit_integrations' => 0,
+            'limit_social_accounts' => 25,
+            'limit_social_posts' => 0,
             'included_agent_seats' => 10,
             'agent_seat_price' => 12,
             'included_companies' => 1,
             'company_seat_price' => 35,
             'plugins' => [
+                'social',
                 'wpbox',
                 'contacts',
                 'agents',
@@ -113,9 +122,6 @@ return [
                 'whatsappcatalog',
                 'shopifylist',
                 'woolist',
-                'embedwhatsapp',
-                'whatsappflows',
-                'whatsappcall',
                 'journies',
                 'reminders',
                 'knowledge',
@@ -123,14 +129,14 @@ return [
             ],
             'managed_ai_monthly_credits' => 1000,
             'capabilities' => [
-                'inbox',
+                'social_publish',
+                'social_analytics',
+                'social_ai',
+                'social_approvals',
                 'contacts',
                 'flows',
-                'campaigns',
                 'catalog',
                 'integrations',
-                'whatsapp_flows',
-                'voice',
                 'journeys',
                 'payments',
                 'collections',
@@ -138,21 +144,26 @@ return [
                 'knowledge',
                 'api_access',
                 'ai_flow_assistant',
-                'inbox_instagram',
-                'inbox_messenger',
-                'inbox_tiktok',
                 'outcomes_cart_recovery',
                 'outcomes_booking_convert',
                 'outcomes_lead_to_cash',
                 'outcomes_suite',
+                // Retained for OFFERING_MODE=full re-enable:
+                'inbox',
+                'campaigns',
+                'whatsapp_flows',
+                'voice',
+                'inbox_instagram',
+                'inbox_messenger',
+                'inbox_tiktok',
             ],
         ],
 
         'agency' => [
             'name' => 'Agency',
             'price' => 299,
-            'description' => 'Manage multiple client WhatsApp numbers, unlimited usage, and full API access from one account.',
-            'features' => 'Everything in Pro, Health Monitor, Integration Hub, Unlimited agents & numbers, Cross-client operations, Full REST API, Priority support',
+            'description' => 'Manage multiple client brands, unlimited social accounts, and full API access from one account.',
+            'features' => 'Everything in Pro, Unlimited organizations & agents, Cross-client Social workspaces, Integration Hub, Full REST API, Priority support',
             'limit_items' => 0,
             'limit_views' => 0,
             'limit_orders' => 0,
@@ -160,6 +171,8 @@ return [
             'limit_agents' => 0,
             'limit_companies' => 0,
             'limit_integrations' => 0,
+            'limit_social_accounts' => 0,
+            'limit_social_posts' => 0,
             'included_agent_seats' => 0,
             'agent_seat_price' => 0,
             'included_companies' => 0,
@@ -177,12 +190,14 @@ return [
         'campaigns' => 'Campaigns this billing period',
         'messages' => 'Messages this billing period',
         'contacts' => 'Contacts stored',
+        'social_posts' => 'Social posts this billing period',
     ],
 
     'resource_limit_labels' => [
         'agents' => 'Agent seats',
         'companies' => 'Organizations',
         'integrations' => 'Store integrations',
+        'social_accounts' => 'Social accounts',
     ],
 
     /*
@@ -190,6 +205,10 @@ return [
     | Used by plan.capability middleware and API access checks.
     */
     'capability_labels' => [
+        'social_publish' => 'Social publishing',
+        'social_analytics' => 'Social analytics',
+        'social_ai' => 'Social AI captions',
+        'social_approvals' => 'Social post approvals',
         'inbox' => 'Team inbox',
         'contacts' => 'Contact CRM',
         'flows' => 'Workflow automation',
@@ -199,7 +218,7 @@ return [
         'whatsapp_flows' => 'WhatsApp Flows',
         'voice' => 'WhatsApp voice calling',
         'journeys' => 'Journey pipelines',
-        'payments' => 'In-chat payments',
+        'payments' => 'Payments',
         'collections' => 'Collections board',
         'reminders' => 'Bookings (appointments & events)',
         'knowledge' => 'Knowledge base',
