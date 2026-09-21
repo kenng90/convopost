@@ -34,6 +34,8 @@ class OfferingNavigationTest extends TestCase
         $this->assertNotContains('whatsapp.setup', $routes);
         $this->assertNotContains('Chat', $names);
         $this->assertNotContains('Campaigns', $names);
+        $this->assertContains('social.home', $routes);
+        $this->assertContains('Social', $names);
     }
 
     public function test_owner_sees_whatsapp_nav_when_offering_is_full(): void
