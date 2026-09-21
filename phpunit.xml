@@ -27,5 +27,6 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="ENABLE_CREDITS" value="false"/>
+        <env name="OFFERING_MODE" value="full"/>
     </php>
 </phpunit>
