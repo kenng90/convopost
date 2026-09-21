@@ -8,11 +8,15 @@
             <p class="text-muted mb-4">
                 {{ __('Publish and schedule content, attach product offers, and drive M-Pesa checkouts — your social commerce home.') }}
             </p>
+            <div class="mb-4">
+                <a href="{{ route('social.accounts.index') }}" class="btn btn-primary">
+                    {{ __('Connected accounts') }}
+                </a>
+            </div>
             <div class="card shadow">
                 <div class="card-body">
                     <p class="mb-2 font-weight-bold">{{ __('Coming next') }}</p>
                     <ul class="mb-0 pl-3">
-                        <li>{{ __('Connect Facebook, Instagram, and LinkedIn accounts') }}</li>
                         <li>{{ __('Compose, schedule, and calendar') }}</li>
                         <li>{{ __('Attach catalog offers with tracked links') }}</li>
                     </ul>

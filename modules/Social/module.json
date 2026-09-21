@@ -18,7 +18,20 @@
             "icon": "ni ni-notification-70 text-primary",
             "route": "social.home",
             "color": "#0E8A7A",
-            "priority": 1
+            "priority": 1,
+            "isGroup": true,
+            "menus": [
+                {
+                    "name": "Overview",
+                    "icon": "ni ni-app text-primary",
+                    "route": "social.home"
+                },
+                {
+                    "name": "Accounts",
+                    "icon": "ni ni-single-02 text-primary",
+                    "route": "social.accounts.index"
+                }
+            ]
         }
     ],
     "staffmenus": [
@@ -27,7 +40,20 @@
             "icon": "ni ni-notification-70 text-primary",
             "route": "social.home",
             "color": "#0E8A7A",
-            "priority": 1
+            "priority": 1,
+            "isGroup": true,
+            "menus": [
+                {
+                    "name": "Overview",
+                    "icon": "ni ni-app text-primary",
+                    "route": "social.home"
+                },
+                {
+                    "name": "Accounts",
+                    "icon": "ni ni-single-02 text-primary",
+                    "route": "social.accounts.index"
+                }
+            ]
         }
     ]
 }
