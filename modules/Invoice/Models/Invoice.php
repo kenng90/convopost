@@ -27,6 +27,8 @@ class Invoice extends Model
     protected $fillable = [
         'company_id',
         'catalog_id',
+        'social_post_id',
+        'social_offer_link_id',
         'public_uuid',
         'invoice_number',
         'customer_name',
@@ -108,6 +110,16 @@ class Invoice extends Model
     public function catalog(): BelongsTo
     {
         return $this->belongsTo(ListCatalog::class, 'catalog_id');
+    }
+
+    public function socialPost(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Social\Models\SocialPost::class, 'social_post_id');
+    }
+
+    public function socialOfferLink(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Social\Models\SocialOfferLink::class, 'social_offer_link_id');
     }
 
     /**
