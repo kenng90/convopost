@@ -1,13 +1,33 @@
 {
     "alias": "social",
-    "description": "",
-    "keywords": [],
+    "description": "Unganisha Social — compose, schedule, and publish social content with commerce offers",
+    "keywords": ["social", "publishing", "scheduler", "calendar"],
     "active": 1,
     "order": 0,
+    "alwayson": true,
+    "nameSpace": "Modules\\Social",
     "providers": [
         "Modules\\Social\\Providers\\Main"
     ],
     "aliases": {},
     "files": [],
-    "requires": []
+    "requires": [],
+    "ownermenus": [
+        {
+            "name": "Social",
+            "icon": "ni ni-notification-70 text-primary",
+            "route": "social.home",
+            "color": "#0E8A7A",
+            "priority": 1
+        }
+    ],
+    "staffmenus": [
+        {
+            "name": "Social",
+            "icon": "ni ni-notification-70 text-primary",
+            "route": "social.home",
+            "color": "#0E8A7A",
+            "priority": 1
+        }
+    ]
 }

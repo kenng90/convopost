@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use Akaunting\Module\Facade as Module;
+use App\Support\Offering;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Route;
 
 class DashboardController extends Controller
 {
@@ -15,6 +17,18 @@ class DashboardController extends Controller
         //Check if there is special admin for owners
         if (config('settings.ownerAdmin', 'default') != 'default' && auth()->user()->hasRole('owner')) {
             return redirect()->route(config('settings.ownerAdmin'));
+        }
+
+        if (
+            Offering::isSocialCommerce()
+            && auth()->check()
+            && (auth()->user()->hasRole('owner') || auth()->user()->isOrganizationManager())
+        ) {
+            $socialHome = Offering::socialHomeRoute();
+
+            if (Route::has($socialHome) && ! request()->routeIs($socialHome)) {
+                return redirect()->route($socialHome);
+            }
         }
 
         $locale = Cookie::get('lang') ? Cookie::get('lang') : config('settings.app_locale');
@@ -70,17 +84,18 @@ class DashboardController extends Controller
                     }
                 }
             }
-        }else{
+        } else {
             //Check if current user company is active
-            if (isset($currentUser->company)&&$currentUser->company->active == 0) {
+            if (isset($currentUser->company) && $currentUser->company->active == 0) {
                 //Logout and redirect to home page
                 auth()->logout();
+
                 return redirect()->route('home')->withError(__('Your account is not active. Please contact the administrator.'));
             }
         }
         $dataToDisplay['tasks'] = $taskToBeDone;
 
-       // dd($dataToDisplay);
+        // dd($dataToDisplay);
 
         $response = new \Illuminate\Http\Response(view('dashboard::index', $dataToDisplay));
         $response->withCookie(cookie('lang', $locale, 120));

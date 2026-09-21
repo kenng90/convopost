@@ -1,16 +1,10 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
-*/
+use Illuminate\Support\Facades\Route;
+use Modules\Social\Http\Controllers\HomeController;
 
-Route::prefix('social')->group(function() {
-    Route::get('/', 'SocialController@index');
-});
+Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro'])
+    ->prefix('social')
+    ->group(function () {
+        Route::get('/', [HomeController::class, '__invoke'])->name('social.home');
+    });
