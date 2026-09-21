@@ -1,0 +1,15 @@
+{
+    "name": "akaunting/social",
+    "description": "",
+    "authors": [
+        {
+            "name": "Akaunting",
+            "email": "info@akaunting.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Modules\\Social\\": ""
+        }
+    }
+}
