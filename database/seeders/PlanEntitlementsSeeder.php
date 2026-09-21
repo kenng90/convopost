@@ -60,6 +60,14 @@ class PlanEntitlementsSeeder extends Seeder
                 'managed_ai_monthly_credits',
                 (string) ($tier['managed_ai_monthly_credits'] ?? config('managed-ai.default_monthly_credits', 0))
             );
+
+            if (array_key_exists('limit_social_accounts', $tier)) {
+                $plan->setConfig('limit_social_accounts', (string) $tier['limit_social_accounts']);
+            }
+
+            if (array_key_exists('limit_social_posts', $tier)) {
+                $plan->setConfig('limit_social_posts', (string) $tier['limit_social_posts']);
+            }
         }
     }
 }
