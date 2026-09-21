@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Akaunting\Module\Facade as Module;
 use App\Services\OrgAuthorization;
+use App\Support\Offering;
 use App\Traits\HasConfig;
 use App\Traits\HasCredit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -282,7 +283,13 @@ class User extends Authenticatable
             $menus = $this->collectManagerModuleMenus();
         } elseif ($this->hasRole('staff') || $this->isOrganizationAgent()) {
             foreach (Module::all() as $key => $module) {
-                if (($module->get('alias') ?? '') === 'reports') {
+                $moduleAlias = (string) ($module->get('alias') ?? '');
+
+                if ($moduleAlias === 'reports') {
+                    continue;
+                }
+
+                if (Offering::isDormantModule($moduleAlias)) {
                     continue;
                 }
 
@@ -295,12 +302,18 @@ class User extends Authenticatable
                         continue;
                     }
 
-                    $routeName = $menu['route'] ?? '';
+                    $filtered = $this->filterMenuForOffering($menu, $moduleAlias);
+
+                    if ($filtered === null) {
+                        continue;
+                    }
+
+                    $routeName = $filtered['route'] ?? '';
                     if ($routeName === '' || ! \Illuminate\Support\Facades\Route::has($routeName)) {
                         continue;
                     }
 
-                    $menus[] = $menu;
+                    $menus[] = $filtered;
                 }
             }
         }
@@ -326,11 +339,17 @@ class User extends Authenticatable
             : null;
 
         foreach (Module::all() as $module) {
+            $moduleAlias = (string) ($module->get('alias') ?? '');
+
             if (! is_array($module->get('ownermenus'))) {
                 continue;
             }
 
-            if (! ($module->get('alwayson') || $allowedPluginsPerPlan === null || in_array($module->get('alias'), $allowedPluginsPerPlan, true))) {
+            if (Offering::isDormantModule($moduleAlias)) {
+                continue;
+            }
+
+            if (! ($module->get('alwayson') || $allowedPluginsPerPlan === null || in_array($moduleAlias, $allowedPluginsPerPlan, true))) {
                 continue;
             }
 
@@ -350,13 +369,56 @@ class User extends Authenticatable
                     ));
                 }
 
-                $menus[] = $menu;
+                $filtered = $this->filterMenuForOffering($menu, $moduleAlias);
+
+                if ($filtered === null) {
+                    continue;
+                }
+
+                $menus[] = $filtered;
             }
         }
 
         usort($menus, fn ($a, $b) => ($a['priority'] ?? 100) <=> ($b['priority'] ?? 100));
 
         return $menus;
+    }
+
+    /**
+     * Drop WhatsApp-dormant routes/modules from a menu tree. Groups survive when
+     * they still have visible children; the parent route is retargeted if needed.
+     *
+     * @param  array<string, mixed>  $menu
+     * @return array<string, mixed>|null
+     */
+    protected function filterMenuForOffering(array $menu, string $moduleAlias): ?array
+    {
+        if (Offering::isDormantModule($moduleAlias)) {
+            return null;
+        }
+
+        if (isset($menu['menus']) && is_array($menu['menus'])) {
+            $menu['menus'] = array_values(array_filter(
+                $menu['menus'],
+                function (array $submenu) use ($moduleAlias) {
+                    return $this->filterMenuForOffering($submenu, $moduleAlias) !== null;
+                }
+            ));
+        }
+
+        $routeName = $menu['route'] ?? null;
+        $routeDormant = Offering::isDormantRoute(is_string($routeName) ? $routeName : null);
+        $hasChildren = ! empty($menu['menus']);
+
+        if ($routeDormant && ! $hasChildren) {
+            return null;
+        }
+
+        if ($routeDormant && $hasChildren) {
+            $menu['route'] = $menu['menus'][0]['route'] ?? $routeName;
+        }
+
+        return $menu;
     }
 
     /**
