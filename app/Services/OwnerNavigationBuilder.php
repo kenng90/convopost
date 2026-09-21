@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Support\Offering;
 use Illuminate\Support\Facades\Route;
 
 class OwnerNavigationBuilder
@@ -122,11 +123,19 @@ class OwnerNavigationBuilder
 
         $plugin = $groupConfig['plugin'] ?? null;
 
+        if ($plugin && Offering::isDormantModule($plugin)) {
+            return null;
+        }
+
         if ($plugin && ! $user->canUsePlanPlugin($plugin)) {
             return null;
         }
 
         $parentRoute = $groupConfig['route'] ?? null;
+
+        if ($parentRoute && Offering::isDormantRoute($parentRoute)) {
+            return null;
+        }
 
         if ($parentRoute && ! Route::has($parentRoute)) {
             return null;
@@ -139,6 +148,14 @@ class OwnerNavigationBuilder
             $subPlugin = $submenu['plugin'] ?? $plugin;
 
             if (! $subRoute || ! Route::has($subRoute)) {
+                continue;
+            }
+
+            if (Offering::isDormantRoute($subRoute)) {
+                continue;
+            }
+
+            if ($subPlugin && Offering::isDormantModule($subPlugin)) {
                 continue;
             }
 

@@ -6,6 +6,7 @@ use Akaunting\Module\Facade as Module;
 use App\Models\Company;
 use App\Models\CompanyMembership;
 use App\Models\User;
+use App\Support\Offering;
 
 class OrgAuthorization
 {
@@ -126,6 +127,10 @@ class OrgAuthorization
             return true;
         }
 
+        if (Offering::isDormantModule($moduleAlias)) {
+            return false;
+        }
+
         if ($this->isOwnerAccount($user)) {
             return $user->canUsePlanPlugin($moduleAlias);
         }
@@ -155,6 +160,10 @@ class OrgAuthorization
     {
         if ($user === null || $routeName === null) {
             return true;
+        }
+
+        if (Offering::isDormantRoute($routeName)) {
+            return false;
         }
 
         if ($this->isPlatformAdmin($user) || $this->isOwnerAccount($user)) {
@@ -289,6 +298,10 @@ class OrgAuthorization
             $alias = (string) $module->get('alias');
 
             if ($alias === '' || in_array($alias, $protected, true)) {
+                continue;
+            }
+
+            if (Offering::isDormantModule($alias)) {
                 continue;
             }
 
