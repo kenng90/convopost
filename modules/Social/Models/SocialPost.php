@@ -82,6 +82,11 @@ class SocialPost extends Model
             ->withTimestamps();
     }
 
+    public function offerLink(): HasOne
+    {
+        return $this->hasOne(SocialOfferLink::class, 'social_post_id');
+    }
+
     public function isDraft(): bool
     {
         return $this->status === 'draft';
