@@ -72,8 +72,8 @@
           </div>
         </div>
       </div>
-      <a href="#channels" class="text-[15px] text-white/75 hover:text-white transition-colors">Channels</a>
-      <a href="#campaigns" class="text-[15px] text-white/75 hover:text-white transition-colors">Campaigns</a>
+      <a href="#social" class="text-[15px] text-white/75 hover:text-white transition-colors">Social</a>
+      <a href="#catalog" class="text-[15px] text-white/75 hover:text-white transition-colors">Store</a>
       <a href="#pricing" class="text-[15px] text-white/75 hover:text-white transition-colors">Pricing</a>
       <a href="#faq" class="text-[15px] text-white/75 hover:text-white transition-colors">FAQ</a>
       @if(isset($hasBlog) && $hasBlog)
@@ -109,8 +109,8 @@
         @endforeach
       </div>
     </div>
-    <a href="#channels" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Channels</a>
-    <a href="#campaigns" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Campaigns</a>
+    <a href="#social" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Social</a>
+    <a href="#catalog" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Store</a>
     <a href="#pricing" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Pricing</a>
     <a href="#faq" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">FAQ</a>
     @if(isset($hasBlog) && $hasBlog)
@@ -148,21 +148,18 @@
         <p class="body-lg text-gray-600 mb-6">
           {{ \Modules\Wpsupportlanding\Support\UnganishaBrand::description() }}
         </p>
-        <div class="flex flex-wrap gap-2 mb-8" aria-label="Supported conversation channels">
+        <div class="flex flex-wrap gap-2 mb-8" aria-label="Supported social platforms">
           <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
-            <span class="w-2 h-2 rounded-full" style="background:#25D366;"></span>WhatsApp
+            <span class="w-2 h-2 rounded-full" style="background:#1877F2;"></span>Facebook
           </span>
           <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
             <span class="w-2 h-2 rounded-full" style="background:#E1306C;"></span>Instagram
           </span>
           <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
-            <span class="w-2 h-2 rounded-full" style="background:#0084FF;"></span>Messenger
+            <span class="w-2 h-2 rounded-full" style="background:#0A66C2;"></span>LinkedIn
           </span>
           <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
-            <span class="w-2 h-2 rounded-full" style="background:#25D366;"></span>WhatsApp Calls
-          </span>
-          <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
-            <span class="w-2 h-2 rounded-full" style="background:#0E8A7A;"></span>Phone calls
+            <span class="w-2 h-2 rounded-full" style="background:#0E8A7A;"></span>M-Pesa checkout
           </span>
         </div>
         <div class="flex flex-wrap gap-3">
@@ -177,8 +174,8 @@
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
           </a>
           @endif
-          <a href="#campaigns" class="inline-flex items-center gap-2 px-7 py-4 text-base font-semibold text-gray-800 rounded-xl border border-gray-200 bg-white/70 hover:border-gray-300 transition-all hover:bg-white">
-            See campaigns
+          <a href="#social" class="inline-flex items-center gap-2 px-7 py-4 text-base font-semibold text-gray-800 rounded-xl border border-gray-200 bg-white/70 hover:border-gray-300 transition-all hover:bg-white">
+            See Social
           </a>
         </div>
         <p class="mt-6 text-sm text-gray-500">
@@ -190,86 +187,65 @@
         </p>
       </div>
 
-      {{-- Product visual — real omnichannel chats inbox --}}
+      {{-- Product visual — social content calendar --}}
       <div class="relative flex justify-center lg:justify-end">
         <div class="absolute -inset-8 rounded-full blur-3xl opacity-40 pointer-events-none" style="background:radial-gradient(circle,rgba(14,138,122,0.35),transparent 70%);"></div>
         <div class="phone-frame hero-phone overflow-hidden float relative z-10" style="background:#f4f6f8;">
           <div class="phone-notch" style="background:#0f3d36;"></div>
           <div class="px-3 pt-2 pb-2.5" style="background:#12263A;">
             <div class="flex items-center gap-2 mb-2.5">
-              <svg class="w-4 h-4 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-              <p class="text-sm font-semibold text-white">Chats</p>
+              <svg class="w-4 h-4 text-white/90" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <p class="text-sm font-semibold text-white">Content calendar</p>
             </div>
-            <div class="rounded-full bg-white px-3 py-1.5 text-[10px] text-gray-400">Search name, channel, message</div>
+            <div class="rounded-full bg-white px-3 py-1.5 text-[10px] text-gray-400">September · Social</div>
           </div>
           <div class="px-2.5 pt-2 pb-1 space-y-1.5" style="background:#f4f6f8;">
             <div class="flex gap-1.5 flex-wrap">
-              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white" style="background:#0f3d36;">All</span>
-              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">WhatsApp</span>
+              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white" style="background:#0f3d36;">Week</span>
+              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Facebook</span>
               <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Instagram</span>
-              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Messenger</span>
-              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Calls</span>
-              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Phone</span>
-            </div>
-            <div class="flex gap-1.5 overflow-hidden">
-              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white" style="background:#0f3d36;">Open</span>
-              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Unread</span>
-              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Mine</span>
-              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">AI</span>
-              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">Handoff</span>
+              <span class="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200">LinkedIn</span>
             </div>
           </div>
-          <div class="bg-white" style="height:calc(100% - 148px); overflow:hidden;">
+          <div class="bg-white" style="height:calc(100% - 120px); overflow:hidden;">
             <div class="flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-100">
-              <div class="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
+              <div class="w-9 h-9 rounded-xl flex-shrink-0" style="background:linear-gradient(135deg,#F58529,#E1306C);"></div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between gap-2">
-                  <p class="text-[11px] font-semibold text-gray-900 truncate">Amina Wanjiku</p>
-                  <span class="text-[9px] text-gray-400 flex-shrink-0">09:13</span>
+                  <p class="text-[11px] font-semibold text-gray-900 truncate">New drop — Outfit teal set</p>
+                  <span class="text-[9px] text-gray-400 flex-shrink-0">Tue</span>
                 </div>
-                <div class="flex items-center justify-between gap-2 mt-0.5">
-                  <p class="text-[10px] text-gray-500">Whatsapp</p>
-                  <span class="text-[8px] font-bold px-1.5 py-0.5 rounded" style="background:#cfe8ff;color:#1d4ed8;">AI</span>
-                </div>
+                <p class="text-[10px] text-gray-500 mt-0.5">Instagram · Offer linked</p>
               </div>
             </div>
             <div class="flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-100">
-              <div class="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
+              <div class="w-9 h-9 rounded-xl flex-shrink-0" style="background:#1877F2;"></div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between gap-2">
-                  <p class="text-[11px] font-semibold text-gray-900 truncate">+254 712 ··· 884</p>
-                  <span class="text-[9px] text-gray-400 flex-shrink-0">09:13</span>
+                  <p class="text-[11px] font-semibold text-gray-900 truncate">Flash sale ends tonight</p>
+                  <span class="text-[9px] text-gray-400 flex-shrink-0">Wed</span>
                 </div>
-                <div class="flex items-center justify-between gap-2 mt-0.5">
-                  <p class="text-[10px] text-gray-500">Whatsapp</p>
-                  <span class="text-[8px] font-bold px-1.5 py-0.5 rounded" style="background:#cfe8ff;color:#1d4ed8;">AI</span>
-                </div>
+                <p class="text-[10px] text-gray-500 mt-0.5">Facebook · M-Pesa CTA</p>
               </div>
             </div>
             <div class="flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-100">
-              <div class="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
+              <div class="w-9 h-9 rounded-xl flex-shrink-0" style="background:#0A66C2;"></div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between gap-2">
-                  <p class="text-[11px] font-semibold text-gray-900 truncate flex items-center gap-1">
-                    Messenger user
-                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[7px] font-bold text-white" style="background:#0084FF;">MS</span>
-                  </p>
-                  <span class="text-[9px] text-gray-400 flex-shrink-0">09:13</span>
+                  <p class="text-[11px] font-semibold text-gray-900 truncate">Agency tip: schedule Reels</p>
+                  <span class="text-[9px] text-gray-400 flex-shrink-0">Thu</span>
                 </div>
-                <p class="text-[10px] text-gray-500 mt-0.5">Messenger</p>
+                <p class="text-[10px] text-gray-500 mt-0.5">LinkedIn · Draft</p>
               </div>
             </div>
             <div class="flex items-center gap-2.5 px-3 py-2.5">
-              <div class="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
+              <div class="w-9 h-9 rounded-xl flex-shrink-0" style="background:#0E8A7A;"></div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between gap-2">
-                  <p class="text-[11px] font-semibold text-gray-900 truncate flex items-center gap-1">
-                    stylehive.ke
-                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full text-[7px] font-bold text-white" style="background:linear-gradient(135deg,#F58529,#E1306C);">IG</span>
-                  </p>
-                  <span class="text-[9px] text-gray-400 flex-shrink-0">08:51</span>
+                  <p class="text-[11px] font-semibold text-gray-900 truncate">3 orders from yesterday’s Reel</p>
+                  <span class="text-[9px] text-gray-400 flex-shrink-0">Fri</span>
                 </div>
-                <p class="text-[10px] text-gray-500 mt-0.5">Instagram</p>
+                <p class="text-[10px] text-gray-500 mt-0.5">Insights · Attributed</p>
               </div>
             </div>
           </div>
@@ -281,24 +257,49 @@
 
 @include('wpsupportlanding::landing.partials.unganisha.products')
 
+<!-- ===== SOCIAL ===== -->
+<section id="social" class="py-24 border-b border-gray-200 bg-white">
+  <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
+    <div class="mb-12 max-w-3xl">
+      <p class="section-label mb-3">Unganisha Social</p>
+      <h2 class="font-display section-title font-800 mb-4">Publish once. <span class="grad-text">Sell everywhere.</span></h2>
+      <p class="text-gray-600 body-lg">Compose and schedule posts for Facebook, Instagram, and LinkedIn, attach a catalog offer, and track which content drives M-Pesa checkouts.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <div class="rounded-3xl border border-gray-200 p-7 bg-white">
+        <h3 class="font-display text-2xl font-800 text-gray-900 mb-2">Compose &amp; schedule</h3>
+        <p class="text-base text-gray-600 leading-relaxed">One composer, per-network versions, media library, and a visual content calendar.</p>
+      </div>
+      <div class="rounded-3xl border border-gray-200 p-7 bg-white">
+        <h3 class="font-display text-2xl font-800 text-gray-900 mb-2">Attach an offer</h3>
+        <p class="text-base text-gray-600 leading-relaxed">Link a product, collection, or promo so every post can become a checkout.</p>
+      </div>
+      <div class="rounded-3xl border border-gray-200 p-7 bg-white">
+        <h3 class="font-display text-2xl font-800 text-gray-900 mb-2">See what sold</h3>
+        <p class="text-base text-gray-600 leading-relaxed">Attribution from click → store → M-Pesa → order, so Insights show revenue — not vanity metrics alone.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ===== STATS / OUTCOMES ===== -->
 <section class="border-y border-gray-200 py-16" style="background:#F7EEDC;">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-12">
       <div>
         <p class="section-label mb-3">Outcomes</p>
-        <h2 class="font-display section-title font-800 text-gray-900">Sell the result, not the inbox:<br/>recovered carts, kept bookings, paid invoices.</h2>
+        <h2 class="font-display section-title font-800 text-gray-900">Sell the result, not the vanity metric:<br/>clicks, carts, and paid invoices.</h2>
       </div>
-      <p class="text-gray-600 max-w-md text-base leading-relaxed">Cart Recovery, Booking Convert, and Lead-to-Cash playbooks run in the same thread as your inbox, catalog, and collections engine.</p>
+      <p class="text-gray-600 max-w-md text-base leading-relaxed">Cart Recovery, Booking Convert, and Lead-to-Cash playbooks connect Social offers to your catalog and collections engine.</p>
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4">
       <div class="stat-item px-2 lg:px-6">
-        <p class="font-display outcome-num font-800 grad-text mb-2">5</p>
-        <p class="text-base text-gray-600">Conversation channels: WhatsApp, Instagram, Messenger, WhatsApp Calls, phone</p>
+        <p class="font-display outcome-num font-800 grad-text mb-2">3</p>
+        <p class="text-base text-gray-600">Launch networks: Facebook, Instagram, LinkedIn — more coming</p>
       </div>
       <div class="stat-item px-2 lg:px-6">
-        <p class="font-display outcome-num font-800 grad-text mb-2">3</p>
-        <p class="text-base text-gray-600">Campaign channels: WhatsApp, SMS, email</p>
+        <p class="font-display outcome-num font-800 grad-text mb-2">1</p>
+        <p class="text-base text-gray-600">Commerce loop: post → offer → store → M-Pesa → order</p>
       </div>
       <div class="stat-item px-2 lg:px-6">
         <p class="font-display outcome-num font-800 grad-text mb-2">~15 min</p>
@@ -312,6 +313,7 @@
   </div>
 </section>
 
+@if(\App\Support\Offering::whatsappEnabled())
 <!-- ===== MESSAGING CHANNELS ===== -->
 <section id="channels" class="py-24 border-b border-gray-200 bg-white">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
@@ -376,6 +378,7 @@
     </div>
   </div>
 </section>
+@endif
 
 <!-- ===== CAMPAIGNS ===== -->
 <!-- <section id="campaigns" class="py-24 relative overflow-hidden" style="background:#F7EEDC;">
