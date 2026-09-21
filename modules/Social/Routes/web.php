@@ -5,6 +5,7 @@ use Modules\Social\Http\Controllers\AccountController;
 use Modules\Social\Http\Controllers\FacebookConnectController;
 use Modules\Social\Http\Controllers\HomeController;
 use Modules\Social\Http\Controllers\InstagramConnectController;
+use Modules\Social\Http\Controllers\LinkedInConnectController;
 
 Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'plan.plugin:social'])
     ->prefix('social')
@@ -21,4 +22,9 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
             ->name('social.accounts.connect.instagram');
         Route::get('/accounts/connect/instagram/callback', [InstagramConnectController::class, 'callback'])
             ->name('social.accounts.connect.instagram.callback');
+
+        Route::get('/accounts/connect/linkedin', [LinkedInConnectController::class, 'redirect'])
+            ->name('social.accounts.connect.linkedin');
+        Route::get('/accounts/connect/linkedin/callback', [LinkedInConnectController::class, 'callback'])
+            ->name('social.accounts.connect.linkedin.callback');
     });
