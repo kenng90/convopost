@@ -4,6 +4,7 @@ namespace Modules\Social\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Social\Enums\SocialProvider;
 use Modules\Social\Models\SocialAccount;
@@ -33,5 +34,22 @@ class AccountController extends Controller
             'accounts' => $accounts,
             'providers' => $providers,
         ]);
+    }
+
+    public function destroy(Request $request, SocialAccount $account): RedirectResponse
+    {
+        $company = $request->user()->currentCompany();
+
+        if (! $company || (int) $account->company_id !== (int) $company->id) {
+            abort(404);
+        }
+
+        $account->status = 'inactive';
+        $account->save();
+        $account->delete();
+
+        return redirect()
+            ->route('social.accounts.index')
+            ->withStatus(__('Social account disconnected.'));
     }
 }

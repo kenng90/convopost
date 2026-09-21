@@ -23,6 +23,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('outcomes:process-booking-no-shows')->hourly();
         $schedule->command('collections:advance')->everyFiveMinutes();
         $schedule->command('tiktok:refresh-tokens')->hourly();
+        $schedule->command('social:refresh-tokens')->hourly();
     }
 
     /**

@@ -20,6 +20,12 @@ class Main extends Provider
         $this->loadTranslations();
         $this->loadMigrations();
         $this->loadRoutes();
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \Modules\Social\Console\RefreshSocialTokensCommand::class,
+            ]);
+        }
     }
 
     protected function loadConfig()

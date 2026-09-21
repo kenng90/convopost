@@ -12,6 +12,7 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
     ->group(function () {
         Route::get('/', [HomeController::class, '__invoke'])->name('social.home');
         Route::get('/accounts', [AccountController::class, 'index'])->name('social.accounts.index');
+        Route::delete('/accounts/{account}', [AccountController::class, 'destroy'])->name('social.accounts.disconnect');
 
         Route::get('/accounts/connect/facebook', [FacebookConnectController::class, 'redirect'])
             ->name('social.accounts.connect.facebook');
