@@ -27,6 +27,8 @@ class SocialPost extends Model
         'label_ids' => 'array',
         'scheduled_at' => 'datetime',
         'published_at' => 'datetime',
+        'submitted_at' => 'datetime',
+        'reviewed_at' => 'datetime',
     ];
 
     protected static function newFactory(): SocialPostFactory
@@ -53,6 +55,11 @@ class SocialPost extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     public function versions(): HasMany
@@ -87,6 +94,11 @@ class SocialPost extends Model
         return $this->hasOne(SocialOfferLink::class, 'social_post_id');
     }
 
+    public function activities(): HasMany
+    {
+        return $this->hasMany(SocialPostActivity::class, 'social_post_id')->orderByDesc('id');
+    }
+
     public function isDraft(): bool
     {
         return $this->status === 'draft';
@@ -100,5 +112,20 @@ class SocialPost extends Model
     public function isPublished(): bool
     {
         return $this->status === 'published';
+    }
+
+    public function isPendingApproval(): bool
+    {
+        return $this->approval_status === 'pending';
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->approval_status === 'approved';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->approval_status === 'rejected';
     }
 }
