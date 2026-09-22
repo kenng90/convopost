@@ -87,6 +87,13 @@ class SocialPostComposerService
 
             $this->syncOffer($post, $company, $data);
 
+            app(SocialPostApprovalService::class)->record(
+                $post,
+                'created',
+                $user,
+                $status === 'scheduled' ? __('Post scheduled') : __('Draft created')
+            );
+
             return $post->fresh(['defaultVersion', 'accounts', 'offerLink']);
         });
     }

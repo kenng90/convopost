@@ -26,6 +26,15 @@ class SocialPostPublishService
             return $post;
         }
 
+        if (app(SocialPostApprovalService::class)->requiresApprovalBeforePublish($post)) {
+            Log::info('Skipping social publish; post awaits approval', [
+                'social_post_id' => $post->id,
+                'approval_status' => $post->approval_status,
+            ]);
+
+            return $post;
+        }
+
         $post->forceFill(['status' => 'publishing'])->save();
 
         $pending = $post->postAccounts->filter(

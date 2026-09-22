@@ -29,6 +29,13 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
 
         Route::get('/posts', [PostController::class, 'index'])->name('social.posts.index');
         Route::get('/posts/create', [PostController::class, 'create'])->name('social.posts.create');
+        Route::get('/posts/{post}', [PostController::class, 'show'])->name('social.posts.show');
+        Route::post('/posts/{post}/submit-approval', [PostController::class, 'submitForApproval'])
+            ->name('social.posts.submit-approval');
+        Route::post('/posts/{post}/approve', [PostController::class, 'approve'])
+            ->name('social.posts.approve');
+        Route::post('/posts/{post}/reject', [PostController::class, 'reject'])
+            ->name('social.posts.reject');
 
         Route::get('/calendar', CalendarController::class)->name('social.calendar');
 

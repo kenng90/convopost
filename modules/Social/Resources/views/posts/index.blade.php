@@ -61,9 +61,9 @@
                                 @foreach ($posts as $post)
                                     <tr>
                                         <td style="max-width: 320px;">
-                                            <div class="text-truncate">
+                                            <a href="{{ route('social.posts.show', $post) }}" class="text-truncate d-block text-dark">
                                                 {{ \Illuminate\Support\Str::limit($post->defaultVersion?->content ?? __('(No content)'), 120) }}
-                                            </div>
+                                            </a>
                                         </td>
                                         <td>
                                             @forelse ($post->accounts as $account)
@@ -101,7 +101,24 @@
                                                     default => 'secondary',
                                                 };
                                             @endphp
-                                            <span class="badge badge-{{ $badge }}">{{ __(ucfirst($post->status)) }}</span>
+                                            <a href="{{ route('social.posts.show', $post) }}" class="badge badge-{{ $badge }}">
+                                                {{ __(ucfirst($post->status)) }}
+                                            </a>
+                                            @if ($post->approval_status !== 'none')
+                                                @php
+                                                    $approvalBadge = match ($post->approval_status) {
+                                                        'approved' => 'success',
+                                                        'pending' => 'warning',
+                                                        'rejected' => 'danger',
+                                                        default => 'secondary',
+                                                    };
+                                                @endphp
+                                                <div class="mt-1">
+                                                    <span class="badge badge-{{ $approvalBadge }}">
+                                                        {{ __('Approval: :status', ['status' => __(ucfirst($post->approval_status))]) }}
+                                                    </span>
+                                                </div>
+                                            @endif
                                         </td>
                                         <td>
                                             @if ($post->scheduled_at)

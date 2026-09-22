@@ -162,10 +162,17 @@
                     <span wire:loading.remove wire:target="saveDraft">{{ __('Save draft') }}</span>
                     <span wire:loading wire:target="saveDraft">{{ __('Saving…') }}</span>
                 </button>
-                <button type="button" class="btn btn-primary" wire:click="schedule" wire:loading.attr="disabled">
-                    <span wire:loading.remove wire:target="schedule">{{ __('Schedule') }}</span>
-                    <span wire:loading wire:target="schedule">{{ __('Scheduling…') }}</span>
-                </button>
+                @if ($requiresApproval)
+                    <button type="button" class="btn btn-primary" wire:click="submitForApproval" wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="submitForApproval">{{ __('Submit for approval') }}</span>
+                        <span wire:loading wire:target="submitForApproval">{{ __('Submitting…') }}</span>
+                    </button>
+                @else
+                    <button type="button" class="btn btn-primary" wire:click="schedule" wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="schedule">{{ __('Schedule') }}</span>
+                        <span wire:loading wire:target="schedule">{{ __('Scheduling…') }}</span>
+                    </button>
+                @endif
             </div>
         </div>
     </div>

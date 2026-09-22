@@ -10,6 +10,8 @@ use Modules\Social\Enums\SocialProvider;
 use Modules\Social\Http\Requests\StoreSocialPostRequest;
 use Modules\Social\Models\SocialAccount;
 use Modules\Social\Models\SocialMediaAsset;
+use Modules\Social\Models\SocialPost;
+use Modules\Social\Services\SocialPostApprovalService;
 use Modules\Social\Services\SocialPostComposerService;
 
 class PostComposer extends Component
@@ -78,15 +80,55 @@ class PostComposer extends Component
 
     public function saveDraft(): void
     {
-        $this->persist('draft');
+        $post = $this->persist('draft');
+
+        if ($post) {
+            $this->redirect(route('social.posts.index', ['status' => 'draft']), navigate: false);
+        }
     }
 
     public function schedule(): void
     {
-        $this->persist('scheduled');
+        if ($this->requiresApprovalGate()) {
+            $post = $this->persist('draft');
+
+            if ($post) {
+                app(SocialPostApprovalService::class)->submit($post, Auth::user());
+                $this->redirect(route('social.posts.show', $post), navigate: false);
+            }
+
+            return;
+        }
+
+        $post = $this->persist('scheduled');
+
+        if ($post) {
+            $this->redirect(route('social.posts.index', ['status' => 'scheduled']), navigate: false);
+        }
     }
 
-    protected function persist(string $status): void
+    public function submitForApproval(): void
+    {
+        $post = $this->persist('draft');
+
+        if ($post) {
+            app(SocialPostApprovalService::class)->submit($post, Auth::user());
+            $this->redirect(route('social.posts.show', $post), navigate: false);
+        }
+    }
+
+    protected function requiresApprovalGate(): bool
+    {
+        $user = Auth::user();
+
+        if (! $user) {
+            return false;
+        }
+
+        return ! app(SocialPostApprovalService::class)->canReview($user);
+    }
+
+    protected function persist(string $status): ?SocialPost
     {
         $this->validate(StoreSocialPostRequest::livewireRules($status, $this->offerType));
 
@@ -95,10 +137,10 @@ class PostComposer extends Component
         if (! $company) {
             $this->addError('content', __('Select a company before composing.'));
 
-            return;
+            return null;
         }
 
-        app(SocialPostComposerService::class)->create($company, Auth::user(), [
+        return app(SocialPostComposerService::class)->create($company, Auth::user(), [
             'content' => $this->content,
             'account_ids' => $this->selectedAccountIds,
             'media_ids' => $this->selectedMediaIds,
@@ -109,8 +151,6 @@ class PostComposer extends Component
             'offer_url' => $this->offerUrl ?: null,
             'offer_target_id' => $this->offerTargetId,
         ]);
-
-        $this->redirect(route('social.posts.index', ['status' => $status]), navigate: false);
     }
 
     public function render(): View
@@ -120,6 +160,7 @@ class PostComposer extends Component
             'mediaAssets' => $this->availableMedia(),
             'catalogs' => $this->availableCatalogs(),
             'providers' => SocialProvider::publishable(),
+            'requiresApproval' => $this->requiresApprovalGate(),
         ]);
     }
 
