@@ -124,6 +124,33 @@
                     </dl>
                 </div>
             </div>
+            <div class="card shadow mb-4">
+                <div class="card-header border-0">
+                    <h3 class="mb-0">{{ __('Activity') }}</h3>
+                </div>
+                <div class="card-body">
+                    @forelse ($post->activities as $activity)
+                        <div class="mb-3 pb-3 {{ ! $loop->last ? 'border-bottom' : '' }}" wire:key="activity-{{ $activity->id }}">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div>
+                                    <div class="font-weight-bold">{{ __(ucfirst(str_replace('_', ' ', $activity->action))) }}</div>
+                                    @if ($activity->message)
+                                        <div class="text-sm text-muted">{{ $activity->message }}</div>
+                                    @endif
+                                    <div class="text-xs text-muted mt-1">
+                                        {{ $activity->user?->name ?? __('System') }}
+                                    </div>
+                                </div>
+                                <div class="text-xs text-muted text-nowrap">
+                                    {{ $activity->created_at?->format('M d, Y H:i') }}
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="mb-0 text-muted">{{ __('No activity yet.') }}</p>
+                    @endforelse
+                </div>
+            </div>
         </div>
     </div>
 </div>
