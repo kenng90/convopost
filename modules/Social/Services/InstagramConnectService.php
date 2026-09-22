@@ -65,16 +65,44 @@ class InstagramConnectService
 
         $pages = $this->fetchPagesWithInstagram($userToken);
 
-        $accounts = [];
-
+        $candidatePages = [];
         foreach ($pages as $page) {
             $igId = (string) data_get($page, 'instagram_business_account.id', '');
             $pageToken = (string) data_get($page, 'access_token', '');
-            $pageId = (string) data_get($page, 'id', '');
-
             if ($igId === '' || $pageToken === '') {
                 continue;
             }
+            $candidatePages[] = $page;
+        }
+
+        $newCount = 0;
+        foreach ($candidatePages as $page) {
+            $igId = (string) data_get($page, 'instagram_business_account.id', '');
+            $exists = SocialAccount::withTrashed()
+                ->where('company_id', $companyId)
+                ->where('provider', SocialProvider::Instagram->value)
+                ->where('external_id', $igId)
+                ->whereNull('deleted_at')
+                ->exists();
+            if (! $exists) {
+                $newCount++;
+            }
+        }
+
+        if ($newCount > 0) {
+            $company = \App\Models\Company::query()->find($companyId);
+            $limits = app(SocialAccountPlanLimit::class);
+            if ($company && ! $limits->canAdd($company, $newCount)) {
+                throw new RuntimeException($limits->limitExceededMessage($company, $newCount));
+            }
+        }
+
+        $accounts = [];
+
+        foreach ($candidatePages as $page) {
+            $igId = (string) data_get($page, 'instagram_business_account.id', '');
+            $pageToken = (string) data_get($page, 'access_token', '');
+            $pageId = (string) data_get($page, 'id', '');
 
             $account = SocialAccount::withTrashed()->firstOrNew([
                 'company_id' => $companyId,

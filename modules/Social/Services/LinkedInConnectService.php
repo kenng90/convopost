@@ -69,6 +69,73 @@ class LinkedInConnectService
         $organizations = $this->fetchOrganizations($accessToken);
         $accounts = [];
 
+        $newOrgIds = [];
+        foreach ($organizations as $org) {
+            $externalId = (string) data_get($org, 'id', '');
+            if ($externalId === '') {
+                continue;
+            }
+
+            $exists = SocialAccount::withTrashed()
+                ->where('company_id', $companyId)
+                ->where('provider', SocialProvider::LinkedIn->value)
+                ->where('external_id', $externalId)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if (! $exists) {
+                $newOrgIds[] = $externalId;
+            }
+        }
+
+        if ($organizations === []) {
+            $profile = $this->fetchMemberProfile($accessToken);
+            $externalId = (string) data_get($profile, 'sub', data_get($profile, 'id', ''));
+
+            if ($externalId === '') {
+                throw new RuntimeException('LinkedIn returned no organizations or member profile to connect.');
+            }
+
+            $exists = SocialAccount::withTrashed()
+                ->where('company_id', $companyId)
+                ->where('provider', SocialProvider::LinkedIn->value)
+                ->where('external_id', $externalId)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if (! $exists) {
+                $company = \App\Models\Company::query()->find($companyId);
+                $limits = app(SocialAccountPlanLimit::class);
+                if ($company && ! $limits->canAdd($company, 1)) {
+                    throw new RuntimeException($limits->limitExceededMessage($company, 1));
+                }
+            }
+
+            $accounts[] = $this->upsertAccount(
+                companyId: $companyId,
+                externalId: $externalId,
+                name: (string) data_get($profile, 'name', data_get($profile, 'localizedFirstName', 'LinkedIn Profile')),
+                username: data_get($profile, 'email'),
+                accessToken: $accessToken,
+                refreshToken: $refreshToken,
+                expiresAt: $expiresAt,
+                meta: [
+                    'type' => 'member',
+                    'member_urn' => 'urn:li:person:'.$externalId,
+                ],
+            );
+
+            return $accounts;
+        }
+
+        if ($newOrgIds !== []) {
+            $company = \App\Models\Company::query()->find($companyId);
+            $limits = app(SocialAccountPlanLimit::class);
+            if ($company && ! $limits->canAdd($company, count($newOrgIds))) {
+                throw new RuntimeException($limits->limitExceededMessage($company, count($newOrgIds)));
+            }
+        }
+
         foreach ($organizations as $org) {
             $externalId = (string) data_get($org, 'id', '');
             if ($externalId === '') {
@@ -86,29 +153,6 @@ class LinkedInConnectService
                 meta: [
                     'type' => 'organization',
                     'organization_urn' => 'urn:li:organization:'.$externalId,
-                ],
-            );
-        }
-
-        if ($accounts === []) {
-            $profile = $this->fetchMemberProfile($accessToken);
-            $externalId = (string) data_get($profile, 'sub', data_get($profile, 'id', ''));
-
-            if ($externalId === '') {
-                throw new RuntimeException('LinkedIn returned no organizations or member profile to connect.');
-            }
-
-            $accounts[] = $this->upsertAccount(
-                companyId: $companyId,
-                externalId: $externalId,
-                name: (string) data_get($profile, 'name', data_get($profile, 'localizedFirstName', 'LinkedIn Profile')),
-                username: data_get($profile, 'email'),
-                accessToken: $accessToken,
-                refreshToken: $refreshToken,
-                expiresAt: $expiresAt,
-                meta: [
-                    'type' => 'member',
-                    'member_urn' => 'urn:li:person:'.$externalId,
                 ],
             );
         }

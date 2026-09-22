@@ -12,6 +12,8 @@ use Throwable;
 
 class FacebookConnectController extends Controller
 {
+    use Concerns\EnforcesSocialAccountLimits;
+
     public function __construct(private readonly FacebookConnectService $facebookConnect)
     {
     }
@@ -30,6 +32,10 @@ class FacebookConnectController extends Controller
             return redirect()
                 ->route('social.accounts.index')
                 ->withError(__('Select a company before connecting social accounts.'));
+        }
+
+        if ($blocked = $this->ensureCanConnectAccounts($company, 1)) {
+            return $blocked;
         }
 
         $state = Str::random(40);

@@ -12,6 +12,8 @@ use Throwable;
 
 class InstagramConnectController extends Controller
 {
+    use Concerns\EnforcesSocialAccountLimits;
+
     public function __construct(private readonly InstagramConnectService $instagramConnect)
     {
     }
@@ -30,6 +32,10 @@ class InstagramConnectController extends Controller
             return redirect()
                 ->route('social.accounts.index')
                 ->withError(__('Select a company before connecting social accounts.'));
+        }
+
+        if ($blocked = $this->ensureCanConnectAccounts($company, 1)) {
+            return $blocked;
         }
 
         $state = Str::random(40);

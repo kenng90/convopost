@@ -69,6 +69,34 @@ class FacebookConnectService
             throw new RuntimeException('No Facebook Pages were returned for this Facebook user.');
         }
 
+        $newExternalIds = [];
+        foreach ($pages as $page) {
+            $externalId = (string) data_get($page, 'id', '');
+            if ($externalId === '') {
+                continue;
+            }
+
+            $exists = SocialAccount::withTrashed()
+                ->where('company_id', $companyId)
+                ->where('provider', SocialProvider::Facebook->value)
+                ->where('external_id', $externalId)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if (! $exists) {
+                $newExternalIds[] = $externalId;
+            }
+        }
+
+        if ($newExternalIds !== []) {
+            $company = \App\Models\Company::query()->find($companyId);
+            $limits = app(SocialAccountPlanLimit::class);
+
+            if ($company && ! $limits->canAdd($company, count($newExternalIds))) {
+                throw new RuntimeException($limits->limitExceededMessage($company, count($newExternalIds)));
+            }
+        }
+
         $accounts = [];
 
         foreach ($pages as $page) {
