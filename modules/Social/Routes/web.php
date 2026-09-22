@@ -6,6 +6,7 @@ use Modules\Social\Http\Controllers\FacebookConnectController;
 use Modules\Social\Http\Controllers\HomeController;
 use Modules\Social\Http\Controllers\InstagramConnectController;
 use Modules\Social\Http\Controllers\LinkedInConnectController;
+use Modules\Social\Http\Controllers\MediaController;
 
 Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'plan.plugin:social'])
     ->prefix('social')
@@ -13,6 +14,8 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
         Route::get('/', [HomeController::class, '__invoke'])->name('social.home');
         Route::get('/accounts', [AccountController::class, 'index'])->name('social.accounts.index');
         Route::delete('/accounts/{account}', [AccountController::class, 'destroy'])->name('social.accounts.disconnect');
+
+        Route::post('/media', [MediaController::class, 'store'])->name('social.media.store');
 
         Route::get('/accounts/connect/facebook', [FacebookConnectController::class, 'redirect'])
             ->name('social.accounts.connect.facebook');

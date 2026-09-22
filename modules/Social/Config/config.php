@@ -66,4 +66,16 @@ return [
             ],
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Media library uploads
+    |--------------------------------------------------------------------------
+    */
+    'media' => [
+        'disk' => env('SOCIAL_MEDIA_DISK', 'public'),
+        'directory' => env('SOCIAL_MEDIA_DIRECTORY', 'social/media'),
+        'max_kilobytes' => (int) env('SOCIAL_MEDIA_MAX_KB', 51200), // 50 MB
+        'allowed_mimes' => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'webm'],
+    ],
 ];
