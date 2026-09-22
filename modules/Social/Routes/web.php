@@ -21,6 +21,7 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
         Route::delete('/media/{media}', [MediaController::class, 'destroy'])->name('social.media.destroy');
 
         Route::get('/posts', [PostController::class, 'index'])->name('social.posts.index');
+        Route::get('/posts/create', [PostController::class, 'create'])->name('social.posts.create');
 
         Route::get('/accounts/connect/facebook', [FacebookConnectController::class, 'redirect'])
             ->name('social.accounts.connect.facebook');

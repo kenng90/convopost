@@ -1,0 +1,84 @@
+<div>
+    <div class="card shadow mb-4">
+        <div class="card-header border-0">
+            <h3 class="mb-0">{{ __('Compose post') }}</h3>
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label class="form-control-label" for="social-post-content">{{ __('Caption') }}</label>
+                <textarea
+                    id="social-post-content"
+                    class="form-control @error('content') is-invalid @enderror"
+                    rows="5"
+                    wire:model="content"
+                    placeholder="{{ __('Write your post…') }}"
+                ></textarea>
+                @error('content') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+            </div>
+
+            <div class="form-group">
+                <label class="form-control-label">{{ __('Publish to') }}</label>
+                @error('selectedAccountIds') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
+                <div class="row">
+                    @forelse ($accounts as $account)
+                        <div class="col-md-4 mb-2" wire:key="account-{{ $account->id }}">
+                            <button
+                                type="button"
+                                class="btn btn-block text-left {{ in_array($account->id, $selectedAccountIds, true) ? 'btn-primary' : 'btn-outline-secondary' }}"
+                                wire:click="toggleAccount({{ $account->id }})"
+                            >
+                                <strong>{{ $account->name ?: $account->external_id }}</strong>
+                                <div class="small">{{ ucfirst($account->provider) }}</div>
+                            </button>
+                        </div>
+                    @empty
+                        <div class="col-12">
+                            <p class="text-muted mb-0">
+                                {{ __('No connected accounts yet.') }}
+                                <a href="{{ route('social.accounts.index') }}">{{ __('Connect one') }}</a>
+                            </p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <div class="form-group mb-0">
+                <label class="form-control-label">{{ __('Attach media') }}</label>
+                <div class="row">
+                    @forelse ($mediaAssets as $asset)
+                        <div class="col-6 col-md-3 mb-3" wire:key="media-{{ $asset->id }}">
+                            <button
+                                type="button"
+                                class="btn btn-block p-0 border {{ in_array($asset->id, $selectedMediaIds, true) ? 'border-primary' : '' }}"
+                                wire:click="toggleMedia({{ $asset->id }})"
+                                style="height: 110px; overflow: hidden;"
+                            >
+                                @if ($asset->isImage())
+                                    <img src="{{ $asset->url() }}" alt="{{ $asset->original_name }}" class="img-fluid" style="object-fit: cover; width: 100%; height: 110px;">
+                                @else
+                                    <div class="d-flex align-items-center justify-content-center h-100 bg-light">
+                                        <span class="small">{{ __('Video') }}</span>
+                                    </div>
+                                @endif
+                            </button>
+                        </div>
+                    @empty
+                        <div class="col-12">
+                            <p class="text-muted mb-0">
+                                {{ __('No media in your library.') }}
+                                <a href="{{ route('social.media.index') }}">{{ __('Upload media') }}</a>
+                            </p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+            <a href="{{ route('social.posts.index') }}" class="btn btn-link">{{ __('Cancel') }}</a>
+            <button type="button" class="btn btn-primary" wire:click="saveDraft" wire:loading.attr="disabled">
+                <span wire:loading.remove wire:target="saveDraft">{{ __('Save draft') }}</span>
+                <span wire:loading wire:target="saveDraft">{{ __('Saving…') }}</span>
+            </button>
+        </div>
+    </div>
+</div>

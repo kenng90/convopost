@@ -4,6 +4,7 @@ namespace Modules\Social\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider as Provider;
+use Livewire\Livewire;
 
 class Main extends Provider
 {
@@ -20,6 +21,8 @@ class Main extends Provider
         $this->loadTranslations();
         $this->loadMigrations();
         $this->loadRoutes();
+
+        Livewire::component('social.post-composer', \Modules\Social\Livewire\PostComposer::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([

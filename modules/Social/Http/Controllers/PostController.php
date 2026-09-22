@@ -40,4 +40,9 @@ class PostController extends Controller
             ],
         ]);
     }
+
+    public function create(): View
+    {
+        return view('social::posts.create');
+    }
 }
