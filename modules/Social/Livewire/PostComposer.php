@@ -20,12 +20,31 @@ class PostComposer extends Component
     /** @var list<int> */
     public array $selectedMediaIds = [];
 
+    /** @var array<string, string> */
+    public array $networkVersions = [
+        'facebook' => '',
+        'instagram' => '',
+        'linkedin' => '',
+    ];
+
+    public bool $showNetworkOverrides = false;
+
     public function mount(): void
     {
         $accounts = $this->availableAccounts();
         if ($accounts->count() === 1) {
             $this->selectedAccountIds = [(int) $accounts->first()->id];
         }
+    }
+
+    public function updatedContent(string $value): void
+    {
+        // Keep empty overrides as inherit-from-default.
+    }
+
+    public function toggleNetworkOverrides(): void
+    {
+        $this->showNetworkOverrides = ! $this->showNetworkOverrides;
     }
 
     public function toggleAccount(int $accountId): void
@@ -74,6 +93,7 @@ class PostComposer extends Component
             'content' => $this->content,
             'account_ids' => $this->selectedAccountIds,
             'media_ids' => $this->selectedMediaIds,
+            'versions' => $this->networkVersions,
             'status' => 'draft',
         ]);
 

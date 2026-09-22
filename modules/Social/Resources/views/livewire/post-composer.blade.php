@@ -42,6 +42,30 @@
                 </div>
             </div>
 
+            <div class="form-group">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <label class="form-control-label mb-0">{{ __('Per-network captions') }}</label>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="toggleNetworkOverrides">
+                        {{ $showNetworkOverrides ? __('Hide overrides') : __('Customize per network') }}
+                    </button>
+                </div>
+                @if ($showNetworkOverrides)
+                    <p class="text-muted small">{{ __('Leave blank to use the main caption for that network.') }}</p>
+                    @foreach (['facebook' => 'Facebook', 'instagram' => 'Instagram', 'linkedin' => 'LinkedIn'] as $provider => $label)
+                        <div class="mb-3" wire:key="version-{{ $provider }}">
+                            <label class="form-control-label" for="version-{{ $provider }}">{{ __($label) }}</label>
+                            <textarea
+                                id="version-{{ $provider }}"
+                                class="form-control"
+                                rows="3"
+                                wire:model="networkVersions.{{ $provider }}"
+                                placeholder="{{ __('Override for :network', ['network' => $label]) }}"
+                            ></textarea>
+                        </div>
+                    @endforeach
+                @endif
+            </div>
+
             <div class="form-group mb-0">
                 <label class="form-control-label">{{ __('Attach media') }}</label>
                 <div class="row">
