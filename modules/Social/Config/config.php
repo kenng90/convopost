@@ -33,7 +33,7 @@ return [
         'instagram' => [
             'enabled' => env('SOCIAL_INSTAGRAM_ENABLED', true),
             'label' => 'Instagram',
-            'publisher' => null,
+            'publisher' => Modules\Social\Publishing\InstagramPublisher::class,
             'scopes' => [
                 'instagram_basic',
                 'instagram_content_publish',
