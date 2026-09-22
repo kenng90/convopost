@@ -28,6 +28,7 @@ class Main extends Provider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 \Modules\Social\Console\RefreshSocialTokensCommand::class,
+                \Modules\Social\Console\PublishDueSocialPostsCommand::class,
             ]);
         }
     }
