@@ -23,6 +23,7 @@ class OfferRedirectController extends Controller
         }
 
         $link->recordClick();
+        $this->tracking->recordClickEvent($request, $link);
         $this->tracking->rememberInSession($request, $link);
 
         return redirect()->away($this->destination($link));

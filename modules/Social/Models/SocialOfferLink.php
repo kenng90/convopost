@@ -7,6 +7,7 @@ use App\Scopes\CompanyScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Modules\Social\Database\Factories\SocialOfferLinkFactory;
 
@@ -51,6 +52,11 @@ class SocialOfferLink extends Model
     public function post(): BelongsTo
     {
         return $this->belongsTo(SocialPost::class, 'social_post_id');
+    }
+
+    public function clicks(): HasMany
+    {
+        return $this->hasMany(SocialPostClick::class, 'social_offer_link_id');
     }
 
     public function destinationUrl(): string

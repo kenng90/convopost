@@ -3,7 +3,9 @@
 namespace Modules\Social\Services;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Modules\Social\Models\SocialOfferLink;
+use Modules\Social\Models\SocialPostClick;
 
 class SocialOfferTrackingService
 {
@@ -28,6 +30,21 @@ class SocialOfferTrackingService
             'social_offer_link_id' => $link->id,
             'tracking_token' => $link->tracking_token,
             'clicked_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    public function recordClickEvent(Request $request, SocialOfferLink $link): SocialPostClick
+    {
+        $ip = (string) $request->ip();
+
+        return SocialPostClick::query()->create([
+            'company_id' => $link->company_id,
+            'social_offer_link_id' => $link->id,
+            'social_post_id' => $link->social_post_id,
+            'ip_hash' => $ip !== '' ? hash('sha256', $ip) : null,
+            'user_agent' => Str::limit((string) $request->userAgent(), 512, ''),
+            'referer' => Str::limit((string) $request->headers->get('referer'), 1024, ''),
+            'clicked_at' => now(),
         ]);
     }
 
