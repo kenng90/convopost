@@ -78,6 +78,52 @@
                 <small class="form-text text-muted">{{ __('Required when scheduling. Leave empty to save as draft.') }}</small>
             </div>
 
+            <div class="form-group">
+                <label class="form-control-label" for="social-offer-type">{{ __('Commerce offer') }}</label>
+                <select id="social-offer-type" class="form-control @error('offerType') is-invalid @enderror" wire:model.live="offerType">
+                    <option value="none">{{ __('No offer') }}</option>
+                    <option value="url">{{ __('Custom URL') }}</option>
+                    <option value="catalog">{{ __('Catalog') }}</option>
+                    <option value="product">{{ __('Product / SKU id') }}</option>
+                </select>
+                @error('offerType') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+            </div>
+
+            @if ($offerType === 'url')
+                <div class="form-group">
+                    <label class="form-control-label" for="social-offer-url">{{ __('Offer URL') }}</label>
+                    <input id="social-offer-url" type="url" class="form-control @error('offerUrl') is-invalid @enderror" wire:model="offerUrl" placeholder="https://">
+                    @error('offerUrl') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                </div>
+            @endif
+
+            @if ($offerType === 'catalog')
+                <div class="form-group">
+                    <label class="form-control-label" for="social-offer-catalog">{{ __('Catalog') }}</label>
+                    <select id="social-offer-catalog" class="form-control @error('offerTargetId') is-invalid @enderror" wire:model="offerTargetId">
+                        <option value="">{{ __('Select a catalog') }}</option>
+                        @foreach ($catalogs as $catalog)
+                            <option value="{{ $catalog->id }}">{{ $catalog->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('offerTargetId') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                </div>
+            @endif
+
+            @if ($offerType === 'product')
+                <div class="form-group">
+                    <label class="form-control-label" for="social-offer-product">{{ __('Product / item id') }}</label>
+                    <input id="social-offer-product" type="number" min="1" class="form-control @error('offerTargetId') is-invalid @enderror" wire:model="offerTargetId">
+                    @error('offerTargetId') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                    <small class="form-text text-muted">{{ __('Use a catalog item id from your store. Tracking link will be generated.') }}</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-control-label" for="social-offer-product-url">{{ __('Optional landing URL') }}</label>
+                    <input id="social-offer-product-url" type="url" class="form-control @error('offerUrl') is-invalid @enderror" wire:model="offerUrl" placeholder="https://">
+                    @error('offerUrl') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                </div>
+            @endif
+
             <div class="form-group mb-0">
                 <label class="form-control-label">{{ __('Attach media') }}</label>
                 <div class="row">

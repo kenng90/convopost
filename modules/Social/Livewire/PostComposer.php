@@ -2,6 +2,7 @@
 
 namespace Modules\Social\Livewire;
 
+use App\Models\ListCatalog;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -30,6 +31,12 @@ class PostComposer extends Component
     public bool $showNetworkOverrides = false;
 
     public ?string $scheduledAt = null;
+
+    public string $offerType = 'none';
+
+    public string $offerUrl = '';
+
+    public ?int $offerTargetId = null;
 
     public function mount(): void
     {
@@ -90,6 +97,9 @@ class PostComposer extends Component
             'networkVersions.instagram' => ['nullable', 'string', 'max:5000'],
             'networkVersions.linkedin' => ['nullable', 'string', 'max:5000'],
             'scheduledAt' => [$status === 'scheduled' ? 'required' : 'nullable', 'date', 'after:now'],
+            'offerType' => ['required', 'in:none,url,catalog,product'],
+            'offerUrl' => [$this->offerType === 'url' ? 'required' : 'nullable', 'url', 'max:2048'],
+            'offerTargetId' => [in_array($this->offerType, ['catalog', 'product'], true) ? 'required' : 'nullable', 'integer'],
         ];
 
         $this->validate($rules);
@@ -109,6 +119,9 @@ class PostComposer extends Component
             'versions' => $this->networkVersions,
             'status' => $status,
             'scheduled_at' => $this->scheduledAt,
+            'offer_type' => $this->offerType,
+            'offer_url' => $this->offerUrl ?: null,
+            'offer_target_id' => $this->offerTargetId,
         ]);
 
         $this->redirect(route('social.posts.index', ['status' => $status]), navigate: false);
@@ -119,6 +132,7 @@ class PostComposer extends Component
         return view('social::livewire.post-composer', [
             'accounts' => $this->availableAccounts(),
             'mediaAssets' => $this->availableMedia(),
+            'catalogs' => $this->availableCatalogs(),
             'providers' => SocialProvider::publishable(),
         ]);
     }
@@ -144,5 +158,16 @@ class PostComposer extends Component
             ->orderByDesc('id')
             ->limit(24)
             ->get();
+    }
+
+    protected function availableCatalogs()
+    {
+        $company = Auth::user()?->currentCompany();
+
+        return ListCatalog::query()
+            ->when($company, fn ($query) => $query->where('company_id', $company->id))
+            ->orderBy('name')
+            ->limit(50)
+            ->get(['id', 'name']);
     }
 }
