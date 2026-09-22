@@ -20,7 +20,7 @@ class PostController extends Controller
         }
 
         $posts = SocialPost::query()
-            ->with(['defaultVersion', 'accounts', 'offerLink'])
+            ->with(['defaultVersion', 'accounts', 'offerLink', 'postAccounts'])
             ->when($company, fn ($query) => $query->where('company_id', $company->id))
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
             ->orderByDesc('scheduled_at')

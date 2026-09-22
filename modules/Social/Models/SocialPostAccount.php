@@ -48,7 +48,7 @@ class SocialPostAccount extends Model
     {
         $this->forceFill([
             'status' => 'failed',
-            'error' => $error,
+            'error' => mb_substr($error, 0, 2000),
         ])->save();
     }
 }

@@ -67,10 +67,30 @@
                                         </td>
                                         <td>
                                             @forelse ($post->accounts as $account)
-                                                <span class="badge badge-secondary mr-1">{{ $account->name ?: $account->provider }}</span>
+                                                @php
+                                                    $pivotStatus = $account->pivot->status ?? 'pending';
+                                                    $pivotError = $account->pivot->error ?? null;
+                                                @endphp
+                                                <span
+                                                    class="badge mr-1 badge-{{ $pivotStatus === 'failed' ? 'danger' : ($pivotStatus === 'published' ? 'success' : 'secondary') }}"
+                                                    @if ($pivotError) title="{{ $pivotError }}" @endif
+                                                >
+                                                    {{ $account->name ?: $account->provider }}
+                                                    @if ($pivotStatus === 'failed')
+                                                        · {{ __('failed') }}
+                                                    @endif
+                                                </span>
                                             @empty
                                                 <span class="text-muted">{{ __('None') }}</span>
                                             @endforelse
+                                            @php
+                                                $failed = $post->postAccounts->firstWhere('status', 'failed');
+                                            @endphp
+                                            @if ($failed?->error)
+                                                <div class="small text-danger text-truncate" style="max-width: 220px;" title="{{ $failed->error }}">
+                                                    {{ \Illuminate\Support\Str::limit($failed->error, 80) }}
+                                                </div>
+                                            @endif
                                         </td>
                                         <td>
                                             @php
