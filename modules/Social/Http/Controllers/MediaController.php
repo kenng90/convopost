@@ -8,12 +8,17 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Social\Http\Requests\StoreSocialMediaAssetRequest;
 use Modules\Social\Models\SocialMediaAsset;
+use Modules\Social\Services\SocialMediaAssetDeletionService;
 use Modules\Social\Services\SocialMediaUploadService;
+use RuntimeException;
+use Throwable;
 
 class MediaController extends Controller
 {
-    public function __construct(private readonly SocialMediaUploadService $uploads)
-    {
+    public function __construct(
+        private readonly SocialMediaUploadService $uploads,
+        private readonly SocialMediaAssetDeletionService $deletions,
+    ) {
     }
 
     public function index(Request $request): View
@@ -47,5 +52,32 @@ class MediaController extends Controller
         return redirect()
             ->route('social.media.index')
             ->withStatus(__('Media uploaded successfully.'));
+    }
+
+    public function destroy(Request $request, SocialMediaAsset $media): RedirectResponse
+    {
+        $company = $request->user()->currentCompany();
+
+        if (! $company || (int) $media->company_id !== (int) $company->id) {
+            abort(404);
+        }
+
+        try {
+            $this->deletions->deleteIfUnused($media);
+        } catch (RuntimeException $e) {
+            return redirect()
+                ->route('social.media.index')
+                ->withError($e->getMessage());
+        } catch (Throwable $e) {
+            report($e);
+
+            return redirect()
+                ->route('social.media.index')
+                ->withError(__('Could not delete media. Please try again.'));
+        }
+
+        return redirect()
+            ->route('social.media.index')
+            ->withStatus(__('Media deleted.'));
     }
 }
