@@ -32,6 +32,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Modules\Invoice\Models\Invoice;
 use Modules\Reminders\Services\BookingPaymentService;
+use Modules\Social\Services\SocialOfferTrackingService;
 use RuntimeException;
 
 class PublicCatalogController extends Controller
@@ -56,6 +57,7 @@ class PublicCatalogController extends Controller
         protected BookingPaymentService $bookingPaymentService,
         protected CatalogOrderService $catalogOrderService,
         protected CatalogCartSessionService $catalogCartSessionService,
+        protected SocialOfferTrackingService $socialOfferTracking,
     ) {
     }
 
@@ -562,9 +564,13 @@ class PublicCatalogController extends Controller
             try {
                 $reservations = $this->reserveCheckoutInventory($catalog, $validated['items']);
 
+                $attribution = $this->socialOfferTracking->attributionFromSession($request) ?? [];
+
                 $invoice = Invoice::create([
                     'company_id' => $catalog->company_id,
                     'catalog_id' => $catalog->id,
+                    'social_post_id' => $attribution['social_post_id'] ?? null,
+                    'social_offer_link_id' => $attribution['social_offer_link_id'] ?? null,
                     'invoice_number' => Invoice::generateInvoiceNumber($catalog->company),
                     'customer_name' => trim((string) ($validated['customerName'] ?? '')) !== ''
                         ? trim((string) $validated['customerName'])
@@ -578,6 +584,10 @@ class PublicCatalogController extends Controller
                     'description' => $validated['notes'] ?? null,
                     'items' => $invoiceItems,
                 ]);
+
+                if (! empty($attribution)) {
+                    $this->socialOfferTracking->clearSession($request);
+                }
 
                 foreach ($reservations as $reservation) {
                     $reservation->update([
