@@ -28,8 +28,12 @@ class CatalogFlowCallbackService
     /**
      * @return array{flow_id: int, contact_id: int, node_id: string, catalog_id: int}
      */
-    public function decodeToken(string $token): ?array
+    public function decodeToken(?string $token): ?array
     {
+        if ($token === null || $token === '') {
+            return null;
+        }
+
         try {
             $payload = json_decode(Crypt::decryptString($token), true, 512, JSON_THROW_ON_ERROR);
         } catch (\Throwable) {
