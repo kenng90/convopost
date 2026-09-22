@@ -15,6 +15,10 @@ class ContentCalendar extends Component
 
     public string $cursorDate;
 
+    public ?int $reschedulingPostId = null;
+
+    public string $rescheduleAt = '';
+
     public function mount(?string $date = null): void
     {
         $this->cursorDate = $date
@@ -52,6 +56,61 @@ class ContentCalendar extends Component
         }
 
         $this->mode = $mode;
+    }
+
+    public function startReschedule(int $postId): void
+    {
+        $post = $this->findOwnedPost($postId);
+
+        if (! $post || ! in_array($post->status, ['draft', 'scheduled'], true)) {
+            return;
+        }
+
+        $this->reschedulingPostId = $post->id;
+        $this->rescheduleAt = ($post->scheduled_at ?? now()->addHour())->format('Y-m-d\TH:i');
+        $this->resetErrorBag();
+    }
+
+    public function cancelReschedule(): void
+    {
+        $this->reschedulingPostId = null;
+        $this->rescheduleAt = '';
+        $this->resetErrorBag();
+    }
+
+    public function saveReschedule(): void
+    {
+        $this->validate([
+            'rescheduleAt' => ['required', 'date', 'after:now'],
+        ]);
+
+        $post = $this->findOwnedPost((int) $this->reschedulingPostId);
+
+        if (! $post || ! in_array($post->status, ['draft', 'scheduled'], true)) {
+            $this->addError('rescheduleAt', __('Only draft or scheduled posts can be rescheduled.'));
+
+            return;
+        }
+
+        $scheduledAt = Carbon::parse($this->rescheduleAt);
+
+        $post->forceFill([
+            'scheduled_at' => $scheduledAt,
+            'status' => 'scheduled',
+        ])->save();
+
+        $this->cursorDate = $scheduledAt->toDateString();
+        $this->cancelReschedule();
+    }
+
+    protected function findOwnedPost(int $postId): ?SocialPost
+    {
+        $company = Auth::user()?->currentCompany();
+
+        return SocialPost::query()
+            ->when($company, fn ($query) => $query->where('company_id', $company->id))
+            ->whereKey($postId)
+            ->first();
     }
 
     public function render(): View

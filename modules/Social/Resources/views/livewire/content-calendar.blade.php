@@ -27,6 +27,28 @@
                 </div>
             </div>
         </div>
+        @if ($reschedulingPostId)
+            <div class="card-body border-top bg-light">
+                <div class="row align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-control-label" for="calendar-reschedule-at">{{ __('Reschedule post') }}</label>
+                        <input
+                            id="calendar-reschedule-at"
+                            type="datetime-local"
+                            class="form-control @error('rescheduleAt') is-invalid @enderror"
+                            wire:model="rescheduleAt"
+                        >
+                        @error('rescheduleAt') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                    </div>
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-primary" wire:click="saveReschedule" wire:loading.attr="disabled">
+                            {{ __('Save new time') }}
+                        </button>
+                        <button type="button" class="btn btn-link" wire:click="cancelReschedule">{{ __('Cancel') }}</button>
+                    </div>
+                </div>
+            </div>
+        @endif
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-bordered mb-0 social-calendar-grid">
@@ -66,14 +88,20 @@
                                                     $snippet = \Illuminate\Support\Str::limit($post->defaultVersion?->content ?? __('(No content)'), 36);
                                                     $time = ($post->scheduled_at ?? $post->published_at)?->format('H:i');
                                                 @endphp
-                                                <div
-                                                    class="small rounded px-1 py-1 bg-white border"
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-link text-left small rounded px-1 py-1 bg-white border w-100"
                                                     title="{{ $snippet }}"
                                                     wire:key="post-{{ $post->id }}"
+                                                    @if (in_array($post->status, ['draft', 'scheduled'], true))
+                                                        wire:click="startReschedule({{ $post->id }})"
+                                                    @else
+                                                        disabled
+                                                    @endif
                                                 >
                                                     <span class="badge badge-{{ $badge }}">{{ $time }}</span>
-                                                    <span class="d-block text-truncate">{{ $snippet }}</span>
-                                                </div>
+                                                    <span class="d-block text-truncate text-dark">{{ $snippet }}</span>
+                                                </button>
                                             @endforeach
                                             @if ($day['posts']->count() > ($mode === 'week' ? 8 : 4))
                                                 <div class="small text-muted">+{{ $day['posts']->count() - ($mode === 'week' ? 8 : 4) }} {{ __('more') }}</div>
