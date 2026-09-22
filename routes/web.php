@@ -314,5 +314,5 @@ Route::middleware('web')->group(function () {
 //Static pages or vendor by alias
 Route::middleware('web')->group(function () {
     Route::get('/{alias}', [FrontEndController::class, 'staticPage'])->name('static-page')
-        ->where('alias', '^(?!flows|whatsapp-flows|dashboard|home|reports|reports/|collections|collections/|social|social/|api/|login|logout|password|register|forgot-password).*');
+        ->where('alias', '^(?!flows|whatsapp-flows|dashboard|home|reports|reports/|collections|collections/|social|social/|o|o/|api/|login|logout|password|register|forgot-password).*');
 });

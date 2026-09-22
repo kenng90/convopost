@@ -8,7 +8,13 @@ use Modules\Social\Http\Controllers\HomeController;
 use Modules\Social\Http\Controllers\InstagramConnectController;
 use Modules\Social\Http\Controllers\LinkedInConnectController;
 use Modules\Social\Http\Controllers\MediaController;
+use Modules\Social\Http\Controllers\OfferRedirectController;
 use Modules\Social\Http\Controllers\PostController;
+
+Route::middleware(['web'])
+    ->get('/o/{token}', OfferRedirectController::class)
+    ->where('token', '[A-Za-z0-9]+')
+    ->name('social.offer.redirect');
 
 Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'plan.plugin:social'])
     ->prefix('social')
