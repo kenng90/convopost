@@ -29,17 +29,14 @@ class PostComposer extends Component
 
     public bool $showNetworkOverrides = false;
 
+    public ?string $scheduledAt = null;
+
     public function mount(): void
     {
         $accounts = $this->availableAccounts();
         if ($accounts->count() === 1) {
             $this->selectedAccountIds = [(int) $accounts->first()->id];
         }
-    }
-
-    public function updatedContent(string $value): void
-    {
-        // Keep empty overrides as inherit-from-default.
     }
 
     public function toggleNetworkOverrides(): void
@@ -73,13 +70,29 @@ class PostComposer extends Component
 
     public function saveDraft(): void
     {
-        $this->validate([
+        $this->persist('draft');
+    }
+
+    public function schedule(): void
+    {
+        $this->persist('scheduled');
+    }
+
+    protected function persist(string $status): void
+    {
+        $rules = [
             'content' => ['required', 'string', 'max:5000'],
             'selectedAccountIds' => ['required', 'array', 'min:1'],
             'selectedAccountIds.*' => ['integer'],
             'selectedMediaIds' => ['array'],
             'selectedMediaIds.*' => ['integer'],
-        ]);
+            'networkVersions.facebook' => ['nullable', 'string', 'max:5000'],
+            'networkVersions.instagram' => ['nullable', 'string', 'max:5000'],
+            'networkVersions.linkedin' => ['nullable', 'string', 'max:5000'],
+            'scheduledAt' => [$status === 'scheduled' ? 'required' : 'nullable', 'date', 'after:now'],
+        ];
+
+        $this->validate($rules);
 
         $company = Auth::user()->currentCompany();
 
@@ -94,10 +107,11 @@ class PostComposer extends Component
             'account_ids' => $this->selectedAccountIds,
             'media_ids' => $this->selectedMediaIds,
             'versions' => $this->networkVersions,
-            'status' => 'draft',
+            'status' => $status,
+            'scheduled_at' => $this->scheduledAt,
         ]);
 
-        $this->redirect(route('social.posts.index', ['status' => 'draft']), navigate: false);
+        $this->redirect(route('social.posts.index', ['status' => $status]), navigate: false);
     }
 
     public function render(): View

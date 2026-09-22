@@ -66,6 +66,18 @@
                 @endif
             </div>
 
+            <div class="form-group">
+                <label class="form-control-label" for="social-post-schedule">{{ __('Schedule for') }}</label>
+                <input
+                    id="social-post-schedule"
+                    type="datetime-local"
+                    class="form-control @error('scheduledAt') is-invalid @enderror"
+                    wire:model="scheduledAt"
+                >
+                @error('scheduledAt') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                <small class="form-text text-muted">{{ __('Required when scheduling. Leave empty to save as draft.') }}</small>
+            </div>
+
             <div class="form-group mb-0">
                 <label class="form-control-label">{{ __('Attach media') }}</label>
                 <div class="row">
@@ -97,12 +109,18 @@
                 </div>
             </div>
         </div>
-        <div class="card-footer d-flex justify-content-between">
+        <div class="card-footer d-flex justify-content-between align-items-center">
             <a href="{{ route('social.posts.index') }}" class="btn btn-link">{{ __('Cancel') }}</a>
-            <button type="button" class="btn btn-primary" wire:click="saveDraft" wire:loading.attr="disabled">
-                <span wire:loading.remove wire:target="saveDraft">{{ __('Save draft') }}</span>
-                <span wire:loading wire:target="saveDraft">{{ __('Saving…') }}</span>
-            </button>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary" wire:click="saveDraft" wire:loading.attr="disabled">
+                    <span wire:loading.remove wire:target="saveDraft">{{ __('Save draft') }}</span>
+                    <span wire:loading wire:target="saveDraft">{{ __('Saving…') }}</span>
+                </button>
+                <button type="button" class="btn btn-primary" wire:click="schedule" wire:loading.attr="disabled">
+                    <span wire:loading.remove wire:target="schedule">{{ __('Schedule') }}</span>
+                    <span wire:loading wire:target="schedule">{{ __('Scheduling…') }}</span>
+                </button>
+            </div>
         </div>
     </div>
 </div>
