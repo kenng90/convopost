@@ -51,7 +51,7 @@ return [
         'linkedin' => [
             'enabled' => env('SOCIAL_LINKEDIN_ENABLED', true),
             'label' => 'LinkedIn',
-            'publisher' => null,
+            'publisher' => Modules\Social\Publishing\LinkedInPublisher::class,
             'scopes' => [
                 'openid',
                 'profile',
