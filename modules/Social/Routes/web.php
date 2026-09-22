@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Social\Http\Controllers\AccountController;
+use Modules\Social\Http\Controllers\CalendarController;
 use Modules\Social\Http\Controllers\FacebookConnectController;
 use Modules\Social\Http\Controllers\HomeController;
 use Modules\Social\Http\Controllers\InstagramConnectController;
@@ -22,6 +23,8 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
 
         Route::get('/posts', [PostController::class, 'index'])->name('social.posts.index');
         Route::get('/posts/create', [PostController::class, 'create'])->name('social.posts.create');
+
+        Route::get('/calendar', CalendarController::class)->name('social.calendar');
 
         Route::get('/accounts/connect/facebook', [FacebookConnectController::class, 'redirect'])
             ->name('social.accounts.connect.facebook');

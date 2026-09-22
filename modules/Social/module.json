@@ -40,6 +40,11 @@
                     "name": "Posts",
                     "icon": "ni ni-align-left-2 text-primary",
                     "route": "social.posts.index"
+                },
+                {
+                    "name": "Calendar",
+                    "icon": "ni ni-calendar-grid-58 text-primary",
+                    "route": "social.calendar"
                 }
             ]
         }
@@ -72,6 +77,11 @@
                     "name": "Posts",
                     "icon": "ni ni-align-left-2 text-primary",
                     "route": "social.posts.index"
+                },
+                {
+                    "name": "Calendar",
+                    "icon": "ni ni-calendar-grid-58 text-primary",
+                    "route": "social.calendar"
                 }
             ]
         }

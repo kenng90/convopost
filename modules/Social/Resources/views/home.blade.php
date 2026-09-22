@@ -18,13 +18,16 @@
                 <a href="{{ route('social.posts.index') }}" class="btn btn-outline-primary">
                     {{ __('Posts') }}
                 </a>
+                <a href="{{ route('social.calendar') }}" class="btn btn-outline-primary">
+                    {{ __('Calendar') }}
+                </a>
             </div>
             <div class="card shadow">
                 <div class="card-body">
                     <p class="mb-2 font-weight-bold">{{ __('Coming next') }}</p>
                     <ul class="mb-0 pl-3">
-                        <li>{{ __('Compose, schedule, and calendar') }}</li>
-                        <li>{{ __('Attach catalog offers with tracked links') }}</li>
+                        <li>{{ __('Publish pipeline and analytics') }}</li>
+                        <li>{{ __('Tracked offer click attribution') }}</li>
                     </ul>
                 </div>
             </div>

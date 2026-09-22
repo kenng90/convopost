@@ -23,6 +23,7 @@ class Main extends Provider
         $this->loadRoutes();
 
         Livewire::component('social.post-composer', \Modules\Social\Livewire\PostComposer::class);
+        Livewire::component('social.content-calendar', \Modules\Social\Livewire\ContentCalendar::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([
