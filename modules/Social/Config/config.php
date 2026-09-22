@@ -16,7 +16,7 @@ return [
         'facebook' => [
             'enabled' => env('SOCIAL_FACEBOOK_ENABLED', true),
             'label' => 'Facebook Page',
-            'publisher' => null,
+            'publisher' => Modules\Social\Publishing\FacebookPublisher::class,
             'scopes' => [
                 'pages_show_list',
                 'pages_manage_posts',
