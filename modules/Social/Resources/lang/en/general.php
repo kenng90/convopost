@@ -2,7 +2,7 @@
 
 return [
 
-    'name'              => 'Social',
-    'description'       => 'This is my awesome module',
+    'name' => 'Social',
+    'description' => 'This is my awesome module',
 
 ];
