@@ -15,6 +15,7 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
         Route::get('/accounts', [AccountController::class, 'index'])->name('social.accounts.index');
         Route::delete('/accounts/{account}', [AccountController::class, 'destroy'])->name('social.accounts.disconnect');
 
+        Route::get('/media', [MediaController::class, 'index'])->name('social.media.index');
         Route::post('/media', [MediaController::class, 'store'])->name('social.media.store');
 
         Route::get('/accounts/connect/facebook', [FacebookConnectController::class, 'redirect'])

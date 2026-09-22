@@ -8,9 +8,12 @@
             <p class="text-muted mb-4">
                 {{ __('Publish and schedule content, attach product offers, and drive M-Pesa checkouts — your social commerce home.') }}
             </p>
-            <div class="mb-4">
+            <div class="mb-4 d-flex flex-wrap gap-2">
                 <a href="{{ route('social.accounts.index') }}" class="btn btn-primary">
                     {{ __('Connected accounts') }}
+                </a>
+                <a href="{{ route('social.media.index') }}" class="btn btn-outline-primary">
+                    {{ __('Media library') }}
                 </a>
             </div>
             <div class="card shadow">
