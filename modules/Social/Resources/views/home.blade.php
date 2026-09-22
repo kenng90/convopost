@@ -15,6 +15,9 @@
                 <a href="{{ route('social.media.index') }}" class="btn btn-outline-primary">
                     {{ __('Media library') }}
                 </a>
+                <a href="{{ route('social.posts.index') }}" class="btn btn-outline-primary">
+                    {{ __('Posts') }}
+                </a>
             </div>
             <div class="card shadow">
                 <div class="card-body">

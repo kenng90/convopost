@@ -7,6 +7,7 @@ use Modules\Social\Http\Controllers\HomeController;
 use Modules\Social\Http\Controllers\InstagramConnectController;
 use Modules\Social\Http\Controllers\LinkedInConnectController;
 use Modules\Social\Http\Controllers\MediaController;
+use Modules\Social\Http\Controllers\PostController;
 
 Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'plan.plugin:social'])
     ->prefix('social')
@@ -18,6 +19,8 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
         Route::get('/media', [MediaController::class, 'index'])->name('social.media.index');
         Route::post('/media', [MediaController::class, 'store'])->name('social.media.store');
         Route::delete('/media/{media}', [MediaController::class, 'destroy'])->name('social.media.destroy');
+
+        Route::get('/posts', [PostController::class, 'index'])->name('social.posts.index');
 
         Route::get('/accounts/connect/facebook', [FacebookConnectController::class, 'redirect'])
             ->name('social.accounts.connect.facebook');

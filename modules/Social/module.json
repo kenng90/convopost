@@ -35,6 +35,11 @@
                     "name": "Media",
                     "icon": "ni ni-album-2 text-primary",
                     "route": "social.media.index"
+                },
+                {
+                    "name": "Posts",
+                    "icon": "ni ni-align-left-2 text-primary",
+                    "route": "social.posts.index"
                 }
             ]
         }
@@ -62,6 +67,11 @@
                     "name": "Media",
                     "icon": "ni ni-album-2 text-primary",
                     "route": "social.media.index"
+                },
+                {
+                    "name": "Posts",
+                    "icon": "ni ni-align-left-2 text-primary",
+                    "route": "social.posts.index"
                 }
             ]
         }
