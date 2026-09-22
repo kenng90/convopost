@@ -7,6 +7,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Modules\Social\Enums\SocialProvider;
+use Modules\Social\Http\Requests\StoreSocialPostRequest;
 use Modules\Social\Models\SocialAccount;
 use Modules\Social\Models\SocialMediaAsset;
 use Modules\Social\Services\SocialPostComposerService;
@@ -87,22 +88,7 @@ class PostComposer extends Component
 
     protected function persist(string $status): void
     {
-        $rules = [
-            'content' => ['required', 'string', 'max:5000'],
-            'selectedAccountIds' => ['required', 'array', 'min:1'],
-            'selectedAccountIds.*' => ['integer'],
-            'selectedMediaIds' => ['array'],
-            'selectedMediaIds.*' => ['integer'],
-            'networkVersions.facebook' => ['nullable', 'string', 'max:5000'],
-            'networkVersions.instagram' => ['nullable', 'string', 'max:5000'],
-            'networkVersions.linkedin' => ['nullable', 'string', 'max:5000'],
-            'scheduledAt' => [$status === 'scheduled' ? 'required' : 'nullable', 'date', 'after:now'],
-            'offerType' => ['required', 'in:none,url,catalog,product'],
-            'offerUrl' => [$this->offerType === 'url' ? 'required' : 'nullable', 'url', 'max:2048'],
-            'offerTargetId' => [in_array($this->offerType, ['catalog', 'product'], true) ? 'required' : 'nullable', 'integer'],
-        ];
-
-        $this->validate($rules);
+        $this->validate(StoreSocialPostRequest::livewireRules($status, $this->offerType));
 
         $company = Auth::user()->currentCompany();
 
