@@ -6,6 +6,18 @@
                     <h3 class="mb-0">{{ $title }}</h3>
                 </div>
                 <div class="col-auto">
+                    <div class="btn-group mr-2" role="group">
+                        <button
+                            type="button"
+                            class="btn btn-sm {{ $mode === 'month' ? 'btn-primary' : 'btn-outline-primary' }}"
+                            wire:click="setMode('month')"
+                        >{{ __('Month') }}</button>
+                        <button
+                            type="button"
+                            class="btn btn-sm {{ $mode === 'week' ? 'btn-primary' : 'btn-outline-primary' }}"
+                            wire:click="setMode('week')"
+                        >{{ __('Week') }}</button>
+                    </div>
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="previousPeriod">←</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" wire:click="goToday">{{ __('Today') }}</button>
@@ -31,7 +43,7 @@
                                 @foreach ($week as $day)
                                     <td
                                         class="align-top p-2 {{ $day['inPeriod'] ? '' : 'bg-light' }} {{ $day['isToday'] ? 'table-primary' : '' }}"
-                                        style="height: 120px; min-width: 120px;"
+                                        style="height: {{ $mode === 'week' ? '180px' : '120px' }}; min-width: 120px;"
                                         wire:key="day-{{ $day['date']->toDateString() }}"
                                     >
                                         <div class="d-flex justify-content-between mb-1">
@@ -43,7 +55,7 @@
                                             @endif
                                         </div>
                                         <div class="d-flex flex-column gap-1">
-                                            @foreach ($day['posts']->take(4) as $post)
+                                            @foreach ($day['posts']->take($mode === 'week' ? 8 : 4) as $post)
                                                 @php
                                                     $badge = match ($post->status) {
                                                         'published' => 'success',
@@ -63,8 +75,8 @@
                                                     <span class="d-block text-truncate">{{ $snippet }}</span>
                                                 </div>
                                             @endforeach
-                                            @if ($day['posts']->count() > 4)
-                                                <div class="small text-muted">+{{ $day['posts']->count() - 4 }} {{ __('more') }}</div>
+                                            @if ($day['posts']->count() > ($mode === 'week' ? 8 : 4))
+                                                <div class="small text-muted">+{{ $day['posts']->count() - ($mode === 'week' ? 8 : 4) }} {{ __('more') }}</div>
                                             @endif
                                         </div>
                                     </td>

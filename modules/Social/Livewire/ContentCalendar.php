@@ -45,6 +45,15 @@ class ContentCalendar extends Component
         $this->cursorDate = now()->toDateString();
     }
 
+    public function setMode(string $mode): void
+    {
+        if (! in_array($mode, ['month', 'week'], true)) {
+            return;
+        }
+
+        $this->mode = $mode;
+    }
+
     public function render(): View
     {
         $cursor = Carbon::parse($this->cursorDate)->startOfDay();
