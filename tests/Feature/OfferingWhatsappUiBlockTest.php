@@ -51,7 +51,7 @@ class OfferingWhatsappUiBlockTest extends TestCase
 
         $this->actingAs($owner)
             ->get(route('chat.index'))
-            ->assertRedirect(route('social.home'));
+            ->assertRedirect(route('social.calendar'));
     }
 
     public function test_campaigns_index_redirects_when_whatsapp_dormant(): void
@@ -60,7 +60,7 @@ class OfferingWhatsappUiBlockTest extends TestCase
 
         $this->actingAs($owner)
             ->get(route('campaigns.index'))
-            ->assertRedirect(route('social.home'));
+            ->assertRedirect(route('social.calendar'));
     }
 
     public function test_whatsapp_setup_redirects_when_whatsapp_dormant(): void
@@ -69,7 +69,7 @@ class OfferingWhatsappUiBlockTest extends TestCase
 
         $this->actingAs($owner)
             ->get(route('whatsapp.setup'))
-            ->assertRedirect(route('social.home'));
+            ->assertRedirect(route('social.calendar'));
     }
 
     public function test_whatsapp_webhook_remains_reachable_when_dormant(): void
@@ -78,7 +78,7 @@ class OfferingWhatsappUiBlockTest extends TestCase
 
         $this->assertNotEquals(302, $response->status());
         $this->assertFalse(
-            $response->isRedirect(route('social.home')),
+            $response->isRedirect(route('social.calendar')),
             'Webhook should not be redirected by offering middleware'
         );
     }
@@ -91,7 +91,7 @@ class OfferingWhatsappUiBlockTest extends TestCase
 
         $response = $this->actingAs($owner)->get(route('chat.index'));
 
-        $this->assertFalse($response->isRedirect(route('social.home')));
+        $this->assertFalse($response->isRedirect(route('social.calendar')));
     }
 
     public function test_dashboard_redirects_owners_to_social_home_when_dormant(): void
@@ -100,6 +100,6 @@ class OfferingWhatsappUiBlockTest extends TestCase
 
         $this->actingAs($owner)
             ->get(route('dashboard'))
-            ->assertRedirect(route('social.home'));
+            ->assertRedirect(route('social.calendar'));
     }
 }

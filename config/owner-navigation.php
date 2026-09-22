@@ -68,6 +68,8 @@ return [
      */
     'routes' => [
         'social.home' => 'social',
+        'social.calendar' => 'social',
+        'social.posts.index' => 'social',
 
         'chat.index' => 'inbox',
         'whatsappcall.calls.index' => 'inbox',

@@ -3,12 +3,20 @@
 namespace Modules\Social\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Contracts\View\View;
+use App\Support\Offering;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Route;
 
 class HomeController extends Controller
 {
-    public function __invoke(): View
+    public function __invoke(): RedirectResponse
     {
-        return view('social::home');
+        $home = Offering::socialHomeRoute();
+
+        if ($home !== 'social.home' && Route::has($home)) {
+            return redirect()->route($home);
+        }
+
+        return redirect()->route('social.calendar');
     }
 }

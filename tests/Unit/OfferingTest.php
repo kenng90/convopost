@@ -60,4 +60,9 @@ class OfferingTest extends TestCase
 
         $this->assertSame('social.calendar', Offering::socialHomeRoute());
     }
+
+    public function test_social_home_defaults_to_calendar(): void
+    {
+        $this->assertSame('social.calendar', Offering::socialHomeRoute());
+    }
 }

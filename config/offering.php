@@ -97,6 +97,6 @@ return [
     | Default authenticated home when in social commerce mode
     |--------------------------------------------------------------------------
     */
-    'social_home_route' => env('SOCIAL_HOME_ROUTE', 'social.home'),
+    'social_home_route' => env('SOCIAL_HOME_ROUTE', 'social.calendar'),
 
 ];

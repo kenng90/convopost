@@ -16,15 +16,15 @@
         {
             "name": "Social",
             "icon": "ni ni-notification-70 text-primary",
-            "route": "social.home",
+            "route": "social.calendar",
             "color": "#0E8A7A",
             "priority": 1,
             "isGroup": true,
             "menus": [
                 {
-                    "name": "Overview",
-                    "icon": "ni ni-app text-primary",
-                    "route": "social.home"
+                    "name": "Calendar",
+                    "icon": "ni ni-calendar-grid-58 text-primary",
+                    "route": "social.calendar"
                 },
                 {
                     "name": "Accounts",
@@ -40,11 +40,6 @@
                     "name": "Posts",
                     "icon": "ni ni-align-left-2 text-primary",
                     "route": "social.posts.index"
-                },
-                {
-                    "name": "Calendar",
-                    "icon": "ni ni-calendar-grid-58 text-primary",
-                    "route": "social.calendar"
                 }
             ]
         }
@@ -53,15 +48,15 @@
         {
             "name": "Social",
             "icon": "ni ni-notification-70 text-primary",
-            "route": "social.home",
+            "route": "social.calendar",
             "color": "#0E8A7A",
             "priority": 1,
             "isGroup": true,
             "menus": [
                 {
-                    "name": "Overview",
-                    "icon": "ni ni-app text-primary",
-                    "route": "social.home"
+                    "name": "Calendar",
+                    "icon": "ni ni-calendar-grid-58 text-primary",
+                    "route": "social.calendar"
                 },
                 {
                     "name": "Accounts",
@@ -77,11 +72,6 @@
                     "name": "Posts",
                     "icon": "ni ni-align-left-2 text-primary",
                     "route": "social.posts.index"
-                },
-                {
-                    "name": "Calendar",
-                    "icon": "ni ni-calendar-grid-58 text-primary",
-                    "route": "social.calendar"
                 }
             ]
         }

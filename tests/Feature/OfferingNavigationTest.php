@@ -34,7 +34,7 @@ class OfferingNavigationTest extends TestCase
         $this->assertNotContains('whatsapp.setup', $routes);
         $this->assertNotContains('Chat', $names);
         $this->assertNotContains('Campaigns', $names);
-        $this->assertContains('social.home', $routes);
+        $this->assertContains('social.calendar', $routes);
         $this->assertContains('Social', $names);
     }
 
