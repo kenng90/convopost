@@ -73,6 +73,11 @@
                     "name": "Labels",
                     "icon": "ni ni-bullet-list-67 text-primary",
                     "route": "social.labels.index"
+                },
+                {
+                    "name": "Insights",
+                    "icon": "ni ni-chart-bar-32 text-primary",
+                    "route": "social.insights"
                 }
             ]
         }
@@ -120,6 +125,11 @@
                     "name": "Labels",
                     "icon": "ni ni-bullet-list-67 text-primary",
                     "route": "social.labels.index"
+                },
+                {
+                    "name": "Insights",
+                    "icon": "ni ni-chart-bar-32 text-primary",
+                    "route": "social.insights"
                 }
             ]
         }

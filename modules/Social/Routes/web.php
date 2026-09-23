@@ -6,6 +6,7 @@ use Modules\Social\Http\Controllers\CalendarController;
 use Modules\Social\Http\Controllers\FacebookConnectController;
 use Modules\Social\Http\Controllers\HashtagGroupController;
 use Modules\Social\Http\Controllers\HomeController;
+use Modules\Social\Http\Controllers\InsightsController;
 use Modules\Social\Http\Controllers\InstagramConnectController;
 use Modules\Social\Http\Controllers\LabelController;
 use Modules\Social\Http\Controllers\LinkedInConnectController;
@@ -52,6 +53,10 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
         Route::get('/labels', [LabelController::class, 'index'])->name('social.labels.index');
         Route::post('/labels', [LabelController::class, 'store'])->name('social.labels.store');
         Route::delete('/labels/{label}', [LabelController::class, 'destroy'])->name('social.labels.destroy');
+
+        Route::get('/insights', [InsightsController::class, 'index'])
+            ->middleware('plan.capability:social_analytics')
+            ->name('social.insights');
 
         Route::get('/calendar', CalendarController::class)->name('social.calendar');
 
