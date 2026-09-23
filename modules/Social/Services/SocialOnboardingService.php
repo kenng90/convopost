@@ -50,7 +50,9 @@ class SocialOnboardingService
             [
                 'key' => 'connect_account',
                 'title' => __('Connect a social account'),
-                'detail' => __('Link Facebook, Instagram, or another network to publish from Unganisha.'),
+                'detail' => __('Link Facebook, Instagram, or another network to publish from :brand.', [
+                    'brand' => \Modules\Social\Support\SocialBrand::platformName($company),
+                ]),
                 'done' => $hasAccount,
                 'route' => Route::has('social.accounts.index') ? 'social.accounts.index' : null,
                 'cta' => __('Connect accounts'),
