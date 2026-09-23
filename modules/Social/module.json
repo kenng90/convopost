@@ -12,6 +12,24 @@
     "aliases": {},
     "files": [],
     "requires": [],
+    "cost_per_action": [
+        {
+            "name": "Social AI — generate caption",
+            "action": "social_ai_caption",
+            "category": "managed_ai",
+            "default_cost": 2,
+            "help": "Managed AI credits per social caption generation when using the platform OpenRouter key.",
+            "sort_order": 92
+        },
+        {
+            "name": "Social AI — rewrite caption",
+            "action": "social_ai_rewrite",
+            "category": "managed_ai",
+            "default_cost": 1,
+            "help": "Managed AI credits per social caption rewrite when using the platform OpenRouter key.",
+            "sort_order": 93
+        }
+    ],
     "ownermenus": [
         {
             "name": "Social",
