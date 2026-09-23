@@ -1,7 +1,7 @@
 @extends('layouts.app', ['title' => __('Content calendar')])
 
 @section('content')
-@php($workspace = auth()->user()?->currentCompany())
+@php($workspace = $workspace ?? auth()->user()?->currentCompany())
 <div class="header pb-8 pt-5 pt-md-8">
     <div class="container-fluid">
         <div class="header-body">
@@ -29,6 +29,7 @@
     <div class="row">
         <div class="col-12">
             @include('partials.flash')
+            @include('social::partials.onboarding-checklist')
             @if ($workspace)
                 <div class="alert alert-primary shadow-sm mb-3">
                     <strong>{{ __('Active Social workspace') }}:</strong>
