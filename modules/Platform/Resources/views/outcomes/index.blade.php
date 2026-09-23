@@ -53,6 +53,12 @@
                             <p class="display-4 mb-0">{{ $metrics['lead_to_cash']['paid'] }}</p>
                             <p class="text-muted mb-0">{{ __('paid in pipeline') }}</p>
                             <p class="small text-muted mt-2">{{ $metrics['lead_to_cash']['pipeline_paid_revenue_formatted'] }} {{ __('paid (30d)') }}</p>
+                            @if(!empty($metrics['lead_to_cash']['social_orders']))
+                                <p class="small mb-0">{{ __(':count social-attributed · :revenue', [
+                                    'count' => $metrics['lead_to_cash']['social_orders'],
+                                    'revenue' => $metrics['lead_to_cash']['social_revenue_formatted'],
+                                ]) }}</p>
+                            @endif
                         </div>
                     </div>
                 </div>

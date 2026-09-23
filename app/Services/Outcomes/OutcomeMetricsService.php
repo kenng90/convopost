@@ -116,11 +116,22 @@ class OutcomeMetricsService
         $stages = $this->stageCounts($company, 'outcome_lead_to_cash_journey_id');
 
         $paidRevenue = 0.0;
+        $socialOrders = 0;
+        $socialRevenue = 0.0;
+
         if (class_exists(Invoice::class)) {
             $paidRevenue = (float) Invoice::where('company_id', $company->id)
                 ->where('status', 'paid')
                 ->where('paid_at', '>=', now()->subDays(30))
                 ->sum('amount');
+
+            $socialQuery = Invoice::where('company_id', $company->id)
+                ->where('status', 'paid')
+                ->whereNotNull('social_post_id')
+                ->where('paid_at', '>=', now()->subDays(30));
+
+            $socialOrders = (int) (clone $socialQuery)->count();
+            $socialRevenue = (float) (clone $socialQuery)->sum('amount');
         }
 
         return [
@@ -131,6 +142,9 @@ class OutcomeMetricsService
             'lost' => (int) ($stages['Lost'] ?? 0),
             'pipeline_paid_revenue' => $paidRevenue,
             'pipeline_paid_revenue_formatted' => $company->currency.' '.number_format($paidRevenue, 0),
+            'social_orders' => $socialOrders,
+            'social_revenue' => $socialRevenue,
+            'social_revenue_formatted' => $company->currency.' '.number_format($socialRevenue, 0),
         ];
     }
 

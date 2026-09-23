@@ -119,12 +119,12 @@ return [
                 'bot' => 80,
             ],
             'checklist' => [
-                'Publish lead WhatsApp Flow or keyword intake',
+                'Publish lead WhatsApp Flow or keyword intake (optional when using Social offers)',
                 'Configure invoice + M-Pesa/Paystack',
-                'Train agents on proposal → pay handoff',
-                'Paid invoices auto-move contacts to Paid stage',
+                'Attach catalog offer links on Social posts for attributed checkouts',
+                'Paid invoices (including social-attributed) auto-move contacts to Paid stage',
             ],
-            'metrics' => ['leads', 'proposals', 'paid', 'pipeline_paid_revenue'],
+            'metrics' => ['leads', 'proposals', 'paid', 'pipeline_paid_revenue', 'social_orders', 'social_revenue'],
         ],
     ],
 ];

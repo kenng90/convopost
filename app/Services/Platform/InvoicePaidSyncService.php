@@ -3,6 +3,7 @@
 namespace App\Services\Platform;
 
 use App\Services\Outcomes\OutcomeJourneyEnroller;
+use App\Services\Outcomes\SocialOutcomeHookService;
 use Illuminate\Support\Facades\Log;
 use Modules\Invoice\Models\Invoice;
 use Modules\Journies\Models\Journey;
@@ -28,13 +29,23 @@ class InvoicePaidSyncService
 
         $company = \App\Models\Company::find($invoice->company_id);
         if ($company) {
-            app(\App\Services\Integrations\PlatformEventBus::class)->emit($company, 'invoice.paid', [
+            $socialHook = app(SocialOutcomeHookService::class);
+            $socialMeta = $socialHook->attributionMetadata($invoice);
+
+            if ($socialMeta !== []) {
+                $socialHook->onSocialInvoicePaid($company, $invoice, $contact);
+            }
+
+            app(\App\Services\Integrations\PlatformEventBus::class)->emit($company, 'invoice.paid', array_filter([
                 'invoice_id' => $invoice->id,
                 'phone' => $invoice->customer_phone,
                 'email' => $invoice->customer_email,
                 'amount' => $invoice->amount,
                 'customer_name' => $invoice->customer_name,
-            ]);
+                'social_post_id' => $invoice->social_post_id,
+                'social_offer_link_id' => $invoice->social_offer_link_id,
+            ], fn ($value) => $value !== null && $value !== ''));
+
             app(\App\Services\Outcomes\OutcomeSkuBiller::class)->record(
                 $company,
                 $contact,
@@ -43,6 +54,7 @@ class InvoicePaidSyncService
                 (float) $invoice->amount,
                 'invoice',
                 (string) $invoice->id,
+                $socialMeta,
             );
         }
     }
@@ -54,9 +66,32 @@ class InvoicePaidSyncService
             return Contact::find($notes['contact_id']);
         }
 
-        return Contact::where('company_id', $invoice->company_id)
-            ->where('phone', $invoice->customer_phone)
+        $phone = trim((string) ($invoice->customer_phone ?? ''));
+
+        if ($phone === '') {
+            return null;
+        }
+
+        $existing = Contact::where('company_id', $invoice->company_id)
+            ->where('phone', $phone)
             ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        // Social-attributed checkouts may not have a CRM contact yet — create without messaging.
+        if ($invoice->social_post_id) {
+            return Contact::create([
+                'company_id' => $invoice->company_id,
+                'phone' => $phone,
+                'name' => $invoice->customer_name ?: $phone,
+                'email' => $invoice->customer_email,
+                'subscribed' => 1,
+            ]);
+        }
+
+        return null;
     }
 
     private function addPaymentNote(Contact $contact, Invoice $invoice): void
@@ -81,14 +116,14 @@ class InvoicePaidSyncService
             return;
         }
 
-        // Prefer Lead-to-Cash playbook when installed
+        // Prefer Lead-to-Cash playbook when installed (social-attributed or otherwise).
         if ($company->getConfig('outcome_lead_to_cash_installed', 'no') === 'yes') {
             $moved = app(OutcomeJourneyEnroller::class)->moveToPlaybookStage(
                 $company,
                 $contact,
                 'lead_to_cash',
                 'Paid',
-                'invoice_paid'
+                $invoice->social_post_id ? 'social_order_paid' : 'invoice_paid'
             );
 
             if ($moved) {
