@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Social\Http\Controllers\AccountController;
 use Modules\Social\Http\Controllers\CalendarController;
 use Modules\Social\Http\Controllers\FacebookConnectController;
+use Modules\Social\Http\Controllers\GbpConnectController;
 use Modules\Social\Http\Controllers\HashtagGroupController;
 use Modules\Social\Http\Controllers\HomeController;
 use Modules\Social\Http\Controllers\InsightsController;
@@ -98,4 +99,9 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
             ->name('social.accounts.connect.pinterest');
         Route::get('/accounts/connect/pinterest/callback', [PinterestConnectController::class, 'callback'])
             ->name('social.accounts.connect.pinterest.callback');
+
+        Route::get('/accounts/connect/gbp', [GbpConnectController::class, 'redirect'])
+            ->name('social.accounts.connect.gbp');
+        Route::get('/accounts/connect/gbp/callback', [GbpConnectController::class, 'callback'])
+            ->name('social.accounts.connect.gbp.callback');
     });

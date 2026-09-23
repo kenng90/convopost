@@ -137,6 +137,24 @@ return [
                 'api_base' => env('SOCIAL_PINTEREST_API_BASE', 'https://api.pinterest.com'),
             ],
         ],
+        'gbp' => [
+            'enabled' => env('SOCIAL_GBP_ENABLED', true),
+            'label' => 'Google Business Profile',
+            'publisher' => Modules\Social\Publishing\GbpPublisher::class,
+            'scopes' => [
+                'https://www.googleapis.com/auth/business.manage',
+            ],
+            'oauth' => [
+                'client_id' => env('SOCIAL_GBP_CLIENT_ID', env('GOOGLE_CLIENT_ID', '')),
+                'client_secret' => env('SOCIAL_GBP_CLIENT_SECRET', env('GOOGLE_CLIENT_SECRET', '')),
+                'redirect' => env('SOCIAL_GBP_REDIRECT', ''),
+                'authorize_url' => env('SOCIAL_GBP_AUTHORIZE_URL', 'https://accounts.google.com/o/oauth2/v2/auth'),
+                'token_url' => env('SOCIAL_GBP_TOKEN_URL', 'https://oauth2.googleapis.com/token'),
+                'account_management_base' => env('SOCIAL_GBP_ACCOUNT_BASE', 'https://mybusinessaccountmanagement.googleapis.com'),
+                'business_info_base' => env('SOCIAL_GBP_INFO_BASE', 'https://mybusinessbusinessinformation.googleapis.com'),
+                'local_posts_base' => env('SOCIAL_GBP_POSTS_BASE', 'https://mybusiness.googleapis.com'),
+            ],
+        ],
     ],
 
     /*

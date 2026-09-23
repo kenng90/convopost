@@ -11,6 +11,7 @@ enum SocialProvider: string
     case YouTube = 'youtube';
     case Threads = 'threads';
     case Pinterest = 'pinterest';
+    case Gbp = 'gbp';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum SocialProvider: string
             self::YouTube => 'YouTube',
             self::Threads => 'Threads',
             self::Pinterest => 'Pinterest',
+            self::Gbp => 'Google Business Profile',
         };
     }
 
@@ -35,6 +37,7 @@ enum SocialProvider: string
             self::YouTube => 'badge-danger',
             self::Threads => 'badge-secondary',
             self::Pinterest => 'badge-warning',
+            self::Gbp => 'badge-success',
         };
     }
 
@@ -51,6 +54,7 @@ enum SocialProvider: string
             self::YouTube,
             self::Threads,
             self::Pinterest,
+            self::Gbp,
         ];
     }
 

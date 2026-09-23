@@ -44,6 +44,7 @@ class StoreSocialPostRequest extends FormRequest
             'versions.youtube' => ['nullable', 'string', 'max:5000'],
             'versions.threads' => ['nullable', 'string', 'max:500'],
             'versions.pinterest' => ['nullable', 'string', 'max:800'],
+            'versions.gbp' => ['nullable', 'string', 'max:1500'],
             'status' => ['required', Rule::in(['draft', 'scheduled'])],
             'scheduled_at' => [
                 Rule::requiredIf($status === 'scheduled'),
@@ -104,6 +105,7 @@ class StoreSocialPostRequest extends FormRequest
             'networkVersions.youtube' => $rules['versions.youtube'],
             'networkVersions.threads' => $rules['versions.threads'],
             'networkVersions.pinterest' => $rules['versions.pinterest'],
+            'networkVersions.gbp' => $rules['versions.gbp'],
             'scheduledAt' => $rules['scheduled_at'],
             'offerType' => $rules['offer_type'],
             'offerUrl' => $rules['offer_url'],

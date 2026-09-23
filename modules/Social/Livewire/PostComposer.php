@@ -48,6 +48,7 @@ class PostComposer extends Component
         'youtube' => '',
         'threads' => '',
         'pinterest' => '',
+        'gbp' => '',
     ];
 
     public bool $showNetworkOverrides = false;
