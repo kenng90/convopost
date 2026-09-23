@@ -5,6 +5,7 @@ namespace Modules\Social\Livewire;
 use App\Models\ListCatalog;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Modules\Social\Enums\SocialProvider;
 use Modules\Social\Http\Requests\StoreSocialPostRequest;
@@ -14,12 +15,20 @@ use Modules\Social\Models\SocialLabel;
 use Modules\Social\Models\SocialMediaAsset;
 use Modules\Social\Models\SocialPost;
 use Modules\Social\Models\SocialTemplate;
+use Modules\Social\Services\SocialAiCaptionService;
 use Modules\Social\Services\SocialPostApprovalService;
 use Modules\Social\Services\SocialPostComposerService;
+use RuntimeException;
 
 class PostComposer extends Component
 {
     public string $content = '';
+
+    public string $aiPrompt = '';
+
+    public ?string $aiError = null;
+
+    public bool $aiBusy = false;
 
     /** @var list<int> */
     public array $selectedAccountIds = [];
@@ -125,6 +134,56 @@ class PostComposer extends Component
             : rtrim($this->content)."\n\n".$tags;
     }
 
+    public function generateAiCaption(): void
+    {
+        $this->aiError = null;
+        $company = Auth::user()?->currentCompany();
+
+        if (! $company) {
+            $this->aiError = __('Select a company before using AI.');
+
+            return;
+        }
+
+        $brief = trim($this->aiPrompt) !== '' ? $this->aiPrompt : $this->content;
+        $offerHint = $this->offerType === 'url' ? $this->offerUrl : null;
+
+        try {
+            $this->aiBusy = true;
+            $this->content = app(SocialAiCaptionService::class)->generate($company, $brief, $offerHint ?: null);
+            $this->aiPrompt = '';
+        } catch (ValidationException $e) {
+            $this->aiError = collect($e->errors())->flatten()->first() ?: $e->getMessage();
+        } catch (RuntimeException $e) {
+            $this->aiError = $e->getMessage();
+        } finally {
+            $this->aiBusy = false;
+        }
+    }
+
+    public function rewriteAiCaption(string $tone): void
+    {
+        $this->aiError = null;
+        $company = Auth::user()?->currentCompany();
+
+        if (! $company) {
+            $this->aiError = __('Select a company before using AI.');
+
+            return;
+        }
+
+        try {
+            $this->aiBusy = true;
+            $this->content = app(SocialAiCaptionService::class)->rewrite($company, $this->content, $tone);
+        } catch (ValidationException $e) {
+            $this->aiError = collect($e->errors())->flatten()->first() ?: $e->getMessage();
+        } catch (RuntimeException $e) {
+            $this->aiError = $e->getMessage();
+        } finally {
+            $this->aiBusy = false;
+        }
+    }
+
     public function toggleLabel(int $labelId): void
     {
         if (in_array($labelId, $this->selectedLabelIds, true)) {
@@ -224,7 +283,24 @@ class PostComposer extends Component
             'labels' => $this->availableLabels(),
             'providers' => SocialProvider::publishable(),
             'requiresApproval' => $this->requiresApprovalGate(),
+            'canUseSocialAi' => $this->canUseSocialAi(),
+            'aiTones' => SocialAiCaptionService::TONES,
+            'aiCaptionCost' => app(\App\Services\Platform\ManagedAiService::class)
+                ->actionCost(SocialAiCaptionService::ACTION_GENERATE),
+            'aiRewriteCost' => app(\App\Services\Platform\ManagedAiService::class)
+                ->actionCost(SocialAiCaptionService::ACTION_REWRITE),
         ]);
+    }
+
+    protected function canUseSocialAi(): bool
+    {
+        $company = Auth::user()?->currentCompany();
+
+        if (! $company) {
+            return false;
+        }
+
+        return app(SocialAiCaptionService::class)->companyCanUseAi($company);
     }
 
     protected function availableAccounts()

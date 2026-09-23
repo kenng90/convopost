@@ -38,6 +38,55 @@
                 @error('content') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
             </div>
 
+            @if ($canUseSocialAi)
+                <div class="form-group border rounded p-3 bg-light">
+                    <label class="form-control-label">{{ __('AI caption') }}</label>
+                    <div class="form-row align-items-end">
+                        <div class="form-group col-md-8 mb-2 mb-md-0">
+                            <input
+                                type="text"
+                                class="form-control"
+                                wire:model="aiPrompt"
+                                placeholder="{{ __('Brief: weekend sale on Nairobi delivery…') }}"
+                                @disabled($aiBusy)
+                            >
+                        </div>
+                        <div class="form-group col-md-4 mb-0">
+                            <button
+                                type="button"
+                                class="btn btn-outline-primary btn-block"
+                                wire:click="generateAiCaption"
+                                wire:loading.attr="disabled"
+                                wire:target="generateAiCaption,rewriteAiCaption"
+                            >
+                                <span wire:loading.remove wire:target="generateAiCaption">
+                                    {{ __('Generate (:credits cr)', ['credits' => $aiCaptionCost]) }}
+                                </span>
+                                <span wire:loading wire:target="generateAiCaption">{{ __('Generating…') }}</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                        <span class="small text-muted">{{ __('Rewrite (:credits cr):', ['credits' => $aiRewriteCost]) }}</span>
+                        @foreach ($aiTones as $toneKey => $toneLabel)
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                wire:key="ai-tone-{{ $toneKey }}"
+                                wire:click="rewriteAiCaption('{{ $toneKey }}')"
+                                wire:loading.attr="disabled"
+                                wire:target="generateAiCaption,rewriteAiCaption"
+                            >
+                                {{ __($toneLabel) }}
+                            </button>
+                        @endforeach
+                    </div>
+                    @if ($aiError)
+                        <div class="text-danger small mt-2">{{ $aiError }}</div>
+                    @endif
+                </div>
+            @endif
+
             @if ($hashtagGroups->isNotEmpty())
                 <div class="form-group">
                     <label class="form-control-label">{{ __('Insert hashtags') }}</label>
