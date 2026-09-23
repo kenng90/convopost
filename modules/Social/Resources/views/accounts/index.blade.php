@@ -7,7 +7,7 @@
             <div class="row align-items-center">
                 <div class="col">
                     <h1 class="h3 mb-1 text-white">{{ __('Connected accounts') }}</h1>
-                    <p class="mb-0 text-white opacity-8">{{ __('Connect Facebook Pages, Instagram, LinkedIn, TikTok, and YouTube to publish from Unganisha Social.') }}</p>
+                    <p class="mb-0 text-white opacity-8">{{ __('Connect Facebook Pages, Instagram, LinkedIn, TikTok, YouTube, and Threads to publish from Unganisha Social.') }}</p>
                 </div>
                 <div class="col-auto">
                     <a href="{{ route('social.home') }}" class="btn btn-sm btn-neutral">{{ __('Back to Social') }}</a>

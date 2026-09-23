@@ -100,6 +100,23 @@ return [
                 'api_base' => env('SOCIAL_YOUTUBE_API_BASE', 'https://www.googleapis.com'),
             ],
         ],
+        'threads' => [
+            'enabled' => env('SOCIAL_THREADS_ENABLED', true),
+            'label' => 'Threads',
+            'publisher' => Modules\Social\Publishing\ThreadsPublisher::class,
+            'scopes' => [
+                'threads_basic',
+                'threads_content_publish',
+            ],
+            'oauth' => [
+                'client_id' => env('SOCIAL_THREADS_CLIENT_ID', env('FACEBOOK_APP_ID', env('FACEBOOK_CLIENT_ID', ''))),
+                'client_secret' => env('SOCIAL_THREADS_CLIENT_SECRET', env('FACEBOOK_APP_SECRET', env('FACEBOOK_CLIENT_SECRET', ''))),
+                'redirect' => env('SOCIAL_THREADS_REDIRECT', ''),
+                'authorize_url' => env('SOCIAL_THREADS_AUTHORIZE_URL', 'https://threads.net/oauth/authorize'),
+                'api_base' => env('SOCIAL_THREADS_API_BASE', 'https://graph.threads.net'),
+                'graph_version' => env('SOCIAL_THREADS_GRAPH_VERSION', 'v1.0'),
+            ],
+        ],
     ],
 
     /*

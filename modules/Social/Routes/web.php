@@ -14,6 +14,7 @@ use Modules\Social\Http\Controllers\MediaController;
 use Modules\Social\Http\Controllers\OfferRedirectController;
 use Modules\Social\Http\Controllers\PostController;
 use Modules\Social\Http\Controllers\TemplateController;
+use Modules\Social\Http\Controllers\ThreadsConnectController;
 use Modules\Social\Http\Controllers\TikTokConnectController;
 use Modules\Social\Http\Controllers\YouTubeConnectController;
 
@@ -86,4 +87,9 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
             ->name('social.accounts.connect.youtube');
         Route::get('/accounts/connect/youtube/callback', [YouTubeConnectController::class, 'callback'])
             ->name('social.accounts.connect.youtube.callback');
+
+        Route::get('/accounts/connect/threads', [ThreadsConnectController::class, 'redirect'])
+            ->name('social.accounts.connect.threads');
+        Route::get('/accounts/connect/threads/callback', [ThreadsConnectController::class, 'callback'])
+            ->name('social.accounts.connect.threads.callback');
     });

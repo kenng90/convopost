@@ -9,6 +9,7 @@ enum SocialProvider: string
     case LinkedIn = 'linkedin';
     case TikTok = 'tiktok';
     case YouTube = 'youtube';
+    case Threads = 'threads';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum SocialProvider: string
             self::LinkedIn => 'LinkedIn',
             self::TikTok => 'TikTok',
             self::YouTube => 'YouTube',
+            self::Threads => 'Threads',
         };
     }
 
@@ -29,6 +31,7 @@ enum SocialProvider: string
             self::LinkedIn => 'badge-info',
             self::TikTok => 'badge-dark',
             self::YouTube => 'badge-danger',
+            self::Threads => 'badge-secondary',
         };
     }
 
@@ -43,6 +46,7 @@ enum SocialProvider: string
             self::LinkedIn,
             self::TikTok,
             self::YouTube,
+            self::Threads,
         ];
     }
 
