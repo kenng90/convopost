@@ -2,6 +2,7 @@
 
 namespace Modules\Social\Services;
 
+use App\Services\Api\PublicWebhookDispatcher;
 use Illuminate\Support\Facades\Log;
 use Modules\Social\Enums\SocialProvider;
 use Modules\Social\Models\SocialMediaAsset;
@@ -186,7 +187,10 @@ class SocialPostPublishService
 
             Log::warning('Social post had no accounts to publish.', ['social_post_id' => $post->id]);
 
-            return $post->fresh();
+            $fresh = $post->fresh(['postAccounts.account']);
+            $this->dispatchPublishWebhook($fresh);
+
+            return $fresh;
         }
 
         $published = $pivots->where('status', 'published')->count();
@@ -212,6 +216,35 @@ class SocialPostPublishService
             ])->save();
         }
 
-        return $post->fresh(['postAccounts']);
+        $fresh = $post->fresh(['postAccounts.account']);
+        $this->dispatchPublishWebhook($fresh);
+
+        return $fresh;
+    }
+
+    protected function dispatchPublishWebhook(?SocialPost $post): void
+    {
+        if (! $post || ! in_array($post->status, ['published', 'failed'], true)) {
+            return;
+        }
+
+        $type = $post->status === 'published'
+            ? 'social.post.published'
+            : 'social.post.failed';
+
+        app(PublicWebhookDispatcher::class)->dispatch((int) $post->company_id, $type, [
+            'id' => $post->id,
+            'status' => $post->status,
+            'published_at' => optional($post->published_at)?->toIso8601String(),
+            'accounts' => $post->postAccounts->map(function (SocialPostAccount $pivot) {
+                return [
+                    'social_account_id' => (int) $pivot->social_account_id,
+                    'provider' => $pivot->account?->provider,
+                    'status' => $pivot->status,
+                    'provider_post_id' => $pivot->provider_post_id,
+                    'error' => $pivot->error,
+                ];
+            })->values()->all(),
+        ]);
     }
 }

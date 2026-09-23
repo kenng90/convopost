@@ -53,6 +53,8 @@ return [
             'order.created',
             'cart.abandoned',
             'fulfillment.shipped',
+            'social.post.published',
+            'social.post.failed',
         ],
     ],
 

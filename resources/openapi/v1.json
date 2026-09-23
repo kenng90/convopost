@@ -347,7 +347,7 @@
                 "required": ["url"],
                 "properties": {
                   "url": { "type": "string", "format": "uri" },
-                  "events": { "type": "array", "items": { "type": "string" }, "example": ["message.*", "contact.created"] },
+                  "events": { "type": "array", "items": { "type": "string" }, "example": ["message.*", "contact.created", "social.post.published", "social.post.failed"] },
                   "description": { "type": "string" }
                 }
               }

@@ -492,6 +492,8 @@ paths:
                   example:
                     - "message.*"
                     - contact.created
+                    - social.post.published
+                    - social.post.failed
                 description:
                   type: string
       responses:
