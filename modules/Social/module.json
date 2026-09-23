@@ -50,6 +50,11 @@
                     "name": "Hashtags",
                     "icon": "ni ni-tag text-primary",
                     "route": "social.hashtags.index"
+                },
+                {
+                    "name": "Labels",
+                    "icon": "ni ni-bullet-list-67 text-primary",
+                    "route": "social.labels.index"
                 }
             ]
         }
@@ -92,6 +97,11 @@
                     "name": "Hashtags",
                     "icon": "ni ni-tag text-primary",
                     "route": "social.hashtags.index"
+                },
+                {
+                    "name": "Labels",
+                    "icon": "ni ni-bullet-list-67 text-primary",
+                    "route": "social.labels.index"
                 }
             ]
         }

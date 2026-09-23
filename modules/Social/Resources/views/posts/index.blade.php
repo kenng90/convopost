@@ -29,13 +29,32 @@
             <div class="btn-group flex-wrap" role="group">
                 @foreach ($statusFilters as $key => $label)
                     <a
-                        href="{{ route('social.posts.index', ['status' => $key === 'all' ? null : $key]) }}"
+                        href="{{ route('social.posts.index', array_filter(['status' => $key === 'all' ? null : $key, 'label' => $labelFilter])) }}"
                         class="btn btn-sm {{ $status === $key ? 'btn-primary' : 'btn-outline-primary' }}"
                     >
                         {{ $label }}
                     </a>
                 @endforeach
             </div>
+            @if ($labels->isNotEmpty())
+                <div class="btn-group flex-wrap mt-2" role="group">
+                    <a
+                        href="{{ route('social.posts.index', array_filter(['status' => $status === 'all' ? null : $status])) }}"
+                        class="btn btn-sm {{ ! $labelFilter ? 'btn-secondary' : 'btn-outline-secondary' }}"
+                    >
+                        {{ __('All labels') }}
+                    </a>
+                    @foreach ($labels as $label)
+                        <a
+                            href="{{ route('social.posts.index', array_filter(['status' => $status === 'all' ? null : $status, 'label' => $label->id])) }}"
+                            class="btn btn-sm {{ (int) $labelFilter === (int) $label->id ? 'btn-secondary' : 'btn-outline-secondary' }}"
+                        >
+                            <span class="badge mr-1" style="background-color: {{ $label->color }};">&nbsp;</span>
+                            {{ $label->name }}
+                        </a>
+                    @endforeach
+                </div>
+            @endif
         </div>
     </div>
 
@@ -64,6 +83,9 @@
                                             <a href="{{ route('social.posts.show', $post) }}" class="text-truncate d-block text-dark">
                                                 {{ \Illuminate\Support\Str::limit($post->defaultVersion?->content ?? __('(No content)'), 120) }}
                                             </a>
+                                            @foreach ($post->labels() as $postLabel)
+                                                <span class="badge badge-sm mr-1" style="background-color: {{ $postLabel->color }};">{{ $postLabel->name }}</span>
+                                            @endforeach
                                         </td>
                                         <td>
                                             @forelse ($post->accounts as $account)

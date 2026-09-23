@@ -59,6 +59,28 @@
             @endif
 
             <div class="form-group">
+                <label class="form-control-label">{{ __('Labels') }}</label>
+                @if ($labels->isNotEmpty())
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach ($labels as $label)
+                            <button
+                                type="button"
+                                class="btn btn-sm {{ in_array($label->id, $selectedLabelIds, true) ? 'btn-primary' : 'btn-outline-secondary' }}"
+                                wire:key="label-{{ $label->id }}"
+                                wire:click="toggleLabel({{ $label->id }})"
+                            >
+                                <span class="badge mr-1" style="background-color: {{ $label->color }};">&nbsp;</span>
+                                {{ $label->name }}
+                            </button>
+                        @endforeach
+                        <a href="{{ route('social.labels.index') }}" class="btn btn-sm btn-link">{{ __('Manage labels') }}</a>
+                    </div>
+                @else
+                    <a href="{{ route('social.labels.index') }}" class="small">{{ __('Create labels') }}</a>
+                @endif
+            </div>
+
+            <div class="form-group">
                 <label class="form-control-label">{{ __('Publish to') }}</label>
                 @error('selectedAccountIds') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
                 <div class="row">

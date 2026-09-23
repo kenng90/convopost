@@ -7,6 +7,7 @@ use Modules\Social\Http\Controllers\FacebookConnectController;
 use Modules\Social\Http\Controllers\HashtagGroupController;
 use Modules\Social\Http\Controllers\HomeController;
 use Modules\Social\Http\Controllers\InstagramConnectController;
+use Modules\Social\Http\Controllers\LabelController;
 use Modules\Social\Http\Controllers\LinkedInConnectController;
 use Modules\Social\Http\Controllers\MediaController;
 use Modules\Social\Http\Controllers\OfferRedirectController;
@@ -47,6 +48,10 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
         Route::get('/hashtags', [HashtagGroupController::class, 'index'])->name('social.hashtags.index');
         Route::post('/hashtags', [HashtagGroupController::class, 'store'])->name('social.hashtags.store');
         Route::delete('/hashtags/{hashtag}', [HashtagGroupController::class, 'destroy'])->name('social.hashtags.destroy');
+
+        Route::get('/labels', [LabelController::class, 'index'])->name('social.labels.index');
+        Route::post('/labels', [LabelController::class, 'store'])->name('social.labels.store');
+        Route::delete('/labels/{label}', [LabelController::class, 'destroy'])->name('social.labels.destroy');
 
         Route::get('/calendar', CalendarController::class)->name('social.calendar');
 

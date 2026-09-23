@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Modules\Social\Models\SocialAccount;
+use Modules\Social\Models\SocialLabel;
 use Modules\Social\Models\SocialMediaAsset;
 use Modules\Social\Models\SocialOfferLink;
 use Modules\Social\Models\SocialPost;
@@ -20,6 +21,7 @@ class SocialPostComposerService
      *     content: string,
      *     account_ids: list<int>,
      *     media_ids?: list<int>,
+     *     label_ids?: list<int>,
      *     versions?: array<string, string>,
      *     status?: string,
      *     scheduled_at?: string|null,
@@ -45,7 +47,7 @@ class SocialPostComposerService
                 'approval_status' => 'none',
                 'scheduled_at' => $status === 'scheduled' ? $scheduledAt : null,
                 'published_at' => null,
-                'label_ids' => [],
+                'label_ids' => $this->ownedLabelIds($company->id, $data['label_ids'] ?? []),
             ]);
 
             $mediaIds = $this->ownedMediaIds($company->id, $data['media_ids'] ?? []);
@@ -153,6 +155,26 @@ class SocialPostComposerService
         return SocialAccount::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->whereNull('deleted_at')
+            ->whereIn('id', $ids)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * @param  list<int|string>  $ids
+     * @return list<int>
+     */
+    protected function ownedLabelIds(int $companyId, array $ids): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return SocialLabel::withoutGlobalScopes()
+            ->where('company_id', $companyId)
             ->whereIn('id', $ids)
             ->pluck('id')
             ->map(fn ($id) => (int) $id)

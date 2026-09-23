@@ -10,6 +10,7 @@ use Modules\Social\Enums\SocialProvider;
 use Modules\Social\Http\Requests\StoreSocialPostRequest;
 use Modules\Social\Models\SocialAccount;
 use Modules\Social\Models\SocialHashtagGroup;
+use Modules\Social\Models\SocialLabel;
 use Modules\Social\Models\SocialMediaAsset;
 use Modules\Social\Models\SocialPost;
 use Modules\Social\Models\SocialTemplate;
@@ -25,6 +26,9 @@ class PostComposer extends Component
 
     /** @var list<int> */
     public array $selectedMediaIds = [];
+
+    /** @var list<int> */
+    public array $selectedLabelIds = [];
 
     /** @var array<string, string> */
     public array $networkVersions = [
@@ -121,6 +125,18 @@ class PostComposer extends Component
             : rtrim($this->content)."\n\n".$tags;
     }
 
+    public function toggleLabel(int $labelId): void
+    {
+        if (in_array($labelId, $this->selectedLabelIds, true)) {
+            $this->selectedLabelIds = array_values(array_filter(
+                $this->selectedLabelIds,
+                fn (int $id) => $id !== $labelId
+            ));
+        } else {
+            $this->selectedLabelIds[] = $labelId;
+        }
+    }
+
     public function saveDraft(): void
     {
         $post = $this->persist('draft');
@@ -187,6 +203,7 @@ class PostComposer extends Component
             'content' => $this->content,
             'account_ids' => $this->selectedAccountIds,
             'media_ids' => $this->selectedMediaIds,
+            'label_ids' => $this->selectedLabelIds,
             'versions' => $this->networkVersions,
             'status' => $status,
             'scheduled_at' => $this->scheduledAt,
@@ -204,6 +221,7 @@ class PostComposer extends Component
             'catalogs' => $this->availableCatalogs(),
             'templates' => $this->availableTemplates(),
             'hashtagGroups' => $this->availableHashtagGroups(),
+            'labels' => $this->availableLabels(),
             'providers' => SocialProvider::publishable(),
             'requiresApproval' => $this->requiresApprovalGate(),
         ]);
@@ -264,5 +282,16 @@ class PostComposer extends Component
             ->orderBy('name')
             ->limit(50)
             ->get(['id', 'name', 'tags']);
+    }
+
+    protected function availableLabels()
+    {
+        $company = Auth::user()?->currentCompany();
+
+        return SocialLabel::query()
+            ->when($company, fn ($query) => $query->where('company_id', $company->id))
+            ->orderBy('name')
+            ->limit(50)
+            ->get(['id', 'name', 'color']);
     }
 }

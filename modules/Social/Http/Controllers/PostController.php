@@ -7,6 +7,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Social\Http\Requests\RejectSocialPostRequest;
+use Modules\Social\Models\SocialLabel;
 use Modules\Social\Models\SocialPost;
 use Modules\Social\Services\SocialPostApprovalService;
 
@@ -20,24 +21,37 @@ class PostController extends Controller
     {
         $company = $request->user()->currentCompany();
         $status = (string) $request->query('status', 'all');
+        $labelId = $request->query('label');
         $allowed = ['all', 'draft', 'scheduled', 'published', 'failed'];
 
         if (! in_array($status, $allowed, true)) {
             $status = 'all';
         }
 
+        $labelFilter = is_numeric($labelId) ? (int) $labelId : null;
+
         $posts = SocialPost::query()
             ->with(['defaultVersion', 'accounts', 'offerLink', 'postAccounts'])
             ->when($company, fn ($query) => $query->where('company_id', $company->id))
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
+            ->when($labelFilter, function ($query) use ($labelFilter) {
+                $query->whereJsonContains('label_ids', $labelFilter);
+            })
             ->orderByDesc('scheduled_at')
             ->orderByDesc('id')
             ->paginate(20)
             ->withQueryString();
 
+        $labels = SocialLabel::query()
+            ->when($company, fn ($query) => $query->where('company_id', $company->id))
+            ->orderBy('name')
+            ->get(['id', 'name', 'color']);
+
         return view('social::posts.index', [
             'posts' => $posts,
             'status' => $status,
+            'labelFilter' => $labelFilter,
+            'labels' => $labels,
             'statusFilters' => [
                 'all' => __('All'),
                 'draft' => __('Draft'),

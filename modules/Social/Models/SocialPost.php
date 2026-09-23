@@ -128,4 +128,19 @@ class SocialPost extends Model
     {
         return $this->approval_status === 'rejected';
     }
+
+    public function labels(): \Illuminate\Support\Collection
+    {
+        $ids = collect($this->label_ids ?? [])->map(fn ($id) => (int) $id)->filter()->values();
+
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+
+        return SocialLabel::withoutGlobalScopes()
+            ->where('company_id', $this->company_id)
+            ->whereIn('id', $ids->all())
+            ->orderBy('name')
+            ->get();
+    }
 }
