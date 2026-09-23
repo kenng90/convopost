@@ -34,6 +34,7 @@ class OfferingFullModeRunbookTest extends TestCase
             'OfferingWhatsappUiBlockTest',
             'LandingPageTest',
             'plan-entitlements',
+            'composer test:offering',
             'Rollback',
         ] as $needle) {
             $this->assertStringContainsString(

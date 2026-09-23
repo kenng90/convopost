@@ -118,18 +118,20 @@ Phase **4.9** covers any further marketing copy polish after the flip.
 
 ---
 
-## 6. Regression test pack (run after flip on staging)
+## 6. Regression test pack (Phase 4.10 — all-inclusive SaaS)
 
-Minimum offering pack:
+Canonical filter (offering flip + Social commerce + inbox bridge + landing):
 
 ```bash
-php artisan test --filter='OfferingTest|OfferingNavigationTest|OfferingWhatsappUiBlockTest|LandingPageTest|UnganishaBrandTest'
+composer test:offering
+# or:
+php artisan test --filter='OfferingTest|OfferingNavigationTest|OfferingWhatsappUiBlockTest|OfferingFullModeReenableTest|OfferingFullModeRunbookTest|LandingPageTest|UnganishaBrandTest|SocialEngagementInboxTest|SocialOutcomePlaybookTest|SocialInsightsTest|SocialOnboardingChecklistTest|OutcomeSkuBillingTest|PlanEntitlementsSeederTest'
 ```
 
-Broader Social + commerce smoke (recommended before production):
+Broader Social smoke before production:
 
 ```bash
-php artisan test --filter='Social|Offering|LandingPage|OutcomeSku|SocialOutcome|SocialInsights|SocialOnboarding'
+php artisan test --filter='Social|Offering|LandingPage|OutcomeSku|SocialOutcome|SocialInsights|SocialOnboarding|SocialEngagement'
 ```
 
 Format dirty PHP before merge:
@@ -138,8 +140,6 @@ Format dirty PHP before merge:
 php vendor/bin/pint --dirty
 ```
 
-Phase **4.10** is the final all-inclusive regression after 4.7–4.9 land.
-
 ---
 
 ## 7. What this flip does *not* do
@@ -147,7 +147,7 @@ Phase **4.10** is the final all-inclusive regression after 4.7–4.9 land.
 Setting `OFFERING_MODE=full` alone:
 
 - Does **not** connect Meta WhatsApp Business / Embedded Signup for tenants — they still complete WhatsApp setup.
-- Does **not** wire Social comments/DMs into Inbox or Flowmaker (that is Phase **4.8**).
+- Does **not** wire Social comments into Inbox unless Messenger/Instagram `ChannelConnection` is connected (see Phase **4.8** / `SocialEngagementInboxService`).
 - Does **not** remove Social commerce; it only unlocks messaging UI that was gated.
 - Does **not** change webhook URLs; Wpbox receive paths stay live in both modes.
 
