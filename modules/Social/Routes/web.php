@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Modules\Social\Http\Controllers\AccountController;
 use Modules\Social\Http\Controllers\CalendarController;
 use Modules\Social\Http\Controllers\FacebookConnectController;
+use Modules\Social\Http\Controllers\HashtagGroupController;
 use Modules\Social\Http\Controllers\HomeController;
 use Modules\Social\Http\Controllers\InstagramConnectController;
 use Modules\Social\Http\Controllers\LinkedInConnectController;
@@ -42,6 +43,10 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
         Route::post('/templates', [TemplateController::class, 'store'])->name('social.templates.store');
         Route::put('/templates/{template}', [TemplateController::class, 'update'])->name('social.templates.update');
         Route::delete('/templates/{template}', [TemplateController::class, 'destroy'])->name('social.templates.destroy');
+
+        Route::get('/hashtags', [HashtagGroupController::class, 'index'])->name('social.hashtags.index');
+        Route::post('/hashtags', [HashtagGroupController::class, 'store'])->name('social.hashtags.store');
+        Route::delete('/hashtags/{hashtag}', [HashtagGroupController::class, 'destroy'])->name('social.hashtags.destroy');
 
         Route::get('/calendar', CalendarController::class)->name('social.calendar');
 

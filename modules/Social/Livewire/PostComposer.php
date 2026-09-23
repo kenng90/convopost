@@ -9,6 +9,7 @@ use Livewire\Component;
 use Modules\Social\Enums\SocialProvider;
 use Modules\Social\Http\Requests\StoreSocialPostRequest;
 use Modules\Social\Models\SocialAccount;
+use Modules\Social\Models\SocialHashtagGroup;
 use Modules\Social\Models\SocialMediaAsset;
 use Modules\Social\Models\SocialPost;
 use Modules\Social\Models\SocialTemplate;
@@ -96,6 +97,30 @@ class PostComposer extends Component
         $this->content = $template->content;
     }
 
+    public function insertHashtagGroup(int $groupId): void
+    {
+        $company = Auth::user()?->currentCompany();
+
+        $group = SocialHashtagGroup::query()
+            ->when($company, fn ($query) => $query->where('company_id', $company->id))
+            ->whereKey($groupId)
+            ->first();
+
+        if (! $group) {
+            return;
+        }
+
+        $tags = $group->formattedTags();
+
+        if ($tags === '') {
+            return;
+        }
+
+        $this->content = trim($this->content) === ''
+            ? $tags
+            : rtrim($this->content)."\n\n".$tags;
+    }
+
     public function saveDraft(): void
     {
         $post = $this->persist('draft');
@@ -178,6 +203,7 @@ class PostComposer extends Component
             'mediaAssets' => $this->availableMedia(),
             'catalogs' => $this->availableCatalogs(),
             'templates' => $this->availableTemplates(),
+            'hashtagGroups' => $this->availableHashtagGroups(),
             'providers' => SocialProvider::publishable(),
             'requiresApproval' => $this->requiresApprovalGate(),
         ]);
@@ -227,5 +253,16 @@ class PostComposer extends Component
             ->orderBy('name')
             ->limit(50)
             ->get(['id', 'name', 'category']);
+    }
+
+    protected function availableHashtagGroups()
+    {
+        $company = Auth::user()?->currentCompany();
+
+        return SocialHashtagGroup::query()
+            ->when($company, fn ($query) => $query->where('company_id', $company->id))
+            ->orderBy('name')
+            ->limit(50)
+            ->get(['id', 'name', 'tags']);
     }
 }

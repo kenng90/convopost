@@ -45,6 +45,11 @@
                     "name": "Templates",
                     "icon": "ni ni-single-copy-04 text-primary",
                     "route": "social.templates.index"
+                },
+                {
+                    "name": "Hashtags",
+                    "icon": "ni ni-tag text-primary",
+                    "route": "social.hashtags.index"
                 }
             ]
         }
@@ -82,6 +87,11 @@
                     "name": "Templates",
                     "icon": "ni ni-single-copy-04 text-primary",
                     "route": "social.templates.index"
+                },
+                {
+                    "name": "Hashtags",
+                    "icon": "ni ni-tag text-primary",
+                    "route": "social.hashtags.index"
                 }
             ]
         }

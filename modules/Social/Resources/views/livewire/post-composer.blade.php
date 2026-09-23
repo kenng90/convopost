@@ -38,6 +38,26 @@
                 @error('content') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
             </div>
 
+            @if ($hashtagGroups->isNotEmpty())
+                <div class="form-group">
+                    <label class="form-control-label">{{ __('Insert hashtags') }}</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach ($hashtagGroups as $group)
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-info"
+                                wire:key="hashtag-group-{{ $group->id }}"
+                                wire:click="insertHashtagGroup({{ $group->id }})"
+                                title="{{ $group->formattedTags() }}"
+                            >
+                                {{ $group->name }}
+                            </button>
+                        @endforeach
+                        <a href="{{ route('social.hashtags.index') }}" class="btn btn-sm btn-link">{{ __('Manage hashtags') }}</a>
+                    </div>
+                </div>
+            @endif
+
             <div class="form-group">
                 <label class="form-control-label">{{ __('Publish to') }}</label>
                 @error('selectedAccountIds') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
