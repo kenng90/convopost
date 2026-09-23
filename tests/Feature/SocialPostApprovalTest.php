@@ -27,6 +27,9 @@ class SocialPostApprovalTest extends TestCase
         config([
             'settings.forceUserToPay' => false,
         ]);
+
+        // Approvals workflow is a Pro capability; leave capabilities unset (all allowed)
+        // for these role tests unless a plan config is present.
     }
 
     public function test_staff_can_submit_but_cannot_approve(): void
@@ -126,7 +129,23 @@ class SocialPostApprovalTest extends TestCase
      */
     private function teamWithDraftPost(): array
     {
-        $owner = User::factory()->create();
+        $plan = \App\Models\Plans::create([
+            'name' => 'Approvals '.uniqid(),
+            'limit_items' => 0,
+            'limit_views' => 0,
+            'limit_orders' => 0,
+            'price' => 149,
+            'period' => 1,
+            'description' => 'Pro',
+            'features' => 'Pro',
+        ]);
+        $plan->setConfig('capabilities', json_encode([
+            'social_publish',
+            'social_approvals',
+        ]));
+        $plan->setConfig('plugins', json_encode(['social']));
+
+        $owner = User::factory()->create(['plan_id' => $plan->id]);
         $owner->assignRole('owner');
         $company = Company::factory()->create([
             'user_id' => $owner->id,
@@ -134,7 +153,10 @@ class SocialPostApprovalTest extends TestCase
         ]);
         $owner->update(['company_id' => $company->id]);
 
-        $staff = User::factory()->create(['company_id' => $company->id]);
+        $staff = User::factory()->create([
+            'company_id' => $company->id,
+            'plan_id' => $plan->id,
+        ]);
         $staff->assignRole('staff');
 
         CompanyMembership::query()->create([

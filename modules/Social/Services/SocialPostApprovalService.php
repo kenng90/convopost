@@ -2,7 +2,9 @@
 
 namespace Modules\Social\Services;
 
+use App\Models\Company;
 use App\Models\User;
+use App\Services\PlanEntitlementResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Modules\Social\Models\SocialPost;
@@ -10,13 +12,30 @@ use Modules\Social\Models\SocialPostActivity;
 
 class SocialPostApprovalService
 {
+    public function __construct(private readonly PlanEntitlementResolver $entitlements)
+    {
+    }
+
+    public function approvalsEnabledForUser(User $user): bool
+    {
+        return $this->entitlements->userHasCapability($user, 'social_approvals');
+    }
+
     public function canReview(User $user): bool
     {
+        if (! $this->approvalsEnabledForUser($user)) {
+            return false;
+        }
+
         return $user->hasRole('owner') || $user->isOrganizationManager();
     }
 
     public function canSubmit(User $user, SocialPost $post): bool
     {
+        if (! $this->approvalsEnabledForUser($user)) {
+            return false;
+        }
+
         if ($this->canReview($user)) {
             return false;
         }
@@ -140,5 +159,14 @@ class SocialPostApprovalService
     public function requiresApprovalBeforePublish(SocialPost $post): bool
     {
         return in_array($post->approval_status, ['pending', 'rejected'], true);
+    }
+
+    public function companyRequiresApprovalWorkflow(?Company $company): bool
+    {
+        if (! $company?->user) {
+            return false;
+        }
+
+        return $this->approvalsEnabledForUser($company->user);
     }
 }

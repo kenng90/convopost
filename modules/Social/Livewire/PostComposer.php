@@ -243,7 +243,13 @@ class PostComposer extends Component
             return false;
         }
 
-        return ! app(SocialPostApprovalService::class)->canReview($user);
+        $approvals = app(SocialPostApprovalService::class);
+
+        if (! $approvals->approvalsEnabledForUser($user)) {
+            return false;
+        }
+
+        return ! $approvals->canReview($user);
     }
 
     protected function persist(string $status): ?SocialPost
