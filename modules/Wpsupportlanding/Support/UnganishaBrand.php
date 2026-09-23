@@ -32,7 +32,9 @@ class UnganishaBrand
 
     public static function positioning(): string
     {
-        return 'The social commerce hub for modern businesses.';
+        return Offering::whatsappEnabled()
+            ? 'The omnichannel commerce hub for modern businesses.'
+            : 'The social commerce hub for modern businesses.';
     }
 
     public static function metaTitle(): string

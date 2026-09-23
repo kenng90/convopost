@@ -110,8 +110,20 @@ class LandingPageTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('id="channels"', false);
+        $response->assertSee('id="campaigns"', false);
         $response->assertSee('WhatsApp, Instagram &amp; Messenger', false);
         $response->assertSee('Where conversations become commerce.', false);
+        $response->assertSee('The omnichannel commerce hub for modern businesses.', false);
+        $response->assertSee('Channels</a>', false);
+        $response->assertSee('Campaigns</a>', false);
+        $response->assertSee('See Inbox', false);
+        $response->assertSee('See Social', false);
+        $response->assertSee('background:#25D366;', false);
+        $response->assertSee('background:#0084FF;', false);
+        $response->assertSee('Unganisha Inbox', false);
+        $response->assertSee('Unganisha Campaigns', false);
+        $response->assertSee('WhatsApp, SMS &amp; email', false);
+        $response->assertSee('connects WhatsApp, Instagram, and Messenger', false);
     }
 
     public function test_landing_page_hides_registration_ctas_when_disabled(): void

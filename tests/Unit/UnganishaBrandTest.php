@@ -45,9 +45,12 @@ class UnganishaBrandTest extends TestCase
         config(['offering.mode' => Offering::MODE_FULL]);
 
         $this->assertSame('Where conversations become commerce.', UnganishaBrand::tagline());
+        $this->assertSame('The omnichannel commerce hub for modern businesses.', UnganishaBrand::positioning());
+        $this->assertStringContainsString('connect with customers', UnganishaBrand::description());
         $productNames = collect(UnganishaBrand::products())->pluck('name')->all();
         $this->assertContains('Unganisha Inbox', $productNames);
         $this->assertContains('Unganisha Campaigns', $productNames);
+        $this->assertContains('Unganisha Social', $productNames);
         $inbox = collect(UnganishaBrand::products())->firstWhere('name', 'Unganisha Inbox');
         $this->assertStringContainsString('WhatsApp Calls', $inbox['blurb']);
         $this->assertStringContainsString('programmable phone', $inbox['blurb']);

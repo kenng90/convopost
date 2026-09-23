@@ -9,6 +9,7 @@
   $metaDescription = \Modules\Wpsupportlanding\Support\UnganishaBrand::description();
   $registrationEnabled = !config('settings.disable_registration_page', false);
   $ogImage = \Modules\Wpsupportlanding\Support\UnganishaBrand::ogImageUrl();
+  $whatsappEnabled = \App\Support\Offering::whatsappEnabled();
 @endphp
 @include('wpsupportlanding::landing.partials.unganisha.styles')
 <title>{{ $metaTitle }}</title>
@@ -74,6 +75,10 @@
       </div>
       <a href="#social" class="text-[15px] text-white/75 hover:text-white transition-colors">Social</a>
       <a href="#catalog" class="text-[15px] text-white/75 hover:text-white transition-colors">Store</a>
+      @if($whatsappEnabled)
+      <a href="#channels" class="text-[15px] text-white/75 hover:text-white transition-colors">Channels</a>
+      <a href="#campaigns" class="text-[15px] text-white/75 hover:text-white transition-colors">Campaigns</a>
+      @endif
       <a href="#pricing" class="text-[15px] text-white/75 hover:text-white transition-colors">Pricing</a>
       <a href="#faq" class="text-[15px] text-white/75 hover:text-white transition-colors">FAQ</a>
       @if(isset($hasBlog) && $hasBlog)
@@ -111,6 +116,10 @@
     </div>
     <a href="#social" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Social</a>
     <a href="#catalog" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Store</a>
+    @if($whatsappEnabled)
+    <a href="#channels" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Channels</a>
+    <a href="#campaigns" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Campaigns</a>
+    @endif
     <a href="#pricing" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">Pricing</a>
     <a href="#faq" class="block py-2.5 text-base text-gray-700 hover:text-gray-900" @click="mobileOpen=false">FAQ</a>
     @if(isset($hasBlog) && $hasBlog)
@@ -148,7 +157,7 @@
         <p class="body-lg text-gray-600 mb-6">
           {{ \Modules\Wpsupportlanding\Support\UnganishaBrand::description() }}
         </p>
-        <div class="flex flex-wrap gap-2 mb-8" aria-label="Supported social platforms">
+        <div class="flex flex-wrap gap-2 mb-8" aria-label="{{ $whatsappEnabled ? 'Supported channels and commerce' : 'Supported social platforms' }}">
           <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
             <span class="w-2 h-2 rounded-full" style="background:#1877F2;"></span>Facebook
           </span>
@@ -158,6 +167,14 @@
           <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
             <span class="w-2 h-2 rounded-full" style="background:#0A66C2;"></span>LinkedIn
           </span>
+          @if($whatsappEnabled)
+          <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
+            <span class="w-2 h-2 rounded-full" style="background:#25D366;"></span>WhatsApp
+          </span>
+          <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
+            <span class="w-2 h-2 rounded-full" style="background:#0084FF;"></span>Messenger
+          </span>
+          @endif
           <span class="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-gray-800">
             <span class="w-2 h-2 rounded-full" style="background:#0E8A7A;"></span>M-Pesa checkout
           </span>
@@ -174,9 +191,18 @@
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
           </a>
           @endif
+          @if($whatsappEnabled)
+          <a href="#channels" class="inline-flex items-center gap-2 px-7 py-4 text-base font-semibold text-gray-800 rounded-xl border border-gray-200 bg-white/70 hover:border-gray-300 transition-all hover:bg-white">
+            See Inbox
+          </a>
           <a href="#social" class="inline-flex items-center gap-2 px-7 py-4 text-base font-semibold text-gray-800 rounded-xl border border-gray-200 bg-white/70 hover:border-gray-300 transition-all hover:bg-white">
             See Social
           </a>
+          @else
+          <a href="#social" class="inline-flex items-center gap-2 px-7 py-4 text-base font-semibold text-gray-800 rounded-xl border border-gray-200 bg-white/70 hover:border-gray-300 transition-all hover:bg-white">
+            See Social
+          </a>
+          @endif
         </div>
         <p class="mt-6 text-sm text-gray-500">
           Need help beyond chat?
@@ -313,7 +339,7 @@
   </div>
 </section>
 
-@if(\App\Support\Offering::whatsappEnabled())
+@if($whatsappEnabled)
 <!-- ===== MESSAGING CHANNELS ===== -->
 <section id="channels" class="py-24 border-b border-gray-200 bg-white">
   <div class="max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
@@ -380,8 +406,9 @@
 </section>
 @endif
 
+@if($whatsappEnabled)
 <!-- ===== CAMPAIGNS ===== -->
-<!-- <section id="campaigns" class="py-24 relative overflow-hidden" style="background:#F7EEDC;">
+<section id="campaigns" class="py-24 relative overflow-hidden" style="background:#F7EEDC;">
   <div class="absolute inset-0 dots-bg opacity-40"></div>
   <div class="relative z-10 max-w-[90rem] mx-auto px-3 sm:px-4 lg:px-6">
     <div class="text-center mb-14">
@@ -425,7 +452,8 @@
 
     @include('wpsupportlanding::landing.partials.infographics.channel_orchestration')
   </div>
-</section> -->
+</section>
+@endif
 
 <!-- ===== HOW IT WORKS ===== -->
 <section id="how-it-works" class="py-24 relative overflow-hidden">
@@ -434,7 +462,11 @@
     <div class="mb-14 max-w-2xl">
       <p class="section-label mb-3">How it works</p>
       <h2 class="font-display section-title font-800 mb-4">Connect. Orchestrate.<br/><span class="grad-text">Engage. Collect.</span></h2>
+      @if($whatsappEnabled)
       <p class="text-gray-600">{{ $siteName }} connects WhatsApp, Instagram, and Messenger — then runs commerce, support, and campaigns so your team spends less time stitching tools and more time closing.</p>
+      @else
+      <p class="text-gray-600">{{ $siteName }} publishes social content, attaches catalog offers, and collects M-Pesa — so your team sells from every post without stitching tools.</p>
+      @endif
     </div>
     @include('wpsupportlanding::landing.partials.infographics.how_it_works')
     <div class="mt-12">
@@ -449,7 +481,11 @@
     <div class="mb-12 max-w-2xl">
       <p class="section-label mb-3">What we do</p>
       <h2 class="font-display section-title font-800 mb-4">Social commerce that<br/><span class="grad-text">runs the work.</span></h2>
+      @if($whatsappEnabled)
       <p class="text-gray-600">Traditional chat tools assist your team. {{ $siteName }} runs selling, support, and automation across WhatsApp, Instagram, and Messenger.</p>
+      @else
+      <p class="text-gray-600">{{ $siteName }} runs publishing, storefronts, and collections — so social posts become paid invoices without a separate messaging stack.</p>
+      @endif
     </div>
     <div class="grid lg:grid-cols-3 gap-6">
       <div class="rounded-3xl border border-gray-200 p-8" style="background:linear-gradient(180deg,rgba(14,138,122,0.06),transparent);">
