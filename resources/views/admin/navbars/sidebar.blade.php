@@ -61,7 +61,13 @@
                             </button>
                             <div class="dropdown-menu w-100 shadow-sm" aria-labelledby="orgDropdown">
                                 @foreach(auth()->user()->accessibleCompanies()->where('active', 1) as $company)
-                                <a class="dropdown-item d-flex align-items-center" href="{{ route('admin.companies.switch', $company->id) }}">
+                                <a
+                                    class="dropdown-item d-flex align-items-center"
+                                    href="{{ route('admin.companies.switch', array_filter([
+                                        'company' => $company->id,
+                                        'to' => request()->routeIs('social.*') ? 'social.calendar' : null,
+                                    ])) }}"
+                                >
                                     <i class="ni ni-building text-primary mr-2"></i>
                                     <span>{{ $company->name }}</span>
                                 </a>

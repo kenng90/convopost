@@ -412,7 +412,7 @@ class CompaniesController extends Controller
     }
 
     //Switch company
-    public function switch($companyid): RedirectResponse
+    public function switch(Request $request, $companyid): RedirectResponse
     {
         $company = Company::findOrFail($companyid);
         if ($this->verifyAccess($company)) {
@@ -424,10 +424,43 @@ class CompaniesController extends Controller
                 auth()->user()->forceFill(['company_id' => $company->id])->save();
             }
 
-            return redirect()->route('home');
+            return redirect()->to($this->resolveCompanySwitchRedirect($request));
         } else {
             abort(403);
         }
+    }
+
+    /**
+     * Keep agency users inside Social when switching client workspaces from a Social page.
+     */
+    protected function resolveCompanySwitchRedirect(Request $request): string
+    {
+        $allowed = [
+            'social.calendar',
+            'social.posts.index',
+            'social.posts.create',
+            'social.comments.index',
+            'social.insights',
+            'social.accounts.index',
+            'social.media.index',
+            'social.home',
+            'home',
+            'dashboard',
+        ];
+
+        $to = $request->query('to');
+
+        if (is_string($to) && in_array($to, $allowed, true) && \Illuminate\Support\Facades\Route::has($to)) {
+            return route($to);
+        }
+
+        $refererPath = parse_url((string) $request->headers->get('referer'), PHP_URL_PATH) ?: '';
+
+        if (is_string($refererPath) && str_starts_with($refererPath, '/social') && \Illuminate\Support\Facades\Route::has('social.calendar')) {
+            return route('social.calendar');
+        }
+
+        return route('home');
     }
 
     public function manage(): View

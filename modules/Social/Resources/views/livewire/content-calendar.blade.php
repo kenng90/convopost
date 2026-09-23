@@ -4,6 +4,9 @@
             <div class="row align-items-center">
                 <div class="col">
                     <h3 class="mb-0">{{ $title }}</h3>
+                    @if (! empty($workspaceName))
+                        <div class="text-sm text-muted">{{ __('Workspace') }}: {{ $workspaceName }}</div>
+                    @endif
                 </div>
                 <div class="col-auto">
                     <div class="btn-group mr-2" role="group">

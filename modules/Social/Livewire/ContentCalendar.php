@@ -107,19 +107,25 @@ class ContentCalendar extends Component
     {
         $company = Auth::user()?->currentCompany();
 
+        if (! $company) {
+            return null;
+        }
+
         return SocialPost::query()
-            ->when($company, fn ($query) => $query->where('company_id', $company->id))
+            ->where('company_id', $company->id)
             ->whereKey($postId)
             ->first();
     }
 
     public function render(): View
     {
+        $company = Auth::user()?->currentCompany();
         $cursor = Carbon::parse($this->cursorDate)->startOfDay();
         $range = $this->rangeFor($cursor);
-        $postsByDay = $this->postsGroupedByDay($range['start'], $range['end']);
+        $postsByDay = $this->postsGroupedByDay($company?->id, $range['start'], $range['end']);
 
         return view('social::livewire.content-calendar', [
+            'workspaceName' => $company?->name,
             'cursor' => $cursor,
             'rangeStart' => $range['start'],
             'rangeEnd' => $range['end'],
@@ -162,13 +168,15 @@ class ContentCalendar extends Component
     /**
      * @return Collection<string, Collection<int, SocialPost>>
      */
-    protected function postsGroupedByDay(Carbon $start, Carbon $end): Collection
+    protected function postsGroupedByDay(?int $companyId, Carbon $start, Carbon $end): Collection
     {
-        $company = Auth::user()?->currentCompany();
+        if (! $companyId) {
+            return collect();
+        }
 
         $posts = SocialPost::query()
             ->with(['defaultVersion', 'accounts'])
-            ->when($company, fn ($query) => $query->where('company_id', $company->id))
+            ->where('company_id', $companyId)
             ->where(function ($query) use ($start, $end) {
                 $query->whereBetween('scheduled_at', [$start, $end])
                     ->orWhereBetween('published_at', [$start, $end]);
