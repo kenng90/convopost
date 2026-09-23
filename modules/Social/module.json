@@ -45,6 +45,11 @@
                     "route": "social.calendar"
                 },
                 {
+                    "name": "Queue",
+                    "icon": "ni ni-watch-time text-primary",
+                    "route": "social.queue.index"
+                },
+                {
                     "name": "Accounts",
                     "icon": "ni ni-single-02 text-primary",
                     "route": "social.accounts.index"
@@ -95,6 +100,11 @@
                     "name": "Calendar",
                     "icon": "ni ni-calendar-grid-58 text-primary",
                     "route": "social.calendar"
+                },
+                {
+                    "name": "Queue",
+                    "icon": "ni ni-watch-time text-primary",
+                    "route": "social.queue.index"
                 },
                 {
                     "name": "Accounts",

@@ -18,6 +18,7 @@ use Modules\Social\Models\SocialTemplate;
 use Modules\Social\Services\SocialAiCaptionService;
 use Modules\Social\Services\SocialPostApprovalService;
 use Modules\Social\Services\SocialPostComposerService;
+use Modules\Social\Services\SocialQueueSlotService;
 use RuntimeException;
 
 class PostComposer extends Component
@@ -231,6 +232,34 @@ class PostComposer extends Component
         }
     }
 
+    public function addToQueue(): void
+    {
+        $company = Auth::user()?->currentCompany();
+
+        if (! $company) {
+            $this->addError('scheduledAt', __('Select a company before composing.'));
+
+            return;
+        }
+
+        $queue = app(SocialQueueSlotService::class);
+
+        if ($queue->activeSlotsFor($company)->isEmpty()) {
+            $queue->seedRecommended($company);
+        }
+
+        $nextAt = $queue->nextAvailableAt($company);
+
+        if (! $nextAt) {
+            $this->addError('scheduledAt', __('No free queue slots found. Add more times under Social → Queue.'));
+
+            return;
+        }
+
+        $this->scheduledAt = $nextAt->timezone(config('app.timezone'))->format('Y-m-d H:i:s');
+        $this->schedule();
+    }
+
     public function submitForApproval(): void
     {
         $post = $this->persist('draft');
@@ -296,6 +325,7 @@ class PostComposer extends Component
             'providers' => SocialProvider::publishable(),
             'requiresApproval' => $this->requiresApprovalGate(),
             'canUseSocialAi' => $this->canUseSocialAi(),
+            'nextQueueAt' => $this->nextQueueAt(),
             'aiTones' => SocialAiCaptionService::TONES,
             'aiCaptionCost' => app(\App\Services\Platform\ManagedAiService::class)
                 ->actionCost(SocialAiCaptionService::ACTION_GENERATE),
@@ -313,6 +343,19 @@ class PostComposer extends Component
         }
 
         return app(SocialAiCaptionService::class)->companyCanUseAi($company);
+    }
+
+    protected function nextQueueAt(): ?string
+    {
+        $company = Auth::user()?->currentCompany();
+
+        if (! $company) {
+            return null;
+        }
+
+        $next = app(SocialQueueSlotService::class)->nextAvailableAt($company);
+
+        return $next?->timezone(config('app.timezone'))->format('D, M j Y H:i');
     }
 
     protected function availableAccounts()

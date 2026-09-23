@@ -188,7 +188,15 @@
                     wire:model="scheduledAt"
                 >
                 @error('scheduledAt') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                <small class="form-text text-muted">{{ __('Required when scheduling. Leave empty to save as draft.') }}</small>
+                <small class="form-text text-muted">
+                    {{ __('Required when scheduling. Leave empty to save as draft.') }}
+                    @if ($nextQueueAt ?? null)
+                        {{ __('Next queue slot:') }} <strong>{{ $nextQueueAt }}</strong>
+                        — <a href="{{ route('social.queue.index') }}">{{ __('Manage queue') }}</a>
+                    @else
+                        <a href="{{ route('social.queue.index') }}">{{ __('Set up posting queue') }}</a>
+                    @endif
+                </small>
             </div>
 
             <div class="form-group">
@@ -281,6 +289,10 @@
                         <span wire:loading wire:target="submitForApproval">{{ __('Submitting…') }}</span>
                     </button>
                 @else
+                    <button type="button" class="btn btn-outline-primary" wire:click="addToQueue" wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="addToQueue">{{ __('Add to queue') }}</span>
+                        <span wire:loading wire:target="addToQueue">{{ __('Queuing…') }}</span>
+                    </button>
                     <button type="button" class="btn btn-primary" wire:click="schedule" wire:loading.attr="disabled">
                         <span wire:loading.remove wire:target="schedule">{{ __('Schedule') }}</span>
                         <span wire:loading wire:target="schedule">{{ __('Scheduling…') }}</span>

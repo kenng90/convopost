@@ -15,6 +15,7 @@ use Modules\Social\Http\Controllers\MediaController;
 use Modules\Social\Http\Controllers\OfferRedirectController;
 use Modules\Social\Http\Controllers\PinterestConnectController;
 use Modules\Social\Http\Controllers\PostController;
+use Modules\Social\Http\Controllers\QueueSlotController;
 use Modules\Social\Http\Controllers\TemplateController;
 use Modules\Social\Http\Controllers\ThreadsConnectController;
 use Modules\Social\Http\Controllers\TikTokConnectController;
@@ -59,6 +60,11 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
         Route::get('/labels', [LabelController::class, 'index'])->name('social.labels.index');
         Route::post('/labels', [LabelController::class, 'store'])->name('social.labels.store');
         Route::delete('/labels/{label}', [LabelController::class, 'destroy'])->name('social.labels.destroy');
+
+        Route::get('/queue', [QueueSlotController::class, 'index'])->name('social.queue.index');
+        Route::post('/queue', [QueueSlotController::class, 'store'])->name('social.queue.store');
+        Route::post('/queue/seed', [QueueSlotController::class, 'seedRecommended'])->name('social.queue.seed');
+        Route::delete('/queue/{slot}', [QueueSlotController::class, 'destroy'])->name('social.queue.destroy');
 
         Route::get('/insights', [InsightsController::class, 'index'])
             ->middleware('plan.capability:social_analytics')
