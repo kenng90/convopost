@@ -57,6 +57,8 @@ class PostComposer extends Component
 
     public ?string $scheduledAt = null;
 
+    public string $firstComment = '';
+
     public string $offerType = 'none';
 
     public string $offerUrl = '';
@@ -307,6 +309,7 @@ class PostComposer extends Component
             'versions' => $this->networkVersions,
             'status' => $status,
             'scheduled_at' => $this->scheduledAt,
+            'first_comment' => $this->firstComment,
             'offer_type' => $this->offerType,
             'offer_url' => $this->offerUrl ?: null,
             'offer_target_id' => $this->offerTargetId,

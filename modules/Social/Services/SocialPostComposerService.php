@@ -23,6 +23,7 @@ class SocialPostComposerService
      *     media_ids?: list<int>,
      *     label_ids?: list<int>,
      *     versions?: array<string, string>,
+     *     first_comment?: string|null,
      *     status?: string,
      *     scheduled_at?: string|null,
      *     offer_type?: string|null,
@@ -35,6 +36,8 @@ class SocialPostComposerService
         return DB::transaction(function () use ($company, $user, $data) {
             $status = $data['status'] ?? 'draft';
             $scheduledAt = $data['scheduled_at'] ?? null;
+            $firstComment = isset($data['first_comment']) ? trim((string) $data['first_comment']) : '';
+            $firstComment = $firstComment !== '' ? $firstComment : null;
 
             if ($status === 'scheduled' && empty($scheduledAt)) {
                 $status = 'draft';
@@ -57,7 +60,7 @@ class SocialPostComposerService
                 'provider' => 'default',
                 'content' => $data['content'],
                 'media_ids' => $mediaIds,
-                'first_comment' => null,
+                'first_comment' => $firstComment,
                 'provider_payload' => [],
             ]);
 
@@ -72,7 +75,7 @@ class SocialPostComposerService
                     'provider' => $provider,
                     'content' => $content,
                     'media_ids' => $mediaIds,
-                    'first_comment' => null,
+                    'first_comment' => $firstComment,
                     'provider_payload' => [],
                 ]);
             }

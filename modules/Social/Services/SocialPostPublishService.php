@@ -78,6 +78,15 @@ class SocialPostPublishService
             return;
         }
 
+        if ($result->success && ! empty($result->meta['first_comment_error'])) {
+            Log::warning('Social first comment failed after publish', [
+                'social_post_id' => $post->id,
+                'social_account_id' => $account->id,
+                'provider_post_id' => $result->providerPostId,
+                'error' => $result->meta['first_comment_error'],
+            ]);
+        }
+
         $this->applyResult($pivot, $result);
     }
 
@@ -95,23 +104,26 @@ class SocialPostPublishService
     protected function versionFor(SocialPost $post, SocialProvider $provider): SocialPostVersion
     {
         $override = $post->versions->firstWhere('provider', $provider->value);
-
-        if ($override) {
-            return $override;
-        }
-
         $default = $post->versions->firstWhere('provider', 'default') ?? $post->defaultVersion;
 
-        if ($default) {
-            return $default;
+        $version = $override ?? $default;
+
+        if (! $version) {
+            return new SocialPostVersion([
+                'social_post_id' => $post->id,
+                'provider' => 'default',
+                'content' => '',
+                'media_ids' => [],
+                'first_comment' => null,
+            ]);
         }
 
-        return new SocialPostVersion([
-            'social_post_id' => $post->id,
-            'provider' => 'default',
-            'content' => '',
-            'media_ids' => [],
-        ]);
+        // Network overrides inherit the default first comment when unset.
+        if ($override && blank($override->first_comment) && $default && filled($default->first_comment)) {
+            $override->setAttribute('first_comment', $default->first_comment);
+        }
+
+        return $version;
     }
 
     /**

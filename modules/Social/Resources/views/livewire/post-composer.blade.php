@@ -180,6 +180,19 @@
             </div>
 
             <div class="form-group">
+                <label class="form-control-label" for="social-first-comment">{{ __('First comment') }}</label>
+                <textarea
+                    id="social-first-comment"
+                    class="form-control @error('firstComment') is-invalid @enderror"
+                    rows="2"
+                    wire:model="firstComment"
+                    placeholder="{{ __('Optional — posted as the first comment on Facebook / Instagram after publish') }}"
+                ></textarea>
+                @error('firstComment') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                <small class="form-text text-muted">{{ __('Supported on Facebook Pages and Instagram. Other networks ignore this field.') }}</small>
+            </div>
+
+            <div class="form-group">
                 <label class="form-control-label" for="social-post-schedule">{{ __('Schedule for') }}</label>
                 <input
                     id="social-post-schedule"

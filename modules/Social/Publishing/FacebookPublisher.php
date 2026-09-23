@@ -11,6 +11,8 @@ use Modules\Social\Support\PublishResult;
 
 class FacebookPublisher implements SocialPublisherInterface
 {
+    use PostsFirstComment;
+
     public function provider(): SocialProvider
     {
         return SocialProvider::Facebook;
@@ -61,7 +63,18 @@ class FacebookPublisher implements SocialPublisherInterface
             return PublishResult::fail('Facebook did not return a post id.');
         }
 
-        return PublishResult::ok($providerPostId, ['response' => $response->json()]);
+        $meta = ['response' => $response->json()];
+        $meta = array_merge(
+            $meta,
+            $this->postFirstComment(
+                $account,
+                $version,
+                $providerPostId,
+                "https://graph.facebook.com/{$graph}"
+            )
+        );
+
+        return PublishResult::ok($providerPostId, $meta);
     }
 
     public function refreshToken(SocialAccount $account): bool

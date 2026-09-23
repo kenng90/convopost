@@ -11,6 +11,8 @@ use Modules\Social\Support\PublishResult;
 
 class InstagramPublisher implements SocialPublisherInterface
 {
+    use PostsFirstComment;
+
     public function provider(): SocialProvider
     {
         return SocialProvider::Instagram;
@@ -73,10 +75,23 @@ class InstagramPublisher implements SocialPublisherInterface
             );
         }
 
-        return PublishResult::ok((string) $publish->json('id'), [
+        $providerPostId = (string) $publish->json('id');
+
+        $meta = [
             'creation_id' => $creationId,
             'response' => $publish->json(),
-        ]);
+        ];
+        $meta = array_merge(
+            $meta,
+            $this->postFirstComment(
+                $account,
+                $version,
+                $providerPostId,
+                "https://graph.facebook.com/{$graph}"
+            )
+        );
+
+        return PublishResult::ok($providerPostId, $meta);
     }
 
     public function refreshToken(SocialAccount $account): bool

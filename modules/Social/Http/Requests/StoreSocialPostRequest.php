@@ -46,6 +46,7 @@ class StoreSocialPostRequest extends FormRequest
             'versions.pinterest' => ['nullable', 'string', 'max:800'],
             'versions.gbp' => ['nullable', 'string', 'max:1500'],
             'versions.x' => ['nullable', 'string', 'max:280'],
+            'first_comment' => ['nullable', 'string', 'max:2000'],
             'status' => ['required', Rule::in(['draft', 'scheduled'])],
             'scheduled_at' => [
                 Rule::requiredIf($status === 'scheduled'),
@@ -109,6 +110,7 @@ class StoreSocialPostRequest extends FormRequest
             'networkVersions.gbp' => $rules['versions.gbp'],
             'networkVersions.x' => $rules['versions.x'],
             'scheduledAt' => $rules['scheduled_at'],
+            'firstComment' => $rules['first_comment'],
             'offerType' => $rules['offer_type'],
             'offerUrl' => $rules['offer_url'],
             'offerTargetId' => $rules['offer_target_id'],
