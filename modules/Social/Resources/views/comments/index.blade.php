@@ -40,6 +40,7 @@
                                 <th>{{ __('Author') }}</th>
                                 <th>{{ __('Comment') }}</th>
                                 <th>{{ __('Post') }}</th>
+                                <th>{{ __('Contact') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -66,10 +67,24 @@
                                             <span class="text-muted">—</span>
                                         @endif
                                     </td>
+                                    <td class="text-sm text-nowrap">
+                                        @if ($comment->contact_id)
+                                            <a href="{{ route('contacts.edit', $comment->contact_id) }}" class="btn btn-sm btn-outline-primary">
+                                                {{ __('View contact') }}
+                                            </a>
+                                        @elseif ($comment->canCreateContact())
+                                            <form method="POST" action="{{ route('social.comments.create-contact', $comment) }}" class="d-inline">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-primary">{{ __('Save as contact') }}</button>
+                                            </form>
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">
+                                    <td colspan="6" class="text-center text-muted py-4">
                                         {{ __('No comments synced yet. Comments appear after published Facebook or Instagram posts are synced.') }}
                                     </td>
                                 </tr>

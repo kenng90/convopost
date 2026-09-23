@@ -111,6 +111,14 @@
                                     <div class="text-sm" style="white-space: pre-wrap;">{{ $comment->body ?: '—' }}</div>
                                     <div class="text-xs text-muted mt-1">
                                         <span class="badge badge-secondary">{{ __(ucfirst($comment->provider)) }}</span>
+                                        @if ($comment->contact_id)
+                                            <a href="{{ route('contacts.edit', $comment->contact_id) }}" class="ml-1">{{ __('Contact') }}</a>
+                                        @elseif ($comment->canCreateContact())
+                                            <form method="POST" action="{{ route('social.comments.create-contact', $comment) }}" class="d-inline ml-1">
+                                                @csrf
+                                                <button type="submit" class="btn btn-link btn-sm p-0 align-baseline">{{ __('Save as contact') }}</button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </div>
                                 <div class="text-xs text-muted text-nowrap">

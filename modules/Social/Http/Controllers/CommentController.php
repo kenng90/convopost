@@ -4,8 +4,10 @@ namespace Modules\Social\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Modules\Social\Models\SocialComment;
+use Modules\Social\Services\SocialEngagerContactService;
 
 class CommentController extends Controller
 {
@@ -24,5 +26,23 @@ class CommentController extends Controller
             'comments' => $comments,
             'company' => $company,
         ]);
+    }
+
+    public function createContact(
+        Request $request,
+        SocialComment $comment,
+        SocialEngagerContactService $engagers,
+    ): RedirectResponse {
+        $company = $request->user()->currentCompany();
+
+        if (! $company || (int) $comment->company_id !== (int) $company->id) {
+            abort(404);
+        }
+
+        $contact = $engagers->createFromComment($comment);
+
+        return redirect()
+            ->back()
+            ->with('success', __('Contact created for :name.', ['name' => $contact->name]));
     }
 }

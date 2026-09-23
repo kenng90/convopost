@@ -7,6 +7,7 @@ use App\Scopes\CompanyScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Contacts\Models\Contact;
 use Modules\Social\Database\Factories\SocialCommentFactory;
 
 class SocialComment extends Model
@@ -56,6 +57,17 @@ class SocialComment extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(SocialAccount::class, 'social_account_id');
+    }
+
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(Contact::class, 'contact_id');
+    }
+
+    public function canCreateContact(): bool
+    {
+        return blank($this->contact_id) && filled($this->author_external_id)
+            && in_array($this->provider, ['facebook', 'instagram'], true);
     }
 
     public function authorLabel(): string
