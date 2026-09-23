@@ -77,18 +77,24 @@ php artisan test --filter=OfferingTest
 
 ## 4. Plans & entitlements
 
-Plan definitions already retain WhatsApp CRM plugins for re-enable (`config/plan-entitlements.php`: `inbox`, `campaigns`, `whatsapp_flows`, `voice`, `inbox_instagram`, `inbox_messenger`, `inbox_tiktok`, etc.).
+Plan tiers already include WhatsApp CRM capabilities for the flip (`config/plan-entitlements.php`):
+
+| Tier | Inbox | Campaigns | Messaging channel plugins |
+|---|---|---|---|
+| Starter | yes | no | wpbox only |
+| Growth | yes | yes | wpbox + commerce |
+| Pro | yes | yes | flows, calls, IG/Messenger/TikTok, SMS/email, embed |
+| Agency | all (`null` = unrestricted) | all | all |
 
 After flipping mode:
 
-- [ ] Confirm Starter / Pro / Agency (or your live plan rows) still include the CRM plugins you intend to sell.
-- [ ] If production plans were edited in DB without those plugins, re-seed or patch plans — do **not** assume config-only merge if `plans` rows were customized.
-- [ ] Spot-check `EnsurePlanPlugin` on Chat / Campaigns for a paying tenant.
+- [ ] Re-run `php artisan db:seed --class=PlanEntitlementsSeeder` on staging/production if plan rows were customized, so plugins/capabilities match config.
+- [ ] Spot-check `EnsurePlanPlugin` / `plan.capability:campaigns` on Chat / Campaigns for Growth and Pro tenants.
 - [ ] Agency multi-company: switch company → Social calendar isolation still works; Chat uses the same company session.
 
 ```bash
 php artisan test --filter=PlanEntitlements
-# plus any Social agency calendar tests you rely on
+php artisan test --filter=OfferingFullModeReenableTest
 php artisan test --filter=SocialAgency
 ```
 

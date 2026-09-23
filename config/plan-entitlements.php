@@ -7,8 +7,9 @@ return [
     | Plan tier presets (used by PlanEntitlementsSeeder)
     |--------------------------------------------------------------------------
     |
-    | Social-commerce-first copy. WhatsApp inbox capabilities remain on higher
-    | tiers so OFFERING_MODE=full can re-enable CRM UI without re-seeding.
+    | Social-commerce-first copy. Inbox/campaigns capabilities are on Starter+
+    | so OFFERING_MODE=full unlocks WhatsApp CRM UI without a separate plan
+    | redesign. Pro includes messaging channel plugins for the same flip.
     |
     | limit_items    → campaigns per billing period (0 = unlimited)
     | limit_views    → outbound/inbound messages per period (0 = unlimited)
@@ -27,8 +28,8 @@ return [
         'starter' => [
             'name' => 'Starter',
             'price' => 29,
-            'description' => 'Social publishing and contact CRM for solo sellers getting started.',
-            'features' => 'Unganisha Social home, Up to 3 social accounts, Content calendar (coming), Contact CRM, Up to 3 agents, 500 contacts',
+            'description' => 'Social publishing, contact CRM, and team inbox for solo sellers getting started.',
+            'features' => 'Unganisha Social home, Up to 3 social accounts, Team inbox (WhatsApp when offering is full), Contact CRM, Up to 3 agents, 500 contacts',
             'limit_items' => 0,
             'limit_views' => 1000,
             'limit_orders' => 500,
@@ -52,14 +53,15 @@ return [
             'capabilities' => [
                 'social_publish',
                 'contacts',
+                'inbox',
             ],
         ],
 
         'growth' => [
             'name' => 'Growth',
             'price' => 79,
-            'description' => 'Social publishing plus catalog commerce and M-Pesa collections for growing brands.',
-            'features' => 'Everything in Starter, Product catalog & branded shop, Shopify/WooCommerce import, Collections & M-Pesa, 5 agents, 5,000 contacts',
+            'description' => 'Social publishing, catalog commerce, inbox, and campaigns for growing brands.',
+            'features' => 'Everything in Starter, Product catalog & branded shop, Shopify/WooCommerce import, Campaigns & broadcasts, Collections & M-Pesa, 5 agents, 5,000 contacts',
             'limit_items' => 10,
             'limit_views' => 5000,
             'limit_orders' => 5000,
@@ -87,6 +89,8 @@ return [
             'capabilities' => [
                 'social_publish',
                 'contacts',
+                'inbox',
+                'campaigns',
                 'flows',
                 'catalog',
                 'integrations',
@@ -98,8 +102,8 @@ return [
         'pro' => [
             'name' => 'Pro',
             'price' => 149,
-            'description' => 'Full social commerce stack — AI captions, analytics, journeys, bookings, and API access.',
-            'features' => 'Everything in Growth, Social AI captions, Social analytics, Journey playbooks, Bookings, Knowledge base, M-Pesa & Paystack, Public API, 15 agents',
+            'description' => 'Full social + messaging stack — inbox, campaigns, AI captions, journeys, bookings, and API access.',
+            'features' => 'Everything in Growth, WhatsApp Flows & voice, Instagram/Messenger/TikTok inbox channels, Social AI captions, Social analytics, Journey playbooks, Bookings, Knowledge base, M-Pesa & Paystack, Public API, 15 agents',
             'limit_items' => 0,
             'limit_views' => 0,
             'limit_orders' => 0,
@@ -126,6 +130,18 @@ return [
                 'reminders',
                 'knowledge',
                 'reports',
+                // Messaging surfaces unlocked when OFFERING_MODE=full:
+                'whatsappflows',
+                'whatsappcall',
+                'whatsappcallworker',
+                'instagram',
+                'messenger',
+                'tiktok',
+                'smswpbox',
+                'emailwpbox',
+                'voicecall',
+                'embedwhatsapp',
+                'embeddedlogin',
             ],
             'managed_ai_monthly_credits' => 1000,
             'capabilities' => [
@@ -148,7 +164,6 @@ return [
                 'outcomes_booking_convert',
                 'outcomes_lead_to_cash',
                 'outcomes_suite',
-                // Retained for OFFERING_MODE=full re-enable:
                 'inbox',
                 'campaigns',
                 'whatsapp_flows',
@@ -162,9 +177,8 @@ return [
         'agency' => [
             'name' => 'Agency',
             'price' => 299,
-            'description' => 'Manage multiple client brands, unlimited social accounts, and full API access from one account.',
-            'features' => 'Everything in Pro, Unlimited organizations & agents, Cross-client Social workspaces, Integration Hub, Full REST API, Priority support',
-            'limit_items' => 0,
+            'description' => 'Manage multiple client brands with full social + messaging CRM, unlimited social accounts, and API access.',
+            'features' => 'Everything in Pro, Unlimited organizations & agents, Cross-client Social workspaces, Integration Hub, Full REST API, Priority support',            'limit_items' => 0,
             'limit_views' => 0,
             'limit_orders' => 0,
             'limit_catalog_items' => 0,

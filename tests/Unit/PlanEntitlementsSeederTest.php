@@ -18,5 +18,22 @@ class PlanEntitlementsSeederTest extends TestCase
         $this->assertDatabaseHas('plan', ['name' => 'Growth', 'limit_items' => 10, 'limit_integrations' => 1]);
         $this->assertDatabaseHas('plan', ['name' => 'Pro', 'price' => 149]);
         $this->assertDatabaseHas('plan', ['name' => 'Agency', 'price' => 299]);
+
+        $starterCaps = json_decode(
+            (string) \App\Models\Plans::query()->where('name', 'Starter')->firstOrFail()->getConfig('capabilities', '[]'),
+            true
+        );
+        $growthCaps = json_decode(
+            (string) \App\Models\Plans::query()->where('name', 'Growth')->firstOrFail()->getConfig('capabilities', '[]'),
+            true
+        );
+        $proPlugins = json_decode(
+            (string) \App\Models\Plans::query()->where('name', 'Pro')->firstOrFail()->getConfig('plugins', '[]'),
+            true
+        );
+
+        $this->assertContains('inbox', $starterCaps);
+        $this->assertContains('campaigns', $growthCaps);
+        $this->assertContains('whatsappcall', $proPlugins);
     }
 }
