@@ -45,6 +45,7 @@ class PostComposer extends Component
         'instagram' => '',
         'linkedin' => '',
         'tiktok' => '',
+        'youtube' => '',
     ];
 
     public bool $showNetworkOverrides = false;

@@ -17,7 +17,7 @@ class SocialAccountFactory extends Factory
      */
     public function definition(): array
     {
-        $provider = $this->faker->randomElement(['facebook', 'instagram', 'linkedin', 'tiktok']);
+        $provider = $this->faker->randomElement(['facebook', 'instagram', 'linkedin', 'tiktok', 'youtube']);
 
         return [
             'company_id' => \App\Models\Company::factory(),

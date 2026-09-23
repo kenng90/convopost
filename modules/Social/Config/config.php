@@ -83,6 +83,23 @@ return [
                 'api_base' => env('SOCIAL_TIKTOK_API_BASE', 'https://open.tiktokapis.com'),
             ],
         ],
+        'youtube' => [
+            'enabled' => env('SOCIAL_YOUTUBE_ENABLED', true),
+            'label' => 'YouTube',
+            'publisher' => Modules\Social\Publishing\YouTubePublisher::class,
+            'scopes' => [
+                'https://www.googleapis.com/auth/youtube.upload',
+                'https://www.googleapis.com/auth/youtube.readonly',
+            ],
+            'oauth' => [
+                'client_id' => env('SOCIAL_YOUTUBE_CLIENT_ID', env('GOOGLE_CLIENT_ID', '')),
+                'client_secret' => env('SOCIAL_YOUTUBE_CLIENT_SECRET', env('GOOGLE_CLIENT_SECRET', '')),
+                'redirect' => env('SOCIAL_YOUTUBE_REDIRECT', ''),
+                'authorize_url' => env('SOCIAL_YOUTUBE_AUTHORIZE_URL', 'https://accounts.google.com/o/oauth2/v2/auth'),
+                'token_url' => env('SOCIAL_YOUTUBE_TOKEN_URL', 'https://oauth2.googleapis.com/token'),
+                'api_base' => env('SOCIAL_YOUTUBE_API_BASE', 'https://www.googleapis.com'),
+            ],
+        ],
     ],
 
     /*

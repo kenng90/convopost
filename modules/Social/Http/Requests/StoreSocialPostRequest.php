@@ -41,6 +41,7 @@ class StoreSocialPostRequest extends FormRequest
             'versions.instagram' => ['nullable', 'string', 'max:5000'],
             'versions.linkedin' => ['nullable', 'string', 'max:5000'],
             'versions.tiktok' => ['nullable', 'string', 'max:5000'],
+            'versions.youtube' => ['nullable', 'string', 'max:5000'],
             'status' => ['required', Rule::in(['draft', 'scheduled'])],
             'scheduled_at' => [
                 Rule::requiredIf($status === 'scheduled'),
@@ -98,6 +99,7 @@ class StoreSocialPostRequest extends FormRequest
             'networkVersions.instagram' => $rules['versions.instagram'],
             'networkVersions.linkedin' => $rules['versions.linkedin'],
             'networkVersions.tiktok' => $rules['versions.tiktok'],
+            'networkVersions.youtube' => $rules['versions.youtube'],
             'scheduledAt' => $rules['scheduled_at'],
             'offerType' => $rules['offer_type'],
             'offerUrl' => $rules['offer_url'],
