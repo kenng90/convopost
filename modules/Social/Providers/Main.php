@@ -29,6 +29,7 @@ class Main extends Provider
             $this->commands([
                 \Modules\Social\Console\RefreshSocialTokensCommand::class,
                 \Modules\Social\Console\PublishDueSocialPostsCommand::class,
+                \Modules\Social\Console\SyncSocialAnalyticsCommand::class,
             ]);
         }
     }

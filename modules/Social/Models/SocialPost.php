@@ -99,6 +99,11 @@ class SocialPost extends Model
         return $this->hasMany(SocialPostActivity::class, 'social_post_id')->orderByDesc('id');
     }
 
+    public function analyticsSnapshots(): HasMany
+    {
+        return $this->hasMany(SocialPostAnalyticsSnapshot::class, 'social_post_id')->orderByDesc('synced_at');
+    }
+
     public function isDraft(): bool
     {
         return $this->status === 'draft';
