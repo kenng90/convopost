@@ -116,6 +116,11 @@ Route::prefix('v1')->middleware(['public.api', 'idempotency'])->group(function (
 
     Route::post('invoices', [\App\Http\Controllers\Api\V1\InvoicesController::class, 'store'])->name('api.v1.invoices.store');
     Route::get('invoices/{invoice}', [\App\Http\Controllers\Api\V1\InvoicesController::class, 'show'])->name('api.v1.invoices.show');
+
+    Route::get('social/posts', [\App\Http\Controllers\Api\V1\SocialPostsController::class, 'index'])->name('api.v1.social.posts.index');
+    Route::post('social/posts', [\App\Http\Controllers\Api\V1\SocialPostsController::class, 'store'])->name('api.v1.social.posts.store');
+    Route::get('social/posts/{post}', [\App\Http\Controllers\Api\V1\SocialPostsController::class, 'show'])->name('api.v1.social.posts.show')->whereNumber('post');
+    Route::post('social/posts/{post}/schedule', [\App\Http\Controllers\Api\V1\SocialPostsController::class, 'schedule'])->name('api.v1.social.posts.schedule')->whereNumber('post');
 });
 
 Route::group([

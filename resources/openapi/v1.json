@@ -16,7 +16,8 @@
     { "name": "Events" },
     { "name": "Webhooks" },
     { "name": "Bookings" },
-    { "name": "Invoices" }
+    { "name": "Invoices" },
+    { "name": "Social" }
   ],
   "security": [{ "bearerAuth": [] }],
   "components": {
@@ -511,6 +512,89 @@
           { "name": "invoice", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
         "responses": { "200": { "description": "Invoice" } }
+      }
+
+    },
+    "/social/posts": {
+      "get": {
+        "tags": ["Social"],
+        "summary": "List social posts (cursor pagination)",
+        "parameters": [
+          { "$ref": "#/components/parameters/CompanyId" },
+          { "$ref": "#/components/parameters/Cursor" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["draft", "scheduled", "published", "failed", "publishing"] } }
+        ],
+        "responses": { "200": { "description": "Paginated social posts" } }
+      },
+      "post": {
+        "tags": ["Social"],
+        "summary": "Create a social post draft or scheduled post",
+        "parameters": [
+          { "$ref": "#/components/parameters/CompanyId" },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["content", "account_ids"],
+                "properties": {
+                  "content": { "type": "string" },
+                  "account_ids": { "type": "array", "items": { "type": "integer" } },
+                  "media_ids": { "type": "array", "items": { "type": "integer" } },
+                  "status": { "type": "string", "enum": ["draft", "scheduled"], "default": "draft" },
+                  "scheduled_at": { "type": "string", "format": "date-time" },
+                  "first_comment": { "type": "string" },
+                  "x_thread_replies": { "type": "array", "items": { "type": "string" } },
+                  "offer_type": { "type": "string", "enum": ["none", "url", "catalog", "product"], "default": "none" },
+                  "offer_url": { "type": "string" },
+                  "offer_target_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Social post created" } }
+      }
+    },
+    "/social/posts/{post}": {
+      "get": {
+        "tags": ["Social"],
+        "summary": "Get a social post",
+        "parameters": [
+          { "$ref": "#/components/parameters/CompanyId" },
+          { "name": "post", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "Social post" } }
+      }
+    },
+    "/social/posts/{post}/schedule": {
+      "post": {
+        "tags": ["Social"],
+        "summary": "Schedule a draft or failed social post",
+        "parameters": [
+          { "$ref": "#/components/parameters/CompanyId" },
+          { "$ref": "#/components/parameters/IdempotencyKey" },
+          { "name": "post", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["scheduled_at"],
+                "properties": {
+                  "scheduled_at": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Post scheduled" } }
       }
     }
   }
