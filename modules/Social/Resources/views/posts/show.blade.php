@@ -96,6 +96,33 @@
                     @endif
                 </div>
             </div>
+
+            <div class="card shadow mb-4">
+                <div class="card-header border-0 d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">{{ __('Comments') }}</h3>
+                    <a href="{{ route('social.comments.index') }}" class="btn btn-sm btn-outline-primary">{{ __('All comments') }}</a>
+                </div>
+                <div class="card-body">
+                    @forelse ($post->comments as $comment)
+                        <div class="mb-3 pb-3 {{ ! $loop->last ? 'border-bottom' : '' }}" wire:key="post-comment-{{ $comment->id }}">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div>
+                                    <div class="font-weight-bold">{{ $comment->authorLabel() }}</div>
+                                    <div class="text-sm" style="white-space: pre-wrap;">{{ $comment->body ?: '—' }}</div>
+                                    <div class="text-xs text-muted mt-1">
+                                        <span class="badge badge-secondary">{{ __(ucfirst($comment->provider)) }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-muted text-nowrap">
+                                    {{ $comment->commented_at?->format('M d, Y H:i') ?? '—' }}
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="mb-0 text-muted">{{ __('No comments synced for this post yet.') }}</p>
+                    @endforelse
+                </div>
+            </div>
         </div>
 
         <div class="col-lg-4">

@@ -81,6 +81,7 @@ class PostController extends Controller
             'reviewer',
             'activities.user',
             'postAccounts',
+            'comments',
         ]);
 
         return view('social::posts.show', [

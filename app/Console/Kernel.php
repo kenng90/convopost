@@ -26,6 +26,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('social:refresh-tokens')->hourly();
         $schedule->command('social:publish-due')->everyMinute();
         $schedule->command('social:sync-analytics')->hourly();
+        $schedule->command('social:sync-comments')->hourly();
     }
 
     /**

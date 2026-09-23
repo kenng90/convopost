@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Social\Http\Controllers\AccountController;
 use Modules\Social\Http\Controllers\CalendarController;
+use Modules\Social\Http\Controllers\CommentController;
 use Modules\Social\Http\Controllers\FacebookConnectController;
 use Modules\Social\Http\Controllers\GbpConnectController;
 use Modules\Social\Http\Controllers\HashtagGroupController;
@@ -47,6 +48,8 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
             ->name('social.posts.approve');
         Route::post('/posts/{post}/reject', [PostController::class, 'reject'])
             ->name('social.posts.reject');
+
+        Route::get('/comments', [CommentController::class, 'index'])->name('social.comments.index');
 
         Route::get('/templates', [TemplateController::class, 'index'])->name('social.templates.index');
         Route::post('/templates', [TemplateController::class, 'store'])->name('social.templates.store');

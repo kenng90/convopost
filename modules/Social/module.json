@@ -65,6 +65,11 @@
                     "route": "social.posts.index"
                 },
                 {
+                    "name": "Comments",
+                    "icon": "ni ni-chat-round text-primary",
+                    "route": "social.comments.index"
+                },
+                {
                     "name": "Templates",
                     "icon": "ni ni-single-copy-04 text-primary",
                     "route": "social.templates.index"
@@ -120,6 +125,11 @@
                     "name": "Posts",
                     "icon": "ni ni-align-left-2 text-primary",
                     "route": "social.posts.index"
+                },
+                {
+                    "name": "Comments",
+                    "icon": "ni ni-chat-round text-primary",
+                    "route": "social.comments.index"
                 },
                 {
                     "name": "Templates",

@@ -30,6 +30,7 @@ class Main extends Provider
                 \Modules\Social\Console\RefreshSocialTokensCommand::class,
                 \Modules\Social\Console\PublishDueSocialPostsCommand::class,
                 \Modules\Social\Console\SyncSocialAnalyticsCommand::class,
+                \Modules\Social\Console\SyncSocialCommentsCommand::class,
             ]);
         }
     }
