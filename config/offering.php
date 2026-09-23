@@ -12,6 +12,7 @@ return [
     | full            — unlock WhatsApp inbox, campaigns, calls, and related menus.
     |
     | Flip to "full" when counsel confirms the non-compete window has ended.
+    | Operator checklist: OFFERING_MODE_FULL_RUNBOOK.md
     |
     */
     'mode' => env('OFFERING_MODE', 'social_commerce'),
