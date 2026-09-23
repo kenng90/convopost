@@ -7,6 +7,7 @@ enum SocialProvider: string
     case Facebook = 'facebook';
     case Instagram = 'instagram';
     case LinkedIn = 'linkedin';
+    case TikTok = 'tiktok';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum SocialProvider: string
             self::Facebook => 'Facebook Page',
             self::Instagram => 'Instagram',
             self::LinkedIn => 'LinkedIn',
+            self::TikTok => 'TikTok',
         };
     }
 
@@ -23,6 +25,7 @@ enum SocialProvider: string
             self::Facebook => 'badge-primary',
             self::Instagram => 'badge-danger',
             self::LinkedIn => 'badge-info',
+            self::TikTok => 'badge-dark',
         };
     }
 
@@ -35,6 +38,7 @@ enum SocialProvider: string
             self::Facebook,
             self::Instagram,
             self::LinkedIn,
+            self::TikTok,
         ];
     }
 

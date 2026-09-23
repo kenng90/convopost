@@ -65,6 +65,24 @@ return [
                 'redirect' => env('SOCIAL_LINKEDIN_REDIRECT', ''),
             ],
         ],
+        'tiktok' => [
+            'enabled' => env('SOCIAL_TIKTOK_ENABLED', true),
+            'label' => 'TikTok',
+            'publisher' => Modules\Social\Publishing\TikTokPublisher::class,
+            'scopes' => [
+                'user.info.basic',
+                'video.upload',
+                'video.publish',
+            ],
+            'oauth' => [
+                'client_key' => env('SOCIAL_TIKTOK_CLIENT_KEY', env('TIKTOK_APP_ID', '')),
+                'client_secret' => env('SOCIAL_TIKTOK_CLIENT_SECRET', env('TIKTOK_APP_SECRET', '')),
+                'redirect' => env('SOCIAL_TIKTOK_REDIRECT', ''),
+                'authorize_url' => env('SOCIAL_TIKTOK_AUTHORIZE_URL', 'https://www.tiktok.com/v2/auth/authorize/'),
+                'token_url' => env('SOCIAL_TIKTOK_TOKEN_URL', 'https://open.tiktokapis.com/v2/oauth/token/'),
+                'api_base' => env('SOCIAL_TIKTOK_API_BASE', 'https://open.tiktokapis.com'),
+            ],
+        ],
     ],
 
     /*

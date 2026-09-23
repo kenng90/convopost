@@ -14,6 +14,7 @@ use Modules\Social\Http\Controllers\MediaController;
 use Modules\Social\Http\Controllers\OfferRedirectController;
 use Modules\Social\Http\Controllers\PostController;
 use Modules\Social\Http\Controllers\TemplateController;
+use Modules\Social\Http\Controllers\TikTokConnectController;
 
 Route::middleware(['web'])
     ->get('/o/{token}', OfferRedirectController::class)
@@ -74,4 +75,9 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
             ->name('social.accounts.connect.linkedin');
         Route::get('/accounts/connect/linkedin/callback', [LinkedInConnectController::class, 'callback'])
             ->name('social.accounts.connect.linkedin.callback');
+
+        Route::get('/accounts/connect/tiktok', [TikTokConnectController::class, 'redirect'])
+            ->name('social.accounts.connect.tiktok');
+        Route::get('/accounts/connect/tiktok/callback', [TikTokConnectController::class, 'callback'])
+            ->name('social.accounts.connect.tiktok.callback');
     });
