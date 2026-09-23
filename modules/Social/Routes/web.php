@@ -12,6 +12,7 @@ use Modules\Social\Http\Controllers\LabelController;
 use Modules\Social\Http\Controllers\LinkedInConnectController;
 use Modules\Social\Http\Controllers\MediaController;
 use Modules\Social\Http\Controllers\OfferRedirectController;
+use Modules\Social\Http\Controllers\PinterestConnectController;
 use Modules\Social\Http\Controllers\PostController;
 use Modules\Social\Http\Controllers\TemplateController;
 use Modules\Social\Http\Controllers\ThreadsConnectController;
@@ -92,4 +93,9 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
             ->name('social.accounts.connect.threads');
         Route::get('/accounts/connect/threads/callback', [ThreadsConnectController::class, 'callback'])
             ->name('social.accounts.connect.threads.callback');
+
+        Route::get('/accounts/connect/pinterest', [PinterestConnectController::class, 'redirect'])
+            ->name('social.accounts.connect.pinterest');
+        Route::get('/accounts/connect/pinterest/callback', [PinterestConnectController::class, 'callback'])
+            ->name('social.accounts.connect.pinterest.callback');
     });

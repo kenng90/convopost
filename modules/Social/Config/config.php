@@ -117,6 +117,26 @@ return [
                 'graph_version' => env('SOCIAL_THREADS_GRAPH_VERSION', 'v1.0'),
             ],
         ],
+        'pinterest' => [
+            'enabled' => env('SOCIAL_PINTEREST_ENABLED', true),
+            'label' => 'Pinterest',
+            'publisher' => Modules\Social\Publishing\PinterestPublisher::class,
+            'scopes' => [
+                'boards:read',
+                'boards:write',
+                'pins:read',
+                'pins:write',
+                'user_accounts:read',
+            ],
+            'oauth' => [
+                'client_id' => env('SOCIAL_PINTEREST_CLIENT_ID', ''),
+                'client_secret' => env('SOCIAL_PINTEREST_CLIENT_SECRET', ''),
+                'redirect' => env('SOCIAL_PINTEREST_REDIRECT', ''),
+                'authorize_url' => env('SOCIAL_PINTEREST_AUTHORIZE_URL', 'https://www.pinterest.com/oauth/'),
+                'token_url' => env('SOCIAL_PINTEREST_TOKEN_URL', 'https://api.pinterest.com/v5/oauth/token'),
+                'api_base' => env('SOCIAL_PINTEREST_API_BASE', 'https://api.pinterest.com'),
+            ],
+        ],
     ],
 
     /*
