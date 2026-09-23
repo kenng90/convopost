@@ -197,4 +197,21 @@ return [
     'ai' => [
         'model' => env('SOCIAL_AI_MODEL', env('MANAGED_AI_FLOW_MODEL', 'openai/gpt-4o-mini')),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Engagement → inbox (OFFERING_MODE=full)
+    |--------------------------------------------------------------------------
+    |
+    | Company config overrides (defaults below):
+    | - social_comment_open_inbox (yes|no)
+    | - social_comment_flow_trigger (yes|no) — enables contact bot for Flowmaker
+    | - social_auto_inbox_on_sync (yes|no) — auto-open on Social comment sync
+    |
+    */
+    'engagement_inbox' => [
+        'open_inbox_default' => env('SOCIAL_COMMENT_OPEN_INBOX', 'yes'),
+        'flow_trigger_default' => env('SOCIAL_COMMENT_FLOW_TRIGGER', 'yes'),
+        'auto_on_sync_default' => env('SOCIAL_AUTO_INBOX_ON_SYNC', 'no'),
+    ],
 ];

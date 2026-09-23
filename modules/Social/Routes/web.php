@@ -52,6 +52,8 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
         Route::get('/comments', [CommentController::class, 'index'])->name('social.comments.index');
         Route::post('/comments/{comment}/create-contact', [CommentController::class, 'createContact'])
             ->name('social.comments.create-contact');
+        Route::post('/comments/{comment}/open-inbox', [CommentController::class, 'openInbox'])
+            ->name('social.comments.open-inbox');
 
         Route::get('/templates', [TemplateController::class, 'index'])->name('social.templates.index');
         Route::post('/templates', [TemplateController::class, 'store'])->name('social.templates.store');

@@ -7,7 +7,13 @@
             <div class="row align-items-center">
                 <div class="col">
                     <h1 class="h3 mb-1 text-white">{{ __('Comments') }}</h1>
-                    <p class="mb-0 text-white opacity-8">{{ __('Read-only comments synced from Facebook and Instagram. Replies stay on the network for now.') }}</p>
+                    <p class="mb-0 text-white opacity-8">
+                        @if (!empty($inboxEnabled))
+                            {{ __('Comments synced from Facebook and Instagram. Save engagers as contacts and open them in the shared inbox when Messenger/Instagram is connected.') }}
+                        @else
+                            {{ __('Read-only comments synced from Facebook and Instagram. Replies stay on the network for now.') }}
+                        @endif
+                    </p>
                 </div>
                 <div class="col-auto">
                     <a href="{{ route('social.posts.index') }}" class="btn btn-sm btn-neutral">{{ __('Posts') }}</a>
@@ -41,6 +47,9 @@
                                 <th>{{ __('Comment') }}</th>
                                 <th>{{ __('Post') }}</th>
                                 <th>{{ __('Contact') }}</th>
+                                @if (!empty($inboxEnabled))
+                                    <th>{{ __('Inbox') }}</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody>
@@ -81,10 +90,22 @@
                                             <span class="text-muted">—</span>
                                         @endif
                                     </td>
+                                    @if (!empty($inboxEnabled))
+                                        <td class="text-sm text-nowrap">
+                                            @if ($comment->canCreateContact() || $comment->contact_id)
+                                                <form method="POST" action="{{ route('social.comments.open-inbox', $comment) }}" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Open in inbox') }}</button>
+                                                </form>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
+                                    @endif
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">
+                                    <td colspan="{{ !empty($inboxEnabled) ? 7 : 6 }}" class="text-center text-muted py-4">
                                         {{ __('No comments synced yet. Comments appear after published Facebook or Instagram posts are synced.') }}
                                     </td>
                                 </tr>

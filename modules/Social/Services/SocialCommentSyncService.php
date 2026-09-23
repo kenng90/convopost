@@ -12,7 +12,8 @@ use Modules\Social\Models\SocialPostAccount;
 class SocialCommentSyncService
 {
     /**
-     * Pull comments for published Facebook / Instagram posts (read-only; no WhatsApp inbox).
+     * Pull comments for published Facebook / Instagram posts.
+     * When OFFERING_MODE=full and company opts in, new comments can open in inbox.
      *
      * @return array{synced: int, failed: int, skipped: int, upserted: int}
      */
@@ -93,7 +94,7 @@ class SocialCommentSyncService
         $upserted = 0;
 
         foreach ($comments as $row) {
-            SocialComment::withoutGlobalScopes()->updateOrCreate(
+            $comment = SocialComment::withoutGlobalScopes()->updateOrCreate(
                 [
                     'company_id' => $post->company_id,
                     'provider' => $provider->value,
@@ -112,6 +113,12 @@ class SocialCommentSyncService
                     'raw' => $row['raw'],
                 ]
             );
+
+            app(SocialEngagementInboxService::class)->maybeOpenAfterSync(
+                $comment,
+                $comment->wasRecentlyCreated
+            );
+
             $upserted++;
         }
 

@@ -13,7 +13,8 @@ class SocialEngagerContactService
 {
     /**
      * Create or link a CRM contact for a social commenter.
-     * Does not open WhatsApp/inbox conversations or send messages.
+     * Does not open WhatsApp/inbox conversations or send messages by itself —
+     * use SocialEngagementInboxService when offering mode is full.
      */
     public function createFromComment(SocialComment $comment): Contact
     {
