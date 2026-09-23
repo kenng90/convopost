@@ -59,6 +59,9 @@ class PostComposer extends Component
 
     public string $firstComment = '';
 
+    /** @var list<string> */
+    public array $xThreadReplies = [];
+
     public string $offerType = 'none';
 
     public string $offerUrl = '';
@@ -205,6 +208,21 @@ class PostComposer extends Component
         }
     }
 
+    public function addThreadReply(): void
+    {
+        if (count($this->xThreadReplies) >= 24) {
+            return;
+        }
+
+        $this->xThreadReplies[] = '';
+    }
+
+    public function removeThreadReply(int $index): void
+    {
+        unset($this->xThreadReplies[$index]);
+        $this->xThreadReplies = array_values($this->xThreadReplies);
+    }
+
     public function saveDraft(): void
     {
         $post = $this->persist('draft');
@@ -310,6 +328,7 @@ class PostComposer extends Component
             'status' => $status,
             'scheduled_at' => $this->scheduledAt,
             'first_comment' => $this->firstComment,
+            'x_thread_replies' => $this->xThreadReplies,
             'offer_type' => $this->offerType,
             'offer_url' => $this->offerUrl ?: null,
             'offer_target_id' => $this->offerTargetId,

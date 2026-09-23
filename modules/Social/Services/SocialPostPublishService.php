@@ -123,6 +123,19 @@ class SocialPostPublishService
             $override->setAttribute('first_comment', $default->first_comment);
         }
 
+        // X overrides inherit thread replies from the default version when unset.
+        if (
+            $override
+            && $provider === SocialProvider::X
+            && blank(data_get($override->provider_payload, 'thread'))
+            && $default
+            && filled(data_get($default->provider_payload, 'thread'))
+        ) {
+            $payload = is_array($override->provider_payload) ? $override->provider_payload : [];
+            $payload['thread'] = data_get($default->provider_payload, 'thread');
+            $override->setAttribute('provider_payload', $payload);
+        }
+
         return $version;
     }
 

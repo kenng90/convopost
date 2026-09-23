@@ -193,6 +193,30 @@
             </div>
 
             <div class="form-group">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-control-label mb-0">{{ __('X thread replies') }}</label>
+                    <button type="button" class="btn btn-sm btn-outline-primary" wire:click="addThreadReply" @disabled(count($xThreadReplies) >= 24)>
+                        {{ __('Add reply') }}
+                    </button>
+                </div>
+                <p class="text-muted small mb-2">{{ __('Optional. The main caption is tweet 1; each reply is posted as the next tweet in the thread (X only).') }}</p>
+                @foreach ($xThreadReplies as $index => $reply)
+                    <div class="d-flex gap-2 mb-2" wire:key="x-thread-{{ $index }}">
+                        <textarea
+                            class="form-control @error('xThreadReplies.'.$index) is-invalid @enderror"
+                            rows="2"
+                            maxlength="280"
+                            wire:model="xThreadReplies.{{ $index }}"
+                            placeholder="{{ __('Tweet :n', ['n' => $index + 2]) }}"
+                        ></textarea>
+                        <button type="button" class="btn btn-sm btn-outline-danger" wire:click="removeThreadReply({{ $index }})">{{ __('Remove') }}</button>
+                    </div>
+                    @error('xThreadReplies.'.$index) <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                @endforeach
+                @error('xThreadReplies') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+            </div>
+
+            <div class="form-group">
                 <label class="form-control-label" for="social-post-schedule">{{ __('Schedule for') }}</label>
                 <input
                     id="social-post-schedule"

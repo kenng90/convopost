@@ -8,6 +8,7 @@ use Modules\Social\Enums\SocialProvider;
 use Modules\Social\Models\SocialAccount;
 use Modules\Social\Models\SocialPostVersion;
 use Modules\Social\Support\PublishResult;
+use Modules\Social\Support\XThreadParts;
 
 class XPublisher implements SocialPublisherInterface
 {
@@ -24,55 +25,87 @@ class XPublisher implements SocialPublisherInterface
             return PublishResult::fail('X access token is missing.');
         }
 
-        $text = trim((string) ($version->content ?? ''));
+        $parts = XThreadParts::fromVersion($version);
 
-        if ($text === '' && $mediaUrls === []) {
+        if ($parts === [] && $mediaUrls === []) {
             return PublishResult::fail('X posts require text or media.');
         }
 
-        $payload = [
-            'text' => mb_substr($text, 0, 280),
-        ];
+        // Media-only first tweet when there is no text.
+        if ($parts === []) {
+            $parts = [''];
+        }
 
-        if ($mediaUrls !== []) {
-            $mediaIds = [];
-            foreach (array_slice($mediaUrls, 0, 4) as $mediaUrl) {
-                $mediaId = $this->uploadMedia($token, $mediaUrl);
-                if ($mediaId === null) {
-                    return PublishResult::fail('Failed to upload media to X: '.$mediaUrl);
+        $tweetIds = [];
+        $previousId = null;
+
+        foreach ($parts as $index => $text) {
+            $payload = [];
+
+            $trimmed = mb_substr(trim($text), 0, 280);
+            if ($trimmed !== '') {
+                $payload['text'] = $trimmed;
+            }
+
+            if ($index === 0 && $mediaUrls !== []) {
+                $mediaIds = [];
+                foreach (array_slice($mediaUrls, 0, 4) as $mediaUrl) {
+                    $mediaId = $this->uploadMedia($token, $mediaUrl);
+                    if ($mediaId === null) {
+                        return PublishResult::fail('Failed to upload media to X: '.$mediaUrl);
+                    }
+                    $mediaIds[] = $mediaId;
                 }
-                $mediaIds[] = $mediaId;
+
+                if ($mediaIds !== []) {
+                    $payload['media'] = ['media_ids' => $mediaIds];
+                }
             }
 
-            if ($mediaIds !== []) {
-                $payload['media'] = ['media_ids' => $mediaIds];
+            if ($previousId !== null) {
+                $payload['reply'] = [
+                    'in_reply_to_tweet_id' => $previousId,
+                ];
             }
-        }
 
-        if (($payload['text'] ?? '') === '') {
-            unset($payload['text']);
-        }
+            if ($payload === [] || (! isset($payload['text']) && ! isset($payload['media']))) {
+                return PublishResult::fail('X thread part requires text or media.');
+            }
 
-        $response = Http::withToken($token)
-            ->acceptJson()
-            ->post($this->apiBase().'/2/tweets', $payload);
+            $response = Http::withToken($token)
+                ->acceptJson()
+                ->post($this->apiBase().'/2/tweets', $payload);
 
-        if (! $response->successful()) {
-            return PublishResult::fail(
-                (string) (data_get($response->json(), 'detail')
+            if (! $response->successful()) {
+                $error = (string) (data_get($response->json(), 'detail')
                     ?? data_get($response->json(), 'title')
                     ?? data_get($response->json(), 'errors.0.message')
-                    ?? $response->body())
-            );
+                    ?? $response->body());
+
+                if ($tweetIds !== []) {
+                    return PublishResult::fail(
+                        'X thread partially published ('.count($tweetIds).' tweet(s)), then failed: '.$error,
+                        ['thread_ids' => $tweetIds, 'response' => $response->json()]
+                    );
+                }
+
+                return PublishResult::fail($error);
+            }
+
+            $tweetId = (string) data_get($response->json(), 'data.id', '');
+
+            if ($tweetId === '') {
+                return PublishResult::fail('X did not return a tweet id.');
+            }
+
+            $tweetIds[] = $tweetId;
+            $previousId = $tweetId;
         }
 
-        $tweetId = (string) data_get($response->json(), 'data.id', '');
-
-        if ($tweetId === '') {
-            return PublishResult::fail('X did not return a tweet id.');
-        }
-
-        return PublishResult::ok($tweetId, ['response' => $response->json()]);
+        return PublishResult::ok($tweetIds[0], [
+            'thread_ids' => $tweetIds,
+            'thread_count' => count($tweetIds),
+        ]);
     }
 
     public function refreshToken(SocialAccount $account): bool

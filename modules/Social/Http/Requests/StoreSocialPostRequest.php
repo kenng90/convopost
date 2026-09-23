@@ -47,6 +47,8 @@ class StoreSocialPostRequest extends FormRequest
             'versions.gbp' => ['nullable', 'string', 'max:1500'],
             'versions.x' => ['nullable', 'string', 'max:280'],
             'first_comment' => ['nullable', 'string', 'max:2000'],
+            'x_thread_replies' => ['nullable', 'array', 'max:24'],
+            'x_thread_replies.*' => ['nullable', 'string', 'max:280'],
             'status' => ['required', Rule::in(['draft', 'scheduled'])],
             'scheduled_at' => [
                 Rule::requiredIf($status === 'scheduled'),
@@ -111,6 +113,8 @@ class StoreSocialPostRequest extends FormRequest
             'networkVersions.x' => $rules['versions.x'],
             'scheduledAt' => $rules['scheduled_at'],
             'firstComment' => $rules['first_comment'],
+            'xThreadReplies' => $rules['x_thread_replies'],
+            'xThreadReplies.*' => $rules['x_thread_replies.*'],
             'offerType' => $rules['offer_type'],
             'offerUrl' => $rules['offer_url'],
             'offerTargetId' => $rules['offer_target_id'],

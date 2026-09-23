@@ -13,6 +13,7 @@ use Modules\Social\Models\SocialOfferLink;
 use Modules\Social\Models\SocialPost;
 use Modules\Social\Models\SocialPostAccount;
 use Modules\Social\Models\SocialPostVersion;
+use Modules\Social\Support\XThreadParts;
 
 class SocialPostComposerService
 {
@@ -24,6 +25,7 @@ class SocialPostComposerService
      *     label_ids?: list<int>,
      *     versions?: array<string, string>,
      *     first_comment?: string|null,
+     *     x_thread_replies?: list<string>|null,
      *     status?: string,
      *     scheduled_at?: string|null,
      *     offer_type?: string|null,
@@ -38,6 +40,8 @@ class SocialPostComposerService
             $scheduledAt = $data['scheduled_at'] ?? null;
             $firstComment = isset($data['first_comment']) ? trim((string) $data['first_comment']) : '';
             $firstComment = $firstComment !== '' ? $firstComment : null;
+            $threadReplies = XThreadParts::normalizeReplies($data['x_thread_replies'] ?? null);
+            $providerPayload = $threadReplies !== [] ? ['thread' => $threadReplies] : [];
 
             if ($status === 'scheduled' && empty($scheduledAt)) {
                 $status = 'draft';
@@ -61,7 +65,7 @@ class SocialPostComposerService
                 'content' => $data['content'],
                 'media_ids' => $mediaIds,
                 'first_comment' => $firstComment,
-                'provider_payload' => [],
+                'provider_payload' => $providerPayload,
             ]);
 
             foreach (($data['versions'] ?? []) as $provider => $content) {
@@ -76,7 +80,7 @@ class SocialPostComposerService
                     'content' => $content,
                     'media_ids' => $mediaIds,
                     'first_comment' => $firstComment,
-                    'provider_payload' => [],
+                    'provider_payload' => $provider === 'x' ? $providerPayload : [],
                 ]);
             }
 
