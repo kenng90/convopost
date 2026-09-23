@@ -164,7 +164,7 @@
                 </div>
                 @if ($showNetworkOverrides)
                     <p class="text-muted small">{{ __('Leave blank to use the main caption for that network.') }}</p>
-                    @foreach (['facebook' => 'Facebook', 'instagram' => 'Instagram', 'linkedin' => 'LinkedIn', 'tiktok' => 'TikTok', 'youtube' => 'YouTube', 'threads' => 'Threads', 'pinterest' => 'Pinterest', 'gbp' => 'Google Business'] as $provider => $label)
+                    @foreach (['facebook' => 'Facebook', 'instagram' => 'Instagram', 'linkedin' => 'LinkedIn', 'tiktok' => 'TikTok', 'youtube' => 'YouTube', 'threads' => 'Threads', 'pinterest' => 'Pinterest', 'gbp' => 'Google Business', 'x' => 'X'] as $provider => $label)
                         <div class="mb-3" wire:key="version-{{ $provider }}">
                             <label class="form-control-label" for="version-{{ $provider }}">{{ __($label) }}</label>
                             <textarea

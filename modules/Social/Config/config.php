@@ -155,6 +155,26 @@ return [
                 'local_posts_base' => env('SOCIAL_GBP_POSTS_BASE', 'https://mybusiness.googleapis.com'),
             ],
         ],
+        'x' => [
+            'enabled' => env('SOCIAL_X_ENABLED', true),
+            'label' => 'X',
+            'publisher' => Modules\Social\Publishing\XPublisher::class,
+            'scopes' => [
+                'tweet.read',
+                'tweet.write',
+                'users.read',
+                'offline.access',
+            ],
+            'oauth' => [
+                'client_id' => env('SOCIAL_X_CLIENT_ID', ''),
+                'client_secret' => env('SOCIAL_X_CLIENT_SECRET', ''),
+                'redirect' => env('SOCIAL_X_REDIRECT', ''),
+                'authorize_url' => env('SOCIAL_X_AUTHORIZE_URL', 'https://twitter.com/i/oauth2/authorize'),
+                'token_url' => env('SOCIAL_X_TOKEN_URL', 'https://api.twitter.com/2/oauth2/token'),
+                'api_base' => env('SOCIAL_X_API_BASE', 'https://api.twitter.com'),
+                'upload_base' => env('SOCIAL_X_UPLOAD_BASE', 'https://upload.twitter.com'),
+            ],
+        ],
     ],
 
     /*

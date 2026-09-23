@@ -49,6 +49,7 @@ class PostComposer extends Component
         'threads' => '',
         'pinterest' => '',
         'gbp' => '',
+        'x' => '',
     ];
 
     public bool $showNetworkOverrides = false;

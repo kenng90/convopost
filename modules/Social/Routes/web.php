@@ -18,6 +18,7 @@ use Modules\Social\Http\Controllers\PostController;
 use Modules\Social\Http\Controllers\TemplateController;
 use Modules\Social\Http\Controllers\ThreadsConnectController;
 use Modules\Social\Http\Controllers\TikTokConnectController;
+use Modules\Social\Http\Controllers\XConnectController;
 use Modules\Social\Http\Controllers\YouTubeConnectController;
 
 Route::middleware(['web'])
@@ -104,4 +105,9 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
             ->name('social.accounts.connect.gbp');
         Route::get('/accounts/connect/gbp/callback', [GbpConnectController::class, 'callback'])
             ->name('social.accounts.connect.gbp.callback');
+
+        Route::get('/accounts/connect/x', [XConnectController::class, 'redirect'])
+            ->name('social.accounts.connect.x');
+        Route::get('/accounts/connect/x/callback', [XConnectController::class, 'callback'])
+            ->name('social.accounts.connect.x.callback');
     });

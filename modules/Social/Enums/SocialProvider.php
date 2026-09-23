@@ -12,6 +12,7 @@ enum SocialProvider: string
     case Threads = 'threads';
     case Pinterest = 'pinterest';
     case Gbp = 'gbp';
+    case X = 'x';
 
     public function label(): string
     {
@@ -24,6 +25,7 @@ enum SocialProvider: string
             self::Threads => 'Threads',
             self::Pinterest => 'Pinterest',
             self::Gbp => 'Google Business Profile',
+            self::X => 'X',
         };
     }
 
@@ -38,6 +40,7 @@ enum SocialProvider: string
             self::Threads => 'badge-secondary',
             self::Pinterest => 'badge-warning',
             self::Gbp => 'badge-success',
+            self::X => 'badge-dark',
         };
     }
 
@@ -55,6 +58,7 @@ enum SocialProvider: string
             self::Threads,
             self::Pinterest,
             self::Gbp,
+            self::X,
         ];
     }
 
