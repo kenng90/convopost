@@ -6,6 +6,28 @@
         <div class="card-body">
             <div class="form-group">
                 <label class="form-control-label" for="social-post-content">{{ __('Caption') }}</label>
+                @if ($templates->isNotEmpty())
+                    <div class="mb-2 d-flex flex-wrap gap-2">
+                        @foreach ($templates as $template)
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                wire:key="template-{{ $template->id }}"
+                                wire:click="applyTemplate({{ $template->id }})"
+                            >
+                                {{ $template->name }}
+                                @if ($template->category)
+                                    <span class="text-muted">({{ $template->category }})</span>
+                                @endif
+                            </button>
+                        @endforeach
+                        <a href="{{ route('social.templates.index') }}" class="btn btn-sm btn-link">{{ __('Manage templates') }}</a>
+                    </div>
+                @else
+                    <div class="mb-2">
+                        <a href="{{ route('social.templates.index') }}" class="small">{{ __('Create a caption template') }}</a>
+                    </div>
+                @endif
                 <textarea
                     id="social-post-content"
                     class="form-control @error('content') is-invalid @enderror"

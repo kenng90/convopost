@@ -10,6 +10,7 @@ use Modules\Social\Http\Controllers\LinkedInConnectController;
 use Modules\Social\Http\Controllers\MediaController;
 use Modules\Social\Http\Controllers\OfferRedirectController;
 use Modules\Social\Http\Controllers\PostController;
+use Modules\Social\Http\Controllers\TemplateController;
 
 Route::middleware(['web'])
     ->get('/o/{token}', OfferRedirectController::class)
@@ -36,6 +37,11 @@ Route::middleware(['web', 'impersonate', 'verified', 'auth', 'isOwnerOnPro', 'pl
             ->name('social.posts.approve');
         Route::post('/posts/{post}/reject', [PostController::class, 'reject'])
             ->name('social.posts.reject');
+
+        Route::get('/templates', [TemplateController::class, 'index'])->name('social.templates.index');
+        Route::post('/templates', [TemplateController::class, 'store'])->name('social.templates.store');
+        Route::put('/templates/{template}', [TemplateController::class, 'update'])->name('social.templates.update');
+        Route::delete('/templates/{template}', [TemplateController::class, 'destroy'])->name('social.templates.destroy');
 
         Route::get('/calendar', CalendarController::class)->name('social.calendar');
 

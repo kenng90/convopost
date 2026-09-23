@@ -11,6 +11,7 @@ use Modules\Social\Http\Requests\StoreSocialPostRequest;
 use Modules\Social\Models\SocialAccount;
 use Modules\Social\Models\SocialMediaAsset;
 use Modules\Social\Models\SocialPost;
+use Modules\Social\Models\SocialTemplate;
 use Modules\Social\Services\SocialPostApprovalService;
 use Modules\Social\Services\SocialPostComposerService;
 
@@ -76,6 +77,23 @@ class PostComposer extends Component
         } else {
             $this->selectedMediaIds[] = $mediaId;
         }
+    }
+
+    public function applyTemplate(int $templateId): void
+    {
+        $company = Auth::user()?->currentCompany();
+
+        $template = SocialTemplate::query()
+            ->active()
+            ->when($company, fn ($query) => $query->where('company_id', $company->id))
+            ->whereKey($templateId)
+            ->first();
+
+        if (! $template) {
+            return;
+        }
+
+        $this->content = $template->content;
     }
 
     public function saveDraft(): void
@@ -159,6 +177,7 @@ class PostComposer extends Component
             'accounts' => $this->availableAccounts(),
             'mediaAssets' => $this->availableMedia(),
             'catalogs' => $this->availableCatalogs(),
+            'templates' => $this->availableTemplates(),
             'providers' => SocialProvider::publishable(),
             'requiresApproval' => $this->requiresApprovalGate(),
         ]);
@@ -196,5 +215,17 @@ class PostComposer extends Component
             ->orderBy('name')
             ->limit(50)
             ->get(['id', 'name']);
+    }
+
+    protected function availableTemplates()
+    {
+        $company = Auth::user()?->currentCompany();
+
+        return SocialTemplate::query()
+            ->active()
+            ->when($company, fn ($query) => $query->where('company_id', $company->id))
+            ->orderBy('name')
+            ->limit(50)
+            ->get(['id', 'name', 'category']);
     }
 }
