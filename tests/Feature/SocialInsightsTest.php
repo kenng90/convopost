@@ -62,14 +62,68 @@ class SocialInsightsTest extends TestCase
         $this->assertSame(120, $payload['totals']['engagement']);
         $this->assertSame(1, $payload['totals']['orders']);
         $this->assertEquals(2500.0, $payload['totals']['revenue']);
+        $this->assertSame(1, $payload['content']['published_posts']);
+        $this->assertSame(1, $payload['commerce']['paid_orders']);
+        $this->assertCount(1, $payload['posts_that_sold']);
 
         $this->actingAs($owner)
             ->withSession(['company_id' => $company->id])
             ->get(route('social.insights'))
             ->assertOk()
             ->assertSee('Launch offer post')
+            ->assertSee(__('Content'))
+            ->assertSee(__('Commerce'))
+            ->assertSee(__('Posts that sold'))
             ->assertSee('800')
             ->assertSee('2,500.00');
+    }
+
+    public function test_unified_insights_separates_paid_revenue_and_conversion(): void
+    {
+        [$owner, $company] = $this->ownerWithAnalytics();
+
+        $post = SocialPost::factory()->published()->withDefaultVersion('Seller post')->create([
+            'company_id' => $company->id,
+            'user_id' => $owner->id,
+        ]);
+
+        \Modules\Social\Models\SocialOfferLink::factory()->create([
+            'company_id' => $company->id,
+            'social_post_id' => $post->id,
+            'click_count' => 10,
+        ]);
+
+        Invoice::create([
+            'company_id' => $company->id,
+            'social_post_id' => $post->id,
+            'invoice_number' => 'INV-PAID-1',
+            'customer_name' => 'Buyer',
+            'customer_phone' => '254700000001',
+            'amount' => 1000,
+            'currency' => 'KES',
+            'status' => 'paid',
+        ]);
+
+        Invoice::create([
+            'company_id' => $company->id,
+            'social_post_id' => $post->id,
+            'invoice_number' => 'INV-OPEN-1',
+            'customer_name' => 'Maybe',
+            'customer_phone' => '254700000002',
+            'amount' => 5000,
+            'currency' => 'KES',
+            'status' => 'sent',
+        ]);
+
+        $payload = app(SocialInsightsService::class)->forCompany($company);
+
+        $this->assertSame(2, $payload['commerce']['orders']);
+        $this->assertSame(1, $payload['commerce']['paid_orders']);
+        $this->assertEquals(1000.0, $payload['commerce']['revenue']);
+        $this->assertEquals(10.0, $payload['commerce']['conversion_rate']);
+        $this->assertEquals(1000.0, $payload['commerce']['average_order_value']);
+        $this->assertSame(1, $payload['totals']['orders']);
+        $this->assertEquals(1000.0, $payload['totals']['revenue']);
     }
 
     public function test_insights_requires_social_analytics_capability(): void
