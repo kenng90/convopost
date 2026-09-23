@@ -25,6 +25,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('tiktok:refresh-tokens')->hourly();
         $schedule->command('social:refresh-tokens')->hourly();
         $schedule->command('social:publish-due')->everyMinute();
+        $schedule->command('social:sync-analytics')->hourly();
     }
 
     /**
